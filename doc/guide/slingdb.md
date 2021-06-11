@@ -15,7 +15,7 @@ systemd service manager:
 
 ```
 curl -o /tmp/slingdb.deb https://ringgaard.com/data/dist/slingdb.deb
-sudo dpkg -c /tmp/slingdb.deb
+sudo dpkg -i /tmp/slingdb.deb
 ```
 
 The SLINGDB runs as a systemd service and after installation you can check if it
@@ -131,6 +131,10 @@ A database can be taken offline with the unmount command:
 curl -X POST localhost:7070/mount?name=test
 ```
 
+For security reasons there is no command to remove a database. To delete a
+database, you first unmount it, and then manually remove the database
+directory, e.g. `sudo rm -r /var/lib/slingdb/test`.
+
 #### backup database index
 
 The backup command makes a consistent backup of the database index which can be
@@ -164,8 +168,10 @@ upgrade mechanism to run on the same port as the HTTP protocol.
 
 ## Python API
 
-The SLING Python API has a Database class that can be used for using SLINGDB
-in Python. It is built on top of the C++ native API.
+The [SLING Python API](pyapi.md) has a Database class that can be used for
+using SLINGDB in Python. It is built on top of the C++ native API.
+
+#### connecting
 
 First, you make a connection to the SLINGDB server:
 
@@ -175,5 +181,47 @@ import sling
 db = sling.Database("test")
 ```
 
-TBC...
+The database name has the general form `[<hostname>[:<port>]/]<database>`
+where hostname defaults to localhost and port defaults to 7070, so "test" is
+shorthand for "localhost:7070/test".
+
+#### reading
+
+* value = db[key]
+* value in db
+* value, version = db.get(key)
+
+#### writing
+
+* db[key] = value
+* db.put(key, value, [version], [mode])
+* db.add(key, value, [version])
+* del db[key]
+* db.delete(key)
+
+#### iterating
+
+* for key, version, value in db:
+* for key in db.keys():
+* for value in db.values():
+* for key, value in db.items():
+* for key, value in db(pos) and db.position
+
+# Security considerations
+
+After installation, the SLINGDB server can only be accessed from the local
+machine. If you want to access the SLINGDB server from other machines, you
+need to change `/etc/slingdb/slingdb.conf`. The `addr` option can be changed
+from `127.0.0.1` to the IP address of the interface you want the SLINGDB service
+to listen on. If you remove the `addr` option, you can access SLINGDB from all
+network interfaces. After you have changed `slingdb.conf` you need to restart
+the SLINGDB service:
+
+```
+sudo systemctl restart slingdb
+```
+
+SLINGDB does not have any access control so you will probably need to run it
+behind a firewall and only allow access through an application server or a
+reverse proxy.
 

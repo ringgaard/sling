@@ -31,6 +31,7 @@
 DEFINE_string(addr, "", "HTTP server address");
 DEFINE_int32(port, 7070, "HTTP server port");
 DEFINE_string(dbdir, "db", "Database directory");
+DEFINE_int32(workers, 16, "Number of network worker threads");
 DEFINE_bool(recover, false, "Recover databases when loading");
 DEFINE_bool(auto_mount, false, "Automatically mount databases in db dir");
 
@@ -1230,6 +1231,7 @@ int main(int argc, char *argv[]) {
   // Start HTTP server.
   LOG(INFO) << "Start HTTP server on port " << FLAGS_port;
   SocketServerOptions sockopts;
+  sockopts.num_workers = FLAGS_workers;
   httpd = new HTTPServer(sockopts, FLAGS_addr.c_str(), FLAGS_port);
   dbservice->Register(httpd);
   CHECK(httpd->Start());

@@ -42,6 +42,10 @@ struct Flag {
     return *reinterpret_cast<const T *>(storage);
   }
 
+  // Set flag value. Negate boolean value if neg is set. Returns false if
+  // value is invalid.
+  bool Set(const char *str, bool neg = false);
+
   // Look up flag information for command line flag.
   static Flag *Find(const char *name);
 

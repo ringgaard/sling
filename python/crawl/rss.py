@@ -31,6 +31,7 @@ def get_atom_element(e, tag):
   return text.strip().replace("\n", " ")
 
 # Initialize news crawler.
+news.init()
 crawler = news.Crawler("rss")
 
 # Read RSS news feeds.

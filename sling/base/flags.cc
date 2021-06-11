@@ -15,11 +15,13 @@
 #include "sling/base/flags.h"
 
 #include <string.h>
+#include <fstream>
 #include <iostream>
 
 #include "sling/base/logging.h"
 
 DEFINE_bool(help, false, "Print help message");
+DEFINE_string(config, "", "Configuration file with flags");
 
 namespace sling {
 
@@ -61,9 +63,8 @@ void Flag::SetUsageMessage(const string &usage) {
   usage_message = usage;
 }
 
-// Split argument it into a flag name and flag value (or nullptr if they are
-// missing). The neg parameter is set if the arg started with "-no" or
-// "--no".
+// Split argument it into a flag name and flag value (or null if value is
+// missing.
 static bool SplitArgument(char *arg, const char **name, const char **value) {
   *name = nullptr;
   *value = nullptr;
@@ -141,57 +142,8 @@ int Flag::ParseCommandLineFlags(int *argc, char **argv) {
       }
     }
 
-    // Parse boolean flag value.
-    if (flag->type == BOOL && !neg && value != nullptr) {
-      static const char *trueval[]  = {"1", "t", "true", "y", "yes"};
-      static const char *falseval[] = {"0", "f", "false", "n", "no"};
-      static_assert(sizeof(trueval) == sizeof(falseval), "true/false values");
-      int bval = -1;
-      for (size_t i = 0; i < sizeof(trueval) / sizeof(*trueval); ++i) {
-        if (strcasecmp(value, trueval[i]) == 0) {
-          bval = 1;
-          break;
-        } else if (strcasecmp(value, falseval[i]) == 0) {
-          bval = 0;
-          break;
-        }
-      }
-      if (bval == -1) {
-        std::cerr << "Error: illegal value for boolean flag " << arg << "\n";
-        rc = j;
-        break;
-      }
-      neg = (bval == 0);
-    }
-
-    // Set the flag.
-    char *endptr = nullptr;
-    switch (flag->type) {
-      case BOOL:
-        flag->value<bool>() = !neg;
-        break;
-      case INT32:
-        flag->value<int32>() = strtol(value, &endptr, 10);
-        break;
-      case UINT32:
-        flag->value<uint32>() = strtoul(value, &endptr, 10);
-        break;
-      case INT64:
-        flag->value<int64>() = strtoll(value, &endptr, 10);
-        break;
-      case UINT64:
-        flag->value<uint64>() = strtoull(value, &endptr, 10);
-        break;
-      case DOUBLE:
-        flag->value<double>() = strtod(value, &endptr);
-        break;
-      case STRING:
-        flag->value<string>() = value;
-        break;
-    }
-
-    // Handle flag value errors.
-    if (endptr != nullptr && *endptr != '\0') {
+    // Set flag value.
+    if (!flag->Set(value, neg)) {
       std::cerr << "Error: illegal value for flag " << arg << " of type "
                 << flagtype[flag->type] << "\nTry --help for options\n";
       rc = j;
@@ -209,12 +161,121 @@ int Flag::ParseCommandLineFlags(int *argc, char **argv) {
   }
   *argc = j;
 
+  // Read flag values from file if --config is specified.
+  if (!FLAGS_config.empty()) {
+    std::ifstream config(FLAGS_config);
+    if (config) {
+      string line;
+      while (std::getline(config, line)) {
+        // Skip whitespace and comments.
+        const char *p = line.c_str();
+        while (*p == ' ') p++;
+        if (*p == '#' || *p == '\0') continue;
+
+        // Parse flag name.
+        const char *n = p;
+        while (*p != '\0' && *p != ' ' && *p != '=') p++;
+        string name(n, p - n);
+
+        // Skip delimiter.
+        while (*p == ' ') p++;
+        if (*p != '=') {
+          std::cerr << "Error bad configuration line: " << line << "\n";
+          rc = -1;
+          continue;
+        }
+        p++;
+        while (*p == ' ') p++;
+
+        // Get flag value.
+        const char *v = p;
+        const char *e = nullptr;
+        while (*p != '\0') {
+          if (*p == ' ') {
+            if (e == nullptr) e = p;
+          } else {
+            e = nullptr;
+          }
+          p++;
+        }
+        string value(v, (e == nullptr ? p : e) - v);
+
+        // Set flag.
+        Flag *flag = Find(name.c_str());
+        if (flag == nullptr) {
+          std::cerr << "Error: unknown configuration option " << name << "\n";
+          rc = -1;
+          continue;
+        }
+        if (!flag->Set(value.c_str())) {
+          std::cerr << "Error: illegal value for option " << name << "\n";
+          rc = -1;
+          continue;
+        }
+      }
+      config.close();
+    } else {
+      std::cerr << "Error: config file not found: " << FLAGS_config << "\n";
+      rc = -1;
+    }
+  }
+
+  // Output help message and exit if --help is specified on command line.
   if (FLAGS_help) {
     PrintHelp();
     exit(0);
   }
 
   return rc;
+}
+
+bool Flag::Set(const char *str, bool neg) {
+  // Parse boolean flag value.
+  if (type == BOOL && !neg && str != nullptr) {
+    static const char *trueval[]  = {"1", "t", "true", "y", "yes"};
+    static const char *falseval[] = {"0", "f", "false", "n", "no"};
+    static_assert(sizeof(trueval) == sizeof(falseval), "true/false values");
+    int bval = -1;
+    for (size_t i = 0; i < sizeof(trueval) / sizeof(*trueval); ++i) {
+      if (strcasecmp(str, trueval[i]) == 0) {
+        bval = 1;
+        break;
+      } else if (strcasecmp(str, falseval[i]) == 0) {
+        bval = 0;
+        break;
+      }
+    }
+    if (bval == -1) return false;
+    neg = (bval == 0);
+  }
+
+  // Set the flag.
+  char *endptr = nullptr;
+  switch (type) {
+    case BOOL:
+      value<bool>() = !neg;
+      break;
+    case INT32:
+      value<int32>() = strtol(str, &endptr, 10);
+      break;
+    case UINT32:
+      value<uint32>() = strtoul(str, &endptr, 10);
+      break;
+    case INT64:
+      value<int64>() = strtoll(str, &endptr, 10);
+      break;
+    case UINT64:
+      value<uint64>() = strtoull(str, &endptr, 10);
+      break;
+    case DOUBLE:
+      value<double>() = strtod(str, &endptr);
+      break;
+    case STRING:
+      value<string>() = str;
+      break;
+  }
+
+  return endptr == nullptr || *endptr == '\0';
 }
 
 std::ostream &operator<<(std::ostream &os, const Flag &flag) {

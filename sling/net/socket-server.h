@@ -46,10 +46,10 @@ enum SocketState {
 // Socket server configuration.
 struct SocketServerOptions {
   // Number of worker threads.
-  int num_workers = 5;
+  int num_workers = 16;
 
   // Maximum number of worker threads.
-  int max_workers = 100;
+  int max_workers = 0;
 
   // Number of events per worker poll.
   int max_events = 1;

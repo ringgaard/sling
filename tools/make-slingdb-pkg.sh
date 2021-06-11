@@ -9,6 +9,7 @@ echo "Build slingdb package in" PKGDIR
 echo "Make directories"
 mkdir -p $PKGDIR/DEBIAN
 mkdir -p $PKGDIR/usr/local/bin
+mkdir -p $PKGDIR/etc/slingdb
 mkdir -p $PKGDIR/etc/systemd/system
 mkdir -p $PKGDIR/var/lib/slingdb
 
@@ -68,6 +69,30 @@ exit 0
 EOF
 chmod +x $PKGDIR/DEBIAN/prerm
 
+# Make slingdb config file.
+cat << EOF > $PKGDIR/etc/slingdb/slingdb.conf
+#
+# SLINGDB configuration
+#
+
+# Database directory.
+dbdir=/var/lib/slingdb
+
+# Network address and port for service. Comment out the addr line to
+# listen on all network interfaces.
+addr=127.0.0.1
+port=7070
+
+# Number of network worker threads for handling requests.
+workers=16
+
+# Automatically mount all databases in database directory on startup.
+auto_mount=true
+
+# Recover inconsistent databases on startup.
+recover=true
+EOF
+
 # Make systemd service unit.
 echo "Make systemd service unit"
 cat << EOF > $PKGDIR/etc/systemd/system/slingdb.service
@@ -78,7 +103,7 @@ After=network.target
 [Service]
 User=root
 WorkingDirectory=/var/lib/slingdb
-ExecStart=/usr/local/bin/slingdb --dbdir /var/lib/slingdb --addr 127.0.0.1 --port 7070 --auto_mount --flushlog --shortlog
+ExecStart=/usr/local/bin/slingdb --config /etc/slingdb/slingdb.conf --flushlog --shortlog
 Restart=always
 RestartSec=10
 

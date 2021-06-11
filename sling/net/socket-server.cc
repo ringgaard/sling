@@ -143,7 +143,7 @@ void SocketServer::Worker() {
     }
 
     // Start new worker if all workers are busy.
-    if (++active_ == workers_.size()) {
+    if (++active_ == workers_.size() && options_.max_workers > 0) {
       MutexLock lock(&mu_);
       if (workers_.size() < options_.max_workers) {
         VLOG(3) << "Starting new worker thread " << workers_.size();

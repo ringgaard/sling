@@ -237,15 +237,26 @@ PyObject *PyDatabase::Lookup(PyObject *key) {
 }
 
 int PyDatabase::Assign(PyObject *key, PyObject *v) {
-  DBRecord record;
-  if (!GetData(key, &record.key)) return -1;
-  if (!GetData(v, &record.value)) return -1;
+  if (v == nullptr) {
+    // Delete record from database.
+    Slice k;
+    if (!GetData(key, &k)) return -1;
 
-  // Update/add record in database.
-  Status st = Transact([&]() -> Status {
-    return db->Put(&record);
-  });
-  if (!CheckIO(st)) return -1;
+    Status st = Transact([&]() -> Status {
+      return db->Delete(k);
+    });
+    if (!CheckIO(st)) return -1;
+  } else {
+    // Update/add record in database.
+    DBRecord record;
+    if (!GetData(key, &record.key)) return -1;
+    if (!GetData(v, &record.value)) return -1;
+
+    Status st = Transact([&]() -> Status {
+      return db->Put(&record);
+    });
+    if (!CheckIO(st)) return -1;
+  }
 
   return 0;
 }
