@@ -459,7 +459,6 @@ def add_media(profile, url, caption, nsfw):
   # DR image scaler.
   m = re.match("https://asset.dr.dk/ImageScaler/\?(.+)", url)
   if m != None:
-    print(m.group(1))
     q = urllib.parse.parse_qs(m.group(1))
     url = "https://%s/%s" % (q["server"][0], q["file"][0])
 

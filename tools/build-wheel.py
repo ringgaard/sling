@@ -79,6 +79,7 @@ pyfiles = [
   'run.py',
   'flags.py',
   'log.py',
+  'util.py',
 
   'myelin/__init__.py',
   'myelin/builder.py',

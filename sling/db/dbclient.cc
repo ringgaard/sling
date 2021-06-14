@@ -363,6 +363,7 @@ Status DBClient::Transact(Transaction tx) {
   // Reconnect if connection closed.
   if (st.code() == EPIPE) {
     VLOG(1) << "Reconnect to " << database_;
+    Close();
     st = Connect(database_, agent_);
     if (st.ok()) st = tx();
   }

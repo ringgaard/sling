@@ -1,10 +1,10 @@
 # SLINGDB
 
-SLINGDB is a persistent key-value store with a HTTP interface. It is a
-hash map stored on disk where you can store one value for each key in each
-database. The keys and values are binary objects and SLINGDB does not interpret
-the content of these. Besides the key and value, a record can also have a
-64 bit integer version number or timestamp.
+SLINGDB is a lightweight persistent key-value store with a HTTP interface.
+It is basically a hash map stored on disk where you can store one value for each
+key in each database. The keys and values are binary objects and SLINGDB does
+not interpret the content of these. Besides the key and value, a record can
+also have a 64 bit integer version number or timestamp.
 
 ## Instalation
 
@@ -99,7 +99,7 @@ curl -X POST localhost:7070/create?name=test
 ```
 
 This will create a new database in `/var/lib/slingdb/test`. The database
-directory is configured with the `--dbdir` command line flag (default is
+directory is configured with `dbdir` configuration option (default is
 /var/lib/slingdb). The database configuration can be specified in the request
 body. The configuaration options are colon-separated key-value pairs:
 
@@ -116,8 +116,8 @@ body. The configuaration options are colon-separated key-value pairs:
 #### mount database
 
 When SLINGDB is started, it mounts all the databases in the subdirectories under
-the database directory (`--dbdir`). Databases can be taken offline for
-maintenance. The mount command is used for putting a database online again:
+the database directory. Databases can be taken offline for maintenance.
+The mount command is used for putting a database online again:
 
 ```
 curl -X POST localhost:7070/mount?name=test
@@ -137,7 +137,7 @@ directory, e.g. `sudo rm -r /var/lib/slingdb/test`.
 
 #### backup database index
 
-The backup command makes a consistent backup of the database index which can be
+The backup command makes a consistent backup of the database index which is
 used to speed up database recovery after a crash:
 
 ```
@@ -162,7 +162,7 @@ curl -X OPTIONS localhost:7070/test
 
 You can use SLINGDB in C++ by using the `DBClient` class in
 [sling/db/client.h](../../sling/db/dbclient.h). It uses the native SLINGDB
-protocol for communicating with the SLINGDB server, which has low overhead
+protocol for communicating with the SLINGDB server, which has lower overhead
 than the HTTP protocol. The native SLINGDB protocol uses the HTTP protocol
 upgrade mechanism to run on the same port as the HTTP protocol.
 
