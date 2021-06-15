@@ -39,15 +39,16 @@ ignored_reddits = [
 # Load news site list.
 news.init()
 
-# Read list of monitored subreddits.
+# Read lists of monitored subreddits.
 session = requests.Session()
 subreddits = set()
 if flags.arg.subreddits:
-  with open(flags.arg.subreddits, "r") as f:
-    for line in f.readlines():
-      sr = line.strip().lower();
-      if len(sr) == 0 or sr[0] == '#': continue;
-      subreddits.add(sr);
+  for filename in flags.arg.subreddits.split(","):
+    with open(filename, "r") as f:
+      for line in f.readlines():
+        sr = line.strip().lower();
+        if len(sr) == 0 or sr[0] == '#': continue;
+        subreddits.add(sr);
   print("Crawl", len(subreddits), "subreddits")
 
 # Connect to reddit submission database.

@@ -57,6 +57,11 @@ flags.define("--photodb",
              default="photo",
              metavar="DBURL")
 
+flags.define("--celebdb",
+             help="celebrity profile database",
+             default="photo",
+             metavar="DBURL")
+
 def post_process_flags(arg):
   if arg.languages == None:
     arg.languages = arg.language
@@ -110,6 +115,10 @@ def wikidatadb():
 def kbdb():
   """Knowledge base database."""
   return flags.arg.kbdb
+
+def celebdb():
+  """Celebrity profile database."""
+  return flags.arg.celebdb
 
 def photodb():
   """Photo database."""

@@ -25,7 +25,7 @@ import sling.util
 
 flags.define("--redditdb",
              help="database for reddit postings",
-             default="vault/reddit",
+             default="reddit",
              metavar="DB")
 
 flags.define("--checkpoint",
@@ -35,7 +35,7 @@ flags.define("--checkpoint",
 
 flags.define("--celebdb",
              help="database for celebrity profiles",
-             default="vault/celeb",
+             default="celeb",
              metavar="DB")
 
 flags.define("--albums",
@@ -49,6 +49,8 @@ flags.parse()
 commons = sling.Store()
 n_id = commons["id"]
 n_name = commons["name"]
+n_instance_of = commons["P31"]
+n_human = commons["Q5"]
 n_english = commons["/lang/en"]
 
 n_subreddit = commons["subreddit"]
@@ -123,7 +125,7 @@ def map_wikipedia(lang, article):
 celebdb = sling.Database(flags.arg.celebdb)
 redditdb = sling.Database(flags.arg.redditdb)
 albums = None
-if flags.arg.albums != None: albums = open(flags.arg.albums, "a")
+if flags.arg.albums != None: albums = open(flags.arg.albums, "w")
 
 # Load xref table.
 print("Load xref table")
@@ -244,6 +246,7 @@ for id, version, value in redditdb(chkpt.checkpoint):
     slots = []
     if qid != None: slots.append((n_id, qid))
     slots.append((n_name, store.qstr(title, n_english)))
+    slots.append((n_instance_of, n_human))
     for property, identifier in refs.items():
       slots.append((property, identifier))
     profile = store.frame(slots)

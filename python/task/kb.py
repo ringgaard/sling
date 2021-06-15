@@ -52,6 +52,10 @@ class KnowledgeBaseWorkflow:
     """Resource for photo database."""
     return self.wf.resource(corpora.photodb(), format="db/frames")
 
+  def celebs(self):
+    """Resource for celebrity profiles."""
+    return self.wf.resource(corpora.celebdb(), format="db/frames")
+
   def elf(self):
     """Resource for ISO 20275 ELF items."""
     return self.wf.resource("elf.rec",
@@ -71,6 +75,7 @@ class KnowledgeBaseWorkflow:
   def extended_item_sources(self):
     return self.wf.bundle(
       self.media(),
+      self.celebs(),
       self.photos(),
       self.data.wikipedia_summaries(),
       self.elf(),
@@ -82,7 +87,8 @@ class KnowledgeBaseWorkflow:
       self.data.wikidata_redirects(),
       self.data.wikidata_items(),
       self.elf(),
-      self.gleif())
+      self.gleif(),
+      self.celebs())
 
     with self.wf.namespace("xrefs"):
       builder = self.wf.task("xref-builder", params={"snapshot": True})
