@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
   int num_keys = 0;
   for (;;) {
     // Read next batch.
-    Status st = db.Next(&iterator, FLAGS_batch, &records);
+    Status st = db.Next(&iterator, FLAGS_batch, -1, false, &records);
     if (!st.ok()) {
       if (st.code() == ENOENT) break;
       LOG(FATAL) << "Error reading from database: " << st;

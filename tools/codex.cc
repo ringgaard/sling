@@ -148,7 +148,7 @@ void DisplayDatabase(const string &filename) {
     uint64 iterator = 0;
     if (FLAGS_follow) CHECK(db.Epoch(&iterator));
     for (;;) {
-      Status st = db.Next(&iterator, FLAGS_batch, &records);
+      Status st = db.Next(&iterator, FLAGS_batch, -1, false, &records);
       if (!st.ok()) {
         if (st.code() == ENOENT) {
           if (!FLAGS_follow) break;

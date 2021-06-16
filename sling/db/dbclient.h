@@ -86,7 +86,10 @@ class DBClient {
   //   Record record;
   //   while (db->Next(&iterator, &record)) { ... }
   Status Next(uint64 *iterator, DBRecord *record);
-  Status Next(uint64 *iterator, int num,
+  Status Next(uint64 *iterator,
+              int num,
+              uint64 limit,
+              bool deletions,
               std::vector<DBRecord> *records,
               IOBuffer *buffer = nullptr);
 

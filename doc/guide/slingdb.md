@@ -202,10 +202,11 @@ shorthand for "localhost:7070/test".
 #### iterating
 
 * for key, version, value in db:
-* for key in db.keys():
+* for key in db.keys(begin=0, end=-1, stable=False, deletions=False):
 * for value in db.values():
 * for key, value in db.items():
-* for key, value in db(pos) and db.position
+* for key, value in db()
+* db.position and db.epoch
 
 # Security considerations
 

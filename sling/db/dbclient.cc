@@ -252,16 +252,24 @@ Status DBClient::Next(uint64 *iterator, DBRecord *record) {
   });
 }
 
-Status DBClient::Next(uint64 *iterator, int num,
+Status DBClient::Next(uint64 *iterator,
+                      int num,
+                      uint64 limit,
+                      bool deletions,
                       std::vector<DBRecord> *records,
                       IOBuffer *buffer) {
   if (buffer == nullptr) buffer = &response_;
   return Transact([&]() -> Status {
     records->clear();
     request_.Clear();
+    uint8 flags = 0;
+    if (deletions) flags |= 1;
+    if (limit != -1) flags |= 2;
+    request_.Write(&flags, 1);
     request_.Write(iterator, 8);
     request_.Write(&num, 4);
-    Status st = Do(DBNEXT, buffer);
+    if (limit != -1) request_.Write(&limit, 8);
+    Status st = Do(DBNEXT2, buffer);
     if (!st.ok()) return st;
     if (reply_ == DBDONE) return Status(ENOENT, "No more records");
     DBRecord record;

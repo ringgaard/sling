@@ -60,15 +60,16 @@ struct PyDatabase : public PyBase {
 
   // Return iterator for records.
   PyObject *Iterator();
-  PyObject *Keys();
-  PyObject *Values();
-  PyObject *Items();
-
-  // Return iterator starting at position.
-  PyObject *Start(PyObject *args, PyObject *kw);
+  PyObject *Keys(PyObject *args, PyObject *kw);
+  PyObject *Values(PyObject *args, PyObject *kw);
+  PyObject *Items(PyObject *args, PyObject *kw);
+  PyObject *Full(PyObject *args, PyObject *kw);
 
   // Return current position in database.
   PyObject *Position();
+
+  // Return current epoch for database.
+  PyObject *Epoch();
 
   // Get slice for string or binary value.
   static bool GetData(PyObject *obj, Slice *data);
@@ -110,8 +111,13 @@ struct PyCursor : public PyBase {
     ITEMS,   // key, value
   };
 
+  // Create new database cursor.
+  static PyObject *Create(PyDatabase *pydb, Fields fields,
+                          PyObject *args, PyObject *kw);
+
   // Initialize database iterator.
-  void Init(PyDatabase *pydb, uint64 start, Fields fields);
+  void Init(PyDatabase *pydb, uint64 begin, uint64 end, Fields fields,
+            bool deletions);
 
   // Deallocate database cursor.
   void Dealloc();
@@ -127,6 +133,12 @@ struct PyCursor : public PyBase {
 
   // Fields to return for cursor iterator.
   Fields fields;
+
+  // Stop position or -1 if iterating until end of database.
+  int limit;
+
+  // Iterate over deletions.
+  bool deletions;
 
   // Current position in database.
   uint64 iterator;

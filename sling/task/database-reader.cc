@@ -60,7 +60,7 @@ class DatabaseReader : public Process {
     std::vector<DBRecord> records;
     for (;;) {
       // Read next batch.
-      st = db.Next(&iterator, batch, &records);
+      st = db.Next(&iterator, batch, -1, false, &records);
       if (!st.ok()) {
         if (st.code() == ENOENT) break;
         LOG(FATAL) << "Error reading from database " << dbname << ": " << st;

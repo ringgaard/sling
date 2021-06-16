@@ -272,7 +272,7 @@ for id, version, value in redditdb(chkpt.checkpoint):
                  (title, key, url, " NSFW" if nsfw else ""))
 
 # Cleanup
-chkpt.commit(redditdb.position)
+chkpt.commit(redditdb.position())
 celebdb.close()
 redditdb.close()
 if albums: albums.close()

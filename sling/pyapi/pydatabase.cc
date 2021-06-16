@@ -35,7 +35,7 @@ void PyDatabase::Define(PyObject *module) {
 
   type.tp_init = method_cast<initproc>(&PyDatabase::Init);
   type.tp_dealloc = method_cast<destructor>(&PyDatabase::Dealloc);
-  type.tp_call = method_cast<ternaryfunc>(&PyDatabase::Start);
+  type.tp_call = method_cast<ternaryfunc>(&PyDatabase::Full);
   type.tp_iter = method_cast<getiterfunc>(&PyDatabase::Iterator);
 
   type.tp_as_mapping = &mapping;
@@ -54,6 +54,7 @@ void PyDatabase::Define(PyObject *module) {
   methods.Add("values", &PyDatabase::Values);
   methods.Add("items", &PyDatabase::Items);
   methods.Add("position", &PyDatabase::Position);
+  methods.Add("epoch", &PyDatabase::Epoch);
   type.tp_methods = methods.table();
 
   RegisterType(&type, module, "Database");
@@ -262,41 +263,38 @@ int PyDatabase::Assign(PyObject *key, PyObject *v) {
 }
 
 PyObject *PyDatabase::Iterator() {
-  PyCursor *cursor = PyObject_New(PyCursor, &PyCursor::type);
-  cursor->Init(this, 0, PyCursor::FULL);
-  return cursor->AsObject();
+  return PyCursor::Create(this, PyCursor::FULL, nullptr, nullptr);
 }
 
-PyObject *PyDatabase::Keys() {
-  PyCursor *cursor = PyObject_New(PyCursor, &PyCursor::type);
-  cursor->Init(this, 0, PyCursor::KEYS);
-  return cursor->AsObject();
+PyObject *PyDatabase::Keys(PyObject *args, PyObject *kw) {
+  return PyCursor::Create(this, PyCursor::KEYS, args, kw);
 }
 
-PyObject *PyDatabase::Values() {
-  PyCursor *cursor = PyObject_New(PyCursor, &PyCursor::type);
-  cursor->Init(this, 0, PyCursor::VALUES);
-  return cursor->AsObject();
+PyObject *PyDatabase::Values(PyObject *args, PyObject *kw) {
+  return PyCursor::Create(this, PyCursor::VALUES, args, kw);
 }
 
-PyObject *PyDatabase::Items() {
-  PyCursor *cursor = PyObject_New(PyCursor, &PyCursor::type);
-  cursor->Init(this, 0, PyCursor::ITEMS);
-  return cursor->AsObject();
+PyObject *PyDatabase::Items(PyObject *args, PyObject *kw) {
+  return PyCursor::Create(this, PyCursor::ITEMS, args, kw);
 }
 
-PyObject *PyDatabase::Start(PyObject *args, PyObject *kw) {
-  uint64 start = 0;
-  if (!PyArg_ParseTuple(args, "L", &start)) return nullptr;
-
-
-  PyCursor *cursor = PyObject_New(PyCursor, &PyCursor::type);
-  cursor->Init(this, start, PyCursor::FULL);
-  return cursor->AsObject();
+PyObject *PyDatabase::Full(PyObject *args, PyObject *kw) {
+  return PyCursor::Create(this, PyCursor::FULL, args, kw);
 }
 
 PyObject *PyDatabase::Position() {
   return PyLong_FromLong(position);
+}
+
+PyObject *PyDatabase::Epoch() {
+  uint64 epoch;
+  Status st = Transact([&]() -> Status {
+    return db->Epoch(&epoch);
+  });
+  if (!CheckIO(st)) return nullptr;
+
+
+  return PyLong_FromLong(epoch);
 }
 
 bool PyDatabase::GetData(PyObject *obj, Slice *data) {
@@ -332,12 +330,48 @@ void PyCursor::Define(PyObject *module) {
   RegisterType(&type, module, "Cursor");
 }
 
-void PyCursor::Init(PyDatabase *pydb, uint64 start, Fields fields) {
+PyObject *PyCursor::Create(PyDatabase *pydb, Fields fields,
+                      PyObject *args, PyObject *kw) {
+  // Parse arguments.
+  static const char *kwlist[] = {
+    "begin", "end", "stable", "deletions", nullptr
+  };
+
+  uint64 begin = 0;
+  uint64 end = -1;
+  bool stable = false;
+  bool deletions = false;
+  if (args != nullptr || kw != nullptr) {
+    bool ok = PyArg_ParseTupleAndKeywords(
+                  args, kw, "|LLbb", const_cast<char **>(kwlist),
+                  &begin, &end, &stable, &deletions);
+    if (!ok) return nullptr;
+  }
+
+  // If a stable cursor is requested, only iterate to the current end of the
+  // database, even if the database is modified during iteration.
+  if (end == -1 && stable) {
+    Status st = pydb->Transact([&]() -> Status {
+      return pydb->db->Epoch(&end);
+    });
+    if (!CheckIO(st)) return nullptr;
+  }
+
+  // Return new cursor.
+  PyCursor *cursor = PyObject_New(PyCursor, &type);
+  cursor->Init(pydb, begin, end, fields, deletions);
+  return cursor->AsObject();
+}
+
+void PyCursor::Init(PyDatabase *pydb, uint64 begin, uint64 end, Fields fields,
+                    bool deletions) {
   this->pydb = pydb;
+  this->limit = end;
+  this->deletions = deletions;
   this->fields = fields;
   Py_INCREF(pydb);
 
-  iterator = start;
+  iterator = begin;
   next = 0;
   records = new std::vector<DBRecord>;
   buffer = new IOBuffer();
@@ -355,7 +389,8 @@ PyObject *PyCursor::Next() {
   if (next == records->size()) {
     records->clear();
     Status st = pydb->Transact([&]() -> Status {
-      return pydb->db->Next(&iterator, pydb->batchsize, records, buffer);
+      return pydb->db->Next(&iterator, pydb->batchsize, limit, deletions,
+                            records, buffer);
     });
     if (!st.ok()) {
       if (st.code() == ENOENT) {
