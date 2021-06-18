@@ -842,11 +842,11 @@ class DBService {
         case DBGET: cont = Get(); break;
         case DBPUT: cont = Put(); break;
         case DBDELETE: cont = Delete(); break;
-        case DBNEXT: cont = Next(false); break;
+        case DBNEXT: cont = Next(1); break;
         case DBBULK: cont = Bulk(); break;
         case DBEPOCH: cont = Epoch(); break;
         case DBHEAD: cont = Head(); break;
-        case DBNEXT2: cont = Next(true); break;
+        case DBNEXT2: cont = Next(2); break;
         default: return Error("command verb not supported");
       }
 
@@ -996,42 +996,51 @@ class DBService {
     }
 
     // Retrieve the next record(s) for a cursor.
-    Continuation Next(bool extended) {
+    Continuation Next(int version) {
+      // Supported iteration flags.
+      static const uint8 supports =
+        DBNEXT_DELETIONS |
+        DBNEXT_LIMIT |
+        DBNEXT_NOVALUE;
+
       if (mount_ == nullptr) return Error("no database");
       DBLock l(mount_);
       auto *req = conn_->request();
       auto *rsp = conn_->response_body();
 
       uint8 flags = 0;
-      if (extended) {
+      if (version >= 2) {
         if (!req->Read(&flags, 1)) return TERMINATE;
+        if (flags & ~supports) return Error("not supported");
       }
       uint64 iterator;
       if (!req->Read(&iterator, 8)) return TERMINATE;
       uint32 num;
       if (!req->Read(&num, 4)) return TERMINATE;
       uint64 limit = -1;
-      if (flags & 2) {
+      if (flags & DBNEXT_LIMIT) {
         if (!req->Read(&limit, 8)) return TERMINATE;
       }
+      bool deletions = (flags & DBNEXT_DELETIONS) != 0;
+      bool with_value = !(flags & DBNEXT_NOVALUE);
 
       Record record;
       for (int n = 0; n < num; ++n) {
         // Fetch next record.
         if ((limit != -1 && iterator >= limit) ||
-           !l.db()->Next(&record, &iterator, flags & 1)) {
+            !l.db()->Next(&record, &iterator, deletions, with_value)) {
           if (n == 0) return Response(DBDONE);
           break;
         }
         if (iterator == -1) return Error("error fetching next record");
 
         // Add record to response.
-        WriteRecord(record);
+        WriteRecord(record, with_value);
         l.yield();
       }
 
       rsp->Write(&iterator, 8);
-      return Response(DBRECORD);
+      return Response(with_value ? DBRECORD : DBKEY);
     }
 
     // Return current epoch for database.
@@ -1106,7 +1115,7 @@ class DBService {
     }
 
     // Write record to response.
-    void WriteRecord(const Record &record) {
+    void WriteRecord(const Record &record, bool with_value = true) {
       auto *rsp = conn_->response_body();
       uint32 ksize = record.key.size() << 1;
       if (record.version != 0) ksize |= 1;
@@ -1119,7 +1128,9 @@ class DBService {
 
       uint32 vsize = record.value.size();
       rsp->Write(&vsize, 4);
-      rsp->Write(record.value.data(), record.value.size());
+      if (with_value) {
+        rsp->Write(record.value.data(), record.value.size());
+      }
     }
 
    private:

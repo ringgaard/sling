@@ -88,7 +88,7 @@ struct PyDatabase : public PyBase {
   int batchsize;
 
   // Current postion in database.
-  int position;
+  uint64 position;
 
   // Mutex for serializing access to the database connection.
   Mutex *mu;

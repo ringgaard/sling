@@ -361,7 +361,9 @@ bool Database::Delete(const Slice &key) {
   return true;
 }
 
-bool Database::Next(Record *record, uint64 *iterator, bool deletions) {
+bool Database::Next(Record *record, uint64 *iterator,
+                    bool deletions,
+                    bool with_value) {
   uint64 shard = Shard(*iterator);
   uint64 pos = Position(*iterator);
   for (;;) {
@@ -395,8 +397,13 @@ bool Database::Next(Record *record, uint64 *iterator, bool deletions) {
     }
 
     // Read record.
-    Status st = reader->Read(record);
-    if (!st) return false;
+    if (with_value) {
+      Status st = reader->Read(record);
+      if (!st) return false;
+    } else {
+      Status st = reader->ReadKey(record);
+      if (!st) return false;
+    }
     pos = reader->Tell();
 
     if (record->value.empty()) {

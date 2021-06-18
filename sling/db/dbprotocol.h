@@ -44,6 +44,7 @@ enum DBVerb : uint32 {
   DBDONE      = 132,   // no more records
   DBRECID     = 133,   // reply with recid for current epoch
   DBRECINFO   = 134,   // reply with record information
+  DBKEY       = 135,   // reply with key and record information
 };
 
 // Update mode for DBPUT.
@@ -71,6 +72,13 @@ enum DBResult : uint32 {
 inline bool ValidDBResult(DBResult result) {
   return result >= DBNEW && result <= DBFAULT;
 }
+
+// Flags for DBNEXT2.
+enum DBNextFlag : uint8 {
+  DBNEXT_DELETIONS = 0x01,     // return record deletions
+  DBNEXT_LIMIT     = 0x02,     // stop iteration at limit
+  DBNEXT_NOVALUE   = 0x04,     // do not return record value
+};
 
 // Database protocol packet header.
 struct DBHeader {
@@ -133,11 +141,21 @@ struct DBHeader {
 // Returns DBDONE when there are no more records to retrieve.
 //
 // DBNEXT2 flags:uint8 recid:uint64 num:uint32 {limit:uint64} ->
-//         DBRECORD {record}* next:uint64 | DBDONE
+//         DBRECORD {record}* next:uint64 |
+//         DBKEY {header}* next:uint64 |
+//         DBDONE
 //
 // Like DBNEXT, but with extra options. If bit 0 of flags is set, deleted
 // records with zero size are returned for deletions. If bit 1 is set, the
-// limit is used for stopping the iteration early.
+// limit is used for stopping the iteration early. If bit 2 is set, the
+// record value is not returned.
+//
+//   header: {
+//     ksize:uint32;         (lower bit indicates if record version is present)
+//     key:byte[ksize >> 1];
+//     {version:uint64};     (if ksize & 1)
+//     vsize:uint32;
+//   }
 //
 // DBBULK enable:uint32 -> DBOK
 //

@@ -63,6 +63,7 @@ A more detailed description of the SLING parser can be found in this paper:
   * [CASPAR frame semantics parser](doc/guide/caspar.md)
   * [Myelin neural network JIT compiler](doc/guide/myelin.md)
   * [Semantic frames](doc/guide/frames.md)
+  * [SLINGDB persistent key-value store](doc/guide/slingdb.md)
 
 ## Credits
 

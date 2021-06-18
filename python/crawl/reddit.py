@@ -47,6 +47,8 @@ if flags.arg.subreddits:
     with open(filename, "r") as f:
       for line in f.readlines():
         sr = line.strip().lower();
+        pos = sr.find(' ')
+        if pos != -1: sr = sr[:pos].strip()
         if len(sr) == 0 or sr[0] == '#': continue;
         subreddits.add(sr);
   print("Crawl", len(subreddits), "subreddits")

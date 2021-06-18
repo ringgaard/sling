@@ -93,11 +93,13 @@ class Database {
   // Delete record in database. Return true if record was deleted.
   bool Delete(const Slice &key);
 
-  // Iterate all active records in database, e.g.
+  // Iterate all (active) records in database, e.g.
   //   uint64 iterator = 0;
   //   Record record;
   //   while (db->Next(&record, &iterator)) { ... }
-  bool Next(Record *record, uint64 *iterator, bool deletions = false);
+  bool Next(Record *record, uint64 *iterator,
+            bool deletions = false,
+            bool with_value = true);
 
   // Check if record id is valid.
   bool Valid(uint64 recid);

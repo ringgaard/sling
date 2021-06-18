@@ -46,8 +46,8 @@ The following HTTP methods are supported:
 * HEAD
 * PUT
 * DELETE
-* POST
 * OPTIONS
+* POST
 
 ### PUT
 
@@ -87,9 +87,23 @@ The HTTP DELETE method is used for deleting records:
 curl -X DELETE localhost:7070/test/123
 ```
 
+### OPTIONS
+
+The HTTP OPTIONS method returns a list of mounted databases:
+
+```
+curl -X OPTIONS localhost:7070
+```
+
+It can also be used for getting basic statistics about a particular database:
+
+```
+curl -X OPTIONS localhost:7070/test
+```
+
 ### POST
 
-The POST verb is be used for various maintenance tasks.
+The POST verb is used for various maintenance tasks.
 
 #### create new database
 
@@ -144,20 +158,6 @@ used to speed up database recovery after a crash:
 curl -X POST localhost:7070/backup?name=test
 ```
 
-### OPTIONS
-
-The HTTP OPTIONS method returns a list of mounted databases:
-
-```
-curl -X OPTIONS localhost:7070
-```
-
-It can also be used for getting basic statistics about a particular database:
-
-```
-curl -X OPTIONS localhost:7070/test
-```
-
 ## C++ API
 
 You can use SLINGDB in C++ by using the `DBClient` class in
@@ -182,31 +182,88 @@ db = sling.Database("test")
 ```
 
 The database name has the general form `[<hostname>[:<port>]/]<database>`
-where hostname defaults to localhost and port defaults to 7070, so "test" is
-shorthand for "localhost:7070/test".
+where hostname defaults to localhost and port defaults to 7070, so `test` is
+shorthand for `localhost:7070/test`.
 
 #### reading
 
-* value = db[key]
-* value in db
-* value, version = db.get(key)
+* `value = db[key]`<br>
+  Fetch record `value` with `key` from database. Returns `None` if record does
+  not exist.
+
+* `key in db`<br>
+  Check is record with `key` is in the database.
+
+* `value, version = db.get(key)`<br>
+  Fetch record with `key` and return `value` and `version` for record. Returns
+  `(None, 0)` is record does not exist.
 
 #### writing
 
-* db[key] = value
-* db.put(key, value, [version], [mode])
-* db.add(key, value, [version])
-* del db[key]
-* db.delete(key)
+* `db[key] = value`<br>
+  Add or update record in database.
+
+* `db.put(key, value, [version=0], [mode=sling.DBOVERWRITE])`<br>
+  Add or update record in database with optional `version` and `mode`. The
+  `mode` parameter controls when the database is updated:
+  * `sling.DBOVERWRITE` (overwrite existing records)
+  * `sling.DBADD` (only add new records, do not overwrite existing ones)
+  * `sling.DBORDERED` (do not overwrite records with higher version)
+  * `sling.DBNEWER` (only overwrite existing record if version is newer)
+
+  Returns outcome of the operation:
+  * `sling.DBNEW` (new record added)
+  * `sling.DBUPDATED` (existing record updated)
+  * `sling.DBUNCHANGED` (record not updated because value is unchanged)
+  * `sling.DBEXISTS` (record already exists and overwrite not allowed)
+  * `sling.DBSTALE` (record not updated because version is lower)
+  * `sling.DBFAULT` (record not updated because of write error)
+
+* `db.add(key, value, [version])`<br>
+  Add new record to database. This is equivalent to
+  `db.put(key, value, version, mode=sling.sling.DBADD)`.
+
+* `db.delete(key)` or `del db[key]`<br>
+  Delete record in database.
 
 #### iterating
 
-* for key, version, value in db:
-* for key in db.keys(begin=0, end=-1, stable=False, deletions=False):
-* for value in db.values():
-* for key, value in db.items():
-* for key, value in db()
-* db.position and db.epoch
+* `for key, version, value in db([begin=0], [end=-1], [stable=False], [deletions=False])`<br>
+  Returns iterator for iterating over all or parts of the database. The key is
+  returned as a string if it is valid UTF-8. Otherwise it is returned as a
+  byte array. The value is returned as a byte array unless it is empty in which
+  case it is returned as `None`.
+
+  If `begin` is specified, iteration starts at that position in the database.
+  Otherwise the iterator starts at the beginning of the database.
+
+  If `end` is specified, the iterator stops before that position. Otherwise
+  the iterator reads until the end of the database.
+
+  If `stable=True` the iterator stops after reading the last record when the
+  iterator is created to avoid reading records updated during iteration. This
+  is equivalent to setting `end=db.epoch()`.
+
+  If `deletions=True` deleted records are returned as well. A deleted record
+  has an empty value, i.e. `None`.
+
+* `for key, version, value in db`<br>
+  Iterate over all records in database. Equivalent to `db(0, -1, False, False)`.
+
+* `for key in db.keys([begin=0], [end=-1], [stable=False], [deletions=False])`<br>
+  Iterate over records in database returning keys.
+
+* `for value in db.values([begin=0], [end=-1], [stable=False], [deletions=False])`<br>
+  Iterate over records in database returning vaules.
+
+* `for key, value in db.items([begin=0], [end=-1], [stable=False], [deletions=False])`<br>
+  Iterate over records in database returning keys and values.
+
+* `db.position()`<br>
+  Returns current position after iterating over records in database.
+
+* `db.epoch()`<br>
+  Returns position for the end of the database.
 
 # Security considerations
 
