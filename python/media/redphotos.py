@@ -148,6 +148,13 @@ photosites = set([
   "pbs.twimg.com",
 ])
 
+# Name delimiters.
+delimiters = [
+  "(", "[", ",", " - ", "|", "/", ":", "!",
+  "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+  " by ", " is ", " in ", " has ", " on ",
+]
+
 # Initialize commons store.
 commons = sling.Store()
 n_subreddit = commons["subreddit"]
@@ -204,11 +211,12 @@ for key, value in redditdb.items(chkpt.checkpoint):
     if sr in general_subreddits:
       # Skip photos with multiple persons.
       if " and " in title: continue
+      if " & " in title: continue
 
       # Try to match title to name.
       name = title
-      for c in ["(", "[", ",", " - ", "|", ":", "!"]:
-        p = name.find(c)
+      for d in delimiters:
+        p = name.find(d)
         if p != -1: name = name[:p].strip()
       name = name.replace(".", "")
       itemid = celebmap.get(name)
