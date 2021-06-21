@@ -35,40 +35,95 @@ flags.define("--subreddits",
              default=None,
              metavar="FILE")
 
+flags.define("--batch",
+             help="output file for photo batch list",
+             default=None,
+             metavar="FILE")
+
 flags.parse()
 
 # Set of black-listed subreddits.
 blacklist = set([
-  "ksi",
-  "tommyinnit",
-  "PewdiepieSubmissions",
+  "Ashens",
   "Behzinga",
   "billsimmons",
+  "bingingwithbabish",
+  "brandonsanderson",
   "CaptainSparklez",
+  "CDawgVA",
+  "codyko",
+  "Cr1TiKaL",
+  "daverubin",
+  "DavidDobrik",
+  "davidlynch",
   "Destiny",
+  "DoctorMike",
+  "douglasadams",
   "DreamWasTaken",
   "earlsweatshirt",
+  "elliottsmith",
+  "elonmusk",
   "Eminem",
+  "EsfandTV",
   "forsen",
   "FrankOcean",
   "Hasan_Piker",
+  "HowToBasic",
+  "InternetCommentEtiq",
   "jacksepticeye",
+  "JacksFilms",
   "JackSucksAtLife",
+  "Jaharia",
+  "JamesHoffmann",
   "Jazza",
   "JoeBiden",
   "JoeRogan",
   "johnoliver",
   "JordanPeterson",
   "Kanye",
+  "KendrickLamar",
+  "ksi",
   "lanadelrey", # only PHOTO flair
+  "LazarBeam",
+  "LeafyIsHere",
   "LGR",
   "liluzivert", # only Image flair
+  "lilypichu",
+  "Lovecraft",
+  "lowspecgamer",
   "LudwigAhgren",
   "MacMiller",
   "Markiplier",
   "Mizkif",
   "mkbhd",
   "MrBeast",
+  "murakami",
+  "Pete_Buttigieg",
+  "PewdiepieSubmissions",
+  "PinkOmega",
+  "playboicarti",
+  "porterrobinson",
+  "PostMalone",
+  "Ranboo",
+  "RTGameCrowd",
+  "samharris",
+  "Schaffrillas",
+  "shakespeare",
+  "SomeOrdinaryGmrs",
+  "StanleyKubrick",
+  "stephenking",
+  "terencemckenna",
+  "TheWeeknd",
+  "tommyinnit",
+  "Trainwreckstv",
+  "travisscott",
+  "tylerthecreator",
+  "valkyrae",
+  "videogamedunkey",
+  "wesanderson",
+  "xqcow",
+  "XXXTENTACION",
+  "YoungThug",
 ])
 
 # List of approved photo sites.
@@ -100,7 +155,7 @@ commons.freeze()
 subreddits = {}
 with open(flags.arg.subreddits, "r") as f:
   for line in f.readlines():
-    f = line.split(' ')
+    f = line.strip().split(' ')
     sr = f[0]
     itemid = f[1]
     if sr in blacklist: continue
@@ -108,6 +163,7 @@ with open(flags.arg.subreddits, "r") as f:
 print("Scan", len(subreddits), "subreddits")
 
 # Find new postings to subreddits.
+batch = open(flags.arg.batch, 'w')
 redditdb = sling.Database(flags.arg.redditdb)
 chkpt = sling.util.Checkpoint(flags.arg.checkpoint)
 for key, value in redditdb.items(chkpt.checkpoint):
@@ -140,10 +196,14 @@ for key, value in redditdb.items(chkpt.checkpoint):
   if url.endswith(".mp4"): continue
   if url.endswith(".webm"): continue
 
+  # Output photo to batch list.
   nsfw = posting[n_over_18]
+  batch.write("%s %s #\t %s %s%s\n" %
+              (sr, title, itemid, url, " NSFW" if nsfw else ""))
 
   print(sr, itemid, title, "NSFW" if nsfw else "", url)
 
-#chkpt.commit(redditdb.position())
+chkpt.commit(redditdb.position())
 redditdb.close()
+batch.close()
 
