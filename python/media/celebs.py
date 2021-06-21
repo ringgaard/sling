@@ -245,7 +245,9 @@ for id, version, value in redditdb(chkpt.checkpoint):
     # Create new profile.
     slots = []
     if qid != None: slots.append((n_id, qid))
-    slots.append((n_name, store.qstr(title, n_english)))
+    for name in title.split("/"):
+      name = name.strip()
+      slots.append((n_name, store.qstr(name, n_english)))
     slots.append((n_instance_of, n_human))
     for property, identifier in refs.items():
       slots.append((property, identifier))
