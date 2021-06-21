@@ -42,9 +42,9 @@ def item_text(item):
   return s
 
 for item in kb:
-  sr = item[n_subreddit]
-  if sr != None:
-    sr = kb.resolve(sr)
-    if is_human(item):
-      print(sr, item_text(item))
+  if n_subreddit in item:
+    for sr in item(n_subreddit):
+      sr = kb.resolve(sr)
+      if is_human(item):
+        print(sr, item_text(item))
 

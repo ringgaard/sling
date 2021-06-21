@@ -35,6 +35,11 @@ flags.define("--subreddits",
              default=None,
              metavar="FILE")
 
+flags.define("--celebmap",
+             help="list of names mapped to item ids",
+             default=None,
+             metavar="FILE")
+
 flags.define("--batch",
              help="output file for photo batch list",
              default=None,
@@ -44,6 +49,7 @@ flags.parse()
 
 # Set of black-listed subreddits.
 blacklist = set([
+  "AdamRagusea",
   "Ashens",
   "Behzinga",
   "billsimmons",
@@ -152,15 +158,29 @@ n_over_18 = commons["over_18"]
 commons.freeze()
 
 # Read subreddit list.
-subreddits = {}
-with open(flags.arg.subreddits, "r") as f:
-  for line in f.readlines():
-    f = line.strip().split(' ')
-    sr = f[0]
-    itemid = f[1]
-    if sr in blacklist: continue
-    subreddits[sr] = itemid
-print("Scan", len(subreddits), "subreddits")
+person_subreddits = {}
+general_subreddits = {}
+for fn in flags.arg.subreddits.split(","):
+  with open(fn, "r") as f:
+    for line in f.readlines():
+      f = line.strip().split(' ')
+      sr = f[0]
+      itemid = f[1] if len(f) > 1 else None
+      if sr in blacklist: continue
+      if itemid is None:
+        general_subreddits[sr] = itemid
+      else:
+        person_subreddits[sr] = itemid
+
+# Read list of celebrity names.
+celebmap = {}
+for fn in flags.arg.celebmap.split(","):
+  with open(fn, "r") as f:
+    for line in f.readlines():
+      f = line.strip().split(':')
+      name = f[0].strip()
+      itemid = f[1].strip()
+      celebmap[name] = itemid
 
 # Find new postings to subreddits.
 batch = open(flags.arg.batch, 'w')
@@ -171,14 +191,28 @@ for key, value in redditdb.items(chkpt.checkpoint):
   store = sling.Store(commons)
   posting = store.parse(value, json=True)
 
-  # Discard if subreddit is not in the set of monitored subreddits.
-  sr = posting[n_subreddit]
-  itemid = subreddits.get(sr)
-  if itemid is None: continue
-
   # Discard posting with bad titles.
   title = posting[n_title]
   if type(title) is bytes: continue
+
+  # Check for personal subreddit.
+  sr = posting[n_subreddit]
+  itemid = person_subreddits.get(sr)
+
+  # Check for name match in general subreddit.
+  if itemid is None:
+    if sr in general_subreddits:
+      # Skip photos with multiple persons.
+      if " and " in title: continue
+
+      # Try to match title to name.
+      name = title
+      for c in ["(", "[", ",", " - ", "|", ":", "!"]:
+        p = name.find(c)
+        if p != -1: name = name[:p].strip()
+      name = name.replace(".", "")
+      itemid = celebmap.get(name)
+  if itemid is None: continue
 
   # Discard self-posts.
   if posting[n_is_self]: continue
