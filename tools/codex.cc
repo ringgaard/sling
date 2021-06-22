@@ -145,10 +145,12 @@ void DisplayDatabase(const string &filename) {
   CHECK(db.Connect(filename, "codex"));
   if (FLAGS_key.empty()) {
     std::vector<DBRecord> records;
-    uint64 iterator = 0;
-    if (FLAGS_follow) CHECK(db.Epoch(&iterator));
+    DBIterator iterator;
+    iterator.batch = FLAGS_batch;
+    iterator.novalue = FLAGS_keys;
+    if (FLAGS_follow) CHECK(db.Epoch(&iterator.position));
     for (;;) {
-      Status st = db.Next(&iterator, FLAGS_batch, -1, false, &records);
+      Status st = db.Next(&iterator, &records);
       if (!st.ok()) {
         if (st.code() == ENOENT) {
           if (!FLAGS_follow) break;

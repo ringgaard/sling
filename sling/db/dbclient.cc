@@ -236,39 +236,40 @@ Status DBClient::Delete(const Slice &key) {
   });
 }
 
-Status DBClient::Next(uint64 *iterator, DBRecord *record) {
+Status DBClient::Next(DBIterator *iterator, DBRecord *record) {
   return Transact([&]() -> Status {
-    uint32 num = 1;
-    request_.Clear();
-    request_.Write(iterator, 8);
-    request_.Write(&num, 4);
-    Status st = Do(DBNEXT);
+    CHECK_EQ(iterator->batch, 1);
+    uint8 flags = 0;
+    if (iterator->deletions) flags |= DBNEXT_DELETIONS;
+    if (iterator->limit != -1) flags |= DBNEXT_LIMIT;
+    if (iterator->novalue) flags |= DBNEXT_NOVALUE;
+    request_.Write(&flags, 1);
+    request_.Write(&iterator->position, 8);
+    request_.Write(&iterator->batch, 4);
+    if (iterator->limit != -1) request_.Write(&iterator->limit, 8);
+    Status st = Do(DBNEXT2, iterator->buffer);
     if (!st.ok()) return st;
     if (reply_ == DBDONE) return Status(ENOENT, "No more records");
-    st = ReadRecord(record);
+    st = ReadRecord(record, iterator->buffer);
     if (!st.ok()) return st;
-    if (!response_.Read(iterator, 8)) return Truncated();
+    if (!response_.Read(&iterator->position, 8)) return Truncated();
     return Status::OK;
   });
 }
 
-Status DBClient::Next(uint64 *iterator,
-                      int num,
-                      uint64 limit,
-                      bool deletions,
-                      std::vector<DBRecord> *records,
-                      IOBuffer *buffer) {
-  if (buffer == nullptr) buffer = &response_;
+Status DBClient::Next(DBIterator *iterator, std::vector<DBRecord> *records) {
+  IOBuffer *buffer = iterator->buffer ? iterator->buffer : &response_;
   return Transact([&]() -> Status {
     records->clear();
     request_.Clear();
     uint8 flags = 0;
-    if (deletions) flags |= 1;
-    if (limit != -1) flags |= 2;
+    if (iterator->deletions) flags |= DBNEXT_DELETIONS;
+    if (iterator->limit != -1) flags |= DBNEXT_LIMIT;
+    if (iterator->novalue) flags |= DBNEXT_NOVALUE;
     request_.Write(&flags, 1);
-    request_.Write(iterator, 8);
-    request_.Write(&num, 4);
-    if (limit != -1) request_.Write(&limit, 8);
+    request_.Write(&iterator->position, 8);
+    request_.Write(&iterator->batch, 4);
+    if (iterator->limit != -1) request_.Write(&iterator->limit, 8);
     Status st = Do(DBNEXT2, buffer);
     if (!st.ok()) return st;
     if (reply_ == DBDONE) return Status(ENOENT, "No more records");
@@ -278,7 +279,7 @@ Status DBClient::Next(uint64 *iterator,
       if (!st.ok()) return st;
       records->push_back(record);
     }
-    if (!buffer->Read(iterator, 8)) return Truncated();
+    if (!buffer->Read(&iterator->position, 8)) return Truncated();
     return Status::OK;
   });
 }
@@ -341,8 +342,13 @@ Status DBClient::ReadRecord(DBRecord *record, IOBuffer *buffer) {
   if (!buffer->Read(&vsize, 4)) return Truncated();
 
   // Read value.
-  if (buffer->available() < vsize) return Truncated();
-  record->value = Slice(buffer->Consume(vsize), vsize);
+  if (reply_ == DBKEY) {
+    char *bad = reinterpret_cast<char *>(0xDECADE0FABBABABE);
+    record->value = Slice(bad, vsize);
+  } else {
+    if (buffer->available() < vsize) return Truncated();
+    record->value = Slice(buffer->Consume(vsize), vsize);
+  }
 
   return Status::OK;
 }

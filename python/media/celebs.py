@@ -49,6 +49,7 @@ flags.parse()
 commons = sling.Store()
 n_id = commons["id"]
 n_name = commons["name"]
+n_alias = commons["alias"]
 n_instance_of = commons["P31"]
 n_human = commons["Q5"]
 n_english = commons["/lang/en"]
@@ -245,9 +246,11 @@ for id, version, value in redditdb(chkpt.checkpoint):
     # Create new profile.
     slots = []
     if qid != None: slots.append((n_id, qid))
+    prop = n_name
     for name in title.split("/"):
       name = name.strip()
-      slots.append((n_name, store.qstr(name, n_english)))
+      slots.append((prop, store.qstr(name, n_english)))
+      prop = n_alias
     slots.append((n_instance_of, n_human))
     for property, identifier in refs.items():
       slots.append((property, identifier))

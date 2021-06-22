@@ -134,23 +134,14 @@ struct PyCursor : public PyBase {
   // Fields to return for cursor iterator.
   Fields fields;
 
-  // Stop position or -1 if iterating until end of database.
-  int limit;
-
-  // Iterate over deletions.
-  bool deletions;
-
-  // Current position in database.
-  uint64 iterator;
+  // Database iterator.
+  DBIterator *iterator;
 
   // Next record in batch.
   int next;
 
   // Current record batch.
   std::vector<DBRecord> *records;
-
-  // I/O Buffer for fetching records.
-  IOBuffer *buffer;
 
   // Registration.
   static PyTypeObject type;

@@ -37,6 +37,16 @@ struct DBRecord {
   DBResult result = DBUNCHANGED;
 };
 
+// Database iterator for reading a range of records from a database.
+struct DBIterator {
+  uint64 position = 0;         // current position for iterator, 0=start
+  uint64 limit = -1;           // stop position, -1=end
+  int batch = 1;               // number of records to retrieve per call
+  bool deletions = false;      // return deletions as empty records
+  bool novalue = false;        // only fetch record keys
+  IOBuffer *buffer = nullptr;  // external I/O buffer
+};
+
 // Database connection to database server. This uses the binary SLINGDB
 // protocol to communicate with the database server.
 class DBClient {
@@ -81,17 +91,12 @@ class DBClient {
   // Delete record in database.
   Status Delete(const Slice &key);
 
-  // Iterate all active records in database, e.g.
-  //   uint64 iterator = 0;
+  // Iterate over records in database, e.g.
+  //   DBIterator iterator;
   //   Record record;
   //   while (db->Next(&iterator, &record)) { ... }
-  Status Next(uint64 *iterator, DBRecord *record);
-  Status Next(uint64 *iterator,
-              int num,
-              uint64 limit,
-              bool deletions,
-              std::vector<DBRecord> *records,
-              IOBuffer *buffer = nullptr);
+  Status Next(DBIterator *iterator, DBRecord *record);
+  Status Next(DBIterator *iterator, std::vector<DBRecord> *records);
 
   // Get current epoch for database. This can be used as the initial iterator
   // value for reading new records from the database.

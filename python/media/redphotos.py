@@ -14,6 +14,7 @@
 
 """Find photos of persons in reddit postings."""
 
+import requests
 from urllib.parse import urlparse
 
 import sling
@@ -86,6 +87,7 @@ blacklist = set([
   "JoeRogan",
   "johnoliver",
   "JordanPeterson",
+  "jschlatt",
   "Kanye",
   "KendrickLamar",
   "ksi",
@@ -189,9 +191,20 @@ for fn in flags.arg.celebmap.split(","):
       itemid = f[1].strip()
       celebmap[name] = itemid
 
+# Check if posting has been deleted.
+session = requests.Session()
+def posting_deleted(sid):
+  r = session.get("https://api.reddit.com/api/info/?id=" + sid,
+                   headers = {"User-agent": "SLING Bot 1.0"})
+  if r.status_code != 200: return True
+  children = r.json()["data"]["children"]
+  if len(children) == 0: return True
+  reply = children[0]["data"]
+  return reply["removed_by_category"] != None
+
 # Find new postings to subreddits.
 batch = open(flags.arg.batch, 'w')
-redditdb = sling.Database(flags.arg.redditdb)
+redditdb = sling.Database(flags.arg.redditdb, "redphotos")
 chkpt = sling.util.Checkpoint(flags.arg.checkpoint)
 for key, value in redditdb.items(chkpt.checkpoint):
   # Parse reddit posting.
@@ -212,6 +225,7 @@ for key, value in redditdb.items(chkpt.checkpoint):
       # Skip photos with multiple persons.
       if " and " in title: continue
       if " & " in title: continue
+      if " &amp; " in title: continue
 
       # Try to match title to name.
       name = title
@@ -238,12 +252,15 @@ for key, value in redditdb.items(chkpt.checkpoint):
   if url.endswith(".mp4"): continue
   if url.endswith(".webm"): continue
 
+  # Check if posting has been deleted.
+  if posting_deleted(key): continue
+
   # Output photo to batch list.
   nsfw = posting[n_over_18]
   batch.write("%s %s #\t %s %s%s\n" %
               (sr, title, itemid, url, " NSFW" if nsfw else ""))
 
-  print(sr, itemid, title, "NSFW" if nsfw else "", url)
+  print(sr, key, itemid, title, "NSFW" if nsfw else "", url)
 
 chkpt.commit(redditdb.position())
 redditdb.close()

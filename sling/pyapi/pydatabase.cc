@@ -366,21 +366,26 @@ PyObject *PyCursor::Create(PyDatabase *pydb, Fields fields,
 void PyCursor::Init(PyDatabase *pydb, uint64 begin, uint64 end, Fields fields,
                     bool deletions) {
   this->pydb = pydb;
-  this->limit = end;
-  this->deletions = deletions;
   this->fields = fields;
   Py_INCREF(pydb);
 
-  iterator = begin;
+  // Initialize iterator.
+  iterator = new DBIterator();
+  iterator->position = begin;
+  iterator->limit = end;
+  iterator->batch = pydb->batchsize;
+  iterator->deletions = deletions;
+  iterator->buffer = new IOBuffer();
+  if (fields == KEYS) iterator->novalue = true;
   next = 0;
   records = new std::vector<DBRecord>;
-  buffer = new IOBuffer();
 }
 
 void PyCursor::Dealloc() {
   Py_DECREF(pydb);
   delete records;
-  delete buffer;
+  delete iterator->buffer;
+  delete iterator;
   Free();
 }
 
@@ -389,8 +394,7 @@ PyObject *PyCursor::Next() {
   if (next == records->size()) {
     records->clear();
     Status st = pydb->Transact([&]() -> Status {
-      return pydb->db->Next(&iterator, pydb->batchsize, limit, deletions,
-                            records, buffer);
+      return pydb->db->Next(iterator, records);
     });
     if (!st.ok()) {
       if (st.code() == ENOENT) {
@@ -401,7 +405,7 @@ PyObject *PyCursor::Next() {
       return nullptr;
     }
     next = 0;
-    pydb->position = iterator;
+    pydb->position = iterator->position;
   }
 
   // Return next record in batch.

@@ -49,18 +49,18 @@ class DatabaseReader : public Process {
     if (!st.ok()) {
       LOG(FATAL) << "Error connecting to database " << dbname << ": " << st;
     }
-    int batch = task->Get("db_read_batch", 1000);
 
     // Statistics counters.
     Counter *db_records_read = task->GetCounter("db_records_read");
     Counter *db_bytes_read = task->GetCounter("db_bytes_read");
 
     // Read records from database and output to output channel.
-    uint64 iterator = 0;
+    DBIterator iterator;
+    iterator.batch = task->Get("db_read_batch", 128);
     std::vector<DBRecord> records;
     for (;;) {
       // Read next batch.
-      st = db.Next(&iterator, batch, -1, false, &records);
+      st = db.Next(&iterator, &records);
       if (!st.ok()) {
         if (st.code() == ENOENT) break;
         LOG(FATAL) << "Error reading from database " << dbname << ": " << st;

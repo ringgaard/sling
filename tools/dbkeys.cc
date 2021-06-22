@@ -27,7 +27,7 @@
 DEFINE_string(db, "", "Database");
 DEFINE_string(chkpt, "", "Checkpoint for resuming");
 DEFINE_string(output, "", "Output file for keys");
-DEFINE_int32(batch, 8, "Batch size for fetching keys");
+DEFINE_int32(batch, 128, "Batch size for fetching keys");
 DEFINE_int32(maxkeys, 0, "Maximum number of keys to fetch");
 DEFINE_int32(progress, 1000, "Report progress for every nth key");
 
@@ -37,11 +37,13 @@ int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
 
   // Read checkpoint.
-  uint64 iterator = 0;
+  DBIterator iterator;
+  iterator.batch = FLAGS_batch;
+  iterator.novalue = true;
   if (!FLAGS_chkpt.empty()) {
     string data;
     CHECK(File::ReadContents(FLAGS_chkpt, &data));
-    iterator = std::stoll(data);
+    iterator.position = std::stoll(data);
   }
 
   // Append keys to output file.
@@ -60,7 +62,7 @@ int main(int argc, char *argv[]) {
   int num_keys = 0;
   for (;;) {
     // Read next batch.
-    Status st = db.Next(&iterator, FLAGS_batch, -1, false, &records);
+    Status st = db.Next(&iterator, &records);
     if (!st.ok()) {
       if (st.code() == ENOENT) break;
       LOG(FATAL) << "Error reading from database: " << st;
@@ -100,7 +102,7 @@ int main(int argc, char *argv[]) {
 
   // Write checkpoint.
   if (!FLAGS_chkpt.empty()) {
-    CHECK(File::WriteContents(FLAGS_chkpt, std::to_string(iterator)));
+    CHECK(File::WriteContents(FLAGS_chkpt, std::to_string(iterator.position)));
   }
 
   return 0;

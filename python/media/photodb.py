@@ -331,8 +331,7 @@ def add_reddit_gallery(profile, galleryid, isnsfw=False):
   if reply["is_self"]:
     print("Skipping self post", galleryid);
     return 0
-  removed = reply["removed_by_category"]
-  if removed in ["deleted", "reddit", "moderator", "anti_evil_ops"]:
+  if reply["removed_by_category"] != None:
     print("Skipping deleted post", galleryid);
     return 0
 
