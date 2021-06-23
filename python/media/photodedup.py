@@ -45,6 +45,11 @@ flags.define("--dedup",
 
 flags.parse()
 
+bad_photos = set([
+  b'\xf1{\x01\x90\x1cu,\x1b\xb0I(\x13\x1d\x16a\xaf', # i.reddit.it
+  b'\xd85\x88Cs\xf4\xd6\xc8\xf2GB\xce\xab\xe7IF',    # i.imgur.com/removed.png
+])
+
 photodb = sling.Database(flags.arg.photodb, "photodedup.py/photo")
 mediadb = sling.Database(flags.arg.mediadb, "photodedup.py/media")
 
@@ -89,6 +94,10 @@ def dedup(id, profile):
           print(id, url, " sfw duplicate of", dup)
         else:
           print(id, url, " duplicate of", dup)
+    elif fingerprint in bad_photos:
+      duplicates.add(url)
+      num_duplicates += 1
+      print(id, url, " bad")
     else:
       fingerprints[fingerprint] = url
 

@@ -362,11 +362,11 @@ def add_reddit_gallery(profile, galleryid, isnsfw=False):
     media = mediadata[mediaid].get("s")
     if media is None:
       print("Skipping missing media in gallery", mediaid);
-      return 0
+      continue
     link = media.get("u")
     if link is None:
       print("Skipping missing image in gallery", mediaid);
-      return 0
+      continue
 
     m = re.match("https://preview.redd.it/(\w+\.\w+)\?", link)
     if m != None: link = "https://i.redd.it/" + m.group(1)

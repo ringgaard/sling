@@ -51,6 +51,7 @@ flags.parse()
 # Set of black-listed subreddits.
 blacklist = set([
   "AdamRagusea",
+  "ariheads",
   "Ashens",
   "Behzinga",
   "billsimmons",
@@ -154,7 +155,7 @@ photosites = set([
 delimiters = [
   "(", "[", ",", " - ", "|", "/", ":", "!",
   "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
-  " by ", " is ", " in ", " has ", " on ",
+  " by ", " is ", " in ", " has ", " on ", " with ",
 ]
 
 # Initialize commons store.

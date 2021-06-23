@@ -49,11 +49,11 @@ SocketServer::Endpoint::Endpoint(const char *addr,
 
 SocketServer::~SocketServer() {
   // Close poll descriptor.
-  LOG(INFO) << "Stop event polling";
+  VLOG(1) << "Stop event polling";
   if (pollfd_ != -1) close(pollfd_);
 
   // Delete listeners.
-  LOG(INFO) << "Stop listeners";
+  VLOG(1) << "Stop listeners";
   Endpoint *endpoint = endpoints_;
   while (endpoint != nullptr) {
     Endpoint *next = endpoint->next;
@@ -63,14 +63,14 @@ SocketServer::~SocketServer() {
   }
 
   // Delete connections.
-  LOG(INFO) << "Close connections";
+  VLOG(1) << "Close connections";
   SocketConnection *conn = connections_;
   while (conn != nullptr) {
     SocketConnection *next = conn->next_;
     delete conn;
     conn = next;
   }
-  LOG(INFO) << "Socket server shut down";
+  VLOG(1) << "Socket server shut down";
 }
 
 void SocketServer::Listen(const char *addr, int port,

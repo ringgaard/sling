@@ -34,14 +34,14 @@ cc_library(
   ],
 )
 
-cc_binary(
-  name = "slingdb",
+cc_library(
+  name = "dbserver",
   srcs = ["dbserver.cc"],
+  hdrs = ["dbserver.h"],
   deps = [
     ":db",
     ":dbprotocol",
     "//sling/base",
-    "//sling/file:posix",
     "//sling/net:http-server",
     "//sling/string:numbers",
     "//sling/util:fingerprint",
@@ -58,6 +58,17 @@ cc_library(
     ":dbprotocol",
     "//sling/base",
     "//sling/util:iobuffer",
+  ],
+)
+
+cc_binary(
+  name = "slingdb",
+  srcs = ["slingdb.cc"],
+  deps = [
+    ":dbserver",
+    "//sling/base",
+    "//sling/file:posix",
+    "//sling/net:http-server",
   ],
 )
 

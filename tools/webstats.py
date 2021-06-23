@@ -193,6 +193,7 @@ worms = [
 ]
 
 spammers = set([
+  "ahar.net",
   "aucoinhomes.com",
   "aoul.top",
   "boyddoherty.top",
@@ -200,6 +201,7 @@ spammers = set([
   "fineblog.top",
   "johnnyhaley.top",
   "joyceblog.top",
+  "manwang.net",
   "meendoru.net",
   "myra.top",
   "pacificdentalcenter.com",
