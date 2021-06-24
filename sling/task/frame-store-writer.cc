@@ -58,6 +58,9 @@ class FrameStoreWriter : public Processor {
     bool snapshot = task->Get("snapshot", false);
     store_->CoalesceStrings();
     if (snapshot) store_->AllocateSymbolHeap();
+    if (task->Get("suppress_gc", true)) {
+      store_->UnlockGC();
+    }
     store_->GC();
 
     // Save store to output file.

@@ -155,7 +155,8 @@ photosites = set([
 delimiters = [
   "(", "[", ",", " - ", "|", "/", ":", "!",
   "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
-  " by ", " is ", " in ", " has ", " on ", " with ",
+  " by ", " is ", " in ", " on ", " with ", " at ", " as ",
+  " aka ", " has ", " having ",
 ]
 
 # Initialize commons store.
@@ -188,7 +189,7 @@ for fn in flags.arg.celebmap.split(","):
   with open(fn, "r") as f:
     for line in f.readlines():
       f = line.strip().split(':')
-      name = f[0].strip()
+      name = f[0].replace(".", "").strip()
       itemid = f[1].strip()
       celebmap[name] = itemid
 
@@ -202,6 +203,12 @@ def posting_deleted(sid):
   if len(children) == 0: return True
   reply = children[0]["data"]
   return reply["removed_by_category"] != None
+
+# Check for selfies.
+def selfie(title):
+  for prefix in ["Me ", "My ", "Me,"]:
+    if title.startswith(prefix): return True
+  return False
 
 # Find new postings to subreddits.
 batch = open(flags.arg.batch, 'w')
@@ -235,6 +242,9 @@ for key, value in redditdb.items(chkpt.checkpoint):
         if p != -1: name = name[:p].strip()
       name = name.replace(".", "")
       itemid = celebmap.get(name)
+      if itemid is None and not posting_deleted(key) and not selfie(title):
+        print(sr, key, Unknown, title, url)
+
   if itemid is None: continue
 
   # Discard self-posts.

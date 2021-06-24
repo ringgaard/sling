@@ -170,3 +170,13 @@ cc_library(
   ],
 )
 
+cc_library(
+  name = "json",
+  srcs = ["json.cc"],
+  hdrs = ["json.h"],
+  deps = [
+    ":iobuffer",
+    "//sling/base",
+  ],
+)
+
