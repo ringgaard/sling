@@ -81,16 +81,6 @@ class DBService {
   // Return server information.
   void Options(HTTPRequest *request, HTTPResponse *response);
 
-  // Add key/value pair to response.
-  static void AddPair(HTTPResponse *response, const char *key,
-                      const string &value, bool last = false);
-
-  static void AddNumPair(HTTPResponse *response, const char *key,
-                      int64 value, bool last = false);
-
-  static void AddBoolPair(HTTPResponse *response, const char *key,
-                          bool value, bool last = false);
-
   // Create new database.
   void Create(HTTPRequest *request, HTTPResponse *response);
 
@@ -102,6 +92,9 @@ class DBService {
 
   // Back up database.
   void Backup(HTTPRequest *request, HTTPResponse *response);
+
+  // Return database statistics.
+  void Statusz(HTTPRequest *request, HTTPResponse *response);
 
   // Check that database name is valid.
   static bool ValidDatabaseName(const string &name);

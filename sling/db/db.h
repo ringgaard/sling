@@ -61,6 +61,18 @@ class Database {
     bool timestamped = false;
   };
 
+  // Database performance metrics.
+  enum Metric {
+    GET,      // number of GET operations
+    PUT,      // number of PUT operations
+    DELETE,   // number of DELETE operations
+    NEXT,     // number of NEXT operations
+    READ,     // number of bytes read
+    WRITE,    // number of bytes written
+  };
+
+  const static int NUM_DBMETRICS = WRITE + 1;
+
   // Deallocate database instance.
   ~Database();
 
@@ -104,8 +116,14 @@ class Database {
   // Check if record id is valid.
   bool Valid(uint64 recid);
 
+  // Return size of last shard.
+  uint64 tail_size() const { return writer_ != nullptr ? writer_->Tell() : 0; }
+
+  // Return total size of data shards.
+  uint64 size() const { return size_ + tail_size(); }
+
   // Return the current epoch for the database.
-  uint64 epoch() const { return RecordID(CurrentShard(), writer_->Tell()); }
+  uint64 epoch() const { return RecordID(CurrentShard(), tail_size()); }
 
   // Check if database has unflushed changed.
   bool dirty() const { return dirty_; }
@@ -134,6 +152,9 @@ class Database {
   // Database configuration.
   const Config &config() const { return config_; }
 
+  // Return database performance counter.
+  uint64 counter(Metric metric) const { return counter_[metric]; }
+
   // Error codes.
   enum Errors {
     E_DB_NOT_FOUND = 1000,  // database not found
@@ -161,6 +182,10 @@ class Database {
   int CurrentShard() const {
     return readers_.size() - 1;
   }
+
+  // Increment performance counter.
+  void inc(Metric metric) { ++counter_[metric]; }
+  void add(Metric metric, uint64 value) { counter_[metric] += value; }
 
   // Parse configuration.
   bool ParseConfig(Text config);
@@ -192,6 +217,8 @@ class Database {
   // Recover index from data files.
   Status Recover(uint64 capacity);
 
+  // Increment value for performance counters.
+
   // Database directory.
   string dbdir_;
 
@@ -215,6 +242,12 @@ class Database {
 
   // Bulk mode is used for initial loading of a database.
   bool bulk_ = false;
+
+  // Size of data shards excluding the last one.
+  uint64 size_ = 0;
+
+  // Database performance counters.
+  uint64 counter_[NUM_DBMETRICS] = {};
 };
 
 }  // namespace sling

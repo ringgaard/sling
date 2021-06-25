@@ -8,6 +8,7 @@ cc_library(
     "//sling/base",
     "//sling/file",
     "//sling/util:iobuffer",
+    "//sling/util:json",
     "//sling/util:mutex",
     "//sling/util:thread",
   ],

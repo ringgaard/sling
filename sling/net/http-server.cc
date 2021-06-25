@@ -163,9 +163,9 @@ void HTTPProtocol::HelpHandler(HTTPRequest *req, HTTPResponse *rsp) {
 }
 
 void HTTPProtocol::SocketHandler(HTTPRequest *req, HTTPResponse *rsp) {
-  rsp->set_content_type("text/html");
-  rsp->set_status(200);
   req->conn()->server()->OutputSocketZ(rsp->buffer());
+  rsp->set_content_type("text/json");
+  rsp->set_status(200);
 }
 
 HTTPSession::HTTPSession(HTTPProtocol *http, SocketConnection *conn)

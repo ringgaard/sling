@@ -38,12 +38,33 @@ class JSON {
   class Object {
    public:
     // Add key/value pair to object. Takes ownership of arrays and objects.
-    void Add(const string &key, int64 value);
-    void Add(const string &key, double value);
-    void Add(const string &key, bool value);
-    void Add(const string &key, const string &value);
-    void Add(const string &key, Object *value);
-    void Add(const string &key, Array *value);
+    void Add(const string &key, int64 value) {
+      items_.emplace_back(key, JSON(value));
+    }
+    void Add(const string &key, uint64 value) {
+      items_.emplace_back(key, JSON(value));
+    }
+    void Add(const string &key, int value) {
+      items_.emplace_back(key, JSON(value));
+    }
+    void Add(const string &key, double value) {
+      items_.emplace_back(key, JSON(value));
+    }
+    void Add(const string &key, bool value) {
+      items_.emplace_back(key, JSON(value));
+    }
+    void Add(const string &key, const string &value) {
+      items_.emplace_back(key, JSON(value));
+    }
+    void Add(const string &key, const char *value) {
+      items_.emplace_back(key, JSON(value));
+    }
+    void Add(const string &key, Object *value) {
+      items_.emplace_back(key, JSON(value));
+    }
+    void Add(const string &key, Array *value) {
+      items_.emplace_back(key, JSON(value));
+    }
 
     // Add new object with key to object.
     Object *AddObject(const string &key);
@@ -63,18 +84,39 @@ class JSON {
   class Array {
    public:
     // Add value to array. Takes ownership of arrays and objects.
-    void Add(int64 value);
-    void Add(double value);
-    void Add(bool value);
-    void Add(const string &value);
-    void Add(Object *value);
-    void Add(Array *value);
+    void Add(int64 value) {
+      elements_.emplace_back(JSON(value));
+    }
+    void Add(uint64 value) {
+      elements_.emplace_back(JSON(value));
+    }
+    void Add(int value) {
+      elements_.emplace_back(JSON(value));
+    }
+    void Add(double value) {
+      elements_.emplace_back(JSON(value));
+    }
+    void Add(bool value) {
+      elements_.emplace_back(JSON(value));
+    }
+    void Add(const string &value) {
+      elements_.emplace_back(JSON(value));
+    }
+    void Add(const char *value) {
+      elements_.emplace_back(JSON(value));
+    }
+    void Add(Object *value) {
+      elements_.emplace_back(JSON(value));
+    }
+    void Add(Array *value) {
+      elements_.emplace_back(JSON(value));
+    }
 
     // Add new object element to array.
-    Object *AddObject(const string &key);
+    Object *AddObject();
 
     // Add new array element to array.
-    Array *AddArray(const string &key);
+    Array *AddArray();
 
     // Write array as JSON to output.
     void Write(IOBuffer *buffer) const;
@@ -92,9 +134,12 @@ class JSON {
 
   // Initialize JSON value. Takes ownership of arrays and objects.
   JSON(int64 value) : type_(INT), i_(value) {}
+  JSON(uint64 value) : type_(INT), i_(value) {}
+  JSON(int value) : type_(INT), i_(value) {}
   JSON(double value) : type_(FLOAT), f_(value) {}
   JSON(bool value) : type_(BOOL), b_(value) {}
   JSON(const string &value) : type_(STRING), s_(new string(value)) {}
+  JSON(const char *value) : type_(STRING), s_(new string(value)) {}
   JSON(Object *value) : type_(OBJECT), o_(value) {}
   JSON(Array *value) : type_(ARRAY), a_(value) {}
 
@@ -118,6 +163,7 @@ class JSON {
    Array *a_;   // ARRAY
   };
 
+  // No copy or assign.
   JSON& operator=(const JSON &) = delete;
   JSON(const JSON &) = delete;
 };

@@ -58,30 +58,6 @@ void JSON::Write(IOBuffer *output) const {
   }
 }
 
-void JSON::Object::Add(const string &key, int64 value) {
-  items_.emplace_back(key, JSON(value));
-}
-
-void JSON::Object::Add(const string &key, double value) {
-  items_.emplace_back(key, JSON(value));
-}
-
-void JSON::Object::Add(const string &key, bool value) {
-  items_.emplace_back(key, JSON(value));
-}
-
-void JSON::Object::Add(const string &key, const string &value) {
-  items_.emplace_back(key, JSON(value));
-}
-
-void JSON::Object::Add(const string &key, Object *value) {
-  items_.emplace_back(key, JSON(value));
-}
-
-void JSON::Object::Add(const string &key, Array *value) {
-  items_.emplace_back(key, JSON(value));
-}
-
 JSON::Object *JSON::Object::AddObject(const string &key) {
   JSON::Object *o = new JSON::Object();
   items_.emplace_back(key, JSON(o));
@@ -106,37 +82,13 @@ void JSON::Object::Write(IOBuffer *output) const {
   output->Write('}');
 }
 
-void JSON::Array::Add(int64 value) {
-  elements_.emplace_back(JSON(value));
-}
-
-void JSON::Array::Add(double value) {
-  elements_.emplace_back(JSON(value));
-}
-
-void JSON::Array::Add(bool value) {
-  elements_.emplace_back(JSON(value));
-}
-
-void JSON::Array::Add(const string &value) {
-  elements_.emplace_back(JSON(value));
-}
-
-void JSON::Array::Add(Object *value) {
-  elements_.emplace_back(JSON(value));
-}
-
-void JSON::Array::Add(Array *value) {
-  elements_.emplace_back(JSON(value));
-}
-
-JSON::Object *JSON::Array::AddObject(const string &key) {
+JSON::Object *JSON::Array::AddObject() {
   JSON::Object *o = new JSON::Object();
   elements_.emplace_back(JSON(o));
   return o;
 }
 
-JSON::Array *JSON::Array::AddArray(const string &key) {
+JSON::Array *JSON::Array::AddArray() {
   JSON::Array *a = new JSON::Array();
   elements_.emplace_back(JSON(a));
   return a;
@@ -148,7 +100,7 @@ void JSON::Array::Write(IOBuffer *output) const {
     if (i > 0) output->Write(",");
     elements_[i].Write(output);
   }
-  output->Write('}');
+  output->Write(']');
 }
 
 }  // namespace sling

@@ -153,7 +153,8 @@ photosites = set([
 
 # Name delimiters.
 delimiters = [
-  "(", "[", ",", " - ", "|", "/", ":", "!",
+  "(", "[", ",", " - ", "|", "/", ":", "!", " – ",
+  " circa ", " c. ",
   "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
   " by ", " is ", " in ", " on ", " with ", " at ", " as ",
   " aka ", " has ", " having ",
@@ -188,7 +189,12 @@ celebmap = {}
 for fn in flags.arg.celebmap.split(","):
   with open(fn, "r") as f:
     for line in f.readlines():
-      f = line.strip().split(':')
+      line = line.strip()
+      if len(line) == 0: continue
+      f = line.split(':')
+      if len(f) != 2:
+        print("bad line in celebmap:", line)
+        continue
       name = f[0].replace(".", "").strip()
       itemid = f[1].strip()
       celebmap[name] = itemid
@@ -232,6 +238,7 @@ for key, value in redditdb.items(chkpt.checkpoint):
     if sr in general_subreddits:
       # Skip photos with multiple persons.
       if " and " in title: continue
+      if " And " in title: continue
       if " & " in title: continue
       if " &amp; " in title: continue
 
@@ -242,10 +249,8 @@ for key, value in redditdb.items(chkpt.checkpoint):
         if p != -1: name = name[:p].strip()
       name = name.replace(".", "")
       itemid = celebmap.get(name)
-      if itemid is None and not posting_deleted(key) and not selfie(title):
-        print(sr, key, Unknown, title, url)
-
-  if itemid is None: continue
+    else:
+      continue
 
   # Discard self-posts.
   if posting[n_is_self]: continue
@@ -265,6 +270,11 @@ for key, value in redditdb.items(chkpt.checkpoint):
 
   # Check if posting has been deleted.
   if posting_deleted(key): continue
+
+  # Log unknown postings.
+  if itemid is None:
+    if not selfie(title): print(sr, key, "UNKNOWN", title, url)
+    continue
 
   # Output photo to batch list.
   nsfw = posting[n_over_18]

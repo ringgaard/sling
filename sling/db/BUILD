@@ -45,6 +45,7 @@ cc_library(
     "//sling/net:http-server",
     "//sling/string:numbers",
     "//sling/util:fingerprint",
+    "//sling/util:json",
     "//sling/util:mutex",
     "//sling/util:thread",
   ],

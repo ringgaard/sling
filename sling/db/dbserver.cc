@@ -24,6 +24,7 @@
 #include "sling/net/http-server.h"
 #include "sling/string/numbers.h"
 #include "sling/util/fingerprint.h"
+#include "sling/util/json.h"
 #include "sling/util/thread.h"
 
 namespace sling {
@@ -57,6 +58,7 @@ DBService::~DBService() {
 }
 
 void DBService::Register(HTTPServer *http) {
+  http->Register("/statusz", this, &DBService::Statusz);
   http->Register("/", this, &DBService::Process);
 }
 
@@ -498,81 +500,32 @@ void DBService::Options(HTTPRequest *request, HTTPResponse *response) {
   }
 
   // General server information.
-  if (strcmp(request->path(), "/") == 0) {
-    response->Append("{\n");
+  JSON::Object json;
+  json.Add("pid", getpid());
 
-    response->Append("\"databases\": [\n");
-    MutexLock lock(&mu_);
-    for (auto &it : mounts_) {
-      DBMount *mount = it.second;
-      mount->Acquire();
-      response->Append("  {\"name\": \"");
-      response->Append(mount->name);
-      response->Append("\", \"records\": ");
-      response->AppendNumber(mount->db.num_records());
-      response->Append("}\n");
-    }
-    response->Append("],\n");
+  // Output database information.
+  JSON::Array *databases = json.AddArray("databases");
+  MutexLock lock(&mu_);
+  for (auto &it : mounts_) {
+    DBMount *mount = it.second;
+    mount->Acquire();
+    JSON::Object *dbinfo = databases->AddObject();
 
-    AddNumPair(response, "pid", getpid(), true);
-
-    response->Append("}\n");
-    response->set_content_type("text/json");
-    return;
+    dbinfo->Add("name", mount->name);
+    dbinfo->Add("dbdir", mount->db.dbdir());
+    dbinfo->Add("size", mount->db.size());
+    dbinfo->Add("records", mount->db.num_records());
+    dbinfo->Add("epoch", mount->db.epoch());
+    dbinfo->Add("dirty", mount->db.dirty());
+    dbinfo->Add("bulk", mount->db.bulk());
+    dbinfo->Add("read_only", mount->db.read_only());
+    dbinfo->Add("timestamped", mount->db.timestamped());
+    dbinfo->Add("deletions", mount->db.num_deleted());
+    dbinfo->Add("index_capacity", mount->db.index_capacity());
   }
 
-  // Database-specific information.
-  DBLock l(this, request->path());
-  if (l.mount() == nullptr) {
-    response->SendError(404, nullptr, "Database not found");
-    return;
-  }
-  response->Append("{\n");
-  Database *db = l.db();
-  AddPair(response, "name", l.mount()->name);
-  AddNumPair(response, "epoch", db->epoch());
-  AddPair(response, "dbdir", db->dbdir());
-  AddBoolPair(response, "dirty", db->dirty());
-  AddBoolPair(response, "bulk", db->bulk());
-  AddBoolPair(response, "read_only", db->read_only());
-  AddBoolPair(response, "timestamped", db->timestamped());
-  AddNumPair(response, "records", db->num_records());
-  AddNumPair(response, "deletions", db->num_deleted());
-  AddNumPair(response, "index_capacity", db->index_capacity(), true);
-  response->Append("}\n");
+  json.Write(response->buffer());
   response->set_content_type("text/json");
-  response->Set("Epoch", l.db()->epoch());
-}
-
-void DBService::AddPair(HTTPResponse *response, const char *key,
-                        const string &value, bool last) {
-  response->Append("\"");
-  response->Append(key);
-  response->Append("\": \"");
-  response->Append(value);
-  response->Append("\"");
-  if (!last) response->Append(",");
-  response->Append("\n");
-}
-
-void DBService::AddNumPair(HTTPResponse *response, const char *key,
-                           int64 value, bool last) {
-  response->Append("\"");
-  response->Append(key);
-  response->Append("\": ");
-  response->AppendNumber(value);
-  if (!last) response->Append(",");
-  response->Append("\n");
-}
-
-void DBService::AddBoolPair(HTTPResponse *response, const char *key,
-                            bool value, bool last) {
-  response->Append("\"");
-  response->Append(key);
-  response->Append("\": ");
-  response->Append(value ? "true" : "false");
-  if (!last) response->Append(",");
-  response->Append("\n");
 }
 
 void DBService::Create(HTTPRequest *request, HTTPResponse *response) {
@@ -698,6 +651,32 @@ void DBService::Backup(HTTPRequest *request, HTTPResponse *response) {
   // Database backup sucessfully.
   LOG(INFO) << "Database backed up: " << name;
   response->SendError(200, nullptr, "Database backed up");
+}
+
+void DBService::Statusz(HTTPRequest *request, HTTPResponse *response) {
+  // General server information.
+  JSON::Object json;
+  json.Add("time", time(nullptr));
+
+  // Output database statistics.
+  JSON::Array *databases = json.AddArray("databases");
+  MutexLock lock(&mu_);
+  for (auto &it : mounts_) {
+    DBMount *mount = it.second;
+    mount->Acquire();
+    JSON::Object *dbstats = databases->AddObject();
+
+    dbstats->Add("name", mount->name);
+    dbstats->Add("GET", mount->db.counter(Database::GET));
+    dbstats->Add("PUT", mount->db.counter(Database::PUT));
+    dbstats->Add("DELETE", mount->db.counter(Database::DELETE));
+    dbstats->Add("NEXT", mount->db.counter(Database::NEXT));
+    dbstats->Add("READ", mount->db.counter(Database::READ));
+    dbstats->Add("WRITE", mount->db.counter(Database::WRITE));
+  }
+
+  json.Write(response->buffer());
+  response->set_content_type("text/json");
 }
 
 bool DBService::ValidDatabaseName(const string &name) {

@@ -26,6 +26,7 @@
 #include <string>
 
 #include "sling/base/logging.h"
+#include "sling/util/json.h"
 
 namespace sling {
 
@@ -292,52 +293,32 @@ void SocketServer::ShutdownIdleConnections() {
 void SocketServer::OutputSocketZ(IOBuffer *out) const {
   MutexLock lock(&mu_);
 
-  out->Write("<html><head><title>sockz</title></head><body>\n");
-
-  out->Write("<h1>Connections</h1>\n");
-  out->Write("<table border=\"1\"><tr>\n");
-  out->Write("<td>Socket</td>");
-  out->Write("<td>Protocol</td>");
-  out->Write("<td>Client address</td>");
-  out->Write("<td>Received</td>");
-  out->Write("<td>Sent</td>");
-  out->Write("<td>Requests</td>");
-  out->Write("<td>Socket status</td>");
-  out->Write("<td>State</td>");
-  out->Write("<td>Idle</td>");
-  out->Write("<td>Agent</td>");
-  out->Write("</tr>\n");
-
+  JSON::Object json;
   time_t now = time(0);
+  json.Add("workers", workers_.size());
+  json.Add("active", active_);
+  json.Add("idle", idle_);
+
+  // Connections.
+  JSON::Array *conns = json.AddArray("connections");
   for (auto *conn = connections_; conn != nullptr; conn = conn->next_) {
-    out->Write("<tr>");
-
-    // Socket.
-    out->Write("<td>" + std::to_string(conn->sock_) + "</td>");
-
-    // Protocol.
-    out->Write("<td>");
-    out->Write(conn->session()->Name());
-    out->Write("</td>");
+    JSON::Object *conninfo = conns->AddObject();
+    conninfo->Add("socket", conn->sock_);
+    conninfo->Add("protocol", conn->session()->Name());
 
     // Client address.
     struct sockaddr_in peer;
     socklen_t plen = sizeof(peer);
     struct sockaddr *saddr = reinterpret_cast<sockaddr *>(&peer);
-    if (getpeername(conn->sock_, saddr, &plen) == -1) {
-      out->Write("<td>?</td>");
-    } else {
-      out->Write("<td>");
-      out->Write(inet_ntoa(peer.sin_addr));
-      out->Write(":");
-      out->Write(std::to_string(ntohs(peer.sin_port)));
-      out->Write("</td>");
+    if (getpeername(conn->sock_, saddr, &plen) != -1) {
+      conninfo->Add("client_address", inet_ntoa(peer.sin_addr));
+      conninfo->Add("client_port", ntohs(peer.sin_port));
     }
 
     // Received, transmitted, and number of requests.
-    out->Write("<td>" + std::to_string(conn->rx_bytes_) + "</td>");
-    out->Write("<td>" + std::to_string(conn->tx_bytes_) + "</td>");
-    out->Write("<td>" + std::to_string(conn->num_requests_) + "</td>");
+    conninfo->Add("rx_bytes", conn->rx_bytes_);
+    conninfo->Add("tx_bytes", conn->tx_bytes_);
+    conninfo->Add("requests", conn->num_requests_);
 
     // Socket state.
     int err = 0;
@@ -349,60 +330,38 @@ void SocketServer::OutputSocketZ(IOBuffer *out) const {
     } else if (err != 0) {
       error = strerror(err);
     }
-    out->Write("<td>");
-    out->Write(error);
-    out->Write("</td>");
+    conninfo->Add("status", error);
 
     // Connection state.
-    out->Write("<td>");
-    out->Write(conn->State());
-    out->Write("</td>");
+    conninfo->Add("state", conn->State());
 
     // Idle time.
-    out->Write("<td>" + std::to_string(now - conn->last_) + "</td>");
+    conninfo->Add("idle", now - conn->last_);
 
     // User agent.
-    out->Write("<td>");
-    out->Write(conn->session()->Agent());
-    out->Write("</td>");
-
-    out->Write("</tr>\n");
+    conninfo->Add("agent", conn->session()->Agent());
   }
-  out->Write("</table>\n");
 
-  out->Write("<h1>Endpoints</h1>\n");
-  out->Write("<table border=\"1\"><tr>\n");
-  out->Write("<td>Port</td>");
-  out->Write("<td>Socket</td>");
-  out->Write("<td>Protocol</td>");
-  out->Write("<td>Connects</td>");
-  out->Write("</tr>\n");
+  // Endpoints.
+  JSON::Array *endpoints = json.AddArray("endpoints");
   for (auto *ep = endpoints_; ep != nullptr; ep = ep->next) {
+    JSON::Object *epinfo = endpoints->AddObject();
+
     // Port.
     int port = ntohs(ep->sin.sin_port);
-    out->Write("<td>" + std::to_string(port) + "</td>");
+    epinfo->Add("port", port);
 
     // Socket.
-    out->Write("<td>" + std::to_string(ep->sock) + "</td>");
+    epinfo->Add("socket", ep->sock);
 
     // Protocol.
-    out->Write("<td>");
-    out->Write(ep->protocol->Name());
-    out->Write("</td>");
+    epinfo->Add("protocol", ep->protocol->Name());
 
     // Connects.
-    out->Write("<td>" + std::to_string(ep->num_connects) + "</td>");
-
-    out->Write("</tr>\n");
+    epinfo->Add("connects", ep->num_connects);
   }
-  out->Write("</table>\n");
 
-  out->Write("<h1>Worker threads</h1>\n");
-  out->Write("<p>" + std::to_string(workers_.size()) + " worker threads, " +
-              std::to_string(active_) + " active, " +
-              std::to_string(idle_) + " idle</p>\n");
-
-  out->Write("</body></html>\n");
+  json.Write(out);
 }
 
 SocketConnection::SocketConnection(SocketServer *server, int sock,

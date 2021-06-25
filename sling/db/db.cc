@@ -58,6 +58,7 @@ Status Database::Open(const string &dbdir, bool recover) {
   File::Match(dbdir_ + "/data-*", &datafiles);
   for (const string &datafile : datafiles) {
     RecordReader *reader = new RecordReader(datafile, config_.record);
+    size_ += reader->size();
     readers_.push_back(reader);
     last = datafile;
   }
@@ -69,6 +70,7 @@ Status Database::Open(const string &dbdir, bool recover) {
     File::Match(partition + "/data-*", &datafiles);
     for (const string &datafile : datafiles) {
       RecordReader *reader = new RecordReader(datafile, config_.record);
+      size_ += reader->size();
       readers_.push_back(reader);
       last = datafile;
     }
@@ -82,6 +84,7 @@ Status Database::Open(const string &dbdir, bool recover) {
   if (!config_.read_only) {
     config_.record.append = true;
     writer_ = new RecordWriter(last, config_.record);
+    size_ -= writer_->Tell();
   }
 
   // Open database index.
@@ -215,6 +218,7 @@ Status Database::Backup() {
 
 bool Database::Get(const Slice &key, Record *record, bool with_value) {
   // Compute record key fingerprint.
+  inc(GET);
   uint64 fp = Fingerprint(key.data(), key.size());
 
   // Loop over matching records in index.
@@ -237,6 +241,7 @@ bool Database::Get(const Slice &key, Record *record, bool with_value) {
 
 uint64 Database::Put(const Record &record, DBMode mode, DBResult *result) {
   // Check if database is read-only.
+  inc(PUT);
   if (config_.read_only) return DatabaseIndex::NVAL;
 
   // The value cannot be empty, since this is used for marking deleted records.
@@ -306,6 +311,7 @@ uint64 Database::Put(const Record &record, DBMode mode, DBResult *result) {
   st = writer_->Write(record, &pos);
   if (!st) return -1;
   uint64 newid = RecordID(CurrentShard(), pos);
+  add(WRITE, record.value.size());
 
   // Update index.
   if (recid == DatabaseIndex::NVAL) {
@@ -324,6 +330,7 @@ uint64 Database::Put(const Record &record, DBMode mode, DBResult *result) {
 
 bool Database::Delete(const Slice &key) {
   // Check if database is read-only.
+  inc(DELETE);
   if (config_.read_only) return false;
 
   // Compute record key fingerprint.
@@ -364,6 +371,7 @@ bool Database::Delete(const Slice &key) {
 bool Database::Next(Record *record, uint64 *iterator,
                     bool deletions,
                     bool with_value) {
+  inc(NEXT);
   uint64 shard = Shard(*iterator);
   uint64 pos = Position(*iterator);
   for (;;) {
@@ -400,6 +408,7 @@ bool Database::Next(Record *record, uint64 *iterator,
     if (with_value) {
       Status st = reader->Read(record);
       if (!st) return false;
+      add(READ, record->value.size());
     } else {
       Status st = reader->ReadKey(record);
       if (!st) return false;
@@ -475,6 +484,7 @@ Status Database::ReadRecord(uint64 recid, Record *record, bool with_value) {
   if (!st) return st;
   if (with_value) {
     st = reader->Read(record);
+    add(READ, record->value.size());
   } else {
     st = reader->ReadKey(record);
   }
