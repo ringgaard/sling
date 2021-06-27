@@ -82,6 +82,7 @@ class KbApp extends Component {
     if (this.find("#websearch")) {
       this.bind("#websearch", "click", e => this.onwebsearch(e));
     }
+    window.onkeydown = e => this.onkeypress(e);
     window.onpopstate = e => this.onpopstate(e);
 
     let itemid = document.head.querySelector('meta[property="itemid"]');
@@ -135,6 +136,12 @@ class KbApp extends Component {
     if (query && query.length > 0) {
       let url = "https://www.google.com/search?q=" + encodeURIComponent(query);
       window.open(url, "_blank", "noopener,noreferrer");
+    }
+  }
+
+  onkeypress(e) {
+    if (e.keyCode == 27) {
+      this.find("#search").clear();
     }
   }
 }
@@ -231,6 +238,10 @@ class KbSearchBox extends Component {
 
   query() {
     return this.find("md-search").query();
+  }
+
+  clear() {
+    return this.find("md-search").clear();
   }
 
   render() {

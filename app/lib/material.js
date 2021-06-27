@@ -627,6 +627,13 @@ export class MdSearch extends Component {
     return this.find("input").value;
   }
 
+  clear() {
+    let input = this.find("input");
+    input.value = null;
+    this.populate(null, null);
+    input.focus();
+  }
+
   render() {
     let attrs = [];
     if (this.props.placeholder) {
