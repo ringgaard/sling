@@ -59,6 +59,9 @@ class ItemReconciler : public task::FrameProcessor {
   }
 
   void Process(Slice key, const Frame &frame) override {
+    // Skip empty frames.
+    if (frame.size() == 0) return;
+
     // Lookup the key in the store to get the reconciled id for the frame.
     Store *store = frame.store();
     Text id = key;

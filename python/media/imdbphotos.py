@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Fetch photos from IMDB."""
+"""Fetch photo profiles from IMDB."""
 
-import collections
 import requests
+import json
 
 import sling
 import sling.flags as flags
@@ -24,34 +24,72 @@ flags.define("--kb",
              default="data/e/kb/kb.sling",
              help="Knowledge base")
 
-flags.parse()
+flags.define("--imdb",
+             help="database for storing IMDB profiles",
+             default="imdb",
+             metavar="DB")
 
-#user_agent = "SLING/1.0 bot (https://github.com/ringgaard/sling)"
-#session = requests.Session()
+flags.parse()
+session = requests.Session()
+db = sling.Database(flags.arg.imdb, "imdbphotos")
 
 # Load knowledge base.
 kb = sling.Store()
 kb.load(flags.arg.kb)
+p_id = kb["id"]
+p_is = kb["is"]
+p_media = kb["media"]
+p_imdb = kb["P345"]
+p_stated_in = kb["P248"]
+n_imdb = kb["Q37312"]
+kb.freeze()
 
-n_image = kb["P18"]
-n_media = kb["media"]
-n_imdb = kb["P345"]
-
-
-# Find items with IMDB id but no photos.
-types = collections.defaultdict(int)
-num_noimage = 0
+# Find items with IMDB id.
+num_profiles = 0
+num_items = 0
 for item in kb:
-  imdb = item[n_imdb]
+  # Check for IMDB id.
+  num_items += 1
+  imdb = item[p_imdb]
   if imdb is None: continue
-  imdb = kb.resolve(imdb)
-  kind = imdb[0:2]
-  types[kind] += 1
-  if kind != "nm": continue
-  if item[n_image] != None or item[n_media] != None:
-    continue
-  print(item.id, imdb, item.name)
-  num_noimage += 1
+  imdbid = kb.resolve(imdb)
 
-print("noimage", num_noimage, "types", types)
+  # Skip unless it is a person.
+  kind = imdbid[0:2]
+  if kind != "nm": continue
+
+  # Skip if profile already in database.
+  key = "P345/" + imdbid
+  if key in db: continue
+
+  # Fetch info from IMDB.
+  r = session.get("https://sg.media-imdb.com/suggests/n/%s.json" % imdbid)
+  if r.status_code == 503:
+    print("UNAVAILABLE", item.id, imdbid, item.name, )
+    continue
+  r.raise_for_status()
+  data = r.content[r.content.find(b'(') + 1 : -1]
+  info = json.loads(data)
+
+  # Get image url.
+  try:
+    d = info["d"][0]
+    i = d.get("i")
+    if i is None: continue
+    if len(i) == 0: continue
+    url = i[0]
+  except Exception as e:
+    print("Error", e, info)
+    continue
+
+  # Save profile.
+  store = sling.Store(kb)
+  image = store.frame([(p_is, url), (p_stated_in, n_imdb)])
+  profile = store.frame([(p_media, image), (p_imdb, imdbid)])
+  db[key] = profile.data(binary=True)
+
+  num_profiles += 1
+  print(num_items, num_profiles, item.id, imdbid, item.name, url)
+
+print(num_items, "items", num_profiles, "imdb profiles updated")
 

@@ -59,7 +59,12 @@ flags.define("--photodb",
 
 flags.define("--celebdb",
              help="celebrity profile database",
-             default="photo",
+             default="celeb",
+             metavar="DBURL")
+
+flags.define("--imdb",
+             help="IMDB profile database",
+             default="imdb",
              metavar="DBURL")
 
 def post_process_flags(arg):
@@ -123,6 +128,10 @@ def celebdb():
 def photodb():
   """Photo database."""
   return flags.arg.photodb
+
+def imdb():
+  """IMDB profile database."""
+  return flags.arg.imdb
 
 def wikidir(language=None):
   """Location of wiki datasets."""

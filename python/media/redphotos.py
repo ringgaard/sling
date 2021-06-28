@@ -157,7 +157,8 @@ delimiters = [
   " circa ", " c. ",
   "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
   " by ", " is ", " in ", " on ", " with ", " at ", " as ", " from ",
-  " aka ", " has ", " having ",
+  " aka ", " has ", " having ", " performing ", " during ", " being ",
+  " posing ", " photographed ",
 ]
 
 # Initialize commons store.

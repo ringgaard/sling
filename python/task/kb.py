@@ -52,6 +52,10 @@ class KnowledgeBaseWorkflow:
     """Resource for photo database."""
     return self.wf.resource(corpora.photodb(), format="db/frames")
 
+  def imdb(self):
+    """Resource for imdb profile database."""
+    return self.wf.resource(corpora.imdb(), format="db/frames")
+
   def celebs(self):
     """Resource for celebrity profiles."""
     return self.wf.resource(corpora.celebdb(), format="db/frames")
@@ -75,6 +79,7 @@ class KnowledgeBaseWorkflow:
   def extended_item_sources(self):
     return self.wf.bundle(
       self.media(),
+      self.imdb(),
       self.celebs(),
       self.photos(),
       self.data.wikipedia_summaries(),
