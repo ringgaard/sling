@@ -17,7 +17,7 @@ const photo_sources = {
   "live.staticflickr.com": "flickr.com",
   "ilarge.lisimg.com": "listal.com",
   "gstatic.com": "google.com",
-  "m.media-amazon.com": "imdb.com",
+  "media-amazon.com": "imdb.com",
 }
 
 function mod(m, n) {

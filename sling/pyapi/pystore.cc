@@ -207,6 +207,9 @@ PyObject *PyStore::Parse(PyObject *args, PyObject *kw) {
                 &object, &force_binary, &json, &xml, &ttl);
   if (!ok) return nullptr;
 
+  // Pass-through empty data.
+  if (object == nullptr || object == Py_None) Py_RETURN_NONE;
+
   // Check that store is writable.
   if (!Writable()) return nullptr;
 

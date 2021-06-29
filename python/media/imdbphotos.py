@@ -42,6 +42,7 @@ p_media = kb["media"]
 p_imdb = kb["P345"]
 p_stated_in = kb["P248"]
 n_imdb = kb["Q37312"]
+empty_profile = kb.frame([])
 kb.freeze()
 
 # Find items with IMDB id.
@@ -75,17 +76,22 @@ for item in kb:
   try:
     d = info["d"][0]
     i = d.get("i")
-    if i is None: continue
-    if len(i) == 0: continue
-    url = i[0]
   except Exception as e:
     print("Error", e, info)
     continue
 
+  if i is None or len(i) == 0:
+    # Create empty profile if there is no photo.
+    profile = empty_profile
+    url = "(no photo)"
+  else:
+    # Create profile for person.
+    url = i[0]
+    store = sling.Store(kb)
+    image = store.frame([(p_is, url), (p_stated_in, n_imdb)])
+    profile = store.frame([(p_media, image), (p_imdb, imdbid)])
+
   # Save profile.
-  store = sling.Store(kb)
-  image = store.frame([(p_is, url), (p_stated_in, n_imdb)])
-  profile = store.frame([(p_media, image), (p_imdb, imdbid)])
   db[key] = profile.data(binary=True)
 
   num_profiles += 1

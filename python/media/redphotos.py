@@ -57,6 +57,7 @@ blacklist = set([
   "billsimmons",
   "bingingwithbabish",
   "brandonsanderson",
+  "BritneySpears",
   "CaptainSparklez",
   "CDawgVA",
   "codyko",
@@ -75,7 +76,6 @@ blacklist = set([
   "EsfandTV",
   "forsen",
   "FrankOcean",
-  "Hasan_Piker",
   "HowToBasic",
   "InternetCommentEtiq",
   "jacksepticeye",
@@ -229,6 +229,7 @@ for key, value in redditdb.items(chkpt.checkpoint):
   # Discard posting with bad titles.
   title = posting[n_title]
   if type(title) is bytes: continue
+  title = title.replace('\n', ' ').strip()
 
   # Check for personal subreddit.
   sr = posting[n_subreddit]
