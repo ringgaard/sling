@@ -66,7 +66,7 @@ for item in kb:
   # Fetch info from IMDB.
   r = session.get("https://sg.media-imdb.com/suggests/n/%s.json" % imdbid)
   if r.status_code == 503:
-    print("UNAVAILABLE", item.id, imdbid, item.name, )
+    print("UNAVAILABLE", item.id, imdbid, item.name)
     continue
   r.raise_for_status()
   data = r.content[r.content.find(b'(') + 1 : -1]

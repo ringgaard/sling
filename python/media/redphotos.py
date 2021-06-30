@@ -153,12 +153,12 @@ photosites = set([
 
 # Name delimiters.
 delimiters = [
-  "(", "[", ",", " - ", "|", "/", ":", "!", " – ",
+  "(", "[", ",", " - ", "|", "/", ":", "!", " – ", "'s ", "’s ",
   " circa ", " c. ",
   "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
   " by ", " is ", " in ", " on ", " with ", " at ", " as ", " from ",
   " aka ", " has ", " having ", " performing ", " during ", " being ",
-  " posing ", " photographed ",
+  " posing ", " photographed ", " dressed ",
 ]
 
 # Initialize commons store.
@@ -246,10 +246,12 @@ for key, value in redditdb.items(chkpt.checkpoint):
 
       # Try to match title to name.
       name = title
+      cut = len(name)
       for d in delimiters:
         p = name.find(d)
-        if p != -1: name = name[:p].strip()
-      name = name.replace(".", "")
+        if p != -1 and p < cut: cut = p
+      name = name[:cut].replace(".", "").strip()
+
       itemid = celebmap.get(name)
     else:
       continue
