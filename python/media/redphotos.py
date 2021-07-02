@@ -89,6 +89,7 @@ blacklist = set([
   "johnoliver",
   "JordanPeterson",
   "jschlatt",
+  "JuiceWRLD",
   "Kanye",
   "KendrickLamar",
   "ksi",
@@ -156,7 +157,7 @@ delimiters = [
   "(", "[", ",", " - ", "|", "/", ":", "!", " – ", "'s ", "’s ",
   " circa ", " c. ",
   "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
-  " by ", " is ", " in ", " on ", " with ", " at ", " as ", " from ",
+  " by ", " is ", " was ", " in ", " on ", " with ", " at ", " as ", " from ",
   " aka ", " has ", " having ", " performing ", " during ", " being ",
   " posing ", " photographed ", " dressed ",
 ]

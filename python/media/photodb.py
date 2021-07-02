@@ -18,8 +18,10 @@ import json
 import requests
 import os
 import re
-import sling
+import sys
+import traceback
 import urllib.parse
+import sling
 import sling.flags as flags
 
 flags.define("--id",
@@ -110,6 +112,11 @@ flags.define("--dryrun",
 flags.define("--batch",
              default=None,
              help="batch file for bulk import")
+
+flags.define("--cont",
+             help="continue on errors in batch mode",
+             default=False,
+             action="store_true")
 
 flags.define("url",
              nargs="*",
@@ -354,7 +361,17 @@ def add_reddit_gallery(profile, galleryid, isnsfw=False):
     # Add media frame to profile.
     return add_media(profile, url, caption, nsfw)
 
-  items = reply["gallery_data"]["items"]
+
+  # Get gallery items.
+  gallery = reply.get("gallery_data")
+  if gallery is None:
+    print("Skipping missing gallery data in", galleryid);
+    return 0
+  items = gallery.get("items")
+  if items is None:
+    print("Skipping missing gallery items in", galleryid);
+    return 0
+
   count = 0
   serial = 1
   for item in items:
@@ -493,11 +510,18 @@ def bulk_load(batch):
       print("*** PROFILE %s, %d existing photos ***************************" %
             (id, profile.count(n_media)))
 
-    # Add media to profile
-    n = add_media(profile, url, flags.arg.caption, nsfw or flags.arg.nsfw)
-    if n > 0:
-      num_photos += n
-      updated.add(id)
+    # Add media to profile.
+    try:
+      n = add_media(profile, url, flags.arg.caption, nsfw or flags.arg.nsfw)
+      if n > 0:
+        num_photos += n
+        updated.add(id)
+    except KeyboardInterrupt as error:
+      sys.exit()
+    except:
+      if not flags.arg.cont: raise
+      print("Error processing", url, "for", id)
+      traceback.print_exc(file=sys.stdout)
 
   fin.close()
 
