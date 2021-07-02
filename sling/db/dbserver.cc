@@ -58,6 +58,8 @@ DBService::~DBService() {
 }
 
 void DBService::Register(HTTPServer *http) {
+  common_.Register(http);
+  app_.Register(http);
   http->Register("/statusz", this, &DBService::Statusz);
   http->Register("/", this, &DBService::Process);
 }
@@ -673,6 +675,8 @@ void DBService::Statusz(HTTPRequest *request, HTTPResponse *response) {
     dbstats->Add("NEXT", mount->db.counter(Database::NEXT));
     dbstats->Add("READ", mount->db.counter(Database::READ));
     dbstats->Add("WRITE", mount->db.counter(Database::WRITE));
+    dbstats->Add("HIT", mount->db.counter(Database::HIT));
+    dbstats->Add("MISS", mount->db.counter(Database::MISS));
   }
 
   json.Write(response->buffer());

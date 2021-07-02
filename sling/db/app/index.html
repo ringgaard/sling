@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name=viewport content="width=device-width, initial-scale=1">
+  <title>SLINGDB</title>
+  <link rel="icon" href="/common/image/appicon.ico" type="image/x-icon" />
+  <script type="module" src="/common/lib/material.js"></script>
+  <script type="module" src="dbadmin.js"></script>
+</head>
+<body>
+  <db-app id="app">
+    <md-column-layout>
+
+      <md-toolbar>
+        <md-toolbar-logo></md-toolbar-logo>
+        <div id="title">SLINGDB</div>
+        <md-spacer></md-spacer>
+        <md-tabs id="tabs" selected="#databases">
+          <md-tab id="databases">Databases</md-tab>
+          <md-tab id="connections">Connections</md-tab>
+          <md-tab id="statistics">Statistics</md-tab>
+        </md-tabs>
+        <md-icon-button id="refresh" icon="refresh"></md-icon-button>
+      </md-toolbar>
+
+      <md-content>
+        <one-of id="router" selected="#databases-card">
+
+          <db-databases-card id="databases-card">
+            <md-card-toolbar>
+              <div>Databases</div>
+            </md-card-toolbar>
+            <md-data-table id="db-table">
+              <md-data-field field="name">Name</md-data-field>
+              <md-data-field field="dir">Directory</md-data-field>
+              <md-data-field field="records" style="text-align: right">Records</md-data-field>
+              <md-data-field field="size" style="text-align: right">Size</md-data-field>
+              <md-data-field field="dirty" style="text-align: center">Dirty</md-data-field>
+              <md-data-field field="bulk" style="text-align: center">Bulk</md-data-field>
+              <md-data-field field="read_only" style="text-align: center">Read-only</md-data-field>
+              <md-data-field field="timestamped" style="text-align: center">Timestamped</md-data-field>
+              <md-data-field field="deletions" style="text-align: right">Deletions</md-data-field>
+              <md-data-field field="index_capacity" style="text-align: right">Index capacity</md-data-field>
+              <md-data-field field="epoch">Epoch</md-data-field>
+            </md-data-table>
+          </db-databases-card>
+
+          <db-connections-card id="connections-card">
+            <md-card-toolbar>
+              <div>Connections</div>
+            </md-card-toolbar>
+            <md-data-table id="conn-table">
+              <md-data-field field="socket" style="text-align: right">Socket</md-data-field>
+              <md-data-field field="protocol">Protocol</md-data-field>
+              <md-data-field field="address">Address</md-data-field>
+              <md-data-field field="port" style="text-align: right">Port</md-data-field>
+              <md-data-field field="status">Status</md-data-field>
+              <md-data-field field="state">State</md-data-field>
+              <md-data-field field="requests" style="text-align: right">Requests</md-data-field>
+              <md-data-field field="rx_bytes" style="text-align: right">Received</md-data-field>
+              <md-data-field field="tx_bytes" style="text-align: right">Sent</md-data-field>
+              <md-data-field field="idle" style="text-align: right">Idle</md-data-field>
+              <md-data-field field="agent">Agent</md-data-field>
+            </md-data-table>
+          </db-connections-card>
+
+          <db-statistics-card id="statistics-card">
+            <md-card-toolbar>
+              <div>Statistics</div>
+            </md-card-toolbar>
+            <md-data-table id="stat-table">
+              <md-data-field field="name">Database</md-data-field>
+              <md-data-field field="get" style="text-align: right">GETs</md-data-field>
+              <md-data-field field="put" style="text-align: right">PUTs</md-data-field>
+              <md-data-field field="del" style="text-align: right">DELETEs</md-data-field>
+              <md-data-field field="next" style="text-align: right">NEXTs</md-data-field>
+              <md-data-field field="read" style="text-align: right">Bytes read</md-data-field>
+              <md-data-field field="write" style="text-align: right">Bytes written</md-data-field>
+              <md-data-field field="hit" style="text-align: right">HITs</md-data-field>
+              <md-data-field field="miss" style="text-align: right">MISSes</md-data-field>
+            </md-data-table>
+          </db-statistics-card>
+
+        </one-of>
+      </md-content>
+
+    </md-column-layout>
+  </db-app>
+</body>
+</html>
+

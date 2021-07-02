@@ -21,6 +21,7 @@
 #include "sling/base/types.h"
 #include "sling/db/db.h"
 #include "sling/net/http-server.h"
+#include "sling/net/static-content.h"
 #include "sling/util/thread.h"
 
 namespace sling {
@@ -113,6 +114,10 @@ class DBService {
 
   // Flag indicating that the database service is terminating.
   bool terminate_ = false;
+
+  // Admin app.
+  StaticContent common_{"/common", "app"};
+  StaticContent app_{"/adminz", "sling/db/app"};
 
   // Maximum batch size.
   static const int MAX_BATCH = 1000;

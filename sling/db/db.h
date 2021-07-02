@@ -69,9 +69,11 @@ class Database {
     NEXT,     // number of NEXT operations
     READ,     // number of bytes read
     WRITE,    // number of bytes written
+    HIT,      // number of hash table hits
+    MISS,     // number of hash table misses
   };
 
-  const static int NUM_DBMETRICS = WRITE + 1;
+  const static int NUM_DBMETRICS = MISS + 1;
 
   // Deallocate database instance.
   ~Database();

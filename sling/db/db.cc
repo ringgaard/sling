@@ -233,7 +233,11 @@ bool Database::Get(const Slice &key, Record *record, bool with_value) {
     if (!st) return false;
 
     // Return record if key matches.
-    if (key == record->key) return true;
+    if (key == record->key) {
+      inc(HIT);
+      return true;
+    }
+    inc(MISS);
   }
 
   return false;

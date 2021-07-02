@@ -40,7 +40,7 @@ DEFINE_bool(lex, false, "Record values as lex encoded documents");
 DEFINE_string(key, "", "Only display records with matching key");
 DEFINE_int32(indent, 2, "Indentation for structured data");
 DEFINE_int32(limit, 0, "Maximum number of records to output");
-DEFINE_int32(batch, 1, "Batch size for fetching records from database");
+DEFINE_int32(batch, 128, "Batch size for fetching records from database");
 DEFINE_bool(utf8, true, "Allow UTF8-encoded output");
 DEFINE_bool(db, false, "Read input from database");
 DEFINE_bool(version, false, "Output record version");

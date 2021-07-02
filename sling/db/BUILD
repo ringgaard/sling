@@ -1,5 +1,7 @@
 package(default_visibility = ["//visibility:public"])
 
+load("//tools:embed.bzl", "embed_data")
+
 cc_library(
   name = "dbprotocol",
   hdrs = ["dbprotocol.h"],
@@ -34,16 +36,27 @@ cc_library(
   ],
 )
 
+embed_data(
+  name = "app",
+  srcs = [
+    "app/index.html",
+    "app/dbadmin.js",
+  ],
+)
+
 cc_library(
   name = "dbserver",
   srcs = ["dbserver.cc"],
   hdrs = ["dbserver.h"],
   deps = [
+    ":app",
     ":db",
     ":dbprotocol",
+    "//app",
     "//sling/base",
+    "//sling/file:embed",
     "//sling/net:http-server",
-    "//sling/string:numbers",
+    "//sling/net:static-content",
     "//sling/util:fingerprint",
     "//sling/util:json",
     "//sling/util:mutex",

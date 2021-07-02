@@ -175,6 +175,75 @@ export class MdToolbar extends Component {
 Component.register(MdToolbar);
 
 //-----------------------------------------------------------------------------
+// Tabs
+//-----------------------------------------------------------------------------
+
+export class MdTabs extends Component {
+  constructor() {
+    super();
+    this.selected = this.find(this.getAttribute("selected"));
+  }
+
+  onconnected() {
+    this.bind(null, "click", e => this.onclick(e));
+    if (this.selected) this.select(this.selected);
+  }
+
+  onclick(e) {
+    if (e.target != this) this.select(e.target);
+  }
+
+  select(tab) {
+    if (!tab) return;
+    if (this.selected) this.selected.classList.remove("selected");
+    this.selected = tab;
+    this.selected.classList.add("selected");
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        height: 100%;
+        margin: 5px;
+        display: table;
+        flex-direction: row;
+        align-items: center;
+        border-spacing: 3px;
+      }
+
+      $ .selected {
+        border-bottom: 2px solid;
+      }
+    `;
+  }
+}
+
+Component.register(MdTabs);
+
+export class MdTab extends Component {
+  static stylesheet() {
+    return `
+      $ {
+        height: 100%;
+        text-transform: uppercase;
+        padding: 5px;
+        text-align: center;
+        display: table-cell;
+        vertical-align: middle;
+        font-size: 16px;
+        cursor: pointer;
+      }
+
+      $:hover {
+        background-color: rgba(0,0,0,0.07);
+      }
+    `;
+  }
+}
+
+Component.register(MdTab);
+
+//-----------------------------------------------------------------------------
 // Card
 //-----------------------------------------------------------------------------
 
@@ -801,14 +870,12 @@ export class MdDataTable extends Component {
     super();
     this.fields = [];
     for (const e of this.elements) {
-      if (e instanceof MdDataField) {
-        this.fields.push({
-          name: e.props.field,
-          header: e.innerHTML,
-          style: e.style ? e.style.cssText : null,
-          escape: !e.props.html,
-        });
-      }
+      this.fields.push({
+        name: e.getAttribute("field"),
+        header: e.innerHTML,
+        style: e.style ? e.style.cssText : null,
+        escape: !e.getAttribute("html"),
+      });
     }
   }
 
@@ -857,7 +924,6 @@ export class MdDataTable extends Component {
     return `
       $ {
         border: 0;
-        border-collapse: collapse;
         white-space: nowrap;
         font-size: 14px;
         text-align: left;
@@ -882,6 +948,7 @@ export class MdDataTable extends Component {
         padding: 8px 12px;
         box-sizing: border-box;
         text-overflow: ellipsis;
+        overflow: hidden;
       }
 
       $ td:first-of-type, $ th:first-of-type {
