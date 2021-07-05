@@ -277,12 +277,13 @@ for key, value in redditdb.items(chkpt.checkpoint):
   if posting_deleted(key): continue
 
   # Log unknown postings.
+  nsfw = posting[n_over_18]
   if itemid is None:
-    if not selfie(title): print(sr, key, "UNKNOWN", title, url)
+    if not selfie(title):
+    print(sr, key, "UNKNOWN", title, "NSFW" if nsfw else "", url)
     continue
 
   # Output photo to batch list.
-  nsfw = posting[n_over_18]
   batch.write("%s %s #\t %s %s%s\n" %
               (sr, title, itemid, url, " NSFW" if nsfw else ""))
 

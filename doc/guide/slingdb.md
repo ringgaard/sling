@@ -36,6 +36,9 @@ with the following command:
 curl -X POST localhost:7070/create?name=test
 ```
 
+The SLINGDB server has a web-based dashboard on http://localhost:7070/adminz
+that can be used for monitoring activity.
+
 ## HTTP API
 
 You can add, update, delete and retrieve records using normal HTTP requests.
@@ -89,16 +92,10 @@ curl -X DELETE localhost:7070/test/123
 
 ### OPTIONS
 
-The HTTP OPTIONS method returns a list of mounted databases:
+The HTTP OPTIONS method returns a list of mounted databases in JSON format:
 
 ```
 curl -X OPTIONS localhost:7070
-```
-
-It can also be used for getting basic statistics about a particular database:
-
-```
-curl -X OPTIONS localhost:7070/test
 ```
 
 ### POST
@@ -192,11 +189,11 @@ shorthand for `localhost:7070/test`.
   not exist.
 
 * `key in db`<br>
-  Check is record with `key` is in the database.
+  Check if record with `key` is in the database.
 
 * `value, version = db.get(key)`<br>
   Fetch record with `key` and return `value` and `version` for record. Returns
-  `(None, 0)` is record does not exist.
+  `(None, 0)` if record does not exist.
 
 #### writing
 

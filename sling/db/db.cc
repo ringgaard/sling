@@ -245,7 +245,6 @@ bool Database::Get(const Slice &key, Record *record, bool with_value) {
 
 uint64 Database::Put(const Record &record, DBMode mode, DBResult *result) {
   // Check if database is read-only.
-  inc(PUT);
   if (config_.read_only) return DatabaseIndex::NVAL;
 
   // The value cannot be empty, since this is used for marking deleted records.
@@ -256,6 +255,7 @@ uint64 Database::Put(const Record &record, DBMode mode, DBResult *result) {
 
   // Loop over matching records in index to check if there is already a record
   // with a matching key.
+  inc(PUT);
   uint64 recid = DatabaseIndex::NVAL;
   uint64 pos = DatabaseIndex::NPOS;
   Record rec;
