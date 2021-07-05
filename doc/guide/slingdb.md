@@ -1,6 +1,6 @@
 # SLINGDB
 
-SLINGDB is a lightweight persistent key-value store with a HTTP interface.
+SLINGDB is a lightweight persistent key-value database with a HTTP interface.
 It is basically a hash map stored on disk where you can store one value for each
 key in each database. The keys and values are binary objects and SLINGDB does
 not interpret the content of these. Besides the key and value, a record can
@@ -8,7 +8,7 @@ also have a 64 bit integer version number or timestamp.
 
 ## Instalation
 
-SLINGDB can be installed indepently of the other SLING components and is
+SLINGDB can be installed independently of the other SLING components and is
 distributed as a standalone Debian package which can be installed using `dpkg`
 on Ubuntu 16+ or any other compatible platform with a Debian package manager and
 systemd service manager:
