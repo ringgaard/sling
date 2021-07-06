@@ -280,8 +280,8 @@ for key, value in redditdb.items(chkpt.checkpoint):
   nsfw = posting[n_over_18]
   if itemid is None:
     if not selfie(title):
-    print(sr, key, "UNKNOWN", title, "NSFW" if nsfw else "", url)
-    continue
+      print(sr, key, "UNKNOWN", title, "NSFW" if nsfw else "", url)
+      continue
 
   # Output photo to batch list.
   batch.write("%s %s #\t %s %s%s\n" %

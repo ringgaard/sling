@@ -53,7 +53,7 @@ for item in kb:
   num_items += 1
   imdb = item[p_imdb]
   if imdb is None: continue
-  imdbid = kb.resolve(imdb)
+  imdbid = str(kb.resolve(imdb))
 
   # Skip unless it is a person.
   kind = imdbid[0:2]
