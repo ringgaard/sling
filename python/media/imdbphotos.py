@@ -48,6 +48,7 @@ kb.freeze()
 # Find items with IMDB id.
 num_profiles = 0
 num_items = 0
+num_photos = 0
 for item in kb:
   # Check for IMDB id.
   num_items += 1
@@ -90,6 +91,7 @@ for item in kb:
     store = sling.Store(kb)
     image = store.frame([(p_is, url), (p_stated_in, n_imdb)])
     profile = store.frame([(p_media, image), (p_imdb, imdbid)])
+    num_photos += 1
 
   # Save profile.
   db[key] = profile.data(binary=True)
@@ -97,5 +99,5 @@ for item in kb:
   num_profiles += 1
   print(num_items, num_profiles, item.id, imdbid, item.name, url)
 
-print(num_items, "items", num_profiles, "imdb profiles updated")
+print(num_items, "items", num_profiles, "imdb profiles", num_photos, "photos")
 
