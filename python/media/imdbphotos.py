@@ -41,6 +41,7 @@ p_is = kb["is"]
 p_media = kb["media"]
 p_imdb = kb["P345"]
 p_stated_in = kb["P248"]
+p_reason_for_deprecation = kb["P2241"]
 n_imdb = kb["Q37312"]
 empty_profile = kb.frame([])
 kb.freeze()
@@ -52,9 +53,22 @@ num_photos = 0
 for item in kb:
   # Check for IMDB id.
   num_items += 1
-  imdb = item[p_imdb]
-  if imdb is None: continue
-  imdbid = str(kb.resolve(imdb))
+  if p_imdb not in item: continue
+
+  # Find last IMDB id that is not deprecated.
+  imdbid = None
+  for v in item(p_imdb):
+    if v is None: continue
+    if type(v) is sling.Frame:
+      if v[p_reason_for_deprecation] != None: continue
+      imdbid = v[p_is]
+    else:
+      imdbid = v
+
+  if imdbid is None: continue
+  if type(imdbid) is not str:
+    print("Bad IMDB id for", item.id, imdbid)
+    continue
 
   # Skip unless it is a person.
   kind = imdbid[0:2]

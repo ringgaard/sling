@@ -42,7 +42,7 @@ def resolve_name(name):
   for item in aliases.lookup(name): return item
   return None
 
-reader = csv.reader(open("data/c/lei/2019-12-05_ra-list-v1.5.csv", "r"))
+reader = csv.reader(open("data/c/lei/2021-06-16_ra_list_v1.6.csv", "r"))
 reader.__next__()
 
 for row in reader:

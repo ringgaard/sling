@@ -3325,6 +3325,19 @@
   transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
+  registration_authority_code: "RA000772"
+  country_name: "Germany"
+  country_code: "DE"
+  country: Q183
+  jurisdiction_name: "Braunschweig"
+  jurisdiction: Q2773
+  register_name: "Foundations Directory"
+  native_register_name: "Stiftungsverzeichnis"
+  owner_name: "Regional Development Office Braunschweig"
+  native_owner_name: "Amt für regionale Landesentwicklung Braunschweig"
+  url: "https://www.arl-bs.niedersachsen.de/startseite/grundbesitz_stiftungen/stiftungen/stiftungen-125836.html"
+}
+{
   registration_authority_code: "RA000222"
   country_name: "Germany"
   country_code: "DE"
@@ -3710,6 +3723,19 @@
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "B1204"
   transform: {"HRB (\\d+)": "HRB%s"}
+}
+{
+  registration_authority_code: "RA000770"
+  country_name: "Germany"
+  country_code: "DE"
+  country: Q183
+  jurisdiction_name: "Freiburg"
+  jurisdiction: Q2833
+  register_name: "Foundations Directory"
+  native_register_name: "Stiftungsverzeichnis"
+  owner_name: "Administrative Region Freiburg"
+  native_owner_name: "Regierungspräsidium Freiburg"
+  url: "http://www.rp.landbw.de/stvz/apex/f?p=110:1::NO:::P1_RP:FRE"
 }
 {
   registration_authority_code: "RA000244"
@@ -4269,6 +4295,19 @@
   transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
+  registration_authority_code: "RA000769"
+  country_name: "Germany"
+  country_code: "DE"
+  country: Q183
+  jurisdiction_name: "Karlsruhe"
+  jurisdiction: Q1040
+  register_name: "Foundations Directory"
+  native_register_name: "Stiftungsverzeichnis"
+  owner_name: "Administrative Region Karlsruhe"
+  native_owner_name: "Regierungspräsidium Karlsruhe"
+  url: "http://www.rp.landbw.de/stvz/apex/f?p=110:1::NO:::P1_RP:KAR"
+}
+{
   registration_authority_code: "RA000275"
   country_name: "Germany"
   country_code: "DE"
@@ -4473,6 +4512,18 @@
   transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
+  registration_authority_code: "RA000773"
+  country_name: "Germany"
+  country_code: "DE"
+  country: Q183
+  jurisdiction_name: "Leine Weser"
+  register_name: "Foundations Directory"
+  native_register_name: "Stiftungsverzeichnis"
+  owner_name: "Regional Development Office Leine Weser"
+  native_owner_name: "Amt für regionale Landesentwicklung Leine Weser"
+  url: "https://www.arl-lw.niedersachsen.de/stiftungen"
+}
+{
   registration_authority_code: "RA000287"
   country_name: "Germany"
   country_code: "DE"
@@ -4605,6 +4656,19 @@
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "P2507"
   transform: {"HRB (\\d+)": "HRB%s"}
+}
+{
+  registration_authority_code: "RA000774"
+  country_name: "Germany"
+  country_code: "DE"
+  country: Q183
+  jurisdiction_name: "Lüneburg"
+  jurisdiction: Q3920
+  register_name: "Foundations Directory"
+  native_register_name: "Stiftungsverzeichnis"
+  owner_name: "Regional Development Office Lüneburg"
+  native_owner_name: "Amt für regionale Landesentwicklung Lüneburg"
+  url: "https://www.arl-lg.niedersachsen.de/startseite/unsere_themen_neu/beratung_und_genehmigung_von_stiftungen/im-dialog-mit-den-stiftungen-125375.html"
 }
 {
   registration_authority_code: "RA000294"
@@ -5678,6 +5742,19 @@
   transform: {"HRB (\\d+)": "HRB%s"}
 }
 {
+  registration_authority_code: "RA000768"
+  country_name: "Germany"
+  country_code: "DE"
+  country: Q183
+  jurisdiction_name: "Stuttgart"
+  jurisdiction: Q1022
+  register_name: "Foundations Directory"
+  native_register_name: "Stiftungsverzeichnis"
+  owner_name: "Administrative Region Stuttgart"
+  native_owner_name: "Regierungspräsidium Stuttgart"
+  url: "http://www.rp.landbw.de/stvz/apex/f?p=110:1::NO:::P1_RP:STU"
+}
+{
   registration_authority_code: "RA000352"
   country_name: "Germany"
   country_code: "DE"
@@ -5742,6 +5819,19 @@
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "D2910"
   transform: {"HRB (\\d+)": "HRB%s"}
+}
+{
+  registration_authority_code: "RA000771"
+  country_name: "Germany"
+  country_code: "DE"
+  country: Q183
+  jurisdiction_name: "Tübingen"
+  jurisdiction: Q3806
+  register_name: "Foundations Directory"
+  native_register_name: "Stiftungsverzeichnis"
+  owner_name: "Administrative Region Tübingen"
+  native_owner_name: "Regierungspräsidium Tübingen"
+  url: "http://www.rp.landbw.de/stvz/apex/f?p=110:1:0:NO:::P1_RP:TUE"
 }
 {
   registration_authority_code: "RA000355"
@@ -5894,6 +5984,19 @@
   opencorporates_jurisdiction: "de"
   opencorporates_prefix: "Y1114"
   transform: {"HRB (\\d+)": "HRB%s"}
+}
+{=#1
+  registration_authority_code: "RA000775"
+  country_name: "Germany"
+  country_code: "DE"
+  country: Q183
+  jurisdiction_name: "Weser-Ems"
+  jurisdiction: Q445936
+  register_name: "Foundations Directory"
+  native_register_name: "Stiftungsverzeichnis"
+  owner_name: "Regional Development Office Weser-Ems"
+  native_owner_name: "Amt für regionale Landesentwicklung Weser-Ems"
+  url: "https://www.arl-we.niedersachsen.de/startseite/grundbesitz_und_stiftungen/stiftungen/"
 }
 {
   registration_authority_code: "RA000364"
@@ -6667,6 +6770,20 @@
   url: "https://www.gst.gov.in/ "
 }
 {
+  registration_authority_code: "RA000778"
+  country_name: "India"
+  country_code: "IN"
+  country: Q668
+  jurisdiction_name: "India"
+  jurisdiction: Q668
+  register_name: "Financial Agents"
+  native_register_name: "Financial Agents"
+  owner_name: "Reserve Bank of India"
+  owner: Q944085
+  native_owner_name: "Reserve Bank of India"
+  url: "https://www.rbi.org.in/commonperson/English/Scripts/BanksInIndia.aspx"
+}
+{
   registration_authority_code: "RA000400"
   country_name: "Indonesia"
   country_code: "ID"
@@ -6861,6 +6978,20 @@
   native_owner_name: "Agenzia per l’Italia Digitale (AgID)"
   owner: Q3606484
   url: "http://www.indicepa.gov.it/"
+}
+{
+  registration_authority_code: "RA000776"
+  country_name: "Italy"
+  country_code: "IT"
+  country: Q38
+  jurisdiction_name: "Italy"
+  jurisdiction: Q38
+  register_name: "Tax Register Information System"
+  native_register_name: "Anagrafe Tributaria"
+  owner_name: "Revenue Agency"
+  owner: Q573607
+  native_owner_name: "Agenzia delle Entrate"
+  url: "https://telematici.agenziaentrate.gov.it/VerificaCF/VerificaCfPnf.do"
 }
 {
   registration_authority_code: "RA000411"
@@ -8428,6 +8559,19 @@
   url: "www.ros.mha.gov.sg"
 }
 {
+  registration_authority_code: "RA000781"
+  country_name: "Singapore"
+  country_code: "SG"
+  country: Q334
+  jurisdiction_name: "Singapore"
+  jurisdiction: Q334
+  register_name: "Charity Portal"
+  native_register_name: "Charity Portal"
+  owner_name: "Commissioner of Charities"
+  native_owner_name: "Commissioner of Charities"
+  url: "https://www.charities.gov.sg"
+}
+{
   registration_authority_code: "RA000525"
   country_name: "Sint Maarten"
   country_code: "SX"
@@ -8801,6 +8945,19 @@
   url: "http://sac.gencat.cat/sacgencat/AppJava/organismes.jsp"
 }
 {
+  registration_authority_code: "RA000780"
+  country_name: "Spain"
+  country_code: "ES"
+  country: Q29
+  jurisdiction_name: "Spain"
+  jurisdiction: Q29
+  register_name: "Central Mercantile Registry"
+  native_register_name: "Registro Mercantil Central"
+  owner_name: "Central Mercantile Registry"
+  native_owner_name: "Registro Mercantil Central"
+  url: "http://www.rmc.es/Home.aspx"
+}
+{
   registration_authority_code: "RA000540"
   country_name: "Sri Lanka"
   country_code: "LK"
@@ -9117,6 +9274,19 @@
   opencorporates_jurisdiction: "tn"
 }
 {
+  registration_authority_code: "RA000758"
+  country_name: "Tunisia"
+  country_code: "TN"
+  country: Q948
+  jurisdiction_name: "Tunisia"
+  jurisdiction: Q948
+  register_name: "National Register of Enterprises (RNE)"
+  native_register_name: "Registre National des Entreprises (RNE) / للمؤسسات الوطني السجل"
+  owner_name: "National Register of Enterprises (RNE)"
+  native_owner_name: "Registre National des Entreprises (RNE) / للمؤسسات الوطني السجل"
+  url: "https://www.registre-entreprises.tn/rne-public"
+}
+{
   registration_authority_code: "RA000560"
   country_name: "Turkey"
   country_code: "TR"
@@ -9138,6 +9308,19 @@
   register_name: "Turkish  Trade Registry"
   owner_name: "Turkish Trade Registry Gazette (The Union of Chambers and Commodity Exchanges of Turkey)"
   url: "http://www.ticaretsicilgazetesi.gov.tr/english/sorgu_acik.php"
+}
+{
+  registration_authority_code: "RA000756"
+  country_name: "Turkey"
+  country_code: "TR"
+  country: Q43
+  jurisdiction_name: "Turkey"
+  jurisdiction: Q43
+  register_name: "Public Disclosure Platform"
+  native_register_name: "Kamuyu Aydınlatma Platformu (KAP)"
+  owner_name: "Central Securities Depository of Turkey"
+  native_owner_name: "Merkezi Kayıt Kuruluşu Anonim Şirketi (MKK)"
+  url: "https://www.kap.org.tr/en/"
 }
 {
   registration_authority_code: "RA000562"
@@ -9460,6 +9643,17 @@
   url: "https://cbls.economy.gov.ae/Search_By_BN.aspx"
 }
 {
+  registration_authority_code: "RA000786"
+  country_name: "United Arab Emirates"
+  country_code: "AE"
+  country: Q878
+  jurisdiction_name: "Fujairah"
+  jurisdiction: Q4045
+  register_name: "Licensing register"
+  owner_name: "Creative City Free Zone Authority"
+  url: "https://creativecity.ae/"
+}
+{
   registration_authority_code: "RA000585"
   country_name: "United Kingdom"
   country_code: "GB"
@@ -9729,7 +9923,7 @@
   native_owner_name: "National Association of Insurance Commissioners"
   url: "https://sbs.naic.org/solar-external-lookup/"
 }
-{=#1
+{
   registration_authority_code: "RA000747"
   country_name: "United States of America"
   country_code: "US"

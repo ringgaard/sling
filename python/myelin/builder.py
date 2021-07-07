@@ -254,7 +254,7 @@ class Builder:
     op.add_input(self.const(splits, DT_INT))
     op.add_input(self.const(axis, DT_INT))
     shape = x.shape[:]
-    shape[axis] = x.shape[axis] / splits
+    shape[axis] = x.shape[axis] // splits
     results = []
     for n in range(splits):
       o = self.var(op.name + ":" + str(n), x.type, shape)

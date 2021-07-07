@@ -4,11 +4,11 @@ Check for companies that need refresh in a Companies House dump file.
 
 import csv
 import zipfile
-import requests
 import json
 import io
 import os
 import sys
+import sling
 import sling.flags as flags
 
 flags.define("--dump",
@@ -18,8 +18,8 @@ flags.define("--dump",
 
 flags.define("--chsdb",
              help="Database for Companies House records",
-             default="http://localhost:7070/chs",
-             metavar="DBURL")
+             default="chs",
+             metavar="DB")
 
 flags.define("--output",
              help="Output file with company ids",
@@ -44,7 +44,7 @@ flags.define("--max",
 
 flags.parse()
 
-dbsession = requests.Session()
+chsdb = sling.Database(flags.arg.chsdb, "chsrefresh")
 
 # Convert date from DD/MM/YYYY or YYYY-MM-DD to SLING format.
 def get_date(s):
@@ -61,13 +61,9 @@ def get_date(s):
 
 # Look up company in database.
 def lookup_company(company_no):
-  r = dbsession.get(flags.arg.chsdb + "/" + company_no)
-  if r.status_code == 200:
-    return json.loads(r.text)
-  elif r.status_code == 404:
-    return None
-  else:
-    r.raise_for_status()
+  rec = chsdb[company_no]
+  if rec is None: return None
+  return json.loads(rec)
 
 # Open output file.
 fout = None

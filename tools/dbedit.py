@@ -65,6 +65,7 @@ if flags.arg.add:
     print("Record already in database")
     sys.exit(1)
   content = ""
+  oldcontent = None
 elif flags.arg.delete:
   del db[flags.arg.id]
   print("Record deleted");
@@ -74,6 +75,7 @@ else:
   if content is None:
     print("Record not found")
     sys.exit(1)
+  oldcontent = content
   if not flags.arg.raw:
     frame = store.parse(content)
     content = frame.data(pretty=True, utf8=True)
@@ -89,7 +91,7 @@ editor = os.environ.get("EDITOR", "nano")
 os.system("%s %s" % (editor, fn))
 
 # Read edited record content.
-f = open(fn, "rb")
+f = open(fn, "r")
 newcontent = f.read()
 f.close()
 os.remove(fn)
@@ -98,7 +100,7 @@ if not flags.arg.raw:
   newcontent = frame.data(binary=True)
 
 # Update database.
-if newcontent == content:
+if newcontent == oldcontent:
   print("No changes")
 elif flags.arg.add:
   db.add(flags.arg.id, newcontent)

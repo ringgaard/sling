@@ -37,7 +37,9 @@ curl -X POST localhost:7070/create?name=test
 ```
 
 The SLINGDB server has a web-based dashboard on http://localhost:7070/adminz
-that can be used for monitoring activity.
+that can be used for monitoring activity:
+
+![SLINGDB admin dashboard.](dbadmin.png)
 
 ## HTTP API
 
