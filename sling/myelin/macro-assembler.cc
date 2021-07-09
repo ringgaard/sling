@@ -339,6 +339,18 @@ void MacroAssembler::Epilogue() {
   rr_.free(datareg);
 }
 
+void MacroAssembler::SaveProfilerRegisters() {
+  if (options_.profiling) {
+    pushq(tsreg);
+  }
+}
+
+void MacroAssembler::RestoreProfilerRegisters() {
+  if (options_.profiling) {
+    popq(tsreg);
+  }
+}
+
 StaticData *MacroAssembler::CreateDataBlock(int alignment) {
   StaticData *data = new StaticData(alignment);
   data_blocks_.push_back(data);

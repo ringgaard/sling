@@ -169,6 +169,7 @@ void CUDAKernel::Generate(Step *step, MacroAssembler *masm) {
 
   // Build parameter array with device instance address as the only parameter.
   Register params = tmpreg;
+  __ SaveProfilerRegisters();
   __ pushq(Operand(masm->instance(), offsetof(CUDAInstance, data)));
   __ pushq(rsp);
   __ movq(params, rsp);
@@ -193,6 +194,7 @@ void CUDAKernel::Generate(Step *step, MacroAssembler *masm) {
                  "cuLaunchKernel");
   __ call(tmpreg);
   __ addq(rsp, Immediate(7 * 8));
+  __ RestoreProfilerRegisters();
   CUDARuntime::EmitStatusCheck("cuLaunchKernel", masm);
 }
 

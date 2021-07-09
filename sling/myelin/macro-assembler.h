@@ -319,6 +319,12 @@ class MacroAssembler : public jit::Assembler {
   // Generate function epilogue.
   void Epilogue();
 
+  // Save profiler registers.
+  void SaveProfilerRegisters();
+
+  // Restore profiler registers.
+  void RestoreProfilerRegisters();
+
   // Create new static data block.
   StaticData *CreateDataBlock(int alignment = 1);
 

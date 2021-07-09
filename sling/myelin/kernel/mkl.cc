@@ -292,11 +292,13 @@ class MKLMatMul : public Kernel {
           }
 
           // Generate call to JIT function.
-        __ movp(arg_reg_1, jitter);
-        __ LoadTensorAddress(arg_reg_2, args.A.tensor);
-        __ LoadTensorAddress(arg_reg_3, args.B.tensor);
-        __ LoadTensorAddress(arg_reg_4, args.C.tensor);
-        __ call_extern(kernel, "");
+          __ SaveProfilerRegisters();
+          __ movp(arg_reg_1, jitter);
+          __ LoadTensorAddress(arg_reg_2, args.A.tensor);
+          __ LoadTensorAddress(arg_reg_3, args.B.tensor);
+          __ LoadTensorAddress(arg_reg_4, args.C.tensor);
+          __ call_extern(kernel, "");
+          __ RestoreProfilerRegisters();
 
           jitted = true;
           step->set_variant(status == MKL_NO_JIT ? "STDJIT" : "JIT");
@@ -347,12 +349,14 @@ class MKLMatMul : public Kernel {
         __ movq(arg_reg_6, Immediate(k));
 
         // Call MKL cblas_gemm.
+        __ SaveProfilerRegisters();
         if (args.type == DT_FLOAT) {
           __ call_extern(cblas_sgemm, "cblas_sgemm");
         } else {
           __ call_extern(cblas_dgemm, "cblas_dgemm");
         }
         __ addq(rsp, Immediate(6 * 8));
+        __ RestoreProfilerRegisters();
 
         step->set_variant("STD");
       }
@@ -411,12 +415,14 @@ class MKLMatMul : public Kernel {
       __ leaq(arg_reg_6, k_array->address());
 
       // Call MKL cblas_gemm.
+      __ SaveProfilerRegisters();
       if (args.type == DT_FLOAT) {
         __ call_extern(cblas_sgemm_batch, "cblas_sgemm_batch");
       } else {
         __ call_extern(cblas_dgemm_batch, "cblas_dgemm_batch");
       }
       __ addq(rsp, Immediate(batch * 3 * 8 + 10 * 8));
+      __ RestoreProfilerRegisters();
       step->set_variant("*" + std::to_string(batch));
     }
   }
