@@ -133,8 +133,8 @@ class XRefMapping {
  public:
   // Map id using cross-reference table. The id consists of a property name
   // and identifier of the form <property id/mnemonic>[:/]<identifier>. Returns
-  // an empty string if no mapped id is found.
-  Text Map(Text id) const;
+  // true if id was mapped.
+  bool Map(string *id) const;
 
   // Load cross-reference table.
   void Load(const string &filename);

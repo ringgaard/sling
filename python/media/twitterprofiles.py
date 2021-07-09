@@ -53,6 +53,7 @@ class TwitterExtract:
     p_image = kb["P18"]
     p_media = kb["media"]
     p_stated_in = kb["P248"]
+    p_deprecation = kb["P2241"]
     n_twitter = kb["Q918"]
 
     kb.freeze()
@@ -67,7 +68,14 @@ class TwitterExtract:
       task.increment("items")
       imageurls = []
       for twitter in item(p_twitter):
-        username = kb.resolve(twitter)
+        # Get twitter user name; skip if deprecated.
+        if type(twitter) is sling.Frame:
+          if twitter[p_deprecation] != None:
+            task.increment("deprecated_users")
+            continue
+          username = twitter[p_is]
+        else:
+          username = twitter
         task.increment("twitter_users")
 
         # Fetch twitter profile from database.

@@ -209,29 +209,37 @@ string XRef::Identifier::ToString() const {
   return str;
 }
 
-Text XRefMapping::Map(Text id) const {
+bool XRefMapping::Map(string *id) const {
   // Try to look up identifier in cross-reference.
-  Handle h = xrefs_.LookupExisting(id);
-  if (!h.IsNil()) return xrefs_.FrameId(h);
+  Handle h = xrefs_.LookupExisting(*id);
+  if (!h.IsNil()) {
+    *id = xrefs_.FrameId(h).str();
+    return true;
+  }
 
   // Try to convert property mnemonic.
-  int slash = id.find('/');
-  int colon = id.find(':');
+  int slash = id->find('/');
+  int colon = id->find(':');
   int sep = slash != -1 && slash < colon ? slash : colon;
   if (sep != -1) {
-    Text domain = id.substr(0, sep).trim();
-    Text identifier = id.substr(sep + 1).trim();
+    Text domain = Text(*id, 0, sep).trim();
+    Text identifier = Text(*id, sep + 1).trim();
     if (!domain.empty() && !identifier.empty()) {
       auto f = mnemonics_.find(domain);
       if (f != mnemonics_.end()) domain = f->second;
       string idstr = StrCat(domain, "/", identifier);
       Handle h = xrefs_.LookupExisting(idstr);
-      if (!h.IsNil()) return xrefs_.FrameId(h);
+      if (!h.IsNil()) {
+        *id = xrefs_.FrameId(h).str();
+      } else {
+        *id = idstr;
+      }
+      return true;
     }
   }
 
   // No mapping found.
-  return Text();
+  return false;
 }
 
 void XRefMapping::Load(const string &filename) {

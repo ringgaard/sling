@@ -289,17 +289,19 @@ Handle KnowledgeService::RetrieveItem(Store *store, Text id,
   Handle handle = store->LookupExisting(id);
   if (!handle.IsNil() && store->IsProxy(handle)) handle = Handle::nil();
 
+  string key = id.str();
   if (handle.IsNil() and xref_.loaded()) {
     // Try looking up in cross-reference.
-    Text mapping = xref_.Map(id);
-    if (!mapping.empty()) handle = store->LookupExisting(mapping);
+    if (xref_.Map(&key)) {
+      handle = store->LookupExisting(key);
+    }
   }
 
   if (handle.IsNil() && offline && items_ != nullptr) {
     // Try looking up item in the offline item records.
     MutexLock lock(&mu_);
     Record rec;
-    if (items_->Lookup(id.slice(), &rec)) {
+    if (items_->Lookup(key, &rec)) {
       ArrayInputStream stream(rec.value);
       InputParser parser(store, &stream);
       handle = parser.Read().handle();
@@ -310,7 +312,7 @@ Handle KnowledgeService::RetrieveItem(Store *store, Text id,
     // Try looking up item in the offline item database.
     MutexLock lock(&mu_);
     DBRecord rec;
-    Status st = itemdb_->Get(id.slice(), &rec);
+    Status st = itemdb_->Get(key, &rec);
     if (st.ok() && !rec.value.empty()) {
       ArrayInputStream stream(rec.value);
       InputParser parser(store, &stream);
