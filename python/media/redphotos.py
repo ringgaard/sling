@@ -15,6 +15,7 @@
 """Find photos of persons in reddit postings."""
 
 import requests
+import datetime
 from urllib.parse import urlparse
 
 import sling
@@ -38,6 +39,16 @@ flags.define("--subreddits",
 
 flags.define("--celebmap",
              help="list of names mapped to item ids",
+             default=None,
+             metavar="FILE")
+
+flags.define("--aliases",
+             help="phrase table for matching item names",
+             default="data/e/kb/en/phrase-table.repo",
+             metavar="FILE")
+
+flags.define("--report",
+             help="HTML report for unmatched postings",
              default=None,
              metavar="FILE")
 
@@ -163,6 +174,77 @@ delimiters = [
   " posing ", " photographed ", " dressed ",
 ]
 
+# HTML templates for unmatched postings.
+html_report_header = """
+<html>
+<head>
+<style>
+body {
+  font-family: Helvetica,sans-serif;
+}
+a {
+  text-decoration: none;
+}
+.title {
+  font-size: 20px;
+}
+.photo {
+  margin: 3;
+}
+.descr {
+  margin: 3px;
+  line-height: 1.3;
+}
+.nsfw {
+  border-radius: 3px;
+  border: 1px solid;
+  font-size: 12px;
+  padding: 2px 4px;
+  margin: 2px;
+  color: #d10023;
+}
+.sfw {
+  display: none;
+}
+</style>
+</head>
+<body>
+"""
+
+html_report_footer = """
+</body>
+</html>
+"""
+
+html_report_headline = """
+  <h1><a href="https://www.reddit.com/r/{sr}/">{sr}</a></h1>
+"""
+
+html_report_template = """
+<div style="display: flex">
+  <div class="photo">
+    <a href="{url}"><img src="{thumb}" width=70 height=70></a>
+  </div>
+  <div class="descr">
+    <div class="title">{title}</div>
+    <div>
+      <span class="{marker}">NSFW</span>
+      <a href="https://www.reddit.com/r/{sr}/comments/{sid}/">{sid}</a>
+    </div>
+    <div>
+      {match}
+    </div>
+  </div>
+</div>
+"""
+
+html_single_match = """
+  <b>{query}</b>:
+  <a href="https://ringgaard.com/kb/{itemid}?nsfw=1">{itemid}</a>
+"""
+
+html_multi_match = "{count} matches for <b>{query}</b>"
+
 # Initialize commons store.
 commons = sling.Store()
 n_subreddit = commons["subreddit"]
@@ -170,6 +252,11 @@ n_title = commons["title"]
 n_url = commons["url"]
 n_is_self = commons["is_self"]
 n_over_18 = commons["over_18"]
+n_thumbnail = commons["thumbnail"]
+n_preview = commons["preview"]
+n_images = commons["images"]
+n_resolutions = commons["resolutions"]
+aliases = sling.PhraseTable(commons, flags.arg.aliases)
 commons.freeze()
 
 # Read subreddit list.
@@ -223,6 +310,7 @@ def selfie(title):
 batch = open(flags.arg.batch, 'w')
 redditdb = sling.Database(flags.arg.redditdb, "redphotos")
 chkpt = sling.util.Checkpoint(flags.arg.checkpoint)
+sr_reports = {}
 for key, value in redditdb.items(chkpt.checkpoint):
   # Parse reddit posting.
   store = sling.Store(commons)
@@ -238,6 +326,7 @@ for key, value in redditdb.items(chkpt.checkpoint):
   itemid = person_subreddits.get(sr)
 
   # Check for name match in general subreddit.
+  query = title
   if itemid is None:
     if sr in general_subreddits:
       # Skip photos with multiple persons.
@@ -255,6 +344,7 @@ for key, value in redditdb.items(chkpt.checkpoint):
       name = name[:cut].replace(".", "").strip()
 
       itemid = celebmap.get(name)
+      query = name
     else:
       continue
 
@@ -282,6 +372,37 @@ for key, value in redditdb.items(chkpt.checkpoint):
   if itemid is None:
     if not selfie(title):
       print(sr, key, "UNKNOWN", title, "NSFW" if nsfw else "", url)
+      if sr not in sr_reports: sr_reports[sr] = []
+
+      # Get thumbnail image.
+      thumb = posting[n_thumbnail]
+      if thumb == "nsfw": thumb = None
+      if thumb is None:
+        thumb = posting
+        for p in [n_preview, n_images, 0, n_resolutions, 0, n_url]:
+          if p not in thumb:
+            thumb = ""
+            break
+          thumb = thumb[p]
+
+      # Check for alias matches.
+      matches = aliases.query(query)
+      match = ""
+      if len(matches) == 1:
+        match = html_single_match.format(itemid=matches[0].id(), query=query)
+      elif len(matches) > 0:
+        match = html_multi_match.format(count=len(matches), query=query)
+
+      # Add section to report for unknown posting.
+      sr_reports[sr].append(html_report_template.format(
+        url=url,
+        thumb=thumb.replace("&amp;", "&"),
+        title=title,
+        marker="nsfw" if nsfw else "sfw",
+        sr=sr,
+        sid=key[3:],
+        match=match,
+      ))
     continue
 
   # Output photo to batch list.
@@ -293,4 +414,16 @@ for key, value in redditdb.items(chkpt.checkpoint):
 chkpt.commit(redditdb.position())
 redditdb.close()
 batch.close()
+
+# Output HTML report with unmatched postings.
+if flags.arg.report:
+  reportfn = datetime.datetime.now().strftime(flags.arg.report)
+  report = open(reportfn, "w")
+  report.write(html_report_header)
+  for sr in sorted(sr_reports.keys()):
+    report.write(html_report_headline.format(sr=sr))
+    for line in sr_reports[sr]:
+      report.write(line)
+  report.write(html_report_footer)
+  report.close()
 
