@@ -34,7 +34,7 @@ using namespace sling;
 using namespace sling::myelin;
 using namespace sling::nlp;
 
-const int cpu_cores = jit::CPU::Processors();
+const int cpu_cores = jit::CPU::Cores();
 
 DEFINE_string(train, "data/c/stanford/train.rec", "Train corpus");
 DEFINE_string(dev, "data/c/stanford/dev.rec", "Test corpus");

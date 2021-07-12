@@ -117,7 +117,7 @@ string Profile::ASCIIReport() const {
       "CPU architecture: %s (family %02x model %02x stepping %02x), %d cores",
       cpu.architecture(),
       cpu.family(), cpu.model(), cpu.stepping(),
-      jit::CPU::Processors());
+      jit::CPU::Cores());
   if (jit::CPU::MemorySize() > 0) {
     StringAppendF(&report,", %" PRId64 "G RAM",
                   jit::CPU::MemorySize() / 1073741824);

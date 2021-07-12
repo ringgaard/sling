@@ -18,6 +18,7 @@
 
 #include "sling/base/flags.h"
 #include "sling/base/logging.h"
+#include "third_party/jit/cpu.h"
 
 namespace sling {
 
@@ -128,6 +129,14 @@ PyObject *PyLogMessage(PyObject *self, PyObject *args) {
   LogMessage(filename, line, severity) << message;
 
   Py_RETURN_NONE;
+}
+
+PyObject *PyCPUs() {
+  return PyLong_FromLong(jit::CPU::Processors());
+}
+
+PyObject *PyCores() {
+  return PyLong_FromLong(jit::CPU::Cores());
 }
 
 }  // namespace sling

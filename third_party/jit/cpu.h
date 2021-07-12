@@ -173,7 +173,10 @@ class CPU {
     initialized = true;
   }
 
-  // Return the number of CPUs.
+  // Return the number of CPU cores, i.e physical CPUs.
+  static int Cores();
+
+  // Return the number of CPUs, i.e. hyper-threads.
   static int Processors();
 
   // Return bit mask with supported features.

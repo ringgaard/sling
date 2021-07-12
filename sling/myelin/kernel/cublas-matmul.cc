@@ -79,7 +79,6 @@ class CUBLASMatMul : public Kernel {
     Register descaddr = masm->rr().alloc_temp();
     __ movp(descaddr, desc);
 
-    __ SaveProfilerRegisters();
     __ movp(arg_reg_1, handle);
     __ movq(arg_reg_2, Operand(descaddr, offsetof(Descriptor, op)));
     __ movp(arg_reg_3, args.traits.one());  // alpha
@@ -106,7 +105,6 @@ class CUBLASMatMul : public Kernel {
                    "cublasLtMatmul");
     __ call(tmp);
     __ addq(rsp, Immediate(10 * 8));
-    __ RestoreProfilerRegisters();
     CUDARuntime::EmitStatusCheck("cublasLtMatmul", masm);
   }
 

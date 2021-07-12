@@ -40,7 +40,7 @@ void LearnerTask::Train(Task *task, myelin::Network *model) {
 
   // Start training threads.
   LOG(INFO) << "Starting training";
-  int threads = task->Get("workers", jit::CPU::Processors());
+  int threads = task->Get("workers", jit::CPU::Cores());
   WorkerPool pool;
   pool.Start(threads, [this, model](int index) {
     int delay = index == 0 ? 0 : (index - 1) * rampup_ + warmup_;

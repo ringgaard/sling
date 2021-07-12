@@ -6988,8 +6988,9 @@
   jurisdiction: Q38
   register_name: "Tax Register Information System"
   native_register_name: "Anagrafe Tributaria"
+  register: Q3614936
   owner_name: "Revenue Agency"
-  owner: Q573607
+  owner: Q392949
   native_owner_name: "Agenzia delle Entrate"
   url: "https://telematici.agenziaentrate.gov.it/VerificaCF/VerificaCfPnf.do"
 }

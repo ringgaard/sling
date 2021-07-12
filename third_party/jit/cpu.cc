@@ -330,6 +330,10 @@ void CPU::Initialize() {
 #include <sys/sysinfo.h>
 
 int CPU::Processors() {
+  return get_nprocs();
+}
+
+int CPU::Cores() {
   static int cpus = -1;
   if (cpus == -1) {
     // Get the number of processors.
@@ -357,9 +361,17 @@ int CPU::Processors() {
   return cpus;
 }
 
+int CPU::Cores() {
+  return Processors();
+}
+
 #else
 
 int CPU::Processors() {
+  return 1;
+}
+
+int CPU::Cores() {
   return 1;
 }
 

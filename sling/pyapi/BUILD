@@ -75,6 +75,7 @@ cc_library(
     "//sling/string:text",
     "//sling/util:mutex",
     "//sling/web:web-archive",
+    "//third_party/jit:cpu",
   ],
   copts = [
     "-Wno-write-strings",

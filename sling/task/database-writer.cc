@@ -131,7 +131,7 @@ class DatabaseWriter : public Processor {
   DBMode mode_ = DBOVERWRITE;
 
   // Number of records to write in one batch.
-  int batch_size_ = 100;
+  int batch_size_ = 128;
 
   // Current queue of messages that have not been written to database.
   std::vector<Message *> queue_;

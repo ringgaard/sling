@@ -28,6 +28,12 @@ PyObject *PySetFlag(PyObject *self, PyObject *args);
 // Log message.
 PyObject *PyLogMessage(PyObject *self, PyObject *args);
 
+// Return number of logical CPUs.
+PyObject *PyCPUs();
+
+// Return number of physical CPUs.
+PyObject *PyCores();
+
 }  // namespace sling
 
 #endif  // SLING_PYAPI_PYMISC_H_
