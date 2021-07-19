@@ -25,14 +25,10 @@ namespace task {
 // Read records from record file and output to channel.
 class RecordFileReader : public Process {
  public:
-  // Process input file.
+  // Process input files.
   void Run(Task *task) override {
     // Get input file.
-    Binding *input = task->GetInput("input");
-    if (input == nullptr) {
-      LOG(ERROR) << "No input resource";
-      return;
-    }
+    auto inputs = task->GetInputs("input");
 
     // Get output channel.
     Channel *output = task->GetSink("output");
@@ -41,10 +37,8 @@ class RecordFileReader : public Process {
       return;
     }
 
-    // Open input file.
     RecordFileOptions options;
     options.buffer_size = task->Get("buffer_size", options.buffer_size);
-    RecordReader reader(input->resource()->name(), options);
 
     // Statistics counters.
     Counter *records_read = task->GetCounter("records_read");
@@ -55,30 +49,36 @@ class RecordFileReader : public Process {
     int64 limit = -1;
     task->Fetch("limit", &limit);
 
-    // Read records from file and output to output channel.
-    Record record;
+    // Read all input files.
     int64 num_records = 0;
-    while (!reader.Done()) {
-      // Read record.
-      CHECK(reader.Read(&record))
-          << ", file: " << input->resource()->name()
-          << ", position: " << reader.Tell();
+    for (Binding *input : inputs) {
+      // Open input file.
+      RecordReader reader(input->resource()->name(), options);
 
-      // Update stats.
-      records_read->Increment();
-      key_bytes_read->Increment(record.key.size());
-      value_bytes_read->Increment(record.value.size());
+      // Read records from file and output to output channel.
+      Record record;
+      while (!reader.Done()) {
+        // Read record.
+        CHECK(reader.Read(&record))
+            << ", file: " << input->resource()->name()
+            << ", position: " << reader.Tell();
 
-      // Send message with record to output channel.
-      Message *message = new Message(record.key, record.version, record.value);
-      output->Send(message);
+        // Update stats.
+        records_read->Increment();
+        key_bytes_read->Increment(record.key.size());
+        value_bytes_read->Increment(record.value.size());
 
-      // Check for early stopping.
-      if (limit != -1 && ++num_records >= limit) break;
+        // Send message with record to output channel.
+        Message *message = new Message(record.key, record.version, record.value);
+        output->Send(message);
+
+        // Check for early stopping.
+        if (limit != -1 && ++num_records >= limit) break;
+      }
+
+      // Close reader.
+      CHECK(reader.Close());
     }
-
-    // Close reader.
-    CHECK(reader.Close());
 
     // Close output channel.
     output->Close();

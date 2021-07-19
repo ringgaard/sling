@@ -28,12 +28,8 @@ class TextFileReader : public Process {
  public:
   // Process input file.
   void Run(Task *task) override {
-    // Get input file.
-    Binding *input = task->GetInput("input");
-    if (input == nullptr) {
-      LOG(ERROR) << "No input resource";
-      return;
-    }
+    // Get input files.
+    auto inputs = task->GetInputs("input");
 
     // Get output channel.
     Channel *output = task->GetSink("output");
@@ -42,28 +38,31 @@ class TextFileReader : public Process {
       return;
     }
 
-    // Open input file.
-    int buffer_size = task->Get("buffer_size", 1 << 16);
-    FileInput file(input->resource()->name(), buffer_size);
-
     // Statistics counters.
     Counter *lines_read = task->GetCounter("text_lines_read");
     Counter *bytes_read = task->GetCounter("text_bytes_read");
 
-    // Read lines from file and output to output channel.
+    // Read input file(s).
+    int buffer_size = task->Get("buffer_size", 1 << 16);
     int64 max_lines = task->Get("max_lines", 0);
     int64 num_lines = 0;
-    string line;
-    while (file.ReadLine(&line)) {
-      // Update stats.
-      lines_read->Increment();
-      bytes_read->Increment(line.size());
+    for (Binding *input : inputs) {
+      // Open input file.
+      FileInput file(input->resource()->name(), buffer_size);
 
-      // Send message with line to output channel.
-      output->Send(new Message(Slice(), Slice(line)));
+      // Read lines from file and output to output channel.
+      string line;
+      while (file.ReadLine(&line)) {
+        // Update stats.
+        lines_read->Increment();
+        bytes_read->Increment(line.size());
 
-      // Stop when max lines reached.
-      if (max_lines > 0 && ++num_lines == max_lines) break;
+        // Send message with line to output channel.
+        output->Send(new Message(Slice(), Slice(line)));
+
+        // Stop when max lines reached.
+        if (max_lines > 0 && ++num_lines == max_lines) break;
+      }
     }
 
     // Close output channel.

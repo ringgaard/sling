@@ -517,6 +517,7 @@ void DBService::Options(HTTPRequest *request, HTTPResponse *response) {
     dbinfo->Add("dbdir", mount->db.dbdir());
     dbinfo->Add("size", mount->db.size());
     dbinfo->Add("records", mount->db.num_records());
+    dbinfo->Add("shards", mount->db.num_shards());
     dbinfo->Add("epoch", mount->db.epoch());
     dbinfo->Add("dirty", mount->db.dirty());
     dbinfo->Add("bulk", mount->db.bulk());

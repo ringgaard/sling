@@ -178,6 +178,7 @@ delimiters = [
 html_report_header = """
 <html>
 <head>
+<meta charset="utf-8">
 <style>
 body {
   font-family: Helvetica,sans-serif;
@@ -229,7 +230,8 @@ html_report_template = """
     <div class="title">{title}</div>
     <div>
       <span class="{marker}">NSFW</span>
-      <a href="https://www.reddit.com/r/{sr}/comments/{sid}/">{sid}</a>
+      <a href="https://www.reddit.com{permalink}">{sid}</a>
+      {xpost}
     </div>
     <div>
       {match}
@@ -245,17 +247,23 @@ html_single_match = """
 
 html_multi_match = "{count} matches for <b>{query}</b>"
 
+html_xpost = """
+  cross-post from <a href="https://www.reddit.com{permalink}">{xsr}</a>
+"""
+
 # Initialize commons store.
 commons = sling.Store()
 n_subreddit = commons["subreddit"]
 n_title = commons["title"]
 n_url = commons["url"]
+n_permalink = commons["permalink"]
 n_is_self = commons["is_self"]
 n_over_18 = commons["over_18"]
 n_thumbnail = commons["thumbnail"]
 n_preview = commons["preview"]
 n_images = commons["images"]
 n_resolutions = commons["resolutions"]
+n_crosspost = commons["crosspost_parent_list"]
 aliases = sling.PhraseTable(commons, flags.arg.aliases)
 commons.freeze()
 
@@ -393,14 +401,25 @@ for key, value in redditdb.items(chkpt.checkpoint):
       elif len(matches) > 0:
         match = html_multi_match.format(count=len(matches), query=query)
 
+      # Check for cross-posting.
+      xpost = ""
+      xpost_list = posting[n_crosspost]
+      if xpost_list and len(xpost_list) == 1:
+        xposting = xpost_list[0]
+        xpost = html_xpost.format(
+          permalink=xposting[n_permalink],
+          xsr=xposting[n_subreddit],
+        )
+
       # Add section to report for unknown posting.
       sr_reports[sr].append(html_report_template.format(
         url=url,
         thumb=thumb.replace("&amp;", "&"),
         title=title,
         marker="nsfw" if nsfw else "sfw",
-        sr=sr,
-        sid=key[3:],
+        permalink=posting[n_permalink],
+        sid=key,
+        xpost=xpost,
         match=match,
       ))
     continue

@@ -29,15 +29,10 @@ namespace task {
 // Frame store reader.
 class FrameStoreReader : public Process {
  public:
-  // Process input file.
+  // Process input files.
   void Run(Task *task) override {
-    // Get input file.
-    Binding *binding = task->GetInput("input");
-    if (binding == nullptr) {
-      LOG(ERROR) << "No input resource";
-      return;
-    }
-    Resource *file = binding->resource();
+    // Get input files.
+    auto inputs = task->GetInputs("input");
 
     // Get output channel.
     Channel *output = task->GetSink("output");
@@ -46,31 +41,34 @@ class FrameStoreReader : public Process {
       return;
     }
 
-    // Open input file.
-    FileInputStream stream(file->name());
-    Input input(&stream);
+    for (Binding *binding : inputs) {
+      // Open input file.
+      Resource *file = binding->resource();
+      FileInputStream stream(file->name());
+      Input input(&stream);
 
-    // Read frames from input and output to output channel.
-    Store store;
-    if (input.Peek() == WIRE_BINARY_MARKER) {
-      Decoder decoder(&store, &input);
-      while (!decoder.done()) {
-        Object object = decoder.Decode();
-        if (object.IsFrame()) {
-          output->Send(CreateMessage(object.AsFrame(), true));
-        } else {
-          output->Send(CreateMessage(Text(), object, true));
+      // Read frames from input and output to output channel.
+      Store store;
+      if (input.Peek() == WIRE_BINARY_MARKER) {
+        Decoder decoder(&store, &input);
+        while (!decoder.done()) {
+          Object object = decoder.Decode();
+          if (object.IsFrame()) {
+            output->Send(CreateMessage(object.AsFrame(), true));
+          } else {
+            output->Send(CreateMessage(Text(), object, true));
+          }
         }
-      }
-    } else {
-      Reader reader(&store, &input);
-      while (!reader.done()) {
-        Object object = reader.Read();
-        CHECK(!reader.error()) << reader.GetErrorMessage(file->name());
-        if (object.IsFrame()) {
-          output->Send(CreateMessage(object.AsFrame(), true));
-        } else {
-          output->Send(CreateMessage(Text(), object, true));
+      } else {
+        Reader reader(&store, &input);
+        while (!reader.done()) {
+          Object object = reader.Read();
+          CHECK(!reader.error()) << reader.GetErrorMessage(file->name());
+          if (object.IsFrame()) {
+            output->Send(CreateMessage(object.AsFrame(), true));
+          } else {
+            output->Send(CreateMessage(Text(), object, true));
+          }
         }
       }
     }

@@ -1088,7 +1088,7 @@ class KbLightbox extends MdModal {
   static stylesheet() {
     return MdModal.stylesheet() + `
       $ {
-        background-color: rgba(0, 0, 0, 0.9);
+        background-color: black;
       }
 
       $ .content {

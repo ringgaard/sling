@@ -83,6 +83,9 @@ for item in kb:
   if r.status_code == 503:
     print("UNAVAILABLE", item.id, imdbid, item.name)
     continue
+  elif r.status_code == 400:
+    print("NOTFOUND", item.id, imdbid, item.name)
+    continue
   r.raise_for_status()
   data = r.content[r.content.find(b'(') + 1 : -1]
   info = json.loads(data)

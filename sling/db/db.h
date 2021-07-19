@@ -142,6 +142,9 @@ class Database {
   // Return number of deleted records.
   uint64 num_deleted() const { return index_->num_deleted(); }
 
+  // Return number of data shards.
+  int num_shards() const { return readers_.size(); }
+
   // Return index capacity.
   uint64 index_capacity() const { return index_->capacity(); }
 

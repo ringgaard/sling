@@ -31,6 +31,10 @@ flags.define("--redditdb",
              default=None,
              help="Reddit submission database")
 
+flags.define("--ids",
+             default=None,
+             help="Reddit submission ids")
+
 flags.parse()
 
 session = requests.Session()
@@ -46,8 +50,11 @@ dt = None
 after = 0
 while True:
   # Fetch next batch.
-  url = "%s/?subreddit=%s&sort=asc&after=%d&size=%d" % (
-    baseurl, flags.arg.subreddit, after, batchsize)
+  if flags.arg.ids:
+    url = "%s/?ids=%s" % (baseurl, flags.arg.ids)
+  else:
+    url = "%s/?subreddit=%s&sort=asc&after=%d&size=%d" % (
+      baseurl, flags.arg.subreddit, after, batchsize)
 
   r = session.get(url)
   if r.status_code == 429:
@@ -84,6 +91,7 @@ while True:
   print(flags.arg.subreddit, dt, num_submissions, "submissions", end='\r')
 
   # Resume at the creation time for last retrieved submission.
+  if flags.arg.ids: break
   after = created
 
 if fout != None: fout.close()

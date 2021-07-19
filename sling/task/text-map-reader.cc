@@ -26,14 +26,10 @@ namespace task {
 // Read text map file and output lines to channel.
 class TextMapReader : public Process {
  public:
-  // Process input file.
+  // Process input files.
   void Run(Task *task) override {
-    // Get input file.
-    Binding *input = task->GetInput("input");
-    if (input == nullptr) {
-      LOG(ERROR) << "No input resource";
-      return;
-    }
+    // Get input files.
+    auto inputs = task->GetInputs("input");
 
     // Get output channel.
     Channel *output = task->GetSink("output");
@@ -42,27 +38,30 @@ class TextMapReader : public Process {
       return;
     }
 
-    // Open input file.
-    int buffer_size = task->Get("buffer_size", 1 << 16);
-    FileInput file(input->resource()->name(), buffer_size);
-
     // Statistics counters.
     Counter *invalid_map_lines = task->GetCounter("invalid_map_lines");
 
-    // Read lines from file and output to output channel.
-    string line;
-    while (file.ReadLine(&line)) {
-      // Find delimiter.
-      size_t split = line.find('\t');
-      if (split == -1) {
-        // Missing delimiter.
-        invalid_map_lines->Increment();
-        output->Send(new Message(Slice(), Slice(line)));
-      } else {
-        // Send message with split into key and value to output channel.
-        Slice key(line.data(), split);
-        Slice value(line.data() + split + 1, line.size() - split - 1);
-        output->Send(new Message(key, value));
+    // Read input file(s).
+    int buffer_size = task->Get("buffer_size", 1 << 16);
+    for (Binding *input : inputs) {
+      // Open input file.
+      FileInput file(input->resource()->name(), buffer_size);
+
+      // Read lines from file and output to output channel.
+      string line;
+      while (file.ReadLine(&line)) {
+        // Find delimiter.
+        size_t split = line.find('\t');
+        if (split == -1) {
+          // Missing delimiter.
+          invalid_map_lines->Increment();
+          output->Send(new Message(Slice(), Slice(line)));
+        } else {
+          // Send message with split into key and value to output channel.
+          Slice key(line.data(), split);
+          Slice value(line.data() + split + 1, line.size() - split - 1);
+          output->Send(new Message(key, value));
+        }
       }
     }
 

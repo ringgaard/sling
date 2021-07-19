@@ -15,6 +15,7 @@
 """Find and remove duplicate photos."""
 
 import hashlib
+import requests
 import sys
 import sling
 import sling.flags as flags
@@ -63,18 +64,26 @@ def dedup(id, profile):
   # Compute image hash for each photo to detect duplicates.
   fingerprints = {}
   duplicates = set()
+  missing = set()
   naughty = set()
   num_photos = 0
   num_duplicates = 0
+  num_missing = 0
   for media in profile(n_media):
     url = store.resolve(media)
     nsfw = type(media) is sling.Frame and media[n_has_quality] == n_nsfw
 
-    # Get image from database.
+    # Get image from database or fetch directly.
     image = mediadb[url]
     if image is None:
-      print(url, "missing in database")
-      continue
+      r = requests.get(url)
+      if r.status_code != 200:
+        print(url, "missing", r.status_code)
+        missing.add(url)
+        num_missing += 1
+        continue
+      print(url, "not cached")
+      image = r.content
 
     # Compute hash and check for duplicates.
     fingerprint = hashlib.md5(image).digest()
@@ -95,8 +104,8 @@ def dedup(id, profile):
         else:
           print(id, url, " duplicate of", dup)
     elif fingerprint in bad_photos:
-      duplicates.add(url)
-      num_duplicates += 1
+      missing.add(url)
+      num_missing += 1
       print(id, url, " bad")
     else:
       fingerprints[fingerprint] = url
@@ -104,30 +113,32 @@ def dedup(id, profile):
     if nsfw: naughty.add(url)
     num_photos += 1
 
-  print(id, num_photos, "photos,", num_duplicates, "duplicates")
+  print(id,
+        num_photos, "photos,",
+        num_duplicates, "duplicates",
+        num_missing, "missing")
 
-  # Remove duplicates
-  if num_duplicates > 0 and flags.arg.dedup:
+  # Remove duplicates.
+  if (num_duplicates > 0 or num_missing > 0) and flags.arg.dedup:
     # Find photos to keep.
     keep = []
     for media in profile(n_media):
       url = store.resolve(media)
-      if url in duplicates:
+      if url in duplicates or url in missing:
         print(id, "Remove", url)
       else:
         keep.append((n_media, media))
     del profile[n_media]
     profile.extend(keep)
 
-  return num_duplicates
-
+  return num_duplicates + num_missing
 
 if flags.arg.all:
   # Check all profiles.
   for id, _, data in photodb:
     profile = store.parse(data)
-    dups = dedup(id, profile)
-    if dups > 0 and flags.arg.dedup:
+    removed = dedup(id, profile)
+    if removed > 0 and flags.arg.dedup:
       # Write updated profile.
       photodb[id] = profile.data(binary=True)
 else:
@@ -137,8 +148,8 @@ else:
     print("no profile found for", id)
   else:
     profile = store.parse(data)
-    dups = dedup(flags.arg.id, profile)
-    if dups > 0 and flags.arg.dedup:
+    removed = dedup(flags.arg.id, profile)
+    if removed > 0 and flags.arg.dedup:
       # Write updated profile.
       photodb[flags.arg.id] = profile.data(binary=True)
 

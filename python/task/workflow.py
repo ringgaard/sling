@@ -49,7 +49,6 @@ flags.define("--jobid",
 # Input readers.
 readers = {
   "records": "record-file-reader",
-  "zip": "zip-file-reader",
   "store": "frame-store-reader",
   "textmap": "text-map-reader",
   "text": "text-file-reader",
