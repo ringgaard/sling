@@ -169,6 +169,7 @@ class WikipediaWorkflow:
       # Parse Wikipedia articles to SLING documents.
       articles = self.wikipedia_articles(language)
       categories = self.wikipedia_categories(language)
+      pages = self.wf.bundle(articles, categories)
       redirects = self.wikipedia_redirects(language)
       commons = [
         self.data.language_defs(),
@@ -182,8 +183,7 @@ class WikipediaWorkflow:
       parser = self.wf.task("wikipedia-document-builder", "wikipedia-documents")
       parser.add_param("language", language)
       parser.add_param("skip_tables", True)
-      self.wf.connect(self.wf.read(articles, name="article-reader"), parser)
-      self.wf.connect(self.wf.read(categories, name="category-reader"), parser)
+      self.wf.connect(self.wf.read(pages, name="pages"), parser)
       parser.attach_input("commons", commons)
       parser.attach_input("wikimap", wikimap)
       parser.attach_input("redirects", redirects)

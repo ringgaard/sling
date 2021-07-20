@@ -269,7 +269,6 @@ class Datasets:
 
   def standard_item_sources(self):
     items = self.wf.bundle(
-              self.properties(),
               self.wikidata_items(),
               self.wikilinks(),
               self.popularity(),

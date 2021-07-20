@@ -56,7 +56,7 @@ class WikidataWorkflow:
                            format="text/json")
     else:
       input = self.wf.read(dump)
-    return self.wf.parallel(input, threads=10, queue=1000)
+    return self.wf.parallel(input, queue=1024)
 
   def wikidata_latest(self):
     """Resource for latest Wikidata update. This contains the the QID and
@@ -111,7 +111,7 @@ class WikidataWorkflow:
     with self.wf.namespace("wikisnap"):
       # Read frames from database.
       snapshot = self.wf.read(self.wikidatadb(), name="db-reader")
-      input = self.wf.parallel(snapshot, threads=3, queue=1000)
+      input = self.wf.parallel(snapshot, queue=1024)
 
       # Split snapshot into items, properties, and redirects.
       task = self.wf.task("wikidata-splitter")

@@ -65,7 +65,7 @@ class AliasWorkflow:
                                      name="wikidata-alias-extractor")
       wikipedia_aliases = self.wf.read(self.data.wikipedia_aliases(language),
                                        name="wikipedia-alias-reader")
-      aliases = wikipedia_aliases + [wikidata_aliases]
+      aliases = self.wf.collect(wikipedia_aliases, wikidata_aliases)
 
     with self.wf.namespace("select"):
       # Group aliases on item id.

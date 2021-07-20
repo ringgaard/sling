@@ -790,10 +790,14 @@ struct ArrayDatum : public Datum {
 // with an array of buckets pointing to linked lists of symbols. Each linked
 // list is terminated by nil.
 struct MapDatum : public ArrayDatum {
-  // Returns a pointer to the bucket for the hash value.
+  // Returns a pointer to the bucket for the hash value. The map size is always
+  // a power of two so we can use masking instead of modulo, i.e.
+  // x % 2^n = x & (2^n - 1). This implementation also takes advantage of the
+  // fact that each bucket is 4 bytes and there are two tag bits.
   Handle *bucket(Handle hash) const {
     DCHECK(hash.IsInt());
-    return reinterpret_cast<Handle *>(payload() + (hash.untagged() % size()));
+    Word offset = hash.untagged() & (size() - 1);
+    return reinterpret_cast<Handle *>(payload() + offset);
   }
 
   // Inserts symbol in map.
@@ -995,7 +999,7 @@ class Store {
     // Initial number of handles.
     int initial_handles;
 
-    // Initial number of bucket in symbol hash table.
+    // Initial number of bucket in symbol hash table. Must be power of two.
     int map_buckets;
 
     // Number of buckets for coalescing strings.

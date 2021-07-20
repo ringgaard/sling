@@ -129,7 +129,11 @@ class KnowledgeBaseWorkflow:
 
   def fuse_items(self, items=None, extras=None, output=None):
     """Fuse items."""
-    items = self.wf.bundle(self.data.standard_item_sources(), items, extras)
+    items = self.wf.bundle(
+      self.data.standard_item_sources(),
+      self.data.wikidata_properties(),
+      items,
+      extras)
     if output == None: output = self.data.items()
 
     with self.wf.namespace("fused-items"):

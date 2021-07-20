@@ -31,7 +31,7 @@ class Workers : public Processor {
 
     // Get worker pool parameters.
     int num_workers = task->Get("worker_threads", 5);
-    int queue_size = task->Get("queue_size", num_workers * 2);
+    int queue_size = task->Get("queue_size", num_workers * 32);
 
     // Start worker pool.
     pool_ = new ThreadPool(num_workers, queue_size);

@@ -30,6 +30,11 @@ flags.define("--dryrun",
              default=False,
              action='store_true')
 
+flags.define("--separate_readers",
+             help="use separate reader for each resource shard",
+             default=False,
+             action='store_true')
+
 flags.define("--monitor",
              help="port number for task monitor (0 means no monitor)",
              default=6767,
@@ -275,9 +280,13 @@ class Scope:
     parts = []
     s = self
     while s != None:
-      parts.append(s.name)
+      if s.name != None: parts.append(s.name)
       s = s.prev
-    return '/'.join(reversed(parts))
+    return '/'.join(reversed(parts)) if len(parts) > 0 else None
+
+  def prefixed(self, name):
+    prefix = self.prefix()
+    return name if prefix is None else prefix + "/" + name
 
 
 def format_of(input):
@@ -312,7 +321,7 @@ class Workflow(object):
   def task(self, type, name=None, shard=None, params=None):
     """A new task to workflow."""
     if name == None: name = type
-    if self.scope != None: name = self.scope.prefix() + "/" + name
+    if self.scope != None: name = self.scope.prefixed(name)
     basename = name
     index = 0
     while (name, shard) in self.task_map:
@@ -471,21 +480,45 @@ class Workflow(object):
     """Add readers for input resource(s). The format of the input resource is
     used for selecting an appropriate reader task for the format."""
     if isinstance(input, list):
-      outputs = []
-      shards = len(input)
-      for shard in range(shards):
-        format = input[shard].format
-        if type(format) == str: format = Format(format)
-        if format == None: format = Format("text")
-        tasktype = readers.get(format.file)
-        if tasktype == None: raise Exception("No reader for " + str(format))
+      if flags.arg.separate_readers:
+        # Create a separate reader task for each resource shard.
+        outputs = []
+        shards = len(input)
+        for shard in range(shards):
+          format = input[shard].format
+          if type(format) == str: format = Format(format)
+          if format == None: format = Format("text")
+          tasktype = readers.get(format.file)
+          if tasktype == None: raise Exception("No reader for " + str(format))
 
-        reader = self.task(tasktype, name=name, shard=Shard(shard, shards))
-        reader.add_params(params)
-        reader.attach_input("input", input[shard])
-        output = self.channel(reader, format=format.as_message())
-        outputs.append(output)
-      return outputs
+          reader = self.task(tasktype, name=name, shard=Shard(shard, shards))
+          reader.add_params(params)
+          reader.attach_input("input", input[shard])
+          output = self.channel(reader, format=format.as_message())
+          outputs.append(output)
+        return outputs
+      else:
+        # Create a one reader task for each resource type and send messages
+        # to a worker pool.
+        with self.namespace(name):
+          shards = len(input)
+          outputs = []
+          inputs = {}
+          for shard in range(shards):
+            format = input[shard].format
+            if type(format) == str: format = Format(format)
+            if format == None: format = Format("text")
+            tasktype = readers.get(format.file)
+            if tasktype == None: raise Exception("No reader for " + str(format))
+            reader = inputs.get(tasktype)
+            if reader is None:
+              reader = self.task(tasktype)
+              reader.add_params(params)
+              inputs[tasktype] = reader
+              output = self.channel(reader, format=format.as_message())
+              outputs.append(output)
+            reader.attach_input("input", input[shard])
+          return self.parallel(outputs)
     else:
       format = input.format
       if type(format) == str: format = Format(format)
@@ -578,28 +611,36 @@ class Workflow(object):
     """Return list of channels that collects the input from all the arguments.
     The arguments can be channels, resources, or lists of channels or
     resources."""
+    resources = []
     channels = []
     for arg in args:
       if arg is None: continue
       if isinstance(arg, Channel):
         channels.append(arg)
       elif isinstance(arg, Resource):
-        channels.append(self.read(arg))
+        resources.append(arg)
       elif isinstance(arg, list):
         for elem in arg:
           if elem is None: continue
           if isinstance(elem, Channel):
             channels.append(elem)
           elif isinstance(elem, Resource):
-            channels.append(self.read(elem))
+            resources.append(elem)
           else:
             raise Exception("illegal element")
       else:
         raise Exception("illegal argument")
+    if len(resources) > 0:
+      output = self.read(resources)
+      if isinstance(output, list):
+        channels.extend(output)
+      else:
+        channels.append(output)
     return channels if len(channels) > 1 else channels[0]
 
-  def parallel(self, input, threads=5, queue=None, name=None):
+  def parallel(self, input, threads=None, queue=None, name=None):
     """Parallelize input messages over thread worker pool."""
+    if threads is None: threads = api.cpus()
     workers = self.task("workers", name=name)
     workers.add_param("worker_threads", threads)
     if queue != None: workers.add_param("queue_size", queue)

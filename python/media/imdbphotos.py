@@ -104,7 +104,7 @@ for item in kb:
     url = "(no photo)"
   else:
     # Create profile for person.
-    url = i[0]
+    url = i[0].replace("/ia.media-imdb.com/", "/m.media-amazon.com/")
     store = sling.Store(kb)
     image = store.frame([(p_is, url), (p_stated_in, n_imdb)])
     profile = store.frame([(p_media, image), (p_imdb, imdbid)])
