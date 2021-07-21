@@ -764,14 +764,21 @@ class KbPictureCard extends MdCard {
   onupdated() {
     let images = this.state;
     if (images && images.length > 0) {
-      let image = images[0];
+      let index = 0;
+      for (let i = 0; i < images.length; ++i) {
+        if (!images[i].nsfw) {
+          index = i;
+          break;
+        }
+      }
+      let image = images[index];
       let caption = image.text;
       if (caption) {
         caption = caption.replace(/\[\[|\]\]/g, '');
       }
       if (images.length > 1) {
         if (!caption) caption = "";
-        caption += ` [1/${images.length}]`;
+        caption += ` [${index + 1}/${images.length}]`;
       }
 
       this.find(".photo").update(imageurl(image.url, true));

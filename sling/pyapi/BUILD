@@ -128,6 +128,7 @@ cc_library(
     "//sling/task:database-writer",
     "//sling/task:pipe-reader",
     "//sling/task:workers",
+    "//sling/task:null-sink",
   ],
 )
 
