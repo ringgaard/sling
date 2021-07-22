@@ -5,12 +5,22 @@
     /w/item/popularity  ; Wikipedia popularity counts
     isa                 ; Wikidata item
     lex                 ; Wikipedia summaries
-    media               ; Twitter and Wikidata photos
     P1278               ; GLEIF
     PELF                ; ISO 20275 entity legal forms
     /w/item/links       ; Wikipedia link graph
     /w/item/category    ; Wikipedia categories
     /w/item/member      ; Wikipedia category members
+  ]
+
+  ; Media sources ordering.
+  media: [
+    Q328                ; English Wikipedia
+    Q48183              ; German Wikipedia
+    Q181163             ; Danish Wikipedia
+    Q8447               ; French Wikipedia
+    Q11920              ; Italian Wikipedia
+    Q37312              ; IMDB
+    Q918                ; Twitter
   ]
 
   ; Property inversion.

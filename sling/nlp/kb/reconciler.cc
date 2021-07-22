@@ -42,6 +42,16 @@ class ItemReconciler : public task::FrameProcessor {
       for (int i = 0; i < sources.length(); ++i) {
         source_order_.push_back(sources.get(i));
       }
+      unknown_source_priority_ += sources.length();
+    }
+
+    // Get media sources order.
+    if (config.Has("media")) {
+      Array media = config.Get("media").AsArray();
+      CHECK(media.valid());
+      for (int i = 0; i < media.length(); ++i) {
+        media_order_[media.get(i)] = unknown_source_priority_++;
+      }
     }
 
     // Get property inversions.
@@ -108,17 +118,44 @@ class ItemReconciler : public task::FrameProcessor {
  private:
   // Get source order for frame.
   int ItemSourceOrder(const Frame &frame) {
+    // Get priority from properties.
     for (int i = 0; i < source_order_.size(); ++i) {
       if (frame.Has(source_order_[i])) return i;
     }
-    return source_order_.size();
+
+    // Get priority from media source.
+    Store *store = frame.store();
+    Handle media = frame.GetHandle(n_media_);
+    if (store->IsFrame(media)) {
+      Frame m(store, media);
+      Handle source = m.GetHandle(n_imported_from_);
+      if (source.IsNil()) source = m.GetHandle(n_stated_in_);
+      if (!source.IsNil()) {
+        auto f = media_order_.find(source);
+        if (f != media_order_.end()) return f->second;
+      }
+    }
+
+    // Return default priority.
+    return unknown_source_priority_;
   }
 
   // Item source ordering.
   std::vector<Handle> source_order_;
 
+  // Media source ordering.
+  HandleMap<int> media_order_;
+
+  // Priority for unknown source.
+  int unknown_source_priority_ = 0;
+
   // Property inversion map.
   HandleMap<Handle> inversion_map_;
+
+  // Symbols.
+  Name n_media_{names_, "media"};
+  Name n_imported_from_{names_, "P143"};
+  Name n_stated_in_{names_, "P248"};
 
   // Statistics.
   task::Counter *num_mapped_ids_ = nullptr;

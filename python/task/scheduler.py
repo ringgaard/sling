@@ -246,7 +246,10 @@ class Queue(threading.Thread):
       job.status = flags.arg.logdir + "/" + job.id + ".json"
     out = open(job.stdout, "w")
     err = open(job.stderr, "w")
-    out.write("# cmd: %s\n" % str(cmd))
+    if type(cmd) is list:
+      out.write("# cmd: %s\n" % " ".join(cmd))
+    else:
+      out.write("# cmd: %s\n" % " ".str(cmd))
     out.flush()
 
     # Run job.

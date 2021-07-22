@@ -50,6 +50,7 @@ static const LinkPrefixMap link_prefix = {
   {"Attēls",     WikiParser::MEDIA},       // lv
   {"Bestand",    WikiParser::MEDIA},       // nl
   {"Berkas",     WikiParser::MEDIA},       // id
+  {"Bild",       WikiParser::MEDIA},       // de
   {"Categoría",  WikiParser::CATEGORY},    // es
   {"Categoria",  WikiParser::CATEGORY},    // it, pt, ca, la
   {"Catégorie",  WikiParser::CATEGORY},    // fr
