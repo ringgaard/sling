@@ -28,7 +28,8 @@ flags.define("--db",
 
 flags.define("--id",
              default=None,
-             help="Record key for record to edit")
+             help="Record key for record to edit",
+             metavar="KEY")
 
 flags.define("--add",
              help="Add new record to database",
@@ -44,6 +45,11 @@ flags.define("--delete",
              help="Delete record from database",
              default=False,
              action="store_true")
+
+flags.define("--move",
+             help="Move content from this record",
+             default=None,
+             metavar="KEY")
 
 flags.parse()
 
@@ -69,6 +75,16 @@ if flags.arg.add:
 elif flags.arg.delete:
   del db[flags.arg.id]
   print("Record deleted");
+  sys.exit(0)
+elif flags.arg.move:
+  if flags.arg.id in db:
+    print("Record", flags.arg.id, "already exists")
+  elif flags.arg.move not in db:
+    print("Record", flags.arg.move, "does not exist")
+  else:
+    db[flags.arg.id] = db[flags.arg.move]
+    del db[flags.arg.move]
+    print("Record moved");
   sys.exit(0)
 else:
   content = db[flags.arg.id]

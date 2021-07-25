@@ -62,6 +62,7 @@ flags.parse()
 # Set of black-listed subreddits.
 blacklist = set([
   "AdamRagusea",
+  "AOC",
   "ariheads",
   "Ashens",
   "Behzinga",
@@ -165,7 +166,7 @@ photosites = set([
 
 # Name delimiters.
 delimiters = [
-  "(", "[", ",", " - ", "|", "/", ":", "!", " – ", "'s ", "’s ",
+  "(", "[", ",", " - ", "|", "/", ":", "!", " – ", ";", "'s ", "’s ",
   " circa ", " c.",
   "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
   " by ", " is ", " was ", " in ", " on ", " with ", " at ", " as ", " from ",
