@@ -249,7 +249,7 @@ class Queue(threading.Thread):
     if type(cmd) is list:
       out.write("# cmd: %s\n" % " ".join(cmd))
     else:
-      out.write("# cmd: %s\n" % " ".str(cmd))
+      out.write("# cmd: %s\n" % str(cmd))
     out.flush()
 
     # Run job.

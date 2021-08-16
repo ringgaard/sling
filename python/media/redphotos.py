@@ -57,6 +57,11 @@ flags.define("--batch",
              default=None,
              metavar="FILE")
 
+flags.define("--caseless",
+             help="case-insesitive matching",
+             default=False,
+             action="store_true")
+
 flags.parse()
 
 # Set of black-listed subreddits.
@@ -170,8 +175,9 @@ delimiters = [
   " circa ", " c.",
   "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
   " by ", " is ", " was ", " in ", " on ", " with ", " at ", " as ", " from ",
-  " for ",
-  " aka ", " has ", " having ", " performing ", " during ", " being ",
+  " for ", " has ",
+  " aka ", " a.k.a. ",
+  " having ", " performing ", " during ", " being ",
   " posing ", " photographed ", " dressed ",
 ]
 
@@ -252,6 +258,17 @@ html_xpost = """
   cross-post from <a href="https://www.reddit.com{permalink}">{xsr}</a>
 """
 
+# Get proper name prefix.
+def name_prefix(name):
+  prefix = []
+  for word in name.split(" "):
+    if len(word) > 0 and word[0].isupper():
+      prefix.append(word)
+    else:
+      break
+  if len(prefix) == 0: return None
+  return " ".join(prefix)
+
 # Initialize commons store.
 commons = sling.Store()
 n_subreddit = commons["subreddit"]
@@ -295,6 +312,7 @@ for fn in flags.arg.celebmap.split(","):
         print("bad line in celebmap:", line)
         continue
       name = f[0].replace(".", "").strip()
+      if flags.arg.caseless: name = name.lower()
       itemid = f[1].strip()
       celebmap[name] = itemid
 
@@ -343,6 +361,8 @@ for key, value in redditdb.items(chkpt.checkpoint):
       if " And " in title: continue
       if " & " in title: continue
       if " &amp; " in title: continue
+      if " vs. " in title: continue
+      if " vs " in title: continue
 
       # Try to match title to name.
       name = title
@@ -352,8 +372,21 @@ for key, value in redditdb.items(chkpt.checkpoint):
         if p != -1 and p < cut: cut = p
       name = name[:cut].replace(".", "").strip()
 
-      itemid = celebmap.get(name)
+      if flags.arg.caseless:
+        itemid = celebmap.get(name.lower())
+      else:
+        itemid = celebmap.get(name)
       query = name
+
+      # Try to match name prefix.
+      if itemid is None:
+        prefix = name_prefix(name)
+        if prefix:
+          if flags.arg.caseless:
+            itemid = celebmap.get(prefix.lower())
+          else:
+            itemid = celebmap.get(prefix)
+        if itemid: query = prefix
     else:
       continue
 

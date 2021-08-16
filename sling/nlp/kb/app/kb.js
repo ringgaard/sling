@@ -142,6 +142,8 @@ class KbApp extends Component {
   onkeypress(e) {
     if (e.keyCode == 27) {
       this.find("#search").clear();
+    } else if (e.keyCode == 67 && e.ctrlKey) {
+      this.find("#item").oncopy(e);
     }
   }
 }

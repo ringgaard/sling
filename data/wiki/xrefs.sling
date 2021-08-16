@@ -75,7 +75,7 @@
     "yt": "P2397"       ; YouTube channel ID
     "of": "P8604"       ; OnlyFans ID
     "vimeo": "P4015"    ; Vimeo identifier
-    "pm": "P5346"       ; Playmate ID
+    "pb": "P5346"       ; Playmate ID
 
     "viaf": "P214"      ; VIAF ID
     "mid": "P646"       ; Freebase MID

@@ -50,6 +50,11 @@ flags.define("--captionless",
              default=False,
              action="store_true")
 
+flags.define("--perimagecaption",
+             help="use individual captions for images in albums",
+             default=False,
+             action="store_true")
+
 flags.define("--numbering",
              help="photo numbering for albums",
              default=False,
@@ -101,6 +106,11 @@ flags.define("--check",
 
 flags.define("--video",
              help="allow video clips",
+             default=False,
+             action="store_true")
+
+flags.define("--albums",
+             help="add albums from posting",
              default=False,
              action="store_true")
 
@@ -237,7 +247,7 @@ def add_photo(profile, url, caption=None, source=None, nsfw=False):
   return 1
 
 # Add Imgur album.
-def add_imgur_album(profile, albumid, isnsfw=False):
+def add_imgur_album(profile, albumid, caption, isnsfw=False):
   print("Imgur album", albumid)
   auth = {'Authorization': "Client-ID " + imgurkeys["clientid"]}
   r = session.get("https://api.imgur.com/3/album/" + albumid, headers=auth)
@@ -253,7 +263,12 @@ def add_imgur_album(profile, albumid, isnsfw=False):
 
   serial = 1
   total = len(reply["images"])
-  title = reply["title"]
+  album_title = reply["title"]
+  if album_title is None:
+     album_title = caption
+  elif caption is not None and caption.startswith(album_title):
+    album_title = caption
+
   count = 0
   for image in reply["images"]:
     link = image["link"]
@@ -268,22 +283,26 @@ def add_imgur_album(profile, albumid, isnsfw=False):
       continue
 
     # Image caption.
-    caption = image["title"]
-    if caption is None:
-      caption = image["description"]
-    if caption is None and title != None:
+    if flags.arg.perimagecaption:
+      title = image["title"]
+      if title is None:
+        title = image["description"]
+    else:
+      title = None
+      
+    if title is None and album_title != None:
       if flags.arg.numbering:
-        caption = title + " (%d/%d)" % (serial, total)
+        title = album_title + " (%d/%d)" % (serial, total)
       else:
-        caption = title
-    if caption != None:
-      caption = caption.replace("\n", " ").strip()
+        title = album_title
+    if title != None:
+      title = title.replace("\n", " ").strip()
 
     # NSFW flag.
     nsfw = isnsfw or reply["nsfw"] or image["nsfw"]
 
     # Add media frame to profile.
-    if add_photo(profile, link, caption, None, nsfw): count += 1
+    if add_photo(profile, link, title, None, nsfw): count += 1
     serial += 1
   return count
 
@@ -323,7 +342,7 @@ def add_imgur_image(profile, imageid, isnsfw=False):
   return add_photo(profile, link, caption, None, nsfw)
 
 # Add Reddit gallery.
-def add_reddit_gallery(profile, galleryid, isnsfw=False):
+def add_reddit_gallery(profile, galleryid, caption, isnsfw=False):
   print("Redit posting", galleryid)
   r = session.get("https://api.reddit.com/api/info/?id=t3_" + galleryid,
                   headers = {"User-agent": "SLING Bot 1.0"})
@@ -335,7 +354,7 @@ def add_reddit_gallery(profile, galleryid, isnsfw=False):
   reply = children[0]["data"]
   #print(json.dumps(reply, indent=2))
 
-  if reply["is_self"]:
+  if not flags.arg.albums and reply["is_self"]:
     print("Skipping self post", galleryid);
     return 0
   if reply["removed_by_category"] != None:
@@ -353,14 +372,23 @@ def add_reddit_gallery(profile, galleryid, isnsfw=False):
       print("Skipping empty gallery", galleryid);
       return 0
 
-    # Single image in Reddit posting.
-    caption = reply["title"]
-    if flags.arg.captionless: caption = None
+    title = reply["title"]
+    if title is None: title = caption
+    if flags.arg.captionless: title = None
     nsfw = isnsfw or reply["over_18"]
 
-    # Add media frame to profile.
-    return add_media(profile, url, caption, nsfw)
+    count = 0
+    if flags.arg.albums:
+      # Fetch albums from text.
+      selftext = reply["selftext"]
+      for m in re.finditer("\[(.+)\]\((https?://imgur.com/a/\w+)\)", selftext):
+        print("Add album", m[2], m[1])
+        count += add_media(profile, m[2], m[1], nsfw)
+    else:
+      # Add posting media to profile.
+      count = add_media(profile, url, title, nsfw)
 
+    return count
 
   # Get gallery items.
   gallery = reply.get("gallery_data")
@@ -389,16 +417,21 @@ def add_reddit_gallery(profile, galleryid, isnsfw=False):
     if m != None: link = "https://i.redd.it/" + m.group(1)
 
     # Image caption.
-    caption = reply["title"]
-    if flags.arg.captionless: caption = None
-    if caption != None and flags.arg.numbering:
-      caption = "%s (%d/%d)" % (caption, serial, len(items))
+    title = reply["title"]
+    if title is None:
+      title = caption
+    elif caption is not None and caption.startswith(title):
+      title = caption
+    if flags.arg.captionless: title = None
+
+    if title != None and flags.arg.numbering:
+      title = "%s (%d/%d)" % (title, serial, len(items))
 
     # NSFW flag.
     nsfw = isnsfw or reply["over_18"]
 
     # Add media frame to profile.
-    if add_photo(profile, link, caption, None, nsfw): count += 1
+    if add_photo(profile, link, title, None, nsfw): count += 1
     serial += 1
   return count
 
@@ -442,17 +475,17 @@ def add_media(profile, url, caption, nsfw):
   m = re.match("https://imgur\.com/a/(\w+)", url)
   if m != None:
     albumid = m.group(1)
-    return add_imgur_album(profile, albumid, nsfw)
+    return add_imgur_album(profile, albumid, caption, nsfw)
 
   # Imgur gallery.
   m = re.match("https://imgur\.com/gallery/(\w+)", url)
   if m != None:
     galleryid = m.group(1)
-    return  add_imgur_album(profile, galleryid, nsfw)
+    return  add_imgur_album(profile, galleryid, caption, nsfw)
   m = re.match("https?://imgur\.com/\w/\w+/(\w+)", url)
   if m != None:
     galleryid = m.group(1)
-    return  add_imgur_album(profile, galleryid, nsfw)
+    return  add_imgur_album(profile, galleryid, caption, nsfw)
 
   # Single-image imgur.
   m = re.match("https://imgur\.com/(\w+)$", url)
@@ -464,13 +497,13 @@ def add_media(profile, url, caption, nsfw):
   m = re.match("https://reddit\.com/gallery/(\w+)", url)
   if m != None:
     galleryid = m.group(1)
-    return add_reddit_gallery(profile, galleryid, nsfw)
+    return add_reddit_gallery(profile, galleryid, caption, nsfw)
 
   # Reddit posting.
   m = re.match("https://reddit\.com/r/\w+/comments/(\w+)/", url)
   if m != None:
     galleryid = m.group(1)
-    return add_reddit_gallery(profile, galleryid, nsfw)
+    return add_reddit_gallery(profile, galleryid, caption, nsfw)
 
   # DR image scaler.
   m = re.match("https://asset.dr.dk/ImageScaler/\?(.+)", url)

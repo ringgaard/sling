@@ -61,6 +61,7 @@ if flags.arg.mediadb: mediadb = sling.Database(flags.arg.mediadb, "twitterpic")
 
 bad_images = set([
   "http://pbs.twimg.com/profile_images/1302121919014207490/KaYYEC8b.jpg"
+  "",
 ])
 
 # Find all twitter users in knowledge base.
@@ -87,7 +88,9 @@ def cache_profile_image(profile):
 
   imageurl = profile["profile_image_url"]
   imageurl = ''.join(imageurl.rsplit("_normal", 1))
-  if imageurl in bad_images: return
+  if imageurl in bad_images:
+    print("bad profile image", imageurl)
+    return
 
   # Fetch image.
   r = session.get(imageurl)

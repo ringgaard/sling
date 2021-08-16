@@ -134,8 +134,6 @@ void WikimediaTypes::Init(Store *store) {
     nullptr
   };
 
-
-
   for (const char **c = category_types; *c != nullptr; ++c) {
     Handle type = store->Lookup(*c);
     category_types_.insert(type);
@@ -157,7 +155,7 @@ bool WikimediaTypes::IsList(Handle type) const {
 }
 
 bool WikimediaTypes::IsTemplate(Handle type) const {
-  return type == n_template_;
+  return type == n_template_ || type == n_navigational_template_;
 }
 
 bool WikimediaTypes::IsInfobox(Handle type) const {

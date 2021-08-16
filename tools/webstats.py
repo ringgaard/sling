@@ -197,6 +197,7 @@ spammers = set([
   "aucoinhomes.com",
   "aoul.top",
   "boyddoherty.top",
+  "czcedu.com",
   "ecosia.org",
   "fineblog.top",
   "johnnyhaley.top",

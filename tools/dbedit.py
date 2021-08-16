@@ -51,6 +51,11 @@ flags.define("--move",
              default=None,
              metavar="KEY")
 
+flags.define("--append",
+             help="Append frame to record",
+             default=None,
+             metavar="FRAME")
+
 flags.parse()
 
 # Check arguments.
@@ -94,6 +99,9 @@ else:
   oldcontent = content
   if not flags.arg.raw:
     frame = store.parse(content)
+    if flags.arg.append:
+      for name, value in store.parse(flags.arg.append):
+       frame.append(name, value)
     content = frame.data(pretty=True, utf8=True)
 
 # Write record to temp file.
@@ -111,6 +119,10 @@ f = open(fn, "r")
 newcontent = f.read()
 f.close()
 os.remove(fn)
+if len(newcontent) == 0:
+  print("Empty, no update")
+  sys.exit(1)
+
 if not flags.arg.raw:
   frame = store.parse(newcontent)
   newcontent = frame.data(binary=True)
