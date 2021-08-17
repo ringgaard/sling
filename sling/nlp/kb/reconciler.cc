@@ -29,6 +29,10 @@ namespace nlp {
 // key that is mapped in a similar manner.
 class ItemReconciler : public task::FrameProcessor {
  public:
+  ~ItemReconciler() {
+    for (auto &i : inversion_map_) delete i.second;
+  }
+
   void Startup(task::Task *task) override {
     // Read reconciler configuration.
     FileReader reader(commons_, task->GetInputFile("config"));
@@ -59,13 +63,26 @@ class ItemReconciler : public task::FrameProcessor {
       Frame inversions = config.Get("inversions").AsFrame();
       CHECK(inversions.valid());
       for (const Slot &slot : inversions) {
-        inversion_map_[slot.name] = slot.value;
+        Frame inverse(commons_, slot.value);
+        Inversion *inversion = new Inversion();
+        if (inverse.IsAnonymous()) {
+          inversion->inverse = inverse.GetHandle(Handle::is());
+          for (const Slot &s : inverse) {
+            if (s.name != Handle::is()) {
+              inversion->qualifiers.emplace_back(s.name, s.value);
+            }
+          }
+        } else {
+          inversion->inverse = slot.value;
+        }
+        inversion_map_[slot.name] = inversion;
       }
     }
 
     // Statistics.
     num_mapped_ids_ = task->GetCounter("mapped_ids");
     num_inverse_properties_ = task->GetCounter("inverse_properties");
+    num_inverse_qualifiers_ = task->GetCounter("inverse_qualifiers");
   }
 
   void Process(Slice key, const Frame &frame) override {
@@ -95,7 +112,7 @@ class ItemReconciler : public task::FrameProcessor {
       // Check for inverted property.
       auto f = inversion_map_.find(slot.name);
       if (f == inversion_map_.end()) continue;
-      Handle inverse_property = f->second;
+      Inversion *inversion = f->second;
 
       // Do not invert non-items and self-relations.
       Handle target = store->Resolve(slot.value);
@@ -103,9 +120,29 @@ class ItemReconciler : public task::FrameProcessor {
       Text target_id = store->FrameId(target);
       if (target_id.empty()) continue;
 
-      // Output inverted property frame.
+      // Build inverted property frame.
       Builder inverted(store);
-      inverted.AddLink(inverse_property, id);
+      if (target != slot.value && !inversion->qualifiers.empty()) {
+        // Inverted qualified statement.
+        Builder qualified(store);
+        Frame qvalue(store, slot.value);
+        for (auto &q : inversion->qualifiers) {
+          Handle value = qvalue.GetHandle(q.first);
+          if (!value.IsNil()) {
+            if (qualified.empty()) qualified.AddIs(id);
+            qualified.Add(q.second, value);
+            num_inverse_qualifiers_->Increment();
+          }
+        }
+        if (qualified.empty()) {
+          inverted.AddLink(inversion->inverse, id);
+        } else {
+          inverted.Add(inversion->inverse, qualified.Create());
+        }
+      } else {
+        // Inverted unqualified statement.
+        inverted.AddLink(inversion->inverse, id);
+      }
       Frame fi = inverted.Create();
       Output(target_id, ItemSourceOrder(fi), fi);
       num_inverse_properties_->Increment();
@@ -150,7 +187,14 @@ class ItemReconciler : public task::FrameProcessor {
   int unknown_source_priority_ = 0;
 
   // Property inversion map.
-  HandleMap<Handle> inversion_map_;
+  struct Inversion {
+    // Inverse property.
+    Handle inverse;
+
+    // Qualifier inversion map.
+    std::vector<std::pair<Handle, Handle>> qualifiers;
+  };
+  HandleMap<Inversion *> inversion_map_;
 
   // Symbols.
   Name n_media_{names_, "media"};
@@ -160,6 +204,7 @@ class ItemReconciler : public task::FrameProcessor {
   // Statistics.
   task::Counter *num_mapped_ids_ = nullptr;
   task::Counter *num_inverse_properties_ = nullptr;
+  task::Counter *num_inverse_qualifiers_ = nullptr;
 };
 
 REGISTER_TASK_PROCESSOR("item-reconciler", ItemReconciler);

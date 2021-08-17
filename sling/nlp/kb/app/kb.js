@@ -143,7 +143,9 @@ class KbApp extends Component {
     if (e.keyCode == 27) {
       this.find("#search").clear();
     } else if (e.keyCode == 67 && e.ctrlKey) {
-      this.find("#item").oncopy(e);
+      if (window.getSelection().type != "Range") {
+        this.find("#item").oncopy(e);
+      }
     }
   }
 }

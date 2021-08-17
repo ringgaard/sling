@@ -25,14 +25,17 @@
 
   ; Property inversion.
   inversions: {
-    P162: Q65994327 ; producer -> producer of
-    P57:  Q65971570 ; director -> director of
-    P161: Q66318312 ; cast member -> cast member of
-    P58:  Q65971578 ; screenwriter -> wrote script of
-    P166: Q66796038 ; award received -> award received by
-    P26: P26        ; spouse -> spouse
-    P170: Q78522641 ; creator -> creator of
-    P199: Q67205181 ; business division -> business division of
+    P162: Q65994327     ; producer -> producer of
+    P57:  Q65971570     ; director -> director of
+    P161: Q66318312     ; cast member -> cast member of
+    P58:  Q65971578     ; screenwriter -> wrote script of
+    P166: {+Q66796038   ; award received -> award received by
+      P585: P585 ; point in time
+    }
+    P1027: Q101072499   ; conferred by -> award conferred
+    P26: P26            ; spouse -> spouse
+    P170: Q78522641     ; creator -> creator of
+    P199: Q67205181     ; business division -> business division of
   }
 }
 

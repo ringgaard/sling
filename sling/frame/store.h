@@ -34,7 +34,7 @@ typedef uint8 Byte;
 typedef uint32 Word;
 typedef Byte *Address;
 
-// A region is an allocated memory area. The region has a two parts. The space
+// A region is an allocated memory area. The region has two parts. The space
 // between base and end is used, and the part between end and limit is unused.
 // The region supports byte-oriented memory addressing.
 class Region {
