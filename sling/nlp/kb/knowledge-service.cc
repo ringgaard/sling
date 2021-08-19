@@ -328,15 +328,20 @@ void KnowledgeService::Preload(const Frame &item, Store *store) {
   if (itemdb_ == nullptr) return;
 
   // Find proxies.
-  std::vector<Slice> keys;
-  item.TraverseSlots([store, &keys](Slot *s) {
+  HandleSet proxies;
+  item.TraverseSlots([store, &proxies](Slot *s) {
     if (store->IsProxy(s->value)) {
-      keys.push_back(store->FrameId(s->value).slice());
+      proxies.insert(s->value);
     }
   });
 
   // Prefetch items for proxies into store.
-  if (!keys.empty()) {
+  if (!proxies.empty()) {
+    std::vector<Slice> keys;
+    for (Handle h : proxies) {
+      keys.push_back(store->FrameId(h).slice());
+    }
+
     MutexLock lock(&mu_);
     std::vector<DBRecord> recs;
     Status st = itemdb_->Get(keys, &recs);

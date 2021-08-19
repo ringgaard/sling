@@ -36,14 +36,14 @@
 
     P345,  ; IMDB ID
     P2002, ; Twitter username
-    P2013, ; Facebook ID
     P2003, ; Instagram username
-    P3984, ; subreddit
+    P5346, ; Playmate ID
+    P2013, ; Facebook ID
     P7085, ; TikTok username
     P8604, ; OnlyFans ID
+    P3984, ; subreddit
     P2397, ; YouTube channel ID
     P4015, ; Vimeo identifier
-    P5346, ; Playmate ID
 
     P214,  ; VIAF ID
     P646,  ; Freebase MID
