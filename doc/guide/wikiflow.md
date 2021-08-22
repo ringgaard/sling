@@ -81,7 +81,7 @@ sling fetch --dataset schemas,wikidefs,templates
 After the dumps have been downloaded, the remaining processing pipeline can be
 executed in one go:
 ```
-sling --build_wiki
+sling build_wiki
 ```
 This is equivalent to running each of the steps separately:
 ```
@@ -114,7 +114,7 @@ defaulting to `/tmp`. So please ensure that this folder is on a partition with
 enough space.
 ```
 export TMPDIR=<folder on partition with lots of space>
-sling --build_wiki
+sling build_wiki
 ```
 
 ## Wikidata import
