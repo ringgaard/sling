@@ -17,6 +17,7 @@
 import requests
 import datetime
 from urllib.parse import urlparse
+from collections import defaultdict
 
 import sling
 import sling.flags as flags
@@ -137,6 +138,7 @@ blacklist = set([
   "PostMalone",
   "Ranboo",
   "RTGameCrowd",
+  "SandersForPresident",
   "samharris",
   "Schaffrillas",
   "shakespeare",
@@ -230,6 +232,7 @@ html_report_footer = """
 
 html_report_headline = """
   <h1><a href="https://www.reddit.com/r/{sr}/">{sr}</a></h1>
+  <p>{matched} / {total} matched</p>
 """
 
 html_report_template = """
@@ -337,11 +340,20 @@ def selfie(title):
     if title.startswith(prefix): return True
   return False
 
+# Look up name in name table.
+def lookup_name(name):
+  if flags.arg.caseless:
+    return celebmap.get(name.lower())
+  else:
+    return celebmap.get(name)
+
 # Find new postings to subreddits.
 batch = open(flags.arg.batch, 'w')
 redditdb = sling.Database(flags.arg.redditdb, "redphotos")
 chkpt = sling.util.Checkpoint(flags.arg.checkpoint)
 sr_reports = {}
+sr_total = defaultdict(int)
+sr_matched = defaultdict(int)
 for key, value in redditdb.items(chkpt.checkpoint):
   # Parse reddit posting.
   store = sling.Store(commons)
@@ -375,29 +387,30 @@ for key, value in redditdb.items(chkpt.checkpoint):
         p = name.find(d)
         if p != -1 and p < cut: cut = p
       name = name[:cut].replace(".", "").strip()
-
-      if flags.arg.caseless:
-        itemid = celebmap.get(name.lower())
-      else:
-        itemid = celebmap.get(name)
+      itemid = lookup_name(name)
       query = name
+
+      # Try to match up until first period.
+      if itemid is None:
+        period = title.find(". ")
+        if period != -1:
+          prefix = title[:period]
+          itemid = lookup_name(prefix)
+          if itemid: query = prefix
 
       # Try to match name prefix.
       if itemid is None:
         prefix = name_prefix(name)
-        if prefix:
-          if flags.arg.caseless:
-            itemid = celebmap.get(prefix.lower())
-          else:
-            itemid = celebmap.get(prefix)
-        if itemid: query = prefix
+        if prefix != None:
+          itemid = lookup_name(prefix)
+          if itemid: query = prefix
     else:
       continue
 
   # Discard self-posts.
   if posting[n_is_self]: continue
 
-  # Check for approved site
+  # Check for approved site.
   url = posting[n_url]
   if url is None or len(url) == 0: continue
   if "?" in url: continue
@@ -414,6 +427,7 @@ for key, value in redditdb.items(chkpt.checkpoint):
   if posting_deleted(key): continue
 
   # Log unknown postings.
+  sr_total[sr] += 1
   nsfw = posting[n_over_18]
   if itemid is None:
     if not selfie(title):
@@ -463,6 +477,7 @@ for key, value in redditdb.items(chkpt.checkpoint):
     continue
 
   # Output photo to batch list.
+  sr_matched[sr] += 1
   batch.write("%s %s #\t %s %s%s\n" %
               (sr, title, itemid, url, " NSFW" if nsfw else ""))
 
@@ -478,7 +493,10 @@ if flags.arg.report:
   report = open(reportfn, "w")
   report.write(html_report_header)
   for sr in sorted(sr_reports.keys()):
-    report.write(html_report_headline.format(sr=sr))
+    report.write(html_report_headline.format(
+      sr=sr,
+      matched=sr_matched[sr],
+      total=sr_total[sr]))
     for line in sr_reports[sr]:
       report.write(line)
   report.write(html_report_footer)
