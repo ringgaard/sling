@@ -38,6 +38,7 @@
     P2002, ; Twitter username
     P2003, ; Instagram username
     P5346, ; Playmate ID
+    P6290, ; Penthouse ID
     P2013, ; Facebook ID
     P7085, ; TikTok username
     P8604, ; OnlyFans ID
@@ -76,6 +77,7 @@
     "of": "P8604"       ; OnlyFans ID
     "vimeo": "P4015"    ; Vimeo identifier
     "pb": "P5346"       ; Playmate ID
+    "ph": "P6290"       ; Penthouse ID
 
     "viaf": "P214"      ; VIAF ID
     "mid": "P646"       ; Freebase MID

@@ -273,7 +273,7 @@ def name_prefix(name):
       prefix.append(word)
     else:
       break
-  if len(prefix) == 0: return None
+  if len(prefix) < 2: return None
   return " ".join(prefix)
 
 # Initialize commons store.
@@ -396,14 +396,14 @@ for key, value in redditdb.items(chkpt.checkpoint):
         if period != -1:
           prefix = title[:period]
           itemid = lookup_name(prefix)
-          if itemid: query = prefix
+          query = prefix
 
       # Try to match name prefix.
       if itemid is None:
         prefix = name_prefix(name)
         if prefix != None:
           itemid = lookup_name(prefix)
-          if itemid: query = prefix
+          query = prefix
     else:
       continue
 

@@ -20,6 +20,7 @@
 #include "sling/pyapi/pydate.h"
 #include "sling/pyapi/pyframe.h"
 #include "sling/pyapi/pymyelin.h"
+#include "sling/pyapi/pynet.h"
 #include "sling/pyapi/pyparser.h"
 #include "sling/pyapi/pyphrase.h"
 #include "sling/pyapi/pyrecordio.h"
@@ -103,6 +104,7 @@ static PyObject *RegisterPythonModule() {
   PyResource::Define(module);
   PyTask::Define(module);
   PyWebArchive::Define(module);
+  PyHTTPServer::Define(module);
 
   return module;
 }

@@ -47,18 +47,19 @@ static bool IsValidPath(const char *filename) {
 
 StaticContent::StaticContent(const string &url, const string &path)
     : url_(url) {
-  // Use configured directory for web content.
-  dir_ = FLAGS_webdir;
-
-  // Default to current directory.
-  if (dir_.empty()) dir_ = ".";
-  if (url_ == "/") url_ = "";
-
-  // Add path for content.
-  if (!path.empty() && path != "/") {
+  if (!path.empty() && path[0] == '/') {
+    // Absolute file path.
+    dir_ = path;
+  } else {
+    // Use configured web directory for relative file path.
+    dir_ = FLAGS_webdir;
     dir_.push_back('/');
     dir_.append(path);
   }
+
+  // Adjust default handler.
+  if (url_ == "/") url_ = "";
+
   VLOG(3) << "Serve url " << url << " from " << dir_;
 }
 
