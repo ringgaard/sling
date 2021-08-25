@@ -23,17 +23,12 @@ import threading
 import time
 import requests
 import queue
-import threading
 import traceback
-from http.server import BaseHTTPRequestHandler, HTTPServer
-from urllib.parse import urlsplit
-from socketserver import ThreadingMixIn
-
-import threading
 
 import sling
 import sling.flags as flags
 import sling.log as log
+import sling.net
 
 flags.define("--tasklist",
              default="local/tasks.sling",
@@ -48,6 +43,9 @@ flags.define("--port",
              default=5050,
              type=int,
              metavar="PORT")
+
+# Parse command line flags.
+flags.parse()
 
 # Get unused TCP port.
 def get_free_port():
@@ -387,7 +385,15 @@ def get_job(jobid):
     if job.id == jobid: return job
   return None
 
-stylesheet = """
+# Load task list.
+refresh_task_list()
+
+# Initialize web server.
+app = sling.net.HTTPServer(flags.arg.port)
+
+# Style sheet
+app.css("/style.css",
+"""
 @import url(https://fonts.googleapis.com/css?family=Roboto:400,400italic,500,500italic,700,700italic,900,900italic,300italic,300,100italic,100);
 
 @font-face {
@@ -569,7 +575,7 @@ body {
 .mdt-data-table td:first-of-type, .mdt-data-table th:first-of-type {
   padding-left: 24px;
 }
-"""
+""")
 
 job_template = """<!DOCTYPE html>
 <html>
@@ -659,168 +665,135 @@ job_template = """<!DOCTYPE html>
 </html>
 """
 
-class SchedulerService(BaseHTTPRequestHandler):
-  def do_GET(self):
-    url = urlsplit(self.path)
+@app.route("/favicon.ico")
+def favicon(request):
+  return 404
 
-    if url.path == '/favicon.ico':
-      self.reply(404, "no fav icon", cache=True)
-      return
+@app.route("/log")
+def log_page(request):
+  jobid = request.path[1:]
+  job = get_job(jobid)
+  if job is None: return 500
+  if job.stdout is None: return 404;
+  return sling.net.HTTPFile(job.stdout, "text/plain; charset=utf-8")
 
-    if url.path == '/style.css':
-      self.reply(200, stylesheet, "text/css", cache=True)
-      return
+@app.route("/errors")
+def errors_page(request):
+  jobid = request.path[1:]
+  job = get_job(jobid)
+  if job is None: return 500
+  if job.stderr is None: return 404;
+  return sling.net.HTTPFile(job.stderr, "text/plain; charset=utf-8")
 
-    if url.path.startswith("/log/"):
-      jobid = url.path[5:]
-      job = get_job(jobid)
-      if job is None:
-        self.send_response(500)
-        return
-      if job.stdout is None:
-        self.send_response(404)
-        return
-      self.return_file(job.stdout, "text/plain; charset=utf-8")
-      return
+@app.route("/status")
+def status_page(request):
+  jobid = request.path[1:]
+  job = get_job(jobid)
+  if job is None: return 500
+  if job.status is None: return 404;
+  return sling.net.HTTPFile(job.status, "text/plain; charset=utf-8")
 
-    if url.path.startswith("/errors/"):
-      jobid = url.path[8:]
-      job = get_job(jobid)
-      if job is None:
-        self.send_response(500)
-        return
-      if job.stderr is None:
-        self.send_response(404)
-        return
-      self.return_file(job.stderr, "text/plain; charset=utf-8")
-      return
+@app.route("/")
+def main_page(request):
+  hostname = request["Host"].split(':')[0]
 
-    if url.path.startswith("/status/"):
-      jobid = url.path[8:]
-      job = get_job(jobid)
-      if job is None:
-        self.send_response(500)
-        return
-      if job.status is None:
-        self.send_response(404)
-        return
-      self.return_file(job.status, "application/json")
-      return
+  running = []
+  pending = []
+  terminated = []
 
-    hostname = self.headers["Host"].split(':')[0]
+  for job in jobs:
+    if job.state != Job.RUNNING: continue
+    running.extend((
+      "\n<tr>",
+      "<td>", job.id, "</td>",
+      "<td>", job.task.description, "</td>",
+      "<td>", str(job), "</td>",
+      "<td>", job.queuename(), "</td>",
+      "<td>", ts2str(job.started), "</td>",
+      "<td>", dur2str(job.runtime()), "</td>",
+    ))
 
-    running = []
-    pending = []
-    terminated = []
+    running.append("<td>")
+    if job.port:
+      statusurl = "http://%s:%d" % (hostname, job.port)
+      running.append(
+        '<a href="%s" target="_blank">status</a> ' % (statusurl))
+    if job.stdout:
+      running.append(
+        '<a href="/log/%s" target="_blank">log</a> ' % (job.id))
+    if job.stderr:
+      running.append(
+        '<a href="/errors/%s" target="_blank">errors</a> ' % (job.id))
+    running.append("</td>")
+    running.append("</tr>")
 
-    for job in jobs:
-      if job.state != Job.RUNNING: continue
-      running.extend((
-        "\n<tr>",
-        "<td>", job.id, "</td>",
-        "<td>", job.task.description, "</td>",
-        "<td>", str(job), "</td>",
-        "<td>", job.queuename(), "</td>",
-        "<td>", ts2str(job.started), "</td>",
-        "<td>", dur2str(job.runtime()), "</td>",
-      ))
+  for job in jobs:
+    if job.state != Job.PENDING: continue
+    pending.extend((
+      "\n<tr>",
+      "<td>", job.id, "</td>",
+      "<td>", job.task.description, "</td>",
+      "<td>", str(job), "</td>",
+      "<td>", job.queuename(), "</td>",
+      "<td>", ts2str(job.submitted), "</td>",
+      "<td>", dur2str(job.waittime()), "</td>",
+      "</tr>"
+    ))
 
-      running.append("<td>")
-      if job.port:
-        statusurl = "http://%s:%d" % (hostname, job.port)
-        running.append(
-          '<a href="%s" target="_blank">status</a> ' % (statusurl))
-      if job.stdout:
-        running.append(
-          '<a href="/log/%s" target="_blank">log</a> ' % (job.id))
-      if job.stderr:
-        running.append(
-          '<a href="/errors/%s" target="_blank">errors</a> ' % (job.id))
-      running.append("</td>")
-      running.append("</tr>")
-
-    for job in jobs:
-      if job.state != Job.PENDING: continue
-      pending.extend((
-        "\n<tr>",
-        "<td>", job.id, "</td>",
-        "<td>", job.task.description, "</td>",
-        "<td>", str(job), "</td>",
-        "<td>", job.queuename(), "</td>",
-        "<td>", ts2str(job.submitted), "</td>",
-        "<td>", dur2str(job.waittime()), "</td>",
-        "</tr>"
-      ))
-
-    for job in reversed(jobs):
-      if job.state != Job.COMPLETED and job.state != Job.FAILED: continue
-      if job.state == Job.FAILED:
-        terminated.append("\n<tr style='background-color: #FCE4EC;'>")
-      else:
-        terminated.append("\n<tr>")
-
-      terminated.extend((
-        "<td>", job.id, "</td>",
-        "<td>", job.task.description, "</td>",
-        "<td>", str(job), "</td>",
-        "<td>", job.queuename(), "</td>",
-        "<td>", ts2str(job.started), "</td>",
-        "<td>", ts2str(job.ended), "</td>",
-        "<td>", dur2str(job.runtime()), "</td>",
-      ))
-
-      terminated.append("<td>")
-      if job.stdout:
-        terminated.append(
-          '<a href="/log/%s" target="_blank">log</a> ' % (job.id))
-      if job.stderr:
-        terminated.append(
-          '<a href="/errors/%s" target="_blank">errors</a> ' % (job.id))
-      if job.status:
-        terminated.append(
-          '<a href="/status/%s" target="_blank">status</a> ' % (job.id))
-      if job.error: terminated.append(str(job.error));
-      terminated.append("</td>")
-      terminated.append("</tr>")
-
-    fillers =  (
-      hostname,
-      hostname,
-      "".join(running),
-      "".join(pending),
-      "".join(terminated)
-    )
-
-    self.reply(200, job_template % fillers, "text/html")
-    return
-
-
-  def do_POST(self):
-    url = urlsplit(self.path)
-    path = url.path[1:].split("/")
-
-    if len(path) < 1:
-      self.reply(500, "no command\n")
-    elif path[0] == "submit":
-      self.do_submit(path, url.query)
-    elif path[0] == "restart":
-      self.do_restart()
+  for job in reversed(jobs):
+    if job.state != Job.COMPLETED and job.state != Job.FAILED: continue
+    if job.state == Job.FAILED:
+      terminated.append("\n<tr style='background-color: #FCE4EC;'>")
     else:
-      self.reply(500, "unknown command\n")
+      terminated.append("\n<tr>")
 
-  def log_message(self, format, *args):
-    log.info("HTTP", self.address_string(), format % args)
+    terminated.extend((
+      "<td>", job.id, "</td>",
+      "<td>", job.task.description, "</td>",
+      "<td>", str(job), "</td>",
+      "<td>", job.queuename(), "</td>",
+      "<td>", ts2str(job.started), "</td>",
+      "<td>", ts2str(job.ended), "</td>",
+      "<td>", dur2str(job.runtime()), "</td>",
+    ))
 
-  def do_submit(self, path, query):
+    terminated.append("<td>")
+    if job.stdout:
+      terminated.append(
+        '<a href="/log/%s" target="_blank">log</a> ' % (job.id))
+    if job.stderr:
+      terminated.append(
+        '<a href="/errors/%s" target="_blank">errors</a> ' % (job.id))
+    if job.status:
+      terminated.append(
+        '<a href="/status/%s" target="_blank">status</a> ' % (job.id))
+    if job.error: terminated.append(str(job.error));
+    terminated.append("</td>")
+    terminated.append("</tr>")
+
+  fillers =  (
+    hostname,
+    hostname,
+    "".join(running),
+    "".join(pending),
+    "".join(terminated)
+  )
+
+  return job_template % fillers
+
+@app.route("/submit", method="POST")
+def submit_command(request):
+  # Get job and optionally queue from path.
+  path = request.path[1:].split("/")
+
+  args = []
+  if request.query is not None:
     # Check for illegal characters in arguments.
     for ch in "|<>;()[]":
-      if ch in query:
-        self.reply(500, "malformed argument\n")
-        return
+      if ch in request.query: return 500
 
     # Get job arguments from query string.
-    args = []
-    for part in query.split("&"):
+    for part in request.query.split("&"):
       if len(part) == 0: continue
       eq = part.find('=')
       if eq == -1:
@@ -828,63 +801,33 @@ class SchedulerService(BaseHTTPRequestHandler):
       else:
         args.append((part[:eq], part[eq + 1:]))
 
-    # Submit job.
-    if len(path) == 2:
-      job = submit_job(path[1], None, args)
-    elif len(path) == 3:
-      job = submit_job(path[2], path[1], args)
-    else:
-      job = None
+  # Submit job.
+  if len(path) == 1:
+    job = submit_job(path[0], None, args)
+  elif len(path) == 2:
+    job = submit_job(path[1], path[1], args)
+  else:
+    job = None
 
-    # Reply with job id.
-    if job is None:
-      self.reply(500, "error submitting job\n")
-    else:
-      self.reply(200,
-                 "job %s submitted to %s queue\n" % (job.id, job.queue.name))
+  # Reply with job id.
+  if job is None: return 500
+  return "job %s submitted to %s queue\n" % (job.id, job.queue.name)
 
-  def do_restart(self):
-    self.reply(200, "restarting job scheduler...\n")
-    self.wfile.flush()
-    log.info("Restarting scheduler")
-    os.execv(sys.argv[0], sys.argv)
+restart = False
 
-  def return_file(self, filename, mimetype):
-    f = open(filename, "rb")
-    content = f.read()
-    f.close()
-    self.send_response(200)
-    if mimetype: self.send_header("Content-Type", mimetype)
-    self.send_header("Content-Length", len(content))
-    self.end_headers()
-    self.wfile.write(content)
+@app.route("/restart", method="POST")
+def restart_command(request):
+  global restart
+  log.info("Restarting scheduler")
+  restart = True
+  app.shutdown()
+  return "restarting job scheduler...\n"
 
-  def reply(self, code, content, ct="text/plain", cache=False):
-    body = content.encode("utf8")
-    self.send_response(code)
-    self.send_header("Content-Type", ct)
-    self.send_header("Content-Length", len(body))
-    self.send_header("Cache-Control", "public" if cache else "no-cache")
-    self.end_headers()
-    self.wfile.write(body)
-
-class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
-  """Handle requests in a separate threads."""
-
-if __name__ == "__main__":
-  # Parse command line flags.
-  flags.parse()
-
-  # Load task list.
-  refresh_task_list()
-
-  # Start web server for submitting and monitoring jobs.
-  httpd = ThreadedHTTPServer(("", flags.arg.port), SchedulerService)
-  log.info('job scheduler running: http://localhost:%d/' % flags.arg.port)
-  try:
-    httpd.serve_forever()
-  except KeyboardInterrupt:
-    pass
-  httpd.server_close()
+# Run app until shutdown.
+app.run()
+if restart:
+  log.info("restart")
+  os.execv(sys.argv[0], sys.argv)
+else:
   log.info("stopped")
 

@@ -23,6 +23,13 @@ import sling.pysling as api
 # Map of HTTP response formatters for each handler return type.
 http_reponse_formatters = {}
 
+# Install HTTP response formatter.
+def response(response_type):
+  def inner(func):
+    http_reponse_formatters[response_type] = func
+    return func
+  return inner
+
 # Timestamp used for static content.
 static_timestamp = time.strftime('%a, %d %b %Y %H:%M:%S GMT', time.gmtime())
 
@@ -47,6 +54,7 @@ class HTTPResponse:
     self.status = 200
     self.headers = None
     self.body = None
+    self.file = None
 
   def __getitem__(self, key):
     """Get HTTP response header"""
@@ -73,13 +81,23 @@ class HTTPResponse:
 
   def result(self):
     """Return response tuple"""
-    return (self.status, self.headers, self.body)
+    return (self.status, self.headers, self.body, self.file)
 
 class HTTPHandler:
-  def __init__(self, func):
+  def __init__(self, func, method="GET"):
     self.func = func
+    self.method = method
 
   def handle(self, method, path, query, headers, body):
+    # Check method.
+    allowed = True
+    if self.method is not None:
+      if type(self.method) is list:
+        if method not in self.method: allowed = False
+      else:
+        if method != self.method: allowed = False
+    if not allowed: return (405, None, "Method Not Allowed", None)
+
     # Make request object.
     request = HTTPRequest(method, path, query, headers, body)
 
@@ -99,6 +117,22 @@ class HTTPStatic:
  def __init__(self, ct, content):
    self.ct = ct
    self.content = content
+
+@response(HTTPStatic)
+def static_page(value, request, response):
+  response.ct = value.ct
+  response["Last-Modified"] = static_timestamp
+  response.body = value.content
+
+class HTTPFile:
+ def __init__(self, filename, ct=None):
+   self.filename = filename
+   self.ct = ct
+
+@response(HTTPFile)
+def file_page(value, request, response):
+  response.ct = value.ct
+  response.file = value.filename
 
 class HTTPServer:
   def __init__(self, port, addr=""):
@@ -130,9 +164,9 @@ class HTTPServer:
   def dynamic(self, path, func):
     self.httpd.dynamic(path, HTTPHandler(func))
 
-  def route(self, path):
+  def route(self, path, method="GET"):
     def inner(func):
-      self.httpd.dynamic(path, HTTPHandler(func))
+      self.httpd.dynamic(path, HTTPHandler(func, method))
     return inner
 
   def page(self, path, content, ct="text/html"):
@@ -152,19 +186,6 @@ class HTTPServer:
     def inner(request):
       return static
     self.dynamic(path, inner)
-
-# Install HTTP response formatter.
-def response(response_type):
-  def inner(func):
-    http_reponse_formatters[response_type] = func
-    return func
-  return inner
-
-@response(HTTPStatic)
-def static_page(value, request, response):
-  response.ct = value.ct
-  response["Last-Modified"] = static_timestamp
-  response.body = value.content
 
 @response(bytes)
 def binary_page(value, request, response):

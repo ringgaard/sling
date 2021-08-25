@@ -354,6 +354,7 @@ chkpt = sling.util.Checkpoint(flags.arg.checkpoint)
 sr_reports = {}
 sr_total = defaultdict(int)
 sr_matched = defaultdict(int)
+seen = set()
 for key, value in redditdb.items(chkpt.checkpoint):
   # Parse reddit posting.
   store = sling.Store(commons)
@@ -425,6 +426,10 @@ for key, value in redditdb.items(chkpt.checkpoint):
 
   # Check if posting has been deleted.
   if posting_deleted(key): continue
+
+  # Discard duplicate postings.
+  if url in seen: continue
+  seen.add(url)
 
   # Log unknown postings.
   sr_total[sr] += 1

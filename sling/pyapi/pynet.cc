@@ -14,6 +14,8 @@
 
 #include "sling/pyapi/pynet.h"
 
+#include "sling/file/file.h"
+
 namespace sling {
 
 // Python type declarations.
@@ -159,9 +161,9 @@ bool PyHTTPServer::DynamicContext::ParseReply(PyObject *ret,
   // Check for exceptions.
   if (ret == nullptr) return false;
 
-  // Return value should be a 3-tuple with status, headers and body.
+  // Return value should be a 4-tuple with status, headers, body, and file.
   if (!PyTuple_Check(ret)) return false;
-  if (PyTuple_Size(ret) != 3) return false;
+  if (PyTuple_Size(ret) != 4) return false;
 
   // Get status code.
   int status = PyLong_AsLong(PyTuple_GetItem(ret, 0));
@@ -196,6 +198,29 @@ bool PyHTTPServer::DynamicContext::ParseReply(PyObject *ret,
       response->Append(data, length);
     } else {
       return false;
+    }
+  }
+
+  // Get response file.
+  PyObject *file = PyTuple_GetItem(ret, 3);
+  if (file != Py_None) {
+    const char *filename = GetString(file);
+    if (filename == nullptr) return false;
+    File *f;
+    Status st = File::Open(filename, "r", &f);
+    if (st.ok()) {
+      // Add file to response.
+      response->set_content_length(response->buffer()->available() + f->Size());
+      response->SendFile(f);
+    } else {
+      if (st.code() == EACCES) {
+        response->SendError(403, "Forbidden", nullptr);
+      } else if (st.code() == ENOENT) {
+        response->SendError(404, "Not Found", nullptr);
+      } else {
+        string error = HTMLEscape(st.message());
+        response->SendError(500, "Internal Server Error", error.c_str());
+      }
     }
   }
 
