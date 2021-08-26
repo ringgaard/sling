@@ -84,19 +84,16 @@ class HTTPResponse:
     return (self.status, self.headers, self.body, self.file)
 
 class HTTPHandler:
-  def __init__(self, func, method="GET"):
+  def __init__(self, func, method="GET", methods=None):
     self.func = func
-    self.method = method
+    self.methods = methods
+    if self.methods is None: self.methods = []
+    if method is not None: self.methods.append(method)
 
   def handle(self, method, path, query, headers, body):
     # Check method.
-    allowed = True
-    if self.method is not None:
-      if type(self.method) is list:
-        if method not in self.method: allowed = False
-      else:
-        if method != self.method: allowed = False
-    if not allowed: return (405, None, "Method Not Allowed", None)
+    if method not in self.methods:
+      return (405, None, "Method Not Allowed", None)
 
     # Make request object.
     request = HTTPRequest(method, path, query, headers, body)

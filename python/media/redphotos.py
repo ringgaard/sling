@@ -254,6 +254,8 @@ html_report_template = """
 </div>
 """
 
+html_no_match = "No matches for <em>{query}</em>"
+
 html_single_match = """
   <b>{query}</b>:
   <a href="https://ringgaard.com/kb/{itemid}?nsfw=1">{itemid}</a>
@@ -264,17 +266,6 @@ html_multi_match = "{count} matches for <b>{query}</b>"
 html_xpost = """
   cross-post from <a href="https://www.reddit.com{permalink}">{xsr}</a>
 """
-
-# Get proper name prefix.
-def name_prefix(name):
-  prefix = []
-  for word in name.split(" "):
-    if len(word) > 0 and word[0].isupper():
-      prefix.append(word)
-    else:
-      break
-  if len(prefix) < 2: return None
-  return " ".join(prefix)
 
 # Initialize commons store.
 commons = sling.Store()
@@ -346,6 +337,18 @@ def lookup_name(name):
     return celebmap.get(name.lower())
   else:
     return celebmap.get(name)
+
+# Get proper name prefix.
+def name_prefix(name):
+  prefix = []
+  for word in name.split(" "):
+    if len(word) >= 3 and word.isupper(): break
+    if len(word) > 0 and word[0].isupper():
+      prefix.append(word)
+    else:
+      break
+  if len(prefix) < 2: return None
+  return " ".join(prefix)
 
 # Find new postings to subreddits.
 batch = open(flags.arg.batch, 'w')
@@ -453,9 +456,11 @@ for key, value in redditdb.items(chkpt.checkpoint):
       # Check for alias matches.
       matches = aliases.query(query)
       match = ""
-      if len(matches) == 1:
+      if len(matches) == 0:
+        match = html_no_match.format(query=query)
+      elif len(matches) == 1:
         match = html_single_match.format(itemid=matches[0].id(), query=query)
-      elif len(matches) > 0:
+      else:
         match = html_multi_match.format(count=len(matches), query=query)
 
       # Check for cross-posting.

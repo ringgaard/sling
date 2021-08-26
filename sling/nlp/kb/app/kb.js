@@ -144,7 +144,7 @@ class KbApp extends Component {
       this.find("#search").clear();
     } else if (e.keyCode == 67 && e.ctrlKey) {
       if (window.getSelection().type != "Range") {
-        this.find("#item").oncopy(e);
+        this.find("#item").copy();
       }
     }
   }
@@ -576,9 +576,6 @@ class KbItemCard extends MdCard {
     if (this.find("#code")) {
       this.bind("#code", "click", e => this.oncode(e));
     }
-    if (this.find("#copy")) {
-      this.bind("#copy", "click", e => this.oncopy(e));
-    }
   }
 
   visible() {
@@ -604,7 +601,7 @@ class KbItemCard extends MdCard {
     window.open(url, "_blank");
   }
 
-  oncopy(e) {
+  copy() {
     let item = this.state;
     let ref = this.find("#ref");
     const selection = window.getSelection();
@@ -1296,7 +1293,6 @@ const desktop_template = `
               </div>
               <md-spacer></md-spacer>
               <md-icon-button id="code" icon="code"></md-icon-button>
-              <md-icon-button id="copy" icon="content_copy"></md-icon-button>
             </md-card-toolbar>
             <div><md-text id="description"></md-text></div>
             <div><md-text id="datatype"></md-text></div>

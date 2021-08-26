@@ -593,7 +593,7 @@ void SocketConnection::Shutdown() {
 const char *SocketConnection::State() const {
   switch (state_) {
     case SOCKET_STATE_IDLE: return "IDLE";
-    case SOCKET_STATE_RECEIVE: return "RECEIVE";
+    case SOCKET_STATE_RECEIVE: return request()->empty() ? "READY" : "RECEIVE";
     case SOCKET_STATE_PROCESS: return "PROCESS";
     case SOCKET_STATE_SEND: return "SEND";
     case SOCKET_STATE_TERMINATE: return "TERMINATE";

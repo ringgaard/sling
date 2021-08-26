@@ -16,13 +16,13 @@
 
 import os
 import os.path
+import queue
+import requests
 import socket
 import subprocess
 import sys
 import threading
 import time
-import requests
-import queue
 import traceback
 
 import sling
@@ -390,284 +390,204 @@ refresh_task_list()
 
 # Initialize web server.
 app = sling.net.HTTPServer(flags.arg.port)
+app.static("/common", "app", internal=True)
 
-# Style sheet
-app.css("/style.css",
+# Main page.
+app.page("/",
 """
-@import url(https://fonts.googleapis.com/css?family=Roboto:400,400italic,500,500italic,700,700italic,900,900italic,300italic,300,100italic,100);
-
-@font-face {
-  font-family: 'Material Icons';
-  font-style: normal;
-  font-weight: 400;
-  src: url(https://fonts.gstatic.com/s/materialicons/v55/flUhRq6tzZclQEJ-Vdg-IuiaDsNc.woff2) format('woff2');
-}
-
-html {
-  width: 100%;
-  height: 100%;
-  min-height: 100%;
-  position:relative;
-}
-
-body {
-  font-family: Roboto,Helvetica,sans-serif;
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 20px;
-  padding: 0;
-  margin: 0;
-  box-sizing: border-box;
-
-  width: 100%;
-  height: 100%;
-  min-height: 100%;
-  position:relative;
-}
-
-.mdt-column-layout {
-  display: flex;
-  flex-direction: column;
-  margin: 0;
-  width: 100%;
-  height: 100%;
-  min-height: 100%;
-}
-
-.mdt-toolbar {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  background-color: #00A0D6;
-  color: rgb(255,255,255);
-  height: 56px;
-  max-height: 56px;
-  font-size: 20px;
-  padding: 0px 16px;
-  margin: 0;
-  box-shadow: 0 1px 8px 0 rgba(0,0,0,.2),
-              0 3px 4px 0 rgba(0,0,0,.14),
-              0 3px 3px -2px rgba(0,0,0,.12);
-  z-index: 2;
-}
-
-.mdt-icon-button {
-  border-radius: 50%;
-  border: 0;
-  height: 40px;
-  width: 40px;
-  margin: 0 6px;
-  padding: 8px;
-  background: transparent;
-  user-select: none;
-  cursor: pointer;
-}
-
-.mdt-icon-button:hover {
-  background-color: rgba(0,0,0,0.07);
-}
-
-.mdt-toolbar .mdt-icon-button {
-  color: rgb(255,255,255);
-}
-
-.mdt-toolbar>.mdt-icon-button:first-child {
-  margin-left: -8px;
-}
-
-.mdt-icon-button:focus {
-  outline: none;
-}
-
-.mdt-icon {
-  font-family: 'Material Icons';
-  font-weight: normal;
-  font-style: normal;
-  font-size: 24px;
-  line-height: 1;
-  letter-spacing: normal;
-  text-transform: none;
-  display: inline-block;
-  white-space: nowrap;
-  word-wrap: normal;
-  direction: ltr;
-}
-
-.mdt-spacer {
-  flex: 1;
-}
-
-.mdt-content {
-  flex: 1;
-  padding: 8px;
-  display: block;
-  overflow: auto;
-  color: rgb(0,0,0);
-  background-color: rgb(250,250,250);
-
-  position:relative;
-
-  flex-basis: 0%;
-  flex-grow: 1;
-  flex-shrink: 1;
-}
-
-.mdt-card {
-  background-color: rgb(255, 255, 255);
-  box-shadow: rgba(0, 0, 0, 0.16) 0px 2px 4px 0px,
-              rgba(0, 0, 0, 0.23) 0px 2px 4px 0px;
-  margin: 10px 5px;
-  padding: 10px;
-}
-
-.mdt-card-toolbar {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  line-height:32px;
-
-  font-size: 24px;
-  margin-bottom: 8px;
-  margin-top: 3px;
-}
-
-.mdt-data-table {
-  border: 0;
-  border-collapse: collapse;
-  white-space: nowrap;
-  font-size: 14px;
-  text-align: left;
-}
-
-.mdt-data-table tr td {
-  vertical-align: top;
-}
-
-.mdt-data-table thead {
-  padding-bottom: 3px;
-}
-
-.mdt-left thead {
-  text-align: left;
-}
-
-.mdt-right thead {
-  text-align: right;
-}
-
-.mdt-data-table th {
-  vertical-align: bottom;
-  padding: 8px 12px;
-  box-sizing: border-box;
-  text-overflow: ellipsis;
-  color: rgba(0,0,0,.54);
-}
-
-.mdt-data-table td {
-  vertical-align: middle;
-  border-top: 1px solid rgba(0,0,0,.12);
-  border-bottom: 1px solid rgba(0,0,0,.12);
-  padding: 8px 12px;
-  box-sizing: border-box;
-  text-overflow: ellipsis;
-}
-
-.mdt-data-table td:first-of-type, .mdt-data-table th:first-of-type {
-  padding-left: 24px;
-}
-""")
-
-job_template = """<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
-<meta charset="utf-8">
-<title>%s - SLING Job Scheduler</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="utf-8">
+  <meta name=viewport content="width=device-width, initial-scale=1">
+  <title>SLING Job Scheduler</title>
+  <link rel="icon" href="/common/image/appicon.ico" type="image/x-icon" />
+  <script type="module" src="/common/lib/material.js"></script>
+  <script type="module" src="scheduler.js"></script>
 </head>
-<body>
-<div class="mdt-column-layout">
+<body style="display: none">
+  <scheduler-app id="app">
+    <md-column-layout>
 
-<div class="mdt-toolbar">
-  <button class="mdt-icon-button">
-    <i class="mdt-icon">menu</i>
-  </button>
-  <div>SLING Job Scheduler on %s</div>
-  <div class="mdt-spacer"></div>
-  <button class="mdt-icon-button">
-    <i class="mdt-icon" onclick="window.location=location">refresh</i>
-  </button>
-</div>
+      <md-toolbar>
+        <md-toolbar-logo></md-toolbar-logo>
+        <div id="title">
+          SLING Job Scheduler on <md-text id="host"></md-text>
+        </div>
+        <md-spacer></md-spacer>
+        <md-icon-button id="refresh" icon="refresh"></md-icon-button>
+      </md-toolbar>
 
-<div class="mdt-content">
-  <div class="mdt-card">
-    <div class="mdt-card-toolbar">Running jobs</div>
-      <table class="mdt-data-table">
-        <thead>
-          <tr>
-            <th>Job</th>
-            <th>Task</th>
-            <th>Command</th>
-            <th>Queue</th>
-            <th>Started</th>
-            <th>Time</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          %s
-        </tbody>
-      </table>
-  </div>
+      <md-content>
 
-  <div class="mdt-card">
-    <div class="mdt-card-toolbar">Pending jobs</div>
-      <table class="mdt-data-table">
-        <thead>
-          <tr>
-            <th>Job</th>
-            <th>Task</th>
-            <th>Command</th>
-            <th>Queue</th>
-            <th>Submitted</th>
-            <th>Time</th>
-          </tr>
-        </thead>
-        <tbody>
-          %s
-        </tbody>
-      </table>
-  </div>
+        <md-card id="running">
+          <md-card-toolbar>
+            <div>Running jobs</div>
+          </md-card-toolbar>
 
-  <div class="mdt-card">
-    <div class="mdt-card-toolbar">Terminated jobs</div>
-      <table class="mdt-data-table">
-        <thead>
-          <tr>
-            <th>Job</th>
-            <th>Task</th>
-            <th>Command</th>
-            <th>Queue</th>
-            <th>Started</th>
-            <th>Ended</th>
-            <th>Time</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          %s
-        </tbody>
-      </table>
-  </div>
+          <md-data-table id="running-jobs">
+            <md-data-field field="job">Job</md-data-field>
+            <md-data-field field="task">Task</md-data-field>
+            <md-data-field field="command">Command</md-data-field>
+            <md-data-field field="queue">Queue</md-data-field>
+            <md-data-field field="started">Started</md-data-field>
+            <md-data-field field="time">Time</md-data-field>
+            <md-data-field field="status" html=1>Status</md-data-field>
+          </md-data-table>
+        </md-card>
 
-</div>
+        <md-card id="pending">
+          <md-card-toolbar>
+            <div>Pending jobs</div>
+          </md-card-toolbar>
 
+          <md-data-table id="pending-jobs">
+            <md-data-field field="job">Job</md-data-field>
+            <md-data-field field="task">Task</md-data-field>
+            <md-data-field field="command">Command</md-data-field>
+            <md-data-field field="queue">Queue</md-data-field>
+            <md-data-field field="submitted">Submitted</md-data-field>
+            <md-data-field field="time">Time</md-data-field>
+          </md-data-table>
+        </md-card>
+
+        <md-card id="terminated">
+          <md-card-toolbar>
+            <div>Terminated jobs</div>
+          </md-card-toolbar>
+
+          <md-data-table id="terminated-jobs">
+            <md-data-field field="job">Job</md-data-field>
+            <md-data-field field="task">Task</md-data-field>
+            <md-data-field field="command">Command</md-data-field>
+            <md-data-field field="queue">Queue</md-data-field>
+            <md-data-field field="started">Started</md-data-field>
+            <md-data-field field="ended">Ended</md-data-field>
+            <md-data-field field="time" style="text-align: right">Time</md-data-field>
+            <md-data-field field="status" html=1>Status</md-data-field>
+          </md-data-table>
+        </md-card>
+
+      </md-content>
+
+    </md-column-layout>
+  </dashboard-app>
 </body>
 </html>
-"""
+""")
 
-@app.route("/favicon.ico")
-def favicon(request):
-  return 404
+app.js("/scheduler.js",
+"""
+import {Component} from "/common/lib/component.js";
+
+class SchedulerApp extends Component {
+  onconnected() {
+    this.bind("#refresh", "click", (e) => this.onrefresh(e));
+    window.document.title = `${this.host()} - SLING Job Scheduler`;
+    this.find("#host").update(this.host());
+    this.reload();
+  }
+
+  onrefresh(e) {
+    this.reload()
+  }
+
+  reload() {
+    fetch("/jobs").then(response => response.json()).then((data) => {
+      this.update(data);
+    }).catch(err => {
+      console.log('Error fetching jobs', err);
+    });
+  }
+
+  onupdate() {
+    this.find("#running-jobs").update(this.state.running);
+    this.find("#pending-jobs").update(this.state.pending);
+    this.find("#terminated-jobs").update(this.state.terminated);
+  }
+
+  host() {
+    if (window.location.port == 5050) {
+      return window.location.hostname;
+    } else {
+      return window.location.hostname + ":" + window.location.port;
+    }
+  };
+}
+
+Component.register(SchedulerApp);
+
+document.body.style = null;
+""")
+
+@app.route("/jobs")
+def jobs_page(request):
+  running = []
+  pending = []
+  terminated = []
+
+  for job in jobs:
+    if job.state == Job.RUNNING:
+      status = ""
+      if job.port:
+        statusurl = "http://%s:%d" % (hostname, job.port)
+        status += '<a href="%s" target="_blank">status</a> ' % statusurl
+      if job.stdout:
+        status += '<a href="/log/%s" target="_blank">log</a> ' % job.id
+      if job.stderr:
+        status += '<a href="/errors/%s" target="_blank">errors</a> ' % job.id
+
+      running.append({
+        "job": job.id,
+        "task": job.task.description,
+        "command": str(job),
+        "queue": job.queuename(),
+        "started": ts2str(job.started),
+        "time": dur2str(job.runtime()),
+        "status": status
+      })
+    elif job.state == Job.PENDING:
+      pending.append({
+        "job": job.id,
+        "task": job.task.description,
+        "command": str(job),
+        "queue": job.queuename(),
+        "submitted": ts2str(job.submitted),
+        "time": dur2str(job.waittime())
+      })
+    else:
+      style = None
+      if job.state == Job.FAILED: style = "background-color: #FCE4EC;"
+
+      status = ""
+      if job.stdout:
+        status += '<a href="/log/%s" target="_blank">log</a> ' % job.id
+      if job.stderr:
+        status += '<a href="/errors/%s" target="_blank">errors</a> ' % job.id
+      if job.status:
+        status += '<a href="/status/%s" target="_blank">errors</a> ' % job.id
+      if job.error:
+        status += str(job.error)
+
+      terminated.append({
+        "job": job.id,
+        "task": job.task.description,
+        "command": str(job),
+        "queue": job.queuename(),
+        "started": ts2str(job.started),
+        "ended": ts2str(job.ended),
+        "time": dur2str(job.runtime()),
+        "status": status,
+        "style": style
+      })
+
+  terminated.reverse()
+
+  return {
+    "running": running,
+    "pending": pending,
+    "terminated": terminated
+  }
 
 @app.route("/log")
 def log_page(request):
@@ -692,94 +612,6 @@ def status_page(request):
   if job is None: return 500
   if job.status is None: return 404;
   return sling.net.HTTPFile(job.status, "text/plain; charset=utf-8")
-
-@app.route("/")
-def main_page(request):
-  hostname = request["Host"].split(':')[0]
-
-  running = []
-  pending = []
-  terminated = []
-
-  for job in jobs:
-    if job.state != Job.RUNNING: continue
-    running.extend((
-      "\n<tr>",
-      "<td>", job.id, "</td>",
-      "<td>", job.task.description, "</td>",
-      "<td>", str(job), "</td>",
-      "<td>", job.queuename(), "</td>",
-      "<td>", ts2str(job.started), "</td>",
-      "<td>", dur2str(job.runtime()), "</td>",
-    ))
-
-    running.append("<td>")
-    if job.port:
-      statusurl = "http://%s:%d" % (hostname, job.port)
-      running.append(
-        '<a href="%s" target="_blank">status</a> ' % (statusurl))
-    if job.stdout:
-      running.append(
-        '<a href="/log/%s" target="_blank">log</a> ' % (job.id))
-    if job.stderr:
-      running.append(
-        '<a href="/errors/%s" target="_blank">errors</a> ' % (job.id))
-    running.append("</td>")
-    running.append("</tr>")
-
-  for job in jobs:
-    if job.state != Job.PENDING: continue
-    pending.extend((
-      "\n<tr>",
-      "<td>", job.id, "</td>",
-      "<td>", job.task.description, "</td>",
-      "<td>", str(job), "</td>",
-      "<td>", job.queuename(), "</td>",
-      "<td>", ts2str(job.submitted), "</td>",
-      "<td>", dur2str(job.waittime()), "</td>",
-      "</tr>"
-    ))
-
-  for job in reversed(jobs):
-    if job.state != Job.COMPLETED and job.state != Job.FAILED: continue
-    if job.state == Job.FAILED:
-      terminated.append("\n<tr style='background-color: #FCE4EC;'>")
-    else:
-      terminated.append("\n<tr>")
-
-    terminated.extend((
-      "<td>", job.id, "</td>",
-      "<td>", job.task.description, "</td>",
-      "<td>", str(job), "</td>",
-      "<td>", job.queuename(), "</td>",
-      "<td>", ts2str(job.started), "</td>",
-      "<td>", ts2str(job.ended), "</td>",
-      "<td>", dur2str(job.runtime()), "</td>",
-    ))
-
-    terminated.append("<td>")
-    if job.stdout:
-      terminated.append(
-        '<a href="/log/%s" target="_blank">log</a> ' % (job.id))
-    if job.stderr:
-      terminated.append(
-        '<a href="/errors/%s" target="_blank">errors</a> ' % (job.id))
-    if job.status:
-      terminated.append(
-        '<a href="/status/%s" target="_blank">status</a> ' % (job.id))
-    if job.error: terminated.append(str(job.error));
-    terminated.append("</td>")
-    terminated.append("</tr>")
-
-  fillers =  (
-    hostname,
-    hostname,
-    "".join(running),
-    "".join(pending),
-    "".join(terminated)
-  )
-
-  return job_template % fillers
 
 @app.route("/submit", method="POST")
 def submit_command(request):

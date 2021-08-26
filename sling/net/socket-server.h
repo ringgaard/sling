@@ -173,6 +173,7 @@ class SocketConnection {
 
   // I/O buffers.
   IOBuffer *request() { return &request_; }
+  const IOBuffer *request() const { return &request_; }
   IOBuffer *response_header() { return &response_header_; }
   IOBuffer *response_body() { return &response_body_; }
 

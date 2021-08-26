@@ -895,7 +895,11 @@ export class MdDataTable extends Component {
 
     if (this.state) {
       for (const row of this.state) {
-        h.push("<tr>");
+        if (row.style) {
+          h.push(`<tr style="${fld.style}">`);
+        } else {
+          h.push("<tr>");
+        }
         for (const fld of this.fields) {
           if (fld.style) {
             h.push(`<td style="${fld.style}">`);

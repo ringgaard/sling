@@ -18,6 +18,7 @@ import requests
 import json
 import datetime
 import time
+import sling
 import sling.flags as flags
 
 flags.define("--subreddit",
@@ -40,10 +41,16 @@ flags.parse()
 session = requests.Session()
 baseurl = "http://api.pushshift.io/reddit/search/submission"
 batchsize = 100
+
 if flags.arg.outdir != None:
   fout = open(flags.arg.outdir + "/" + flags.arg.subreddit.lower(), "w")
 else:
   fout = None
+
+if flags.arg.redditdb != None:
+  redditdb = sling.Database(flags.arg.redditdb)
+else:
+  redditdb = None
 
 num_submissions = 0
 dt = None
@@ -78,13 +85,9 @@ while True:
     if fout != None:
       fout.write(json.dumps(submission))
       fout.write("\n")
-    if flags.arg.redditdb != None:
+    if redditdb != None:
       key = "t3_" + submission["id"]
-      dburl = flags.arg.redditdb + "/" + key
-      r = session.put(dburl,
-                      headers={"Mode": "add"},
-                      data=json.dumps(submission))
-      r.raise_for_status()
+      redditdb.put(key, json.dumps(submission), mode=sling.DBADD)
     num_submissions += 1
 
   dt =  datetime.datetime.fromtimestamp(created)
@@ -95,5 +98,6 @@ while True:
   after = created
 
 if fout != None: fout.close()
+if redditdb != None: redditdb.close()
 print(flags.arg.subreddit, dt, num_submissions, "submissions")
 
