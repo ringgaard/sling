@@ -145,6 +145,8 @@ void PyHTTPServer::DynamicContext::Handle(HTTPRequest *request,
       LOG(ERROR) << "Python exception:";
       PyErr_Print();
       fflush(stderr);
+    } else {
+      LOG(ERROR) << "Error processing request";
     }
     response->SendError(500);
   }

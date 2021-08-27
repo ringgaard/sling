@@ -181,16 +181,16 @@ class Job:
         if arg[0] is not None: cmd.append("--" + str(arg[0]))
         if arg[1] is not None: cmd.append(str(arg[1]))
 
-    if self.task.monitor:
-      if self.port is None: self.port = get_free_port()
-      cmd.append("--monitor")
-      cmd.append(str(self.port))
+      if self.task.monitor:
+        if self.port is None: self.port = get_free_port()
+        cmd.append("--monitor")
+        cmd.append(str(self.port))
 
-    if self.task.statistics:
-      cmd.append("--logdir")
-      cmd.append(flags.arg.logdir)
-      cmd.append("--jobid")
-      cmd.append(self.id)
+      if self.task.statistics:
+        cmd.append("--logdir")
+        cmd.append(flags.arg.logdir)
+        cmd.append("--jobid")
+        cmd.append(self.id)
 
     return cmd
 
@@ -471,7 +471,7 @@ app.page("/",
       </md-content>
 
     </md-column-layout>
-  </dashboard-app>
+  </scheduler-app>
 </body>
 </html>
 """)
@@ -530,6 +530,9 @@ def jobs_page(request):
     if job.state == Job.RUNNING:
       status = ""
       if job.port:
+        hostname = request["Host"]
+        if hostname is None: hostname = "localhost"
+        if ':' in hostname: hostname =  hostname[:hostname.find(':')]
         statusurl = "http://%s:%d" % (hostname, job.port)
         status += '<a href="%s" target="_blank">status</a> ' % statusurl
       if job.stdout:

@@ -53,6 +53,7 @@ else:
   redditdb = None
 
 num_submissions = 0
+num_dups = 0
 dt = None
 after = 0
 while True:
@@ -87,7 +88,8 @@ while True:
       fout.write("\n")
     if redditdb != None:
       key = "t3_" + submission["id"]
-      redditdb.put(key, json.dumps(submission), mode=sling.DBADD)
+      res = redditdb.put(key, json.dumps(submission), mode=sling.DBADD)
+      if res == sling.DBEXISTS: num_dups += 1
     num_submissions += 1
 
   dt =  datetime.datetime.fromtimestamp(created)
@@ -99,5 +101,5 @@ while True:
 
 if fout != None: fout.close()
 if redditdb != None: redditdb.close()
-print(flags.arg.subreddit, dt, num_submissions, "submissions")
+print(flags.arg.subreddit, dt, num_submissions, "submissions", num_dups, "dups")
 

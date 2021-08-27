@@ -18,6 +18,7 @@ import json
 import os
 import threading
 import time
+import traceback
 import sling.pysling as api
 
 # Map of HTTP response formatters for each handler return type.
@@ -79,6 +80,12 @@ class HTTPResponse:
     """Set content type"""
     self["Content-Type"] = value
 
+  def error(self, status, message=None):
+    self.status = status
+    self.ct = "text/plain"
+    self.body = message
+    self.file = None
+
   def result(self):
     """Return response tuple"""
     return (self.status, self.headers, self.body, self.file)
@@ -91,21 +98,27 @@ class HTTPHandler:
     if method is not None: self.methods.append(method)
 
   def handle(self, method, path, query, headers, body):
-    # Check method.
-    if method not in self.methods:
-      return (405, None, "Method Not Allowed", None)
-
-    # Make request object.
-    request = HTTPRequest(method, path, query, headers, body)
-
-    # Run handler.
-    ret = self.func(request)
-
-    # Format response.
-    formatter = http_reponse_formatters.get(type(ret))
-    if formatter is None: raise "No HTTP formatter for " + str(type())
     response = HTTPResponse()
-    formatter(ret, request, response)
+    try:
+      # Check method.
+      if method not in self.methods:
+        response.error(405, "Method Not Allowed")
+      else:
+        # Make request object.
+        request = HTTPRequest(method, path, query, headers, body)
+
+        # Run handler.
+        ret = self.func(request)
+
+        # Format response.
+        formatter = http_reponse_formatters.get(type(ret))
+        if formatter is None: raise "No HTTP formatter for " + str(type())
+        formatter(ret, request, response)
+
+    except Exception as e:
+      # Return error response with stack trace.
+      trace = traceback.format_exception(type(e), e, tb=e.__traceback__)
+      response.error(500, "".join(trace))
 
     # Return response.
     return response.result()

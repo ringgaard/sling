@@ -185,6 +185,9 @@ delimiters = [
   " aka ", " a.k.a. ",
   " having ", " performing ", " during ", " being ",
   " posing ", " photographed ", " dressed ",
+
+  # For jounalists.
+  "FoxWeather",
 ]
 
 # HTML templates for unmatched postings.

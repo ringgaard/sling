@@ -299,7 +299,7 @@ M257.94,57.87c-16,22.9-37.86,45.41-62.54,60a60.83,60.83,0,0,0,7.66-29.64,61.\
 export class MdLogo extends Component {
   render() {
     return `
-      <a href="/">
+      <a href="/" tabindex="-1">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 283.46 176.46">
           <g><path d="${logo}"/></g>
         </svg>
@@ -344,10 +344,15 @@ Component.register(MdToolbarLogo);
 //-----------------------------------------------------------------------------
 
 export class MdIconButton extends Component {
+  visible() {
+    return this.state;
+  }
+
   render() {
     let attrs = [];
     if (this.props.disabled) attrs.push(' disabled');
     if (this.props.shortcut) attrs.push(` accesskey="${this.props.shortcut}"`);
+    if (this.props.type) attrs.push(` type="${this.props.type}"`);
     return `<button ${attrs.join("")}><i>${this.props.icon}</i></button>`;
   }
 
@@ -501,11 +506,6 @@ export class MdIcon extends Component {
 
   static stylesheet() {
     return `
-      $ {
-        align-items: center;
-        display: flex;
-      }
-
       $ i {
         font-family: 'Material Icons';
         font-weight: normal;
