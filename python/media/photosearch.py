@@ -75,7 +75,7 @@ app.page("/photosearch",
 </html>
 """)
 
-app.js("/app.js",
+app.js("/photosearch/app.js",
 """
 import {Component} from "/common/lib/component.js";
 import {MdCard} from "/common/lib/material.js";
