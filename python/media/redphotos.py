@@ -180,14 +180,14 @@ delimiters = [
   "(", "[", ",", " - ", "|", "/", ":", "!", " – ", ";", "'s ", "’s ",
   " circa ", " c.",
   "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
-  " by ", " is ", " was ", " in ", " on ", " with ", " at ", " as ", " from ",
-  " for ", " has ",
+  " by ", " is ", " was ", " in ", " In", " on ", " with ", " at ", " as ",
+  " from ", " for ", " has ",
   " aka ", " a.k.a. ",
   " having ", " performing ", " during ", " being ",
   " posing ", " photographed ", " dressed ",
 
   # For jounalists.
-  "FoxWeather",
+  "FoxWeather", "News"
 ]
 
 # HTML templates for unmatched postings.

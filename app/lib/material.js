@@ -578,6 +578,11 @@ export class MdInput extends Component {
     return this.find("input").value;
   }
 
+  onupdated() {
+    let value = this.state;
+    if (value) this.find("input").value = value;
+  }
+
   render() {
     let attrs = [];
     if (this.props.type) {

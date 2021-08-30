@@ -576,6 +576,9 @@ class KbItemCard extends MdCard {
     if (this.find("#code")) {
       this.bind("#code", "click", e => this.oncode(e));
     }
+    if (this.find("#imgsearch")) {
+      this.bind("#imgsearch", "click", e => this.onimgsearch(e));
+    }
   }
 
   visible() {
@@ -598,6 +601,13 @@ class KbItemCard extends MdCard {
   oncode(e) {
     let item = this.state;
     let url = "/kb/frame?fmt=txt&id=" + encodeURIComponent(item.ref);
+    window.open(url, "_blank");
+  }
+
+  onimgsearch(e) {
+    let item = this.state;
+    let url = `/photosearch?q="${encodeURIComponent(item.text)}"`;
+    if (allow_nsfw) url += "&nsfw=1";
     window.open(url, "_blank");
   }
 
@@ -1096,7 +1106,7 @@ class KbLightbox extends MdModal {
   static stylesheet() {
     return MdModal.stylesheet() + `
       $ {
-        background-color: black;
+        background-color: #0E0E0E;
       }
 
       $ .content {
@@ -1292,7 +1302,10 @@ const desktop_template = `
                 <md-link id="ref" notab="1" newtab="1" external="1"></md-link>
               </div>
               <md-spacer></md-spacer>
-              <md-icon-button id="code" icon="code"></md-icon-button>
+              <md-icon-button id="imgsearch" icon="image_search">
+              </md-icon-button>
+              <md-icon-button id="code" icon="code">
+              </md-icon-button>
             </md-card-toolbar>
             <div><md-text id="description"></md-text></div>
             <div><md-text id="datatype"></md-text></div>
