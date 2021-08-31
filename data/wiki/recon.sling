@@ -30,7 +30,10 @@
     P161: Q66318312     ; cast member -> cast member of
     P58:  Q65971578     ; screenwriter -> wrote script of
     P166: {+Q66796038   ; award received -> award received by
-      P585: P585 ; point in time
+      P585: P585   ; point in time
+      P17: P17     ; country
+      P1476: P1476 ; title
+      P1810: P1810 ; named as
     }
     P1027: Q101072499   ; conferred by -> award conferred
     P26: P26            ; spouse -> spouse

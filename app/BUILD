@@ -11,5 +11,6 @@ embed_data(
     "lib/docview.js",
     "lib/material.js",
     "lib/frame.js",
+    "lib/reddit.js",
   ],
 )

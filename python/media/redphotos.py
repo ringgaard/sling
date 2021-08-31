@@ -14,6 +14,7 @@
 
 """Find photos of persons in reddit postings."""
 
+import json
 import requests
 import datetime
 from urllib.parse import urlparse
@@ -49,6 +50,11 @@ flags.define("--aliases",
              metavar="FILE")
 
 flags.define("--report",
+             help="JSON report for unmatched postings",
+             default=None,
+             metavar="FILE")
+
+flags.define("--htmlreport",
              help="HTML report for unmatched postings",
              default=None,
              metavar="FILE")
@@ -357,10 +363,14 @@ def name_prefix(name):
 batch = open(flags.arg.batch, 'w')
 redditdb = sling.Database(flags.arg.redditdb, "redphotos")
 chkpt = sling.util.Checkpoint(flags.arg.checkpoint)
+report = {}
+report["subreddits"] = {}
+seen = set()
+
 sr_reports = {}
 sr_total = defaultdict(int)
 sr_matched = defaultdict(int)
-seen = set()
+
 for key, value in redditdb.items(chkpt.checkpoint):
   # Parse reddit posting.
   store = sling.Store(commons)
@@ -370,10 +380,12 @@ for key, value in redditdb.items(chkpt.checkpoint):
   title = posting[n_title]
   if type(title) is bytes: continue
   title = title.replace('\n', ' ').strip()
+  nsfw = posting[n_over_18]
 
   # Check for personal subreddit.
   sr = posting[n_subreddit]
   itemid = person_subreddits.get(sr)
+  general = itemid is None
 
   # Check for name match in general subreddit.
   query = title
@@ -437,9 +449,34 @@ for key, value in redditdb.items(chkpt.checkpoint):
   if url in seen: continue
   seen.add(url)
 
+  # Add posting to report.
+  subreddit = report["subreddits"].get(sr)
+  if subreddit is None:
+    subreddit = {}
+    subreddit["total"] = 0
+    subreddit["matches"] = 0
+    subreddit["matched"] = []
+    subreddit["unmatched"] = []
+    report["subreddits"][sr] = subreddit
+
+  subreddit["total"] += 1
+  p = {}
+  p["posting"] = json.loads(value)
+  if itemid is None:
+    if not selfie(title):
+      matches = aliases.query(query)
+      p["query"] = query
+      p["matches"] = len(matches)
+      if len(matches) == 1: p["match"] = matches[0].id()
+      subreddit["unmatched"].append(p)
+  else:
+    subreddit["matches"] += 1
+    p["itemid"] = itemid
+    if general: p["query"] = query
+    subreddit["matched"].append(p)
+
   # Log unknown postings.
   sr_total[sr] += 1
-  nsfw = posting[n_over_18]
   if itemid is None:
     if not selfie(title):
       print(sr, key, "UNKNOWN", title, "NSFW" if nsfw else "", url)
@@ -500,18 +537,25 @@ chkpt.commit(redditdb.position())
 redditdb.close()
 batch.close()
 
-# Output HTML report with unmatched postings.
+# Output JSON report.
 if flags.arg.report:
   reportfn = datetime.datetime.now().strftime(flags.arg.report)
-  report = open(reportfn, "w")
-  report.write(html_report_header)
+  fout = open(reportfn, "w")
+  json.dump(report, fout)
+  fout.close()
+
+# Output HTML report with unmatched postings.
+if flags.arg.htmlreport:
+  reportfn = datetime.datetime.now().strftime(flags.arg.htmlreport)
+  fout = open(reportfn, "w")
+  fout.write(html_report_header)
   for sr in sorted(sr_reports.keys()):
-    report.write(html_report_headline.format(
+    fout.write(html_report_headline.format(
       sr=sr,
       matched=sr_matched[sr],
       total=sr_total[sr]))
     for line in sr_reports[sr]:
-      report.write(line)
-  report.write(html_report_footer)
-  report.close()
+      fout.write(line)
+  fout.write(html_report_footer)
+  fout.close()
 
