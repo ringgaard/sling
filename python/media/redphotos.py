@@ -431,6 +431,7 @@ for key, value in redditdb.items(chkpt.checkpoint):
 
   # Check for approved site.
   url = posting[n_url]
+  if type(url) != str: continue
   if url is None or len(url) == 0: continue
   if "?" in url: continue
   domain = urlparse(url).netloc

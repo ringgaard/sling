@@ -568,7 +568,7 @@ def jobs_page(request):
       if job.stderr:
         status += '<a href="/errors/%s" target="_blank">errors</a> ' % job.id
       if job.status:
-        status += '<a href="/status/%s" target="_blank">errors</a> ' % job.id
+        status += '<a href="/status/%s" target="_blank">status</a> ' % job.id
       if job.error:
         status += str(job.error)
 
