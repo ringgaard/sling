@@ -90,6 +90,13 @@ class HTTPResponse:
     """Return response tuple"""
     return (self.status, self.headers, self.body, self.file)
 
+@response(HTTPResponse)
+def http_response(value, request, response):
+  response.status = value.status
+  response.headers = value.headers
+  response.body = value.body
+  response.file = value.file
+
 class HTTPHandler:
   def __init__(self, func, method="GET", methods=None):
     self.func = func
@@ -144,6 +151,16 @@ def file_page(value, request, response):
   response.ct = value.ct
   response.file = value.filename
 
+class HTTPRedirect:
+ def __init__(self, location, status=307):
+   self.location = location
+   self.status = status
+
+@response(HTTPRedirect)
+def redirect_page(value, request, response):
+  response.status = value.status
+  response["Location"] = value.location
+
 class HTTPServer:
   def __init__(self, port, addr=""):
     self.httpd = api.HTTPServer(addr, port)
@@ -177,6 +194,12 @@ class HTTPServer:
   def route(self, path, method="GET"):
     def inner(func):
       self.httpd.dynamic(path, HTTPHandler(func, method))
+    return inner
+
+  def redirect(self, path, location, status=307):
+    redir = HTTPRedirect(location, status)
+    def inner(func):
+      return redir
     return inner
 
   def page(self, path, content, ct="text/html"):

@@ -34,7 +34,7 @@ body {
   width: 100%;
   height: 100%;
   min-height: 100%;
-  position:relative;
+  position: relative;
 }
 `);
 
@@ -378,13 +378,10 @@ export class MdIconButton extends Component {
   static stylesheet() {
     return `
       $ button {
-        display: flex;
         border-radius: 50%;
         border: 0;
         height: 40px;
         width: 40px;
-        justify-content: center;
-        align-items: center;
         background: transparent;
         user-select: none;
         cursor: pointer;

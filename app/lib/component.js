@@ -22,9 +22,9 @@ window.addEventListener('load', (e) => {
 // Base class for web components.
 export class Component extends HTMLElement {
   // Initialize new web component.
-  constructor() {
+  constructor(state) {
     super();
-    this.state = null;
+    this.state = state;
     this.props = {};
     this.elements = [...this.children];
     this.nodes = [...this.childNodes];
@@ -89,7 +89,13 @@ export class Component extends HTMLElement {
       let content = this.render();
       if (content instanceof Array) {
         while (this.firstChild) this.removeChild(this.lastChild);
-        for (let n of content) this.appendChild(n);
+        for (let n of content) {
+          if (n instanceof Node) {
+            this.appendChild(n);
+          } else {
+            this.insertAdjacentHTML("beforeend", n);
+          }
+        }
       } else if (content instanceof Node) {
         while (this.firstChild) this.removeChild(this.lastChild);
         this.appendChild(content);
