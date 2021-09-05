@@ -128,7 +128,9 @@ class HTTPHandler:
     except Exception as e:
       # Return error response with stack trace.
       trace = traceback.format_exception(type(e), e, tb=e.__traceback__)
-      response.error(500, "".join(trace))
+      errmsg = "".join(trace)
+      print(errmsg)
+      response.error(500, errmsg)
 
     # Return response.
     return response.result()

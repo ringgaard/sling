@@ -33,10 +33,6 @@ flags.define("--caption",
              default=None,
              help="photo caption")
 
-flags.define("--source",
-             default=None,
-             help="photo source")
-
 flags.define("--nsfw",
              help="mark photos as nsfw",
              default=False,

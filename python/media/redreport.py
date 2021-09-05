@@ -18,12 +18,18 @@ import sling
 import sling.flags as flags
 import sling.log as log
 import sling.net
+import sling.media.photo as photo
 
 flags.define("--port",
              help="port number for the HTTP server",
              default=8080,
              type=int,
              metavar="PORT")
+
+flags.define("--celebmap",
+             help="list of names mapped to item ids",
+             default=None,
+             metavar="FILE")
 
 # Parse command line flags.
 flags.parse()
@@ -97,6 +103,42 @@ class PhotoReportApp extends Component {
 Component.register(PhotoReportApp);
 
 class RedditPosting extends Component {
+  onconnected() {
+    if (this.find("#add")) {
+      this.bind("#add", "click", e => this.onadd(e));
+    }
+  }
+
+  onadd(e) {
+    let item = this.state;
+    let posting = item.posting;
+    let url = posting.url;
+    let name = item.query;
+    let itemid = item.match;
+    let nsfw = posting.over_18;
+    let request = {
+      url: posting.url,
+      name: item.query,
+      id: item.match,
+      nsfw: posting.over_18,
+    }
+
+    fetch("/addmedia", {method: "POST", body: JSON.stringify(request)})
+      .then(response => response.json())
+      .then((response) => {
+        let msg = "";
+        if (response.images == 0) {
+          msg = "no images added";
+        } else if (response.images == 1) {
+          msg = "image added";
+        } else {
+          msg = `${response.images} added`;
+        }
+
+        this.find("#msg").update(msg);
+      });
+  }
+
   render() {
     let item = this.state;
     let posting = item.posting;
@@ -121,6 +163,8 @@ class RedditPosting extends Component {
       match = `
          <b>${item.query}</b>:
          <a href="${kburl}" target="_blank">${item.match}</a>
+         <button id="add">Add</button>
+         <md-text id="msg"></md-text>
        `;
     } else {
       match = `${item.matches} matches for <b>${item.query}</b>`
@@ -258,6 +302,29 @@ Component.register(SubredditList);
 
 document.body.style = null;
 """)
+
+@app.route("/addmedia", method="POST")
+def add_media(request):
+  # Get request.
+  r = request.json();
+  url = r["url"]
+  name = r["name"]
+  id = r["id"]
+  nsfw = r["nsfw"]
+  print("***", id, name, url, "NSFW" if nsfw else "")
+
+  # Add media to profile.
+  profile = photo.Profile(id)
+  n = profile.add_media(url, None, nsfw)
+  if n > 0: profile.write()
+
+  # Add name mapping to celeb map.
+  if name != None and flags.arg.celebmap:
+    f = open(flags.arg.celebmap, "a")
+    f.write("%s: %s\n" % (name, id))
+    f.close()
+
+  return {"images": n}
 
 # Run app until shutdown.
 log.info("running")

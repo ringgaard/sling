@@ -58,6 +58,10 @@ flags.define("--numbering",
              default=False,
              action="store_true")
 
+flags.define("--source",
+             default=None,
+             help="photo source")
+
 flags.define("--video",
              help="allow video clips",
              default=False,
@@ -497,6 +501,12 @@ class Profile:
     if m != None:
       galleryid = m.group(1)
       return self.add_reddit_gallery(galleryid, caption, nsfw)
+
+    # Reddit preview.
+    m = re.match("https://preview.redd.it/(\w+.png)\?", url)
+    if m != None:
+      imagename = m.group(1)
+      url = "https://i.redd.it/" + imagename
 
     # DR image scaler.
     m = re.match("https://asset.dr.dk/ImageScaler/\?(.+)", url)
