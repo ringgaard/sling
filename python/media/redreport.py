@@ -108,7 +108,9 @@ class RedditPosting extends Component {
     if (xpost_list && xpost_list.length == 1) {
       let xp = xpost_list[0];
       xpost = `cross-post from
-        <a href="https://www.reddit.com${xp.permalink}">${xp.subreddit}</a>`;
+        <a href="https://www.reddit.com${xp.permalink}  target="_blank"">
+          ${xp.subreddit}
+        </a>`;
     }
 
     let match = "";
@@ -118,7 +120,7 @@ class RedditPosting extends Component {
       let kburl = `https://ringgaard.com/kb/${item.match}?nsfw=1`;
       match = `
          <b>${item.query}</b>:
-         <a href="${kburl}">${item.match}</a>
+         <a href="${kburl}" target="_blank">${item.match}</a>
        `;
     } else {
       match = `${item.matches} matches for <b>${item.query}</b>`

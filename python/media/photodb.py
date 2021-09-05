@@ -127,10 +127,12 @@ def bulk_load(batch):
     nsfw = len(fields) >= 3 and fields[2] == "NSFW"
 
     # Get profile or create a new one.
-    profile = photo.Profile(id)
-    if profile.isnew: num_new += 1
-    profiles[id] = profile
-    print("*** PROFILE %s, %d existing photos" % (id, profile.count()))
+    profile = profiles.get(id)
+    if profile is None:
+      profile = photo.Profile(id)
+      if profile.isnew: num_new += 1
+      profiles[id] = profile
+      print("*** PROFILE %s, %d existing photos" % (id, profile.count()))
 
     # Add media to profile.
     try:

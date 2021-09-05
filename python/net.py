@@ -50,6 +50,9 @@ class HTTPRequest:
         if key == header[0].casefold(): return header[1]
     return None
 
+  def json(self):
+    return json.loads(self.body)
+
 class HTTPResponse:
   def __init__(self):
     self.status = 200
