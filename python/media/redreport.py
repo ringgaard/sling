@@ -33,10 +33,12 @@ flags.define("--celebmap",
 
 # Parse command line flags.
 flags.parse()
+flags.arg.captionless = True
 
 # Initialize web server.
 app = sling.net.HTTPServer(flags.arg.port)
 app.static("/common", "app", internal=True)
+app.redirect("/", "/redreport/")
 
 # Main page.
 app.page("/redreport",
@@ -56,7 +58,7 @@ app.page("/redreport",
     <md-column-layout>
       <md-toolbar>
         <md-toolbar-logo></md-toolbar-logo>
-        <div id="title">Reddit photo report</div>
+        <md-text id="title">Reddit photo report</md-text>
       </md-toolbar>
 
       <md-content>
@@ -82,7 +84,8 @@ class PhotoReportApp extends Component {
   onconnected() {
     // Get date from request; default to current date.
     let path = window.location.pathname;
-    let date = path.substr(path.indexOf('/', 1) + 1);
+    let pos = path.indexOf('/', 1);
+    let date = pos == -1 ? "" : path.substr(pos + 1);
     if (date.length == 0) date = current_date();
 
     // Retrieve report.
@@ -91,12 +94,8 @@ class PhotoReportApp extends Component {
       .then(response => response.json())
       .then((report) => {
         this.find("subreddit-list").update(report);
+        this.find("#title").update(`Reddit photo report for ${date}`);
       });
-  }
-
-  static stylesheet() {
-    return `
-    `;
   }
 }
 
@@ -112,31 +111,42 @@ class RedditPosting extends Component {
   onadd(e) {
     let item = this.state;
     let posting = item.posting;
-    let url = posting.url;
-    let name = item.query;
-    let itemid = item.match;
-    let nsfw = posting.over_18;
-    let request = {
-      url: posting.url,
-      name: item.query,
-      id: item.match,
-      nsfw: posting.over_18,
-    }
+    this.add(posting.url, item.query, item.match, posting.over_18);
+  }
 
-    fetch("/addmedia", {method: "POST", body: JSON.stringify(request)})
-      .then(response => response.json())
-      .then((response) => {
-        let msg = "";
-        if (response.images == 0) {
-          msg = "no images added";
-        } else if (response.images == 1) {
-          msg = "image added";
-        } else {
-          msg = `${response.images} added`;
-        }
+  add(url, name, id, nsfw) {
+    fetch("/redreport/addmedia", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        url: url,
+        name: name,
+        id: id,
+        nsfw: nsfw,
+      }),
+    })
+    .then((response) => {
+      if (!response.ok) throw Error(response.statusText);
+      return response.json();
+    })
+    .then((response) => {
+      let msg = "";
+      if (response.images == 0) {
+        msg = "(no image added)";
+      } else if (response.images == 1) {
+        msg = "(image added)";
+      } else {
+        msg = `(${response.images} images added)`;
+      }
 
-        this.find("#msg").update(msg);
-      });
+      this.find("#msg").update(msg);
+    })
+    .catch(error => {
+      console.log("Server error", error.message, error.stack);
+      this.find("#msg").update(`(Error: ${error.message})`);
+    });
   }
 
   render() {
@@ -150,7 +160,7 @@ class RedditPosting extends Component {
     if (xpost_list && xpost_list.length == 1) {
       let xp = xpost_list[0];
       xpost = `cross-post from
-        <a href="https://www.reddit.com${xp.permalink}  target="_blank"">
+        <a href="https://www.reddit.com${xp.permalink}" target="_blank"">
           ${xp.subreddit}
         </a>`;
     }
@@ -163,8 +173,6 @@ class RedditPosting extends Component {
       match = `
          <b>${item.query}</b>:
          <a href="${kburl}" target="_blank">${item.match}</a>
-         <button id="add">Add</button>
-         <md-text id="msg"></md-text>
        `;
     } else {
       match = `${item.matches} matches for <b>${item.query}</b>`
@@ -184,7 +192,9 @@ class RedditPosting extends Component {
           ${xpost}
         </div>
         <div class="match">
+          <button id="add">Add</button>
           ${match}
+          <md-text id="msg"></md-text>
         </div>
       </div>
     `;
@@ -303,15 +313,28 @@ Component.register(SubredditList);
 document.body.style = null;
 """)
 
-@app.route("/addmedia", method="POST")
+celebmap = {}
+
+def add_celeb(name, id):
+  if flags.arg.celebmap is None: return
+  if name is None or len(name) == 0: return
+  if name in celebmap: return
+
+  f = open(flags.arg.celebmap, "a")
+  f.write("%s: %s\n" % (name, id))
+  f.close()
+  celebmap[name] = id
+
+@app.route("/redreport/addmedia", method="POST")
 def add_media(request):
   # Get request.
   r = request.json();
-  url = r["url"]
-  name = r["name"]
-  id = r["id"]
-  nsfw = r["nsfw"]
+  url = r.get("url")
+  name = r.get("name")
+  id = r.get("id")
+  nsfw = r.get("nsfw")
   print("***", id, name, url, "NSFW" if nsfw else "")
+  if id is None or url is None: return 400
 
   # Add media to profile.
   profile = photo.Profile(id)
@@ -319,10 +342,7 @@ def add_media(request):
   if n > 0: profile.write()
 
   # Add name mapping to celeb map.
-  if name != None and flags.arg.celebmap:
-    f = open(flags.arg.celebmap, "a")
-    f.write("%s: %s\n" % (name, id))
-    f.close()
+  add_celeb(name, id)
 
   return {"images": n}
 

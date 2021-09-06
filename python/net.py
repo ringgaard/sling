@@ -19,6 +19,7 @@ import os
 import threading
 import time
 import traceback
+import sling
 import sling.pysling as api
 
 # Map of HTTP response formatters for each handler return type.
@@ -52,6 +53,10 @@ class HTTPRequest:
 
   def json(self):
     return json.loads(self.body)
+
+  def frame(self, store=None):
+    if store is None: store = sling.Store()
+    return store.parse(self.body)
 
 class HTTPResponse:
   def __init__(self):
@@ -205,7 +210,7 @@ class HTTPServer:
     redir = HTTPRedirect(location, status)
     def inner(func):
       return redir
-    return inner
+    self.dynamic(path, inner)
 
   def page(self, path, content, ct="text/html"):
     static = HTTPStatic(ct, content)
@@ -242,4 +247,14 @@ def error_page(value, request, response):
 def json_page(value, request, response):
   response.ct = "application/json"
   response.body = json.dumps(value)
+
+@response(sling.Frame)
+def json_page(value, request, response):
+  response.ct = "application/sling"
+  response.body = value.data(binary=True)
+
+@response(sling.Array)
+def json_page(value, request, response):
+  response.ct = "application/sling"
+  response.body = value.data(binary=True)
 
