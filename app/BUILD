@@ -9,6 +9,7 @@ embed_data(
     "image/rr-logo.svg",
     "lib/component.js",
     "lib/docview.js",
+    "lib/gallery.js",
     "lib/material.js",
     "lib/frame.js",
     "lib/reddit.js",

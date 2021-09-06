@@ -1,4 +1,4 @@
-import {Component} from "/common/lib/component.js";
+import {Component} from "./component.js";
 
 const kb_url = '/kb/';
 

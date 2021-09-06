@@ -1,6 +1,6 @@
 // Material Design web components.
 
-import {Component, stylesheet} from "/common/lib/component.js";
+import {Component, stylesheet} from "./component.js";
 
 //-----------------------------------------------------------------------------
 // Global styles
@@ -473,7 +473,7 @@ export class MdLink extends Component {
 Component.register(MdLink);
 
 //-----------------------------------------------------------------------------
-// Icon
+// Image
 //-----------------------------------------------------------------------------
 
 export class MdImage extends Component {

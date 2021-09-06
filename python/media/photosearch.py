@@ -31,6 +31,7 @@ flags.parse()
 # Initialize web server.
 app = sling.net.HTTPServer(flags.arg.port)
 app.static("/common", "app", internal=True)
+app.redirect("/", "/photosearch")
 
 # Main page.
 app.page("/photosearch",
