@@ -146,6 +146,107 @@ export class MdModal extends Component {
 Component.register(MdModal);
 
 //-----------------------------------------------------------------------------
+// Dialog
+//-----------------------------------------------------------------------------
+
+export class MdDialog extends Component {
+  show() {
+    document.body.insertAdjacentHTML("beforeend", "<dialog></dialog>");
+    this.dialog = document.body.lastChild;
+    this.dialog.addEventListener("close", e => this.cancel());
+    this.dialog.appendChild(this);
+
+    if (this.onopen) this.onopen();
+    this.dialog.showModal();
+    this.bind(null, "keydown", e => { if (e.keyCode == 13) this.done(); });
+
+    let promise = new Promise((resolve, reject) => { this.resolve = resolve; });
+    return promise;
+  }
+
+  close(cancel) {
+    if (this.onclose) this.onclose(cancel);
+    document.body.removeChild(this.dialog);
+    if (!cancel) this.resolve(this.state);
+  }
+
+  done() { this.close(false); }
+  cancel() { this.close(true); }
+
+  static stylesheet() {
+    return `
+      dialog {
+        border-style: none;
+        padding: 0px;
+        border-radius: 5px;
+        box-shadow: 0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22);
+      }
+
+      $ {
+        display: block;
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+    `;
+  }
+}
+
+Component.register(MdDialog);
+
+export class MdDialogTop extends Component {
+  static stylesheet() {
+    return `
+      $ {
+        display: block;
+        margin-top: 16px;
+        margin-bottom: 16px;
+        font-size: 1.25rem;
+        line-height: 2rem;
+        font-weight: 500;
+        letter-spacing: .0125em;
+      }
+    `;
+  }
+}
+
+Component.register(MdDialogTop);
+
+export class MdDialogBottom extends Component {
+  static stylesheet() {
+    return `
+      $ {
+        display: flex;
+        justify-content: flex-end;
+        flex-shrink: 0;
+        flex-wrap: wrap;
+        padding-top: 8px;
+        padding-bottom: 8px;
+      }
+      $ button {
+        font: bold 14px Roboto,Helvetica,sans-serif;
+        color: #00A0D6;
+        background-color: #ffffff;
+        border: none;
+        border-radius: 4px;
+        text-transform: uppercase;
+        letter-spacing: 1.25px;
+        text-align: right;
+        padding: 8px;
+        margin-left: 4px;
+      }
+      $ button:hover {
+        background-color: #eeeeee;
+      }
+      $ button:active {
+        background-color: #aaaaaa;
+      }
+    `;
+  }
+}
+
+Component.register(MdDialogBottom);
+
+//-----------------------------------------------------------------------------
 // Toolbar
 //-----------------------------------------------------------------------------
 

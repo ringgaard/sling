@@ -121,6 +121,7 @@ class Profile:
 
   # Write photo profile to database.
   def write(self):
+    if self.itemid is None or self.itemid == "": raise Error("empty id")
     data = self.frame.data(binary=True)
     photodb().put(self.itemid, data)
 
@@ -383,7 +384,7 @@ class Profile:
           count += self.add_media(m[2], m[1], nsfw)
       else:
         # Add media to profile frame.
-        count = add_media(url, title, nsfw)
+        count = self.add_media(url, title, nsfw)
 
       return count
 
@@ -467,6 +468,9 @@ class Profile:
          url.startswith("https://v.redd.it/"):
         print("Skipping video", url)
         return 0
+
+    # Discard empty urls.
+    if len(url) == 0: return 0
 
     # Imgur album.
     m = re.match("https://imgur\.com/a/(\w+)", url)

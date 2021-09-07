@@ -94,7 +94,7 @@ delimiters = [
   " posing ", " photographed ", " dressed ",
 
   # For jounalists.
-  "FoxWeather", "News"
+  "FoxWeather", "News", "Fox13",
 ]
 
 # Initialize commons store.

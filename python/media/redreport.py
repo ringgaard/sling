@@ -14,6 +14,7 @@
 
 """Search Reddit for photos."""
 
+import sys
 import sling
 import sling.flags as flags
 import sling.log as log
@@ -73,7 +74,7 @@ app.page("/redreport",
 app.js("/redreport/app.js",
 """
 import {Component} from "/common/lib/component.js";
-import {MdCard} from "/common/lib/material.js";
+import {MdCard, MdDialog} from "/common/lib/material.js";
 import {reddit_thumbnail} from "/common/lib/reddit.js";
 
 function current_date() {
@@ -101,6 +102,57 @@ class PhotoReportApp extends Component {
 
 Component.register(PhotoReportApp);
 
+class PhotoDialog extends MdDialog {
+  onconnected() {
+    this.bind("#add", "click", e => this.done());
+    this.bind("#cancel", "click", e => this.cancel());
+  }
+
+  onclose() {
+    this.state = {
+      id: this.find("#id").value.trim(),
+      name: this.find("#name").value.trim(),
+      nsfw: this.find("#nsfw").checked,
+    };
+  }
+
+  render() {
+    let p = this.state;
+    return `
+      <md-dialog-top>Add photo</md-dialog-top>
+      <div style="display: flex; flex-direction: column;">
+        <div>Item ID:</div>
+        <input id="id" value="${p.id}">
+
+        <div>Name:</div>
+        <input id="name" value="${Component.escape(p.name)}">
+
+        <div>
+          <input id="nsfw" type="checkbox" ${p.nsfw ? "checked" : ""}>
+          <label for="nsfw"> NSFW</label>
+        </div>
+      </div>
+      <md-dialog-bottom>
+        <button id="cancel">Cancel</button>
+        <button id="add">Add photo</button>
+      </md-dialog-bottom>
+    `;
+  }
+
+  static stylesheet() {
+    return MdDialog.stylesheet() + `
+      #id {
+        width: 100px;
+      }
+      #name {
+        width: 300px;
+      }
+    `;
+  }
+}
+
+Component.register(PhotoDialog);
+
 class RedditPosting extends Component {
   onconnected() {
     if (this.find("#add")) {
@@ -111,7 +163,17 @@ class RedditPosting extends Component {
   onadd(e) {
     let item = this.state;
     let posting = item.posting;
-    this.add(posting.url, item.query, item.match, posting.over_18);
+    let name = window.getSelection().toString();
+    if (!name) name = item.query;
+    let dialog = new PhotoDialog({
+      name: name,
+      id: item.match ? item.match : "",
+      nsfw: posting.over_18,
+    });
+    dialog.show().then(result => {
+      console.log("Add image", result);
+      this.add(posting.url, result.name, result.id, result.nsfw);
+    });
   }
 
   add(url, name, id, nsfw) {
@@ -334,7 +396,8 @@ def add_media(request):
   id = r.get("id")
   nsfw = r.get("nsfw")
   print("***", id, name, url, "NSFW" if nsfw else "")
-  if id is None or url is None: return 400
+  if id is None or id == "": return 400
+  if url is None or url == "": return 400
 
   # Add media to profile.
   profile = photo.Profile(id)
@@ -344,6 +407,7 @@ def add_media(request):
   # Add name mapping to celeb map.
   add_celeb(name, id)
 
+  sys.stdout.flush()
   return {"images": n}
 
 # Run app until shutdown.
