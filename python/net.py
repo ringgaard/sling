@@ -20,6 +20,7 @@ import sys
 import threading
 import time
 import traceback
+import urllib.parse
 import sling
 import sling.pysling as api
 
@@ -51,6 +52,10 @@ class HTTPRequest:
       for header in self.headers:
         if key == header[0].casefold(): return header[1]
     return None
+
+  def params(self):
+    # Return query string parameters.
+    return urllib.parse.parse_qs(self.query)
 
   def json(self):
     return json.loads(self.body)

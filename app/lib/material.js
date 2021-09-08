@@ -151,14 +151,23 @@ Component.register(MdModal);
 
 export class MdDialog extends Component {
   show() {
+    // Add dialog to DOM.
     document.body.insertAdjacentHTML("beforeend", "<dialog></dialog>");
     this.dialog = document.body.lastChild;
     this.dialog.addEventListener("close", e => this.cancel());
     this.dialog.appendChild(this);
 
+    // Open dialog.
     if (this.onopen) this.onopen();
     this.dialog.showModal();
-    this.bind(null, "keydown", e => { if (e.keyCode == 13) this.done(); });
+
+    // Bind default submit and cancel.
+    this.bind(null, "keydown", e => {
+      if (e.keyCode == 13) this.done();
+      if (e.keyCode == 27) this.cancel();
+    });
+    if (this.find("#submit")) this.bind("#submit", "click", e => this.done());
+    if (this.find("#cancel")) this.bind("#cancel", "click", e => this.cancel());
 
     let promise = new Promise((resolve, reject) => { this.resolve = resolve; });
     return promise;
@@ -233,6 +242,7 @@ export class MdDialogBottom extends Component {
         text-align: right;
         padding: 8px;
         margin-left: 4px;
+        cursor: pointer;
       }
       $ button:hover {
         background-color: #eeeeee;

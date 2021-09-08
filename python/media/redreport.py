@@ -77,6 +77,8 @@ import {Component} from "/common/lib/component.js";
 import {MdCard, MdDialog} from "/common/lib/material.js";
 import {reddit_thumbnail} from "/common/lib/reddit.js";
 
+var sfw = false;
+
 function current_date() {
   return new Date().toISOString().split('T')[0];
 }
@@ -88,6 +90,8 @@ class PhotoReportApp extends Component {
     let pos = path.indexOf('/', 1);
     let date = pos == -1 ? "" : path.substr(pos + 1);
     if (date.length == 0) date = current_date();
+    let qs = new URLSearchParams(window.location.search);
+    if (qs.get("sfw") == "1") sfw = true;
 
     // Retrieve report.
     let url = `https://ringgaard.com/reddit/report/${date}.json`;
@@ -103,11 +107,6 @@ class PhotoReportApp extends Component {
 Component.register(PhotoReportApp);
 
 class PhotoDialog extends MdDialog {
-  onconnected() {
-    this.bind("#add", "click", e => this.done());
-    this.bind("#cancel", "click", e => this.cancel());
-  }
-
   onclose() {
     this.state = {
       id: this.find("#id").value.trim(),
@@ -134,7 +133,7 @@ class PhotoDialog extends MdDialog {
       </div>
       <md-dialog-bottom>
         <button id="cancel">Cancel</button>
-        <button id="add">Add photo</button>
+        <button id="submit">Add photo</button>
       </md-dialog-bottom>
     `;
   }
@@ -324,6 +323,7 @@ class SubredditCard extends MdCard {
 
     // Render postings.
     for (let item of sr.unmatched) {
+      if (sfw && item.posting.over_18) continue;
       h.push(new RedditPosting(item));
     }
 
@@ -386,6 +386,7 @@ def add_celeb(name, id):
   f.write("%s: %s\n" % (name, id))
   f.close()
   celebmap[name] = id
+  print("map", name, "to", id)
 
 @app.route("/redreport/addmedia", method="POST")
 def add_media(request):
