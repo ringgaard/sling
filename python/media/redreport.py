@@ -119,17 +119,19 @@ class PhotoDialog extends MdDialog {
     let p = this.state;
     return `
       <md-dialog-top>Add photo</md-dialog-top>
-      <div style="display: flex; flex-direction: column;">
-        <div>Item ID:</div>
-        <input id="id" value="${p.id}">
-
-        <div>Name:</div>
-        <input id="name" value="${Component.escape(p.name)}">
-
-        <div>
-          <input id="nsfw" type="checkbox" ${p.nsfw ? "checked" : ""}>
-          <label for="nsfw"> NSFW</label>
-        </div>
+      <div id="content">
+        <md-text-field
+          id="id"
+          value="${p.id}"
+          label="Item ID">
+        </md-text-field>
+        <md-text-field
+          id="name"
+          value="${Component.escape(p.name)}"
+          label="Name">
+        </md-text-field>
+        <md-checkbox id="nsfw" label="NSFW" checked="${p.nsfw}">
+        </md-checkbox>
       </div>
       <md-dialog-bottom>
         <button id="cancel">Cancel</button>
@@ -140,11 +142,16 @@ class PhotoDialog extends MdDialog {
 
   static stylesheet() {
     return MdDialog.stylesheet() + `
+      #content {
+        display: flex;
+        flex-direction: column;
+        row-gap: 16px;
+      }
       #id {
-        width: 100px;
+        width: 200px;
       }
       #name {
-        width: 300px;
+        width: 400px;
       }
     `;
   }
@@ -230,7 +237,8 @@ class RedditPosting extends Component {
     if (item.matches == 0) {
       match = `No matches for <em>${item.query}</em>`
     } else if (item.matches == 1) {
-      let kburl = `https://ringgaard.com/kb/${item.match}?nsfw=1`;
+      let kburl = `https://ringgaard.com/kb/${item.match}`;
+      if (!sfw) kburl += "?nsfw=1";
       match = `
          <b>${item.query}</b>:
          <a href="${kburl}" target="_blank">${item.match}</a>

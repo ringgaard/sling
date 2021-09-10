@@ -678,8 +678,166 @@ export class MdRadioButton extends Component {
 Component.register(MdRadioButton);
 
 //-----------------------------------------------------------------------------
-// Input box
+// Checkbox
 //-----------------------------------------------------------------------------
+
+export class MdCheckbox extends Component {
+  onconnect() {
+    if (this.state == undefined || this.state == null) {
+      this.state = this.props["checked"];
+    }
+  }
+
+  onconnected() {
+    this.bind(null, "change", e => this.onchange(e));
+  }
+
+  onchange(e) {
+    this.state = this.find("input").checked;
+  }
+
+  get checked() {
+    return this.state;
+  }
+
+  set checked(value) {
+    if (value == "false" || value == 0) value = false;
+    if (value == "true" || value == 1) value = true;
+    this.update(value);
+  }
+
+  render() {
+    let label = this.props.label ? Component.escape(this.props.label) : "";
+    return `
+      <label>
+        <input type="checkbox" ${this.state ? "checked" : ""}>
+        <div>${label}</div>
+      </label>
+    `;
+  }
+
+  static stylesheet() {
+    return `
+      $ label {
+        display: flex;
+      }
+      $ input {
+        transform: scale(1.5)
+      }
+      $ div {
+        font-size: 16px;
+        margin-left: 3px;
+        margin-top: -1px;
+      }
+    `;
+  }
+}
+
+Component.register(MdCheckbox);
+
+//-----------------------------------------------------------------------------
+// Text field
+//-----------------------------------------------------------------------------
+
+class MdTextField extends Component {
+  onconnect() {
+    if (!this.state) this.state = this.props["value"];
+  }
+
+  get value() {
+    return this.state;
+  }
+  set value(v) {
+    this.update(v);
+  }
+
+
+  onconnected() {
+    this.bind(null, "focusin", e => this.onfocus(e));
+    this.bind(null, "focusout", e => this.onunfocus(e));
+    this.bind(null, "input", e => this.onchange(e));
+  }
+
+  onfocus(e) {
+    this.find("div").className = "focused";
+  }
+
+  onunfocus(e) {
+    this.find("div").className = this.state ? "above" : "";
+  }
+
+  onchange(e) {
+    this.state = e.target.value
+  }
+
+  render() {
+    let value = this.state ? Component.escape(this.state) : "";
+    let label = this.props.label ? Component.escape(this.props.label) : "";
+
+    return `
+      <label>
+        <div class="${value ? "above" : ""}">${label}</div>
+        <input value="${value}">
+      </label>
+    `;
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        display: flex;
+      }
+      $ label {
+        display: block;
+        width: 100%
+      }
+      $ div {
+        position: absolute;
+        padding-left: 16px;
+        padding-top: 13px;
+        font-size: 16px;
+        color: #757575;
+        text-overflow: ellipsis;
+      }
+      $ .above {
+        padding-top: 6px;
+        font-size: 12px;
+        color: #5f5f5f;
+      }
+      $ .focused {
+        padding-top: 6px;
+        font-size: 12px;
+        color: #00A0D6;
+      }
+      $ input {
+        display: block;
+        border-top: none;
+        border-left: none;
+        border-right: none;
+        border-bottom: 1px solid #6b6b6b;
+        border-radius: 4px 4px 0 0;
+        padding: 20px 16px 6px 16px;
+        background-color: #f5f5f5;
+        font-size: 16px;
+        font-family: inherit;
+        width: calc(100% - 32px);
+      }
+      $ input:hover {
+        background-color: #eeeeee;
+        border-bottom: 1px solid #000000;
+      }
+      $ input:focus {
+        background-color: #dcdcdc;
+        border-bottom-color: ;
+        border-bottom: 2px solid #00A0D6;
+        padding-bottom: 5px;
+        outline: none;
+      }
+    `;
+  }
+}
+
+Component.register(MdTextField);
 
 export class MdInput extends Component {
   value() {

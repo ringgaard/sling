@@ -33,6 +33,7 @@ flags.define("--twitterdb",
 bad_images = set([
   "",
   "http://pbs.twimg.com/profile_images/1302121919014207490/KaYYEC8b.jpg",
+  "http://pbs.twimg.com/profile_images/825116317057298434/T8YRhnl8.jpg",
   "https://pbs.twimg.com/static/dmca/dmca-med.jpg",
 ])
 
