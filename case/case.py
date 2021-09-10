@@ -12,7 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import requests
+
+import sling
 import sling.net
+import sling.util
 import sling.flags as flags
 import sling.log as log
 
@@ -22,50 +26,59 @@ flags.define("--port",
              type=int,
              metavar="PORT")
 
+flags.define("--number",
+             help="Checkpoint file for keeping track of new case numbers",
+             default=None,
+             metavar="FILE")
+
+flags.define("--number_service",
+             help="Endpoint for assigning new case numbers",
+             default="https://ringgaard.com/newcase",
+             metavar="URL")
+
 flags.parse()
 
 # Initialize HTTP server.
 app = sling.net.HTTPServer(flags.arg.port)
 
-@app.route("/hello")
-def hello(request):
-  return f"<html><body>Hello world from {request.path}</body></html>"
-
-@app.route("/secret")
-def hello(request):
-  return 403
-
-@app.route("/json")
-def hello(request):
-  return {"name": "John", "location": ["London", "Paris", "Rome"], "age": 30}
-
-@app.route("/license")
-def readme(request):
-  return sling.net.HTTPFile("LICENSE", "text/plain")
-
-app.page("/page.html",
-"""
-<html>
-<body>
-This is a static page
-</body>
-</html>
-""")
-
-app.js("/app.js",
-"""
-square(n) {
-  return n * n;
-}
-""")
-
-# Add internal static files.
+# Add static files.
 app.static("/common", "app", internal=True)
-app.static("/lib", "app")
+app.static("/c/app", "case/app")
+
+# Commons store.
+commons = sling.Store()
+commons.freeze()
+
+# Checkpoint with next case number.
+numbering = None
+if flags.arg.number:
+  numbering = sling.util.Checkpoint(flags.arg.number)
+
+@app.route("/c")
+def main_page(request):
+  return "<html><body>Under construction</body></html>"
+
+@app.route("/newcase")
+def new_case(request):
+  if numbering:
+    # Get new case number.
+    client = request["X-Forwarded-For"]
+    caseno = numbering.checkpoint
+    numbering.commit(caseno + 1)
+    log.info("Assign case #%d to client %s" % (caseno, client))
+
+    # Make new case from with the assigned case number.
+    store = sling.Store(commons)
+    newcase = store.frame("{=c/%d :case}" % caseno)
+    return newcase
+  elif flags.arg.number_service:
+    # Redirect to remote case numbering service.
+    return sling.net.HTTPRedirect(flags.arg.number_service)
+  else:
+    return 500
 
 # Run HTTP server.
 log.info("HTTP server listening on port", flags.arg.port)
 app.run()
-
 log.info("Shutdown.")
 
