@@ -196,6 +196,7 @@ class HTTPServer:
 
     # Stop HTTP server.
     self.httpd.stop()
+    self.httpd = None
 
   def shutdown(self):
     # Signal shutdown of HTTP server.

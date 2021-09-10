@@ -72,10 +72,12 @@ ncsa_log_pattern = re.compile(
 
 local_domains = set([
   "87.104.43.9",
+  "87.104.43.9.static.fibianet.dk",
   "jbox.dk",
   "ringgaard.com",
   "localhost",
   "127.0.0.1",
+  "",
 ])
 
 url_pattern = re.compile(r"https?:\/\/([A-Za-z0-9\-\.]+)(\:[0-9]+)?(\/.*)?")
