@@ -169,7 +169,9 @@ class RedditPosting extends Component {
   onadd(e) {
     let item = this.state;
     let posting = item.posting;
-    let name = window.getSelection().toString();
+    let selection = window.getSelection();
+    let name = selection.toString();
+    selection.removeAllRanges();
     if (!name) name = item.query;
     let dialog = new PhotoDialog({
       name: name,

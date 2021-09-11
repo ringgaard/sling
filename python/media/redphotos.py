@@ -17,6 +17,7 @@
 import json
 import requests
 import datetime
+import re
 from urllib.parse import urlparse
 from collections import defaultdict
 
@@ -41,6 +42,11 @@ flags.define("--subreddits",
 
 flags.define("--celebmap",
              help="list of names mapped to item ids",
+             default=None,
+             metavar="FILES")
+
+flags.define("--patterns",
+             help="patterns for matching posting titles",
              default=None,
              metavar="FILES")
 
@@ -84,17 +90,19 @@ photosites = set([
 
 # Name delimiters.
 delimiters = [
-  "(", "[", ",", " - ", "|", "/", ":", "!", " – ", ";", "'s ", "’s ", "...",
+  "(", "[", ",", " - ", "|", "/", ":", "!", " – ", ";", "'s ", "’s ",
+  "...", " -- ",
   " circa ", " c.",
   "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
   " by ", " is ", " was ", " in ", " In", " on ", " with ", " at ", " as ",
   " from ", " for ", " has ",
-  " aka ", " a.k.a. ",
+  " Is ", " Has ", " On ", " As ",
+  " aka ", " a.k.a. ", " IG ", "on/off", "On/Off",
   " having ", " performing ", " during ", " being ",
-  " posing ", " photographed ", " dressed ",
+  " posing ", " photographed ", " dressed ", " former ",
 
   # For jounalists.
-  "FoxWeather", "News", "Fox13",
+  "FoxWeather", "News", "Fox13", "Weather Channel", "Court TV"
 ]
 
 # Initialize commons store.
@@ -130,6 +138,16 @@ for fn in flags.arg.subreddits.split(","):
         skipped_subreddits.add(sr)
       else:
         person_subreddits[sr] = itemid
+
+# Read regex patterns for mathing posting titles.
+patterns = []
+for fn in flags.arg.patterns.split(","):
+  with open(fn, "r") as f:
+    for line in f.readlines():
+      line = line.strip()
+      if len(line) == 0 or line.startswith("#"): continue
+      r = re.compile(line)
+      patterns.append(r)
 
 # Read list of celebrity names.
 celebmap = {}
@@ -202,10 +220,35 @@ for key, value in redditdb.items(chkpt.checkpoint):
   title = title.replace('\n', ' ').strip()
   nsfw = posting[n_over_18]
 
+  # Discard self-posts.
+  if posting[n_is_self]: continue
+
+  # Check for approved site.
+  url = posting[n_url]
+  if type(url) != str: continue
+  if url is None or len(url) == 0: continue
+  if "?" in url: continue
+  domain = urlparse(url).netloc
+  if domain not in photosites: continue
+
+  # Discard videos.
+  if url.endswith(".gif"): continue
+  if url.endswith(".gifv"): continue
+  if url.endswith(".mp4"): continue
+  if url.endswith(".webm"): continue
+
   # Check for personal subreddit.
   sr = posting[n_subreddit]
   itemid = person_subreddits.get(sr)
   general = itemid is None
+
+  # Try to match patterns in title.
+  if general:
+    for pattern in patterns:
+      m = pattern.fullmatch(title)
+      if m != None:
+        print("*** Extract '%s' in '%s'" %  (m.group(1), title))
+        title = m.group(1).strip()
 
   # Check for name match in general subreddit.
   query = title
@@ -245,23 +288,6 @@ for key, value in redditdb.items(chkpt.checkpoint):
           query = prefix
     else:
       continue
-
-  # Discard self-posts.
-  if posting[n_is_self]: continue
-
-  # Check for approved site.
-  url = posting[n_url]
-  if type(url) != str: continue
-  if url is None or len(url) == 0: continue
-  if "?" in url: continue
-  domain = urlparse(url).netloc
-  if domain not in photosites: continue
-
-  # Discard videos.
-  if url.endswith(".gif"): continue
-  if url.endswith(".gifv"): continue
-  if url.endswith(".mp4"): continue
-  if url.endswith(".webm"): continue
 
   # Check if posting has been deleted.
   if posting_deleted(key): continue
