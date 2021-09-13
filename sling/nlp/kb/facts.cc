@@ -197,6 +197,7 @@ bool FactCatalog::ItemInClosure(Handle property, Handle coarse, Handle fine) {
 void FactCatalog::ExtractItemTypes(Handle item, std::vector<Handle> *types) {
   // Get types for item.
   item = store_->Resolve(item);
+  if (!store_->IsFrame(item)) return;
   for (const Slot &s : Frame(store_, item)) {
     if (s.name == p_instance_of_) {
       Handle type = store_->Resolve(s.value);
@@ -230,6 +231,7 @@ bool FactCatalog::InstanceOf(Handle item, Handle type) {
   // Check types for item.
   Handles types(store_);
   item = store_->Resolve(item);
+  if (!store_->IsFrame(item)) return false;
   for (const Slot &s : Frame(store_, item)) {
     if (s.name == p_instance_of_) {
       Handle t = store_->Resolve(s.value);
@@ -260,6 +262,7 @@ bool FactCatalog::InstanceOf(Handle item, Handle type) {
 void Facts::Extract(Handle item) {
   // Extract facts from the properties of the item.
   auto &extractors = catalog_->property_extractors_;
+  if (!store_->IsFrame(item)) return;
   for (const Slot &s : Frame(store_, item)) {
     // Look up extractor for property.
     auto f = extractors.find(s.name);
@@ -293,6 +296,7 @@ void Facts::Expand(Handle property, Handle value) {
 void Facts::ExtractFor(Handle item, const HandleSet &properties) {
   // Extract facts from the properties of the item.
   auto &extractors = catalog_->property_extractors_;
+  if (!store_->IsFrame(item)) return;
   for (const Slot &s : Frame(store_, item)) {
     // Ignore if property is not in the property set.
     if (properties.find(s.name) == properties.end()) continue;
@@ -356,10 +360,12 @@ void Facts::ExtractType(Handle type) {
 }
 
 void Facts::ExtractSuperclass(Handle item) {
+  item = store_->Resolve(item);
+  if (!store_->IsFrame(item)) return;
   ExtractClosure(item, catalog_->p_subclass_of_.handle());
 
   push(catalog_->p_subclass_of_);
-  for (const Slot &s : Frame(store_, store_->Resolve(item))) {
+  for (const Slot &s : Frame(store_, item)) {
     if (s.name == catalog_->p_subclass_of_) {
       Frame superclass(store_, s.value);
       Handle of = superclass.GetHandle(catalog_->p_of_);
@@ -374,7 +380,9 @@ void Facts::ExtractSuperclass(Handle item) {
 }
 
 void Facts::ExtractClass(Handle item) {
-  for (const Slot &s : Frame(store_, store_->Resolve(item))) {
+  item = store_->Resolve(item);
+  if (!store_->IsFrame(item)) return;
+  for (const Slot &s : Frame(store_, item)) {
     if (s.name == catalog_->p_instance_of_) {
       push(catalog_->p_instance_of_);
       ExtractType(s.value);
@@ -438,7 +446,9 @@ void Facts::ExtractTimePeriod(Handle period) {
   ExtractSimple(period);
 
   // Add facts for start and end time of period.
-  Frame f(store_, store_->Resolve(period));
+  period = store_->Resolve(period);
+  if (!store_->IsFrame(period)) return;
+  Frame f(store_, period);
   Handle start = f.GetHandle(catalog_->p_start_time_);
   if (!start.IsNil()) {
     push(catalog_->p_start_time_);
@@ -454,8 +464,8 @@ void Facts::ExtractTimePeriod(Handle period) {
 }
 
 void Facts::ExtractTime(Handle event) {
+  if (!store_->IsFrame(event)) return;
   Frame f(store_, event);
-  if (f.invalid()) return;
 
   Handle time = f.GetHandle(catalog_->p_point_in_time_);
   if (!time.IsNil()) {
