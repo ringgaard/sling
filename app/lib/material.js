@@ -163,24 +163,38 @@ export class MdDialog extends Component {
 
     // Bind default submit and cancel.
     this.bind(null, "keydown", e => {
-      if (e.keyCode == 13) this.done();
-      if (e.keyCode == 27) this.cancel();
+      if (e.keyCode == 13) {
+        this.onsubmit();
+        e.preventDefault();
+      }
+      if (e.keyCode == 27) {
+        this.oncancel();
+        e.preventDefault();
+      }
     });
-    if (this.find("#submit")) this.bind("#submit", "click", e => this.done());
-    if (this.find("#cancel")) this.bind("#cancel", "click", e => this.cancel());
+    if (this.find("#submit")) {
+      this.bind("#submit", "click", e => this.onsubmit());
+    }
+    if (this.find("#cancel")) {
+      this.bind("#cancel", "click", e => this.oncancel());
+    }
 
     let promise = new Promise((resolve, reject) => { this.resolve = resolve; });
     return promise;
   }
 
-  close(cancel) {
-    if (this.onclose) this.onclose(cancel);
+  close(result) {
     document.body.removeChild(this.dialog);
-    if (!cancel) this.resolve(this.state);
+    this.resolve(result);
   }
 
-  done() { this.close(false); }
-  cancel() { this.close(true); }
+  onsubmit() {
+    this.close(true);
+  }
+
+  oncancel() {
+    this.close(false);
+  }
 
   static stylesheet() {
     return `
@@ -231,6 +245,9 @@ export class MdDialogBottom extends Component {
         padding-top: 8px;
         padding-bottom: 8px;
       }
+      $[center] {
+        justify-content: center;
+      }
       $ button {
         font: bold 14px Roboto,Helvetica,sans-serif;
         color: #00A0D6;
@@ -255,6 +272,76 @@ export class MdDialogBottom extends Component {
 }
 
 Component.register(MdDialogBottom);
+
+export class StdDialog extends MdDialog {
+  onconnected() {
+    if (this.state && this.state.buttons) {
+      for (let button of Object.keys(this.state.buttons)) {
+        let id = button.replace(/ /g, "-").toLowerCase();
+        this.bind("#" + id, "click", e => this.onclick(e));
+      }
+    }
+  }
+
+  onclick(e) {
+    if (e.target.id != "cancel" && e.target.id != "submit") {
+      this.close(this.state.buttons[e.target.id]);
+    }
+  }
+
+  render() {
+    let s = this.state;
+    if (!s) return;
+    let h = [];
+    if (s.title) {
+      h.push(`<md-dialog-top>${s.title}</md-dialog-top>`);
+    }
+    if (s.message) {
+      h.push(`<div>${s.message}</div>`);
+    }
+    if (s.buttons) {
+      h.push("<md-dialog-bottom center>");
+      for (let button of Object.keys(s.buttons)) {
+        let id = button.replace(/ /g, "-").toLowerCase();
+        h.push(`<button id="${id}">${button}</button>`);
+      }
+      h.push("</md-dialog-bottom>");
+    }
+    return h.join("");
+  }
+
+  static choose(title, message, buttons) {
+    let dialog = new StdDialog({title, message, buttons});
+    return dialog.show();
+  }
+
+  static alert(title, message) {
+    let buttons = {"OK": true};
+    return StdDialog.choose(title, message, buttons);
+  }
+
+  static ask(title, message, yes = "Yes", no = "No") {
+    let buttons = {no: false, yes: true};
+    return StdDialog.choose(title, message, buttons);
+  }
+
+  static confirm(title, message, ok = "OK", cancel = "Cancel") {
+    let buttons = {cancel: false, ok: true};
+    return StdDialog.choose(title, message, buttons);
+  }
+
+  static stylesheet() {
+    return MdDialog.stylesheet() + `
+      $ {
+        font-size: 16px;
+        min-width: 200px;
+        max-width: 80%;
+      }
+    `;
+  }
+}
+
+Component.register(StdDialog);
 
 //-----------------------------------------------------------------------------
 // Toolbar

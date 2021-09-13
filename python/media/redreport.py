@@ -107,12 +107,12 @@ class PhotoReportApp extends Component {
 Component.register(PhotoReportApp);
 
 class PhotoDialog extends MdDialog {
-  onclose() {
-    this.state = {
+  onsubmit() {
+    this.close({
       id: this.find("#id").value.trim(),
       name: this.find("#name").value.trim(),
       nsfw: this.find("#nsfw").checked,
-    };
+    });
   }
 
   render() {
@@ -169,9 +169,12 @@ class RedditPosting extends Component {
   onadd(e) {
     let item = this.state;
     let posting = item.posting;
-    let selection = window.getSelection();
-    let name = selection.toString();
-    selection.removeAllRanges();
+    let name = "";
+    if (!item.match) {
+      let selection = window.getSelection();
+      name = selection.toString();
+      selection.removeAllRanges();
+    }
     if (!name) name = item.query;
     let dialog = new PhotoDialog({
       name: name,
@@ -179,8 +182,10 @@ class RedditPosting extends Component {
       nsfw: posting.over_18,
     });
     dialog.show().then(result => {
-      console.log("Add image", result);
-      this.add(posting.url, result.name, result.id, result.nsfw);
+      if (result) {
+        console.log("Add image", posting.url, result);
+        this.add(posting.url, result.name, result.id, result.nsfw);
+      }
     });
   }
 
