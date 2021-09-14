@@ -60,6 +60,8 @@ app.page("/redreport",
       <md-toolbar>
         <md-toolbar-logo></md-toolbar-logo>
         <md-text id="title">Reddit photo report</md-text>
+        <md-spacer></md-spacer>
+        <md-icon-button id="imgsearch" icon="image_search">
       </md-toolbar>
 
       <md-content>
@@ -85,6 +87,9 @@ function current_date() {
 
 class PhotoReportApp extends Component {
   onconnected() {
+    // Image search.
+    this.bind("#imgsearch", "click", e => this.onsearch(e));
+
     // Get date from request; default to current date.
     let path = window.location.pathname;
     let pos = path.indexOf('/', 1);
@@ -101,6 +106,14 @@ class PhotoReportApp extends Component {
         this.find("subreddit-list").update(report);
         this.find("#title").update(`Reddit photo report for ${date}`);
       });
+  }
+
+  onsearch(e) {
+    let selection = window.getSelection();
+    let query = selection.toString();
+    let url = `/photosearch?q="${encodeURIComponent(query)}"`;
+    if (!sfw) url += "&nsfw=1";
+    window.open(url, "_blank");
   }
 }
 
@@ -268,8 +281,8 @@ class RedditPosting extends Component {
           ${xpost}
         </div>
         <div class="match">
-          <button id="add">Add</button>
-          ${match}
+          <md-icon-button id="add" icon="add_a_photo"></md-icon-button>
+          <div>${match}</div>
           <md-text id="msg"></md-text>
         </div>
       </div>
@@ -300,13 +313,17 @@ class RedditPosting extends Component {
       $ .descr .info {
         font-size: 13px;
         margin-top: 3px;
-        margin-bottom: 5px;
       }
       $ .descr .info a {
         color: #006ABA;
       }
       $ .descr .match {
+        display: flex;
+        align-items: center;
         font-size: 16px;
+      }
+      $ md-icon-button {
+        margin-left: -10px;
       }
       $ .nsfw {
         border-radius: 3px;

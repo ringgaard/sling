@@ -91,7 +91,8 @@ photosites = set([
 # Name delimiters.
 delimiters = [
   "(", "[", ",", " - ", "|", "/", ":", "!", " – ", ";", "'s ", "’s ",
-  "...", " -- ",
+  "...", " -- ", "~",
+  "❤️", "♥️", "☺", "✨", "❣", "<3", "•", "❤"
   " circa ", " c.",
   "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
   " by ", " is ", " was ", " in ", " In", " on ", " with ", " at ", " as ",
@@ -268,7 +269,7 @@ for key, value in redditdb.items(chkpt.checkpoint):
       for d in delimiters:
         p = name.find(d)
         if p != -1 and p < cut: cut = p
-      name = name[:cut].replace(".", "").strip()
+      name = name[:cut].strip(" .-?")
       itemid = lookup_name(name)
       query = name
 

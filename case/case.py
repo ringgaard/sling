@@ -56,7 +56,17 @@ if flags.arg.number:
 
 @app.route("/c")
 def main_page(request):
-  return "<html><body>Under construction</body></html>"
+  return """<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name=viewport content="width=device-width, initial-scale=1">
+<link rel="icon" href="/common/image/appicon.ico" type="image/x-icon" />
+<script type="module" src="/c/app/case.js"></script>
+</head>
+<body style="display: none;">
+</body>
+</html>""";
 
 @app.route("/newcase")
 def new_case(request):

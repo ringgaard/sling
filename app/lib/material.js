@@ -13,7 +13,7 @@ stylesheet(`
   font-family: 'Material Icons';
   font-style: normal;
   font-weight: 400;
-  src: url(https://fonts.gstatic.com/s/materialicons/v55/flUhRq6tzZclQEJ-Vdg-IuiaDsNc.woff2) format('woff2');
+  src: url(https://fonts.gstatic.com/s/materialicons/v102/flUhRq6tzZclQEJ-Vdg-IuiaDsNc.woff2) format('woff2');
 }
 
 html {
@@ -164,19 +164,19 @@ export class MdDialog extends Component {
     // Bind default submit and cancel.
     this.bind(null, "keydown", e => {
       if (e.keyCode == 13) {
-        this.onsubmit();
+        this.submit();
         e.preventDefault();
       }
       if (e.keyCode == 27) {
-        this.oncancel();
+        this.cancel();
         e.preventDefault();
       }
     });
     if (this.find("#submit")) {
-      this.bind("#submit", "click", e => this.onsubmit());
+      this.bind("#submit", "click", e => this.submit());
     }
     if (this.find("#cancel")) {
-      this.bind("#cancel", "click", e => this.oncancel());
+      this.bind("#cancel", "click", e => this.cancel());
     }
 
     let promise = new Promise((resolve, reject) => { this.resolve = resolve; });
@@ -188,11 +188,11 @@ export class MdDialog extends Component {
     this.resolve(result);
   }
 
-  onsubmit() {
+  submit() {
     this.close(true);
   }
 
-  oncancel() {
+  cancel() {
     this.close(false);
   }
 
@@ -220,7 +220,8 @@ export class MdDialogTop extends Component {
   static stylesheet() {
     return `
       $ {
-        display: block;
+        display: flex;
+        align-items: center;
         margin-top: 16px;
         margin-bottom: 16px;
         font-size: 1.25rem;
@@ -294,10 +295,15 @@ export class StdDialog extends MdDialog {
     if (!s) return;
     let h = [];
     if (s.title) {
-      h.push(`<md-dialog-top>${s.title}</md-dialog-top>`);
+      h.push("<md-dialog-top>");
+      if (s.icon) h.push(`<md-icon icon="${s.icon}"></md-icon>`);
+      h.push(Component.escape(s.title));
+      h.push("</md-dialog-top>");
     }
     if (s.message) {
-      h.push(`<div>${s.message}</div>`);
+      h.push("<div>");
+      h.push(Component.escape(s.message));
+      h.push("</div>");
     }
     if (s.buttons) {
       h.push("<md-dialog-bottom center>");
@@ -310,14 +316,19 @@ export class StdDialog extends MdDialog {
     return h.join("");
   }
 
-  static choose(title, message, buttons) {
-    let dialog = new StdDialog({title, message, buttons});
+  static choose(title, message, buttons, icon) {
+    let dialog = new StdDialog({title, message, buttons, icon});
     return dialog.show();
   }
 
   static alert(title, message) {
     let buttons = {"OK": true};
-    return StdDialog.choose(title, message, buttons);
+    return StdDialog.choose(title, message, buttons, "warning");
+  }
+
+  static error(message) {
+    let buttons = {"OK": true};
+    return StdDialog.choose("Error", message, buttons, "error");
   }
 
   static ask(title, message, yes = "Yes", no = "No") {
@@ -336,6 +347,10 @@ export class StdDialog extends MdDialog {
         font-size: 16px;
         min-width: 200px;
         max-width: 80%;
+      }
+      $ md-icon {
+         font-size: 32px;
+         margin-right: 6px;
       }
     `;
   }
@@ -556,7 +571,10 @@ export class MdIconButton extends Component {
     if (this.props.disabled) attrs.push(' disabled');
     if (this.props.shortcut) attrs.push(` accesskey="${this.props.shortcut}"`);
     if (this.props.type) attrs.push(` type="${this.props.type}"`);
-    return `<button ${attrs.join("")}><i>${this.props.icon}</i></button>`;
+    return `
+      <button ${attrs.join("")}>
+        <md-icon icon="${this.props.icon}"></md-icon>
+      </button>`;
   }
 
   disable() {
@@ -600,20 +618,6 @@ export class MdIconButton extends Component {
 
       $ button:focus {
         outline: none;
-      }
-
-      $ button i {
-        font-family: 'Material Icons';
-        font-weight: normal;
-        font-style: normal;
-        font-size: 24px;
-        line-height: 1;
-        letter-spacing: normal;
-        text-transform: none;
-        display: inline-block;
-        white-space: nowrap;
-        word-wrap: normal;
-        direction: ltr;
       }
     `;
   }
@@ -701,15 +705,16 @@ export class MdIcon extends Component {
   }
 
   render() {
-    return `<i>${this.props.icon}</i>`;
+    return this.props.icon;
   }
 
   static stylesheet() {
     return `
-      $ i {
+      $ {
         font-family: 'Material Icons';
         font-weight: normal;
         font-style: normal;
+        font-size: 24px;
         line-height: 1;
         letter-spacing: normal;
         text-transform: none;
@@ -717,6 +722,8 @@ export class MdIcon extends Component {
         white-space: nowrap;
         word-wrap: normal;
         direction: ltr;
+        -webkit-font-feature-settings: 'liga';
+        -webkit-font-smoothing: antialiased;
       }
     `;
   }
