@@ -1,3 +1,6 @@
+// Copyright 2020 Ringgaard Research ApS
+// Licensed under the Apache License, Version 2
+
 // Workflow dashboard app.
 
 import {Component} from "/common/lib/component.js";

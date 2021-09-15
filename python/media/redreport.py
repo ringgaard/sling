@@ -120,7 +120,7 @@ class PhotoReportApp extends Component {
 Component.register(PhotoReportApp);
 
 class PhotoDialog extends MdDialog {
-  onsubmit() {
+  submit() {
     this.close({
       id: this.find("#id").value.trim(),
       name: this.find("#name").value.trim(),
@@ -281,8 +281,8 @@ class RedditPosting extends Component {
           ${xpost}
         </div>
         <div class="match">
-          <md-icon-button id="add" icon="add_a_photo"></md-icon-button>
           <div>${match}</div>
+          <md-icon-button id="add" icon="add_a_photo" outlined></md-icon-button>
           <md-text id="msg"></md-text>
         </div>
       </div>
@@ -321,9 +321,6 @@ class RedditPosting extends Component {
         display: flex;
         align-items: center;
         font-size: 16px;
-      }
-      $ md-icon-button {
-        margin-left: -10px;
       }
       $ .nsfw {
         border-radius: 3px;

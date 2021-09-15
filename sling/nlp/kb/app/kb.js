@@ -1,4 +1,7 @@
-// Knowledge base app.
+// Copyright 2020 Ringgaard Research ApS
+// Licensed under the Apache License, Version 2
+
+// Knowledge base browser.
 
 import {Component} from "/common/lib/component.js";
 import {MdCard, MdModal} from "/common/lib/material.js";
@@ -178,7 +181,6 @@ class KbSearchBox extends Component {
       query = query.slice(0, -1);
     }
 
-    let app = this.match("#app");
     fetch("/kb/query?" + params + "&q=" + encodeURIComponent(query))
       .then(response => response.json())
       .then((data) => {

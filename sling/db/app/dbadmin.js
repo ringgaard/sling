@@ -1,3 +1,6 @@
+// Copyright 2020 Ringgaard Research ApS
+// Licensed under the Apache License, Version 2
+
 // SLINGDB admin app.
 
 import {Component} from "/common/lib/component.js";

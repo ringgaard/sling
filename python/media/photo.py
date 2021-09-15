@@ -53,6 +53,11 @@ flags.define("--perimagecaption",
              default=False,
              action="store_true")
 
+flags.define("--preservecaptioned",
+             help="do not remove captioned duplicates",
+             default=False,
+             action="store_true")
+
 flags.define("--numbering",
              help="photo numbering for albums",
              default=False,
@@ -454,6 +459,9 @@ class Profile:
       url = m.group(1)
       if url.endswith("/new"): url = url[:-4]
 
+    m = re.match("https://preview.redd.it/(\w+.png)\?.+", url)
+    if m != None: url = "https://i.redd.it/" + m.group(1)
+
     m = re.match("(https://imgur\.com/.+\.jpe?g)-\w+", url)
     if m != None: url = m.group(1)
 
@@ -537,6 +545,7 @@ class Profile:
     for media in self.media():
       url = store.resolve(media)
       nsfw = type(media) is sling.Frame and media[n_has_quality] == n_nsfw
+      captioned = type(media) is sling.Frame and n_legend in media
 
       # Get image from database or fetch directly.
       image = mediadb[url]
@@ -554,20 +563,23 @@ class Profile:
       fingerprint = hashlib.md5(image).digest()
       dup = fingerprints.get(fingerprint)
       if dup != None:
-        duplicates.add(url)
-        num_duplicates += 1
-
-        # Check for inconsistent nsfw classification.
-        if nsfw:
-          if dup not in naughty:
-            print(self.itemid, url, " nsfw duplicate of", dup)
-          else:
-            print(self.itemid, url, " duplicate of", dup)
+        if flags.arg.preservecaptioned and captioned:
+          print(self.itemid, url, " preserve captioned duplicate of", dup)
         else:
-          if dup in naughty:
-            print(self.itemid, url, " sfw duplicate of", dup)
+          duplicates.add(url)
+          num_duplicates += 1
+
+          # Check for inconsistent nsfw classification.
+          if nsfw:
+            if dup not in naughty:
+              print(self.itemid, url, " nsfw duplicate of", dup)
+            else:
+              print(self.itemid, url, " duplicate of", dup)
           else:
-            print(self.itemid, url, " duplicate of", dup)
+            if dup in naughty:
+              print(self.itemid, url, " sfw duplicate of", dup)
+            else:
+              print(self.itemid, url, " duplicate of", dup)
       elif fingerprint in bad_photos:
         missing.add(url)
         num_missing += 1

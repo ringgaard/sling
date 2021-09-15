@@ -1,3 +1,6 @@
+// Copyright 2020 Ringgaard Research ApS
+// Licensed under the Apache License, Version 2
+
 // Photo gallery web component.
 
 import {Component} from "./component.js";
@@ -271,15 +274,14 @@ export class PhotoGallery extends MdModal {
         padding: 8px 12px;
       }
 
-      $ .close i {
+      $ .close {
         position: absolute;
         top: 0;
         right: 0;
 
         color: white;
-        padding: 16px;
+        padding: 8px 12px;
         font-size: 24px;
-        font-weight: bold;
       }
 
       $ .source {
@@ -287,9 +289,13 @@ export class PhotoGallery extends MdModal {
         bottom: 0;
         left: 0;
 
+        display: flex;
+        align-items: center;
+
         color: rgb(255, 255, 255);
         font-size: 12px;
         padding: 8px 12px;
+        height: 14px;
         cursor: pointer;
       }
 
@@ -386,10 +392,13 @@ class PhotoCopyright extends Component {
   static stylesheet() {
     return `
       $ {
-        display: inline-block;
+        display: flex;
         vertical-align: middle;
-        font-size: 14px;
-        cursor: default;
+        align-items: center;
+      }
+      $ md-icon {
+        font-size: 16px;
+        margin: 2px;
       }
     `;
   }

@@ -1,3 +1,6 @@
+// Copyright 2020 Ringgaard Research ApS
+// Licensed under the Apache License, Version 2
+
 // Material Design web components.
 
 import {Component, stylesheet} from "./component.js";
@@ -14,6 +17,13 @@ stylesheet(`
   font-style: normal;
   font-weight: 400;
   src: url(https://fonts.gstatic.com/s/materialicons/v102/flUhRq6tzZclQEJ-Vdg-IuiaDsNc.woff2) format('woff2');
+}
+
+@font-face {
+  font-family: 'Material Icons Outlined';
+  font-style: normal;
+  font-weight: 400;
+  src: url(https://fonts.gstatic.com/s/materialiconsoutlined/v79/gok-H7zzDkdnRel8-DQ6KAXJ69wP1tGnf4ZGhUce.woff2) format('woff2');
 }
 
 html {
@@ -568,12 +578,15 @@ export class MdIconButton extends Component {
 
   render() {
     let attrs = [];
-    if (this.props.disabled) attrs.push(' disabled');
-    if (this.props.shortcut) attrs.push(` accesskey="${this.props.shortcut}"`);
-    if (this.props.type) attrs.push(` type="${this.props.type}"`);
+    if (this.props.disabled) attrs.push('disabled');
+    if (this.props.shortcut) attrs.push(`accesskey="${this.props.shortcut}"`);
+    if (this.props.type) attrs.push(`type="${this.props.type}"`);
+    let iattrs = [];
+    iattrs.push(`icon="${this.props.icon}"`);
+    if (this.props.outlined != undefined) iattrs.push(`class="outlined"`);
     return `
-      <button ${attrs.join("")}>
-        <md-icon icon="${this.props.icon}"></md-icon>
+      <button ${attrs.join(" ")}>
+        <md-icon ${iattrs.join(" ")}></md-icon>
       </button>`;
   }
 
@@ -601,6 +614,8 @@ export class MdIconButton extends Component {
         background: transparent;
         user-select: none;
         cursor: pointer;
+        color: inherit;
+        font-size: inherit;
       }
 
       $ button:hover:enabled {
@@ -724,6 +739,9 @@ export class MdIcon extends Component {
         direction: ltr;
         -webkit-font-feature-settings: 'liga';
         -webkit-font-smoothing: antialiased;
+      }
+      $.outlined {
+        font-family: 'Material Icons Outlined';
       }
     `;
   }

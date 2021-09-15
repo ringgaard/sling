@@ -40,6 +40,7 @@ flags.parse()
 
 # Initialize HTTP server.
 app = sling.net.HTTPServer(flags.arg.port)
+app.redirect("/", "/c")
 
 # Add static files.
 app.static("/common", "app", internal=True)
@@ -79,7 +80,7 @@ def new_case(request):
 
     # Make new case from with the assigned case number.
     store = sling.Store(commons)
-    newcase = store.frame("{=c/%d :case}" % caseno)
+    newcase = store.parse("{=c/%d :case}" % caseno)
     return newcase
   elif flags.arg.number_service:
     # Redirect to remote case numbering service.

@@ -144,6 +144,17 @@ export class Frame {
     this.slots.push(value);
   }
 
+  // Set (or add) slot value.
+  set(name, value) {
+    for (let n = 0; n < this.slots.length; n += 2) {
+      if (this.slots[n] === name) {
+        this.slots[n + 1] = value;
+        return;
+      }
+    }
+    add(name, value);
+  }
+
   // Return number of slots for frame.
   get length() {
     return this.slots.length / 2;
@@ -467,7 +478,7 @@ class Encoder {
   // Encode object.
   encode(obj) {
     if (typeof obj === 'number') {
-      // TODO: handle integer overlow.
+      // TODO: handle integer overflow.
       if (Number.isInteger(obj)) {
         this.writeTag(5, obj);
       } else {

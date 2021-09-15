@@ -1,9 +1,23 @@
+// Copyright 2020 Ringgaard Research ApS
+// Licensed under the Apache License, Version 2
+
 // Case-based knowledge management app.
 
 import {Component} from "/common/lib/component.js";
-import {StdDialog} from "/common/lib/material.js";
+import {MdDialog, StdDialog} from "/common/lib/material.js";
+import {Store} from "/common/lib/frame.js";
 
 const kbservice = "https://ringgaard.com/kb"
+
+let store = new Store();
+const n_id = store.id;
+const n_is = store.is;
+const n_isa = store.isa;
+const n_name = store.lookup("name");
+const n_description = store.lookup("description");
+const n_created = store.lookup("created");
+const n_modified = store.lookup("modified");
+const n_main_subject = store.lookup("P921");
 
 //-----------------------------------------------------------------------------
 // App
@@ -12,9 +26,78 @@ const kbservice = "https://ringgaard.com/kb"
 class CaseApp extends Component {
   onconnected() {
   }
+
+  addcase(name, description, topic) {
+    fetch("/newcase")
+    .then(response => store.parse(response))
+    .then(frame => {
+      if (name) frame.add(n_name, name);
+      if (description) frame.add(n_description, description);
+      if (topic) frame.add(n_main_subject, store.lookup(topic));
+      let ts = new Date().toJSON();
+      frame.add(n_created, ts);
+      frame.add(n_modified, ts);
+      console.log("add case", frame.text(true));
+    });
+  }
 }
 
 Component.register(CaseApp);
+
+//-----------------------------------------------------------------------------
+// New case
+//-----------------------------------------------------------------------------
+
+class NewCaseDialog extends MdDialog {
+  submit() {
+    this.close({
+      name: this.find("#name").value.trim(),
+      description: this.find("#description").value.trim(),
+      topic: this.state.topic,
+    });
+  }
+
+  render() {
+    let p = this.state;
+    return `
+      <md-dialog-top>Create new case</md-dialog-top>
+      <div id="content">
+        <md-text-field
+          id="name"
+          value="${Component.escape(p.name)}"
+          label="Name">
+        </md-text-field>
+        <md-text-field
+          id="description"
+          value="${Component.escape(p.description)}"
+          label="Description">
+        </md-text-field>
+      </div>
+      <md-dialog-bottom>
+        <button id="cancel">Cancel</button>
+        <button id="submit">Create case</button>
+      </md-dialog-bottom>
+    `;
+  }
+
+  static stylesheet() {
+    return MdDialog.stylesheet() + `
+      #content {
+        display: flex;
+        flex-direction: column;
+        row-gap: 16px;
+      }
+      #name {
+        width: 300px;
+      }
+      #description {
+        width: 500px;
+      }
+    `;
+  }
+}
+
+Component.register(NewCaseDialog);
 
 //-----------------------------------------------------------------------------
 // Case search box
@@ -36,42 +119,49 @@ class CaseSearchBox extends Component {
       query = query.slice(0, -1);
     }
 
-    let app = this.match("#app");
+    this.itemnames = new Map();
     fetch(kbservice + "/query?" + params + "&q=" + encodeURIComponent(query))
-      .then(response => response.json())
-      .then((data) => {
-        let items = [];
-        for (let item of data.matches) {
-          let elem = document.createElement("md-search-item");
-          elem.setAttribute("name", item.text);
-          elem.setAttribute("value", item.ref);
+    .then(response => response.json())
+    .then((data) => {
+      let items = [];
+      for (let item of data.matches) {
+        let elem = document.createElement("md-search-item");
+        elem.setAttribute("name", item.text);
+        elem.setAttribute("value", item.ref);
 
-          let title = document.createElement("span");
-          title.className = "item-title";
-          title.appendChild(document.createTextNode(item.text));
-          elem.appendChild(title);
+        let title = document.createElement("span");
+        title.className = "item-title";
+        title.appendChild(document.createTextNode(item.text));
+        elem.appendChild(title);
 
-          if (item.description) {
-            let desciption = document.createElement("span");
-            desciption.className = "item-description";
-            desciption.appendChild(document.createTextNode(item.description));
-            elem.appendChild(desciption);
-          }
-
-          items.push(elem);
+        if (item.description) {
+          let desciption = document.createElement("span");
+          desciption.className = "item-description";
+          desciption.appendChild(document.createTextNode(item.description));
+          elem.appendChild(desciption);
         }
-        target.populate(detail, items);
-      })
-      .catch(error => {
-        console.log("Query error", query, error.message, error.stack);
-        StdDialog.error(error.message);
-        target.populate(detail, null);
-      });
+
+        items.push(elem);
+        this.itemnames[item.ref] = item.text;
+      }
+      target.populate(detail, items);
+    })
+    .catch(error => {
+      console.log("Query error", query, error.message, error.stack);
+      StdDialog.error(error.message);
+      target.populate(detail, null);
+    });
   }
 
   onitem(e) {
-    let id = e.detail;
-    console.log("selected", id)
+    let topic = e.detail;
+    let name = this.itemnames[topic];
+    let dialog = new NewCaseDialog({topic, name});
+    dialog.show().then(r => {
+      if (r) {
+        this.match("#app").addcase(r.name, r.description, r.topic);
+      }
+    });
   }
 
   query() {

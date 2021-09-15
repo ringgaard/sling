@@ -1,3 +1,8 @@
+// Copyright 2020 Ringgaard Research ApS
+// Licensed under the Apache License, Version 2
+
+// Document viewer.
+
 import {Component} from "./component.js";
 
 const kb_url = '/kb/';

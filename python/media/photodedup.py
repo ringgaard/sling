@@ -46,19 +46,22 @@ flags.parse()
 if flags.arg.all:
   # Get id of all profiles changed since last run.
   chkpt = sling.util.Checkpoint(flags.arg.checkpoint)
-  ids = set(photo.photodb().keys(start=chkpt.checkpoint))
+  ids = set(photo.photodb().keys(begin=chkpt.checkpoint))
   print(len(ids), "profiles to update")
 
   # Check all profiles.
+  total_removed = 0
   for id in ids:
     profile = photo.Profile(id)
     removed = profile.dedup()
     if removed > 0 and not flags.arg.dryrun:
       # Write updated profile.
       profile.write()
+      total_removed += 1
 
   if not flags.arg.dryrun:
     chkpt.commit(photo.photodb().epoch())
+    print(total_removed, "photos removed")
 else:
   # Check single profile.
   profile = photo.Profile(flags.arg.id)
