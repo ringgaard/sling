@@ -15,9 +15,15 @@ const n_is = store.is;
 const n_isa = store.isa;
 const n_name = store.lookup("name");
 const n_description = store.lookup("description");
+const n_main = store.lookup("main");
+const n_caseno = store.lookup("caseno");
 const n_created = store.lookup("created");
+const n_topics = store.lookup("topics");
+const n_folders = store.lookup("folders");
+const n_next = store.lookup("next");
 const n_modified = store.lookup("modified");
 const n_main_subject = store.lookup("P921");
+const n_pcase = store.lookup("PCASE");
 
 //-----------------------------------------------------------------------------
 // App
@@ -30,14 +36,28 @@ class CaseApp extends Component {
   addcase(name, description, topic) {
     fetch("/newcase")
     .then(response => store.parse(response))
-    .then(frame => {
-      if (name) frame.add(n_name, name);
-      if (description) frame.add(n_description, description);
-      if (topic) frame.add(n_main_subject, store.lookup(topic));
+    .then(casefile => {
+      let caseno = casefile.get(n_caseno);
+
+      // Create main topic.
+      let main = store.frame([
+        n_id, `t/${caseno}/1`,
+        n_pcase, `${caseno}`,
+      ]);
+      if (name) main.add(n_name, name);
+      if (description) main.add(n_description, description);
+      if (topic) main.add(n_main_subject, store.lookup(topic));
+
+      // Initialize case.
       let ts = new Date().toJSON();
-      frame.add(n_created, ts);
-      frame.add(n_modified, ts);
-      console.log("add case", frame.text(true));
+      casefile.add(n_created, ts);
+      casefile.add(n_modified, ts);
+      casefile.add(n_main, main);
+      casefile.add(n_topics, [main]);
+      casefile.add(n_folders, store.frame(["Main", [main]]));
+      casefile.add(n_next, 2);
+      console.log("main", main.text(true));
+      console.log("add case", casefile.text(true));
     });
   }
 }
@@ -53,7 +73,6 @@ class NewCaseDialog extends MdDialog {
     this.close({
       name: this.find("#name").value.trim(),
       description: this.find("#description").value.trim(),
-      topic: this.state.topic,
     });
   }
 
@@ -157,9 +176,9 @@ class CaseSearchBox extends Component {
     let topic = e.detail;
     let name = this.itemnames[topic];
     let dialog = new NewCaseDialog({topic, name});
-    dialog.show().then(r => {
-      if (r) {
-        this.match("#app").addcase(r.name, r.description, r.topic);
+    dialog.show().then(result => {
+      if (result) {
+        this.match("#app").addcase(result.name, result.description, topic);
       }
     });
   }

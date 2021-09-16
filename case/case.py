@@ -69,6 +69,15 @@ def main_page(request):
 </body>
 </html>""";
 
+# Frame template for new case.
+case_template = """
+{
+  =c/#
+  :casefile
+  caseno: #
+}
+"""
+
 @app.route("/newcase")
 def new_case(request):
   if numbering:
@@ -80,7 +89,7 @@ def new_case(request):
 
     # Make new case from with the assigned case number.
     store = sling.Store(commons)
-    newcase = store.parse("{=c/%d :case}" % caseno)
+    newcase = store.parse(case_template.replace("#", str(caseno)))
     return newcase
   elif flags.arg.number_service:
     # Redirect to remote case numbering service.

@@ -58,7 +58,7 @@ export class Store {
   // Register frame under id in store.
   register(id, frame) {
     this.frames.set(id, frame);
-    frame.anonymous = false;
+    frame.state = Frame.FULL;
   }
 
   // Add frame to store.
@@ -81,7 +81,7 @@ export class Store {
   // Create proxy frame and add it to the store.
   proxy(id) {
     let proxy = new Frame(this);
-    proxy.proxy = true;
+    proxy.state = Frame.PROXY;
     proxy.slots = [this.id, id];
     this.register(id, proxy);
     return proxy;
@@ -116,12 +116,17 @@ export class Store {
 
 // A frame has a list of (name,value) slots.
 export class Frame {
+  // Frame states.
+  const PROXY = 0;      // placeholder object with only the id
+  const STUB = 1;       // object with id(s) and name(s)
+  const FULL = 2;       // fully loaded object with all the slots
+  const ANONYMOUS = 3;  // frame with no identifiers
+
   // Create new frame with slots.
   constructor(store, slots) {
     this.store = store;
     this.slots = slots ? Array.from(slots) : null;
-    this.proxy = false;
-    this.anonymous = true;
+    this.state = Frame.ANONYMOUS;
   }
 
   // Return (first) value for frame slot.
@@ -134,7 +139,7 @@ export class Frame {
 
   // Return id for frame.
   get id() {
-    if (this.anonymous) return undefined;
+    if (this.state == Frame.ANONYMOUS) return undefined;
     return this.get(this.store.id);
   }
 
@@ -287,7 +292,7 @@ class Decoder {
   // Read all the objects from the input.
   readAll() {
     let obj = this.read();
-    while (this.pos < this.input.length) this.read();
+    while (this.pos < this.input.length) obj = this.read();
     return obj;
   }
 
@@ -400,7 +405,7 @@ class Decoder {
 
     // Assign slots to frame.
     frame.slots = slots;
-    frame.proxy = false;
+    frame.state = Frame.FULL;
 
     return frame;
   }
@@ -504,7 +509,7 @@ class Encoder {
           this.encodeRef(ref);
         } else if (ref.status == Status.LINKED) {
           // A link to this frame has already been encoded.
-          if (obj.proxy) {
+          if (obj.state == Frame.PROXY) {
             this.encodeRef(ref);
           } else {
             // Encode a resolved frame which points back to the link reference.
@@ -514,7 +519,7 @@ class Encoder {
             this.writeVarInt(ref.index);
             this.encodeSlots(obj.slots);
           }
-        } else if (obj.proxy) {
+        } else if (obj.state == Frame.PROXY) {
             // Output SYMBOL for the proxy.
             ref.status = Status.LINKED;
             ref.index = this.next++;
@@ -567,7 +572,7 @@ class Encoder {
   encodeLink(link) {
     // Only output link to public frames.
     if (link instanceof Frame) {
-      if (!link.anonymous) {
+      if (link.state != Frame.ANONYMOUS) {
         // Just output link to public frame.
         let ref = this.refs.get(link);
         if (ref) {
@@ -658,7 +663,6 @@ const keywords = new Map([
   ["nil",   -2],
   ["false", -3],
   ["true",  -4],
-
 ]);
 
 // Token types:
@@ -965,7 +969,7 @@ class Reader {
       if (index != -1) this.refs[index] = frame;
     } else {
       frame.slots = slots;
-      frame.proxy = false;
+      frame.state = Frame.FULL;
       this.store.add(frame);
     }
 
@@ -1026,7 +1030,7 @@ class Printer {
   // Print frame or reference.
   printFrame(frame) {
     // Output reference for nested frames.
-    if (this.level > 0 && !frame.anonymous) {
+    if (this.level > 0 && frame.state != Frame.ANONYMOUS) {
       this.printSymbol(frame.id);
       return;
     }
@@ -1050,7 +1054,7 @@ class Printer {
     this.level++;
 
     // Add frame to set of printed references.
-    if (frame.anonymous) {
+    if (frame.state == Frame.ANONYMOUS) {
       // Assign next local id for anonymous frame.
       let id = this.nextidx++;
       this.write("=#");

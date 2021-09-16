@@ -262,6 +262,7 @@ export class PhotoGallery extends MdModal {
         height: auto;
         margin: auto;
         cursor: pointer;
+        background-color: hsl(0, 0%, 90%);
       }
 
       $ .counter {

@@ -92,13 +92,13 @@ photosites = set([
 delimiters = [
   "(", "[", ",", " - ", "|", "/", ":", "!", " – ", ";", "'s ", "’s ",
   "...", " -- ", "~", "- ", " -",
-  "❤️", "♥️", "☺", "✨", "❣", "<3", "•", "❤"
+  "❤️", "♥️", "☺", "✨", "❣", "<3", "•", "❤", "📸",
   " circa ", " c.",
   "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
   " by ", " is ", " was ", " in ", " In", " on ", " with ", " at ", " as ",
   " from ", " for ", " has ",
   " Is ", " Has ", " On ", " As ",
-  " aka ", " a.k.a. ", " IG ", "on/off", "On/Off",
+  " aka ", " a.k.a. ", " IG ", " on/off", " On/Off", " Circa "
   " having ", " performing ", " during ", " being ",
   " posing ", " photographed ", " dressed ", " former ",
 

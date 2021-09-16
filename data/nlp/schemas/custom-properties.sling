@@ -20,3 +20,24 @@
   }
 }
 
+{
+  =PCASE
+  :/w/property
+  name: "SLING case number"@/lang/en
+  description: "Case number in SLING Case System"@/lang/en
+  source: /w/entity
+  target: /w/xref
+
+  P31: Q190087 ; data type
+  P31: Q6545185 ; unique identifier
+
+  P2378: Q105832622 ; issued by: Ringgaard Research ApS
+  P1896: "https://ringgaard.com" ; source website: ringgaard.com
+  P1630: "https://ringgaard.com/c/$1" ; formatter url
+
+  P1793: {
+    +"[0-9]+"
+    P2916: "numeric value"@/lang/en
+  }
+}
+

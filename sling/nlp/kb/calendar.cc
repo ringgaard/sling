@@ -130,7 +130,7 @@ void Date::ParseFromFrame(const Frame &frame) {
   if (time.invalid()) return;
   if (time.IsInt()) {
     int num = time.AsInt();
-    CHECK(num > 0);
+    CHECK(num >= 0);
     ParseFromNumber(num);
   } else if (time.IsString()) {
     Text datestr = time.AsString().text();
