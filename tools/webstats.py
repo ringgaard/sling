@@ -203,6 +203,7 @@ spammers = set([
   "czcedu.com",
   "ecosia.org",
   "fineblog.top",
+  "gcmx.net",
   "johnnyhaley.top",
   "joyceblog.top",
   "manwang.net",

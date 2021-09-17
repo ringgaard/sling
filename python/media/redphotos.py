@@ -100,7 +100,7 @@ delimiters = [
   " Is ", " Has ", " On ", " As ",
   " aka ", " a.k.a. ", " IG ", " on/off", " On/Off", " Circa "
   " having ", " performing ", " during ", " being ",
-  " posing ", " photographed ", " dressed ", " former ",
+  " posing ", " photographed ", " dressed ", " former ", " formerly ",
 
   # For jounalists.
   "FoxWeather", "News", "Fox13", "Weather Channel", "Court TV"
@@ -179,7 +179,7 @@ def posting_deleted(sid):
 
 # Check for selfies.
 def selfie(title):
-  for prefix in ["Me ", "My ", "Me,"]:
+  for prefix in ["Me ", "My ", "Me,", "Me. "]:
     if title.startswith(prefix): return True
   return False
 

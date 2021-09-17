@@ -31,6 +31,12 @@ function hasBinaryMarker(data) {
   }
 }
 
+// Frame states.
+const PROXY = 0;      // placeholder object with only the id
+const STUB = 1;       // object with id(s) and name(s)
+const FULL = 2;       // fully loaded object with all the slots
+const ANONYMOUS = 3;  // frame with no identifiers
+
 // Frame store.
 export class Store {
   // Initialize new frame store.
@@ -58,7 +64,7 @@ export class Store {
   // Register frame under id in store.
   register(id, frame) {
     this.frames.set(id, frame);
-    frame.state = Frame.FULL;
+    frame.state = FULL;
   }
 
   // Add frame to store.
@@ -81,7 +87,7 @@ export class Store {
   // Create proxy frame and add it to the store.
   proxy(id) {
     let proxy = new Frame(this);
-    proxy.state = Frame.PROXY;
+    proxy.state = PROXY;
     proxy.slots = [this.id, id];
     this.register(id, proxy);
     return proxy;
@@ -116,17 +122,11 @@ export class Store {
 
 // A frame has a list of (name,value) slots.
 export class Frame {
-  // Frame states.
-  const PROXY = 0;      // placeholder object with only the id
-  const STUB = 1;       // object with id(s) and name(s)
-  const FULL = 2;       // fully loaded object with all the slots
-  const ANONYMOUS = 3;  // frame with no identifiers
-
   // Create new frame with slots.
   constructor(store, slots) {
     this.store = store;
     this.slots = slots ? Array.from(slots) : null;
-    this.state = Frame.ANONYMOUS;
+    this.state = ANONYMOUS;
   }
 
   // Return (first) value for frame slot.
@@ -139,7 +139,7 @@ export class Frame {
 
   // Return id for frame.
   get id() {
-    if (this.state == Frame.ANONYMOUS) return undefined;
+    if (this.state == ANONYMOUS) return undefined;
     return this.get(this.store.id);
   }
 
@@ -235,7 +235,7 @@ export class Frame {
 }
 
 // Binary SLING decoder.
-class Decoder {
+export class Decoder {
   // Initialize decoder.
   constructor(store, data) {
     this.store = store ? store : new Store();
@@ -405,7 +405,7 @@ class Decoder {
 
     // Assign slots to frame.
     frame.slots = slots;
-    frame.state = Frame.FULL;
+    frame.state = FULL;
 
     return frame;
   }
@@ -460,7 +460,7 @@ const Status = Object.freeze({
 });
 
 // Binary SLING decoder.
-class Encoder {
+export class Encoder {
   constructor(store) {
     // Allocate output buffer.
     this.buffer = new Uint8Array(4096);
@@ -509,7 +509,7 @@ class Encoder {
           this.encodeRef(ref);
         } else if (ref.status == Status.LINKED) {
           // A link to this frame has already been encoded.
-          if (obj.state == Frame.PROXY) {
+          if (obj.state == PROXY) {
             this.encodeRef(ref);
           } else {
             // Encode a resolved frame which points back to the link reference.
@@ -519,7 +519,7 @@ class Encoder {
             this.writeVarInt(ref.index);
             this.encodeSlots(obj.slots);
           }
-        } else if (obj.state == Frame.PROXY) {
+        } else if (obj.state == PROXY) {
             // Output SYMBOL for the proxy.
             ref.status = Status.LINKED;
             ref.index = this.next++;
@@ -533,7 +533,7 @@ class Encoder {
         }
       } else if (obj instanceof Array) {
         // Output array tag followed by array size and the elements.
-        ref.status = ENCODED;
+        ref.status = Status.ENCODED;
         ref.index = this.next++;
         this.writeTag(7, 5);
         this.writeVarInt(obj.length);
@@ -572,7 +572,7 @@ class Encoder {
   encodeLink(link) {
     // Only output link to public frames.
     if (link instanceof Frame) {
-      if (link.state != Frame.ANONYMOUS) {
+      if (link.state != ANONYMOUS) {
         // Just output link to public frame.
         let ref = this.refs.get(link);
         if (ref) {
@@ -677,7 +677,7 @@ const keywords = new Map([
 //  -8: symbol
 
 // Read objects in text format and convert these to the internal object format.
-class Reader {
+export class Reader {
   // Initialize reader.
   constructor(store, data) {
     this.store = store ? store : new Store();
@@ -969,7 +969,7 @@ class Reader {
       if (index != -1) this.refs[index] = frame;
     } else {
       frame.slots = slots;
-      frame.state = Frame.FULL;
+      frame.state = FULL;
       this.store.add(frame);
     }
 
@@ -996,7 +996,7 @@ class Reader {
 }
 
 // Output objects in human-readable text format which can be read by a reader.
-class Printer {
+export class Printer {
   constructor(store) {
     this.store = store;
     this.output = "";
@@ -1030,7 +1030,7 @@ class Printer {
   // Print frame or reference.
   printFrame(frame) {
     // Output reference for nested frames.
-    if (this.level > 0 && frame.state != Frame.ANONYMOUS) {
+    if (this.level > 0 && frame.state != ANONYMOUS) {
       this.printSymbol(frame.id);
       return;
     }
@@ -1054,7 +1054,7 @@ class Printer {
     this.level++;
 
     // Add frame to set of printed references.
-    if (frame.state == Frame.ANONYMOUS) {
+    if (frame.state == ANONYMOUS) {
       // Assign next local id for anonymous frame.
       let id = this.nextidx++;
       this.write("=#");

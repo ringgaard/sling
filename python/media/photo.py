@@ -552,7 +552,7 @@ class Profile:
       if image is None:
         r = requests.get(url)
         if r.status_code != 200:
-          print(url, "missing", r.status_code)
+          print(self.itemid, url, "missing", r.status_code)
           missing.add(url)
           num_missing += 1
           continue
