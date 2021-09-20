@@ -1262,6 +1262,7 @@ export class MdDataTable extends Component {
         name: e.getAttribute("field"),
         header: e.innerHTML,
         style: e.style ? e.style.cssText : null,
+        cls: e.className ? e.className : null,
         escape: !e.getAttribute("html"),
       });
     }
@@ -1289,7 +1290,9 @@ export class MdDataTable extends Component {
           h.push("<tr>");
         }
         for (const fld of this.fields) {
-          if (fld.style) {
+          if (fld.cls) {
+            h.push(`<td class="${fld.cls}">`);
+          } else if (fld.style) {
             h.push(`<td style="${fld.style}">`);
           } else {
             h.push("<td>");

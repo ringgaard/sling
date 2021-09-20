@@ -214,7 +214,7 @@ class NewCaseDialog extends MdDialog {
   render() {
     let p = this.state;
     return `
-      <md-dialog-top>Create new case</md-dialog-top>
+      <md-dialog-top>Open new case</md-dialog-top>
       <div id="content">
         <md-text-field
           id="name"
@@ -229,7 +229,7 @@ class NewCaseDialog extends MdDialog {
       </div>
       <md-dialog-bottom>
         <button id="cancel">Cancel</button>
-        <button id="submit">Create case</button>
+        <button id="submit">Create</button>
       </md-dialog-bottom>
     `;
   }
@@ -389,7 +389,14 @@ class CaseList extends MdCard {
   }
 
   static stylesheet() {
-    return MdCard.stylesheet();
+    return MdCard.stylesheet() + `
+      $ table {
+        width: 100%;
+      }
+      $ .right {
+        text-align: right
+      }
+    `;
   }
 }
 
@@ -415,7 +422,7 @@ document.body.innerHTML = `
           <div>My cases</div>
         </md-card-toolbar>
         <md-data-table id="case-table">
-          <md-data-field field="caseno" style="text-align: right">Case #</md-data-field>
+          <md-data-field field="caseno" class="right">Case #</md-data-field>
           <md-data-field field="name">Name</md-data-field>
           <md-data-field field="description">Description</md-data-field>
           <md-data-field field="created">Created</md-data-field>

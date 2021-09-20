@@ -695,6 +695,10 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
       if (qualified) {
         Item qualifiers(item.store());
         FetchProperties(Frame(item.store(), h), &qualifiers);
+        for (Handle xref : qualifiers.xrefs) {
+          // Treat xrefs as properties for qualifiers.
+          qualifiers.properties.push_back(xref);
+        }
         if (!qualifiers.properties.empty()) {
           v.Add(n_qualifiers_, Array(item.store(), qualifiers.properties));
         }

@@ -107,6 +107,12 @@ if os.path.exists("local/keys/imgur.json"):
   with open("local/keys/imgur.json", "r") as f:
     imgurkeys = json.load(f)
 
+# Trim numbering from caption.
+def trim_numbering(caption):
+  m = re.fullmatch("(.+) \(\d+/\d+\)", caption)
+  if m != None: return m.group(1)
+  return caption
+
 def photodb():
   global db
   if db is None: db = sling.Database(flags.arg.photodb, "photo.py")
@@ -536,6 +542,7 @@ class Profile:
 
     # Compute image hash for each photo to detect duplicates.
     fingerprints = {}
+    captions = {}
     duplicates = set()
     missing = set()
     naughty = set()
@@ -546,6 +553,7 @@ class Profile:
       url = store.resolve(media)
       nsfw = type(media) is sling.Frame and media[n_has_quality] == n_nsfw
       captioned = type(media) is sling.Frame and n_legend in media
+      if captioned: captions[url] = media[n_legend]
 
       # Get image from database or fetch directly.
       image = mediadb[url]
@@ -566,20 +574,34 @@ class Profile:
         if flags.arg.preservecaptioned and captioned:
           print(self.itemid, url, " preserve captioned duplicate of", dup)
         else:
-          duplicates.add(url)
-          num_duplicates += 1
-
-          # Check for inconsistent nsfw classification.
-          if nsfw:
-            if dup not in naughty:
-              print(self.itemid, url, " nsfw duplicate of", dup)
-            else:
-              print(self.itemid, url, " duplicate of", dup)
+          # Keep photo with the longest caption.
+          urlcaption = trim_numbering(captions.get(url, ""))
+          dupcaption = trim_numbering(captions.get(dup, ""))
+          if urlcaption != "" and dupcaption != "" and urlcaption != dupcaption:
+            print("caption:", urlcaption, "vs", dupcaption)
+          if len(dupcaption) < len(urlcaption):
+            # Remove previous duplicate.
+            duplicates.add(dup)
+            num_duplicates += 1
+            fingerprints[fingerprint] = url
+            msg = "captioned duplicate of"
           else:
-            if dup in naughty:
-              print(self.itemid, url, " sfw duplicate of", dup)
+            # Remove this duplicate.
+            duplicates.add(url)
+            num_duplicates += 1
+
+            # Check for inconsistent nsfw classification.
+            if nsfw:
+              if dup not in naughty:
+                msg = "nsfw duplicate of"
+              else:
+                msg = "duplicate of"
             else:
-              print(self.itemid, url, " duplicate of", dup)
+              if dup in naughty:
+                msg = "sfw duplicate of"
+              else:
+                msg = "duplicate of"
+          print(self.itemid, url, msg, dup)
       elif fingerprint in bad_photos:
         missing.add(url)
         num_missing += 1
