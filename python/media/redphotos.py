@@ -18,11 +18,13 @@ import json
 import requests
 import datetime
 import re
+import traceback
 from urllib.parse import urlparse
 from collections import defaultdict
 
 import sling
 import sling.flags as flags
+import sling.media.photo as photo
 import sling.util
 
 flags.define("--redditdb",
@@ -203,12 +205,16 @@ def name_prefix(name):
   return " ".join(prefix)
 
 # Find new postings to subreddits.
-batch = open(flags.arg.batch, 'w')
+batch = None
+if flags.arg.batch: batch = open(flags.arg.batch, 'w')
 redditdb = sling.Database(flags.arg.redditdb, "redphotos")
 chkpt = sling.util.Checkpoint(flags.arg.checkpoint)
 report = {}
 report["subreddits"] = {}
 seen = set()
+profiles = {}
+num_profiles = 0
+num_photos = 0
 
 for key, value in redditdb.items(chkpt.checkpoint):
   # Parse reddit posting.
@@ -311,27 +317,42 @@ for key, value in redditdb.items(chkpt.checkpoint):
   p = {}
   p["posting"] = json.loads(value)
   if itemid is None:
-    if not selfie(title):
+    if selfie(title):
+      print(sr, key, "SELFIE", title, "NSFW" if nsfw else "", url)
+    else:
       matches = aliases.query(query)
       p["query"] = query
       p["matches"] = len(matches)
       if len(matches) == 1: p["match"] = matches[0].id()
       subreddit["unmatched"].append(p)
+      print(sr, key, "UNKNOWN", title, "NSFW" if nsfw else "", url)
   else:
     subreddit["matches"] += 1
     p["itemid"] = itemid
     if general: p["query"] = query
     subreddit["matched"].append(p)
+    print(sr, key, itemid, title, "NSFW" if nsfw else "", url)
+
+    # Add media to photo db.
+    if flags.arg.photodb:
+      # Get or create new profile.
+      profile = profiles.get(itemid)
+      if profile is None:
+        profile = photo.Profile(itemid)
+        profiles[itemid] = profile
+
+      try:
+        n = profile.add_media(url, None, nsfw)
+        num_profiles += 1
+        num_photos += n
+      except:
+        print("Error processing", url, "for", itemid)
+        traceback.print_exc(file=sys.stdout)
 
     # Output photo to batch list.
-    batch.write("%s %s #\t %s %s%s\n" %
-                (sr, title, itemid, url, " NSFW" if nsfw else ""))
-
-  print(sr, key, itemid, title, "NSFW" if nsfw else "", url)
-
-chkpt.commit(redditdb.position())
-redditdb.close()
-batch.close()
+    if batch:
+      batch.write("%s %s #\t %s %s%s\n" %
+                  (sr, title, itemid, url, " NSFW" if nsfw else ""))
 
 # Output JSON report.
 if flags.arg.report:
@@ -339,4 +360,15 @@ if flags.arg.report:
   fout = open(reportfn, "w")
   json.dump(report, fout)
   fout.close()
+
+# Write updated profiles.
+photo.store.coalesce()
+for id in profiles:
+  profiles[id].write()
+
+print(num_photos, "photos in", num_profiles, "profiles")
+
+chkpt.commit(redditdb.position())
+redditdb.close()
+if batch: batch.close()
 

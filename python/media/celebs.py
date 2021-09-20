@@ -21,6 +21,7 @@ import urllib.parse
 import os.path
 import sling
 import sling.flags as flags
+import sling.media.photo as photo
 import sling.util
 
 flags.define("--redditdb",
@@ -37,11 +38,6 @@ flags.define("--celebdb",
              help="database for celebrity profiles",
              default="celeb",
              metavar="DB")
-
-flags.define("--albums",
-             help="output file for photo albums",
-             default=None,
-             metavar="FILE")
 
 flags.parse()
 
@@ -125,8 +121,6 @@ def map_wikipedia(lang, article):
 # Open databases.
 celebdb = sling.Database(flags.arg.celebdb)
 redditdb = sling.Database(flags.arg.redditdb)
-albums = None
-if flags.arg.albums != None: albums = open(flags.arg.albums, "w")
 
 # Load xref table.
 print("Load xref table")
@@ -271,14 +265,16 @@ for id, version, value in redditdb(chkpt.checkpoint):
   print(key, "profile:", profile.data())
   celebdb[key] = profile.data(binary=True)
 
-  # Output album to photo batch.
-  if albums:
-    albums.write("%s #\t %s %s%s\n" %
-                 (title, key, url, " NSFW" if nsfw else ""))
+  # Add album to photo database.
+  if flags.arg.photodb:
+    profile = photo.Profile(key)
+    n = profile.add_media(url, None, nsfw)
+    if n > 0:
+      photo.store.coalesce()
+      profile.write()
 
 # Cleanup
 chkpt.commit(redditdb.position())
 celebdb.close()
 redditdb.close()
-if albums: albums.close()
 

@@ -378,14 +378,25 @@ class CaseList extends MdCard {
     let rows = [];
     for (let rec of this.state) {
       rows.push({
+        type: '<md-icon icon="folder" class="outlined"></md-icon>',
         caseno: rec.id,
         name: rec.name,
-        description: rec.description,
+        descr: rec.description,
         created: date2str(rec.modified),
         modified: date2str(rec.created),
+        actions: `<md-icon-button icon="delete" outlined delete="${rec.id}">
+                  </md-icon-button>`,
       });
     }
     this.find("#case-table").update(rows);
+  }
+
+  onupdated() {
+    this.find("table", "click", e => this.onclick(e))
+  }
+
+  onclick(e) {
+    console.log("click", e);
   }
 
   static stylesheet() {
@@ -393,8 +404,19 @@ class CaseList extends MdCard {
       $ table {
         width: 100%;
       }
+      $ td {
+        padding: 0px 12px;
+      }
+      $ tbody>tr:hover {
+        /*outline: 3px solid #eeeeee;*/
+        background-color: #eeeeee;
+        cursor: pointer;
+      }
       $ .right {
-        text-align: right
+        text-align: right;
+      }
+      $ .descr {
+        width: 100%;
       }
     `;
   }
@@ -422,11 +444,13 @@ document.body.innerHTML = `
           <div>My cases</div>
         </md-card-toolbar>
         <md-data-table id="case-table">
+          <md-data-field field="type" html=1></md-data-field>
           <md-data-field field="caseno" class="right">Case #</md-data-field>
           <md-data-field field="name">Name</md-data-field>
-          <md-data-field field="description">Description</md-data-field>
+          <md-data-field field="descr" class="descr">Description</md-data-field>
           <md-data-field field="created">Created</md-data-field>
           <md-data-field field="modified">Modified</md-data-field>
+          <md-data-field field="actions" html=1></md-data-field>
         </md-data-table>
       </case-list>
 
