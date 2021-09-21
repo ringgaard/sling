@@ -57,6 +57,7 @@ n_title = commons["title"]
 n_body = commons["body"]
 n_url = commons["url"]
 n_over_18 = commons["over_18"]
+n_link_flair_text = commons["link_flair_text"]
 
 # Link mapping for xrefs.
 idmapping = [
@@ -153,7 +154,7 @@ for id, version, value in redditdb(chkpt.checkpoint):
 
   # Get album url.
   url = submission[n_url]
-  nsfw = submission[n_over_18]
+  nsfw = submission[n_over_18] and submission[n_link_flair_text] != "Non-Nude"
 
   # The title is the name of the entity.
   title = submission[n_title]

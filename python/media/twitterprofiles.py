@@ -37,6 +37,7 @@ bad_images = set([
   "https://pbs.twimg.com/profile_images/1158806333686210560/iJj9gE9t.jpg",
   "https://pbs.twimg.com/profile_images/1267721157794361345/KnbubkxM.jpg",
   "https://pbs.twimg.com/profile_images/1278922852272467968/dAnpxA1L.jpg",
+  "https://pbs.twimg.com/profile_images/1233065469189464066/dl-rt_ZK.jpg",
   "https://pbs.twimg.com/static/dmca/dmca-med.jpg",
 ])
 

@@ -124,10 +124,30 @@ class CaseDatabase {
     return rec;
   }
 
+  remove(caseid) {
+    // Remove case from directory.
+    let tx = this.db.transaction(["casedir", "casedata"], "readwrite");
+    let casedir = tx.objectStore("casedir");
+    let dirrequest = casedir.delete(caseid);
+    dirrequest.onsuccess = e => {
+      console.log("Removed record", caseid, "from case directory");
+    }
+
+    // Remove case from data store.
+    let casedata = tx.objectStore("casedata");
+    let datarequest = casedata.delete(caseid);
+    datarequest.onsuccess = e => {
+      console.log("Removed record", caseid, "from case store");
+    }
+    datarequest.onerror = e => {
+      console.log("Error removing data from case store", e.target.result);
+    }
+  }
+
   readdir() {
     // Read case directory and add to list.
     let deferred = new Deferred();
-    let caselist = [];
+    let caselist = new Array();
     let casedir = this.db.transaction("casedir").objectStore("casedir");
     casedir.openCursor().onsuccess = e => {
       var cursor = e.target.result;
@@ -160,7 +180,7 @@ class CaseApp extends Component {
     });
   }
 
-  addcase(name, description, topic) {
+  add_case(name, description, topic) {
     fetch("/newcase")
     .then(response => store.parse(response))
     .then(casefile => {
@@ -185,15 +205,28 @@ class CaseApp extends Component {
       casefile.add(n_next, 2);
       console.log("main", main.text(true));
       console.log("add case", casefile.text(true));
+
+      // Write case to database.
       let rec = casedb.write(casefile);
+
+      // Update case list.
       this.caselist.push(rec);
       this.refresh();
     });
   }
 
+  delete_case(caseid) {
+    // Remove case from database.
+    casedb.remove(caseid);
+
+    // Update case list.
+    this.caselist = this.caselist.filter(rec => rec.id != caseid);
+    this.refresh();
+  }
+
   refresh() {
     this.caselist.sort((a, b) => a.modified > b.modified ? -1 : 1);
-    this.find("#mycases").update(this.caselist);
+    this.find("#cases").update(this.caselist);
   }
 }
 
@@ -313,7 +346,7 @@ class CaseSearchBox extends Component {
     let dialog = new NewCaseDialog({topic, name});
     dialog.show().then(result => {
       if (result) {
-        this.match("#app").addcase(result.name, result.description, topic);
+        this.match("#app").add_case(result.name, result.description, topic);
       }
     });
   }
@@ -374,48 +407,105 @@ Component.register(CaseSearchBox);
 //-----------------------------------------------------------------------------
 
 class CaseList extends MdCard {
-  onupdate() {
-    let rows = [];
-    for (let rec of this.state) {
-      rows.push({
-        type: '<md-icon icon="folder" class="outlined"></md-icon>',
-        caseno: rec.id,
-        name: rec.name,
-        descr: rec.description,
-        created: date2str(rec.modified),
-        modified: date2str(rec.created),
-        actions: `<md-icon-button icon="delete" outlined delete="${rec.id}">
-                  </md-icon-button>`,
-      });
-    }
-    this.find("#case-table").update(rows);
-  }
-
   onupdated() {
-    this.find("table", "click", e => this.onclick(e))
+    this.bind("table", "click", e => this.onclick(e));
   }
 
   onclick(e) {
-    console.log("click", e);
+    let row = e.target.closest("tr");
+    let button = e.target.closest("md-icon-button");
+    let caseid = row ? parseInt(row.getAttribute("case")) : undefined;
+    if (!caseid) return;
+
+    if (button) {
+      let action = button.getAttribute("icon");
+      let message = `Delete case #${caseid}?`;
+      StdDialog.confirm("Delete case", message, "Delete").then(result => {
+        if (result) {
+          this.match("#app").delete_case(caseid);
+        }
+      });
+    } else {
+      StdDialog.alert("Open case", `Open case #${caseid}`);
+    }
+  }
+
+  render() {
+   if (!this.state) return null;
+   let h = [];
+   h.push("<table>");
+   h.push(`
+     <thead><tr>
+       <th>Case #</th>
+       <th>Name</th>
+       <th>Description</th>
+       <th>Created</th>
+       <th>Modified</th>
+       <th></th>
+     </tr></thead>
+   `);
+    h.push("<tbody>");
+    for (let rec of this.state) {
+      h.push(`
+        <tr case="${rec.id}">
+          <td>${rec.id}</td>
+          <td>${Component.escape(rec.name)}</td>
+          <td>${Component.escape(rec.description)}</td>
+          <td>${date2str(rec.created)}</td>
+          <td>${date2str(rec.modified)}</td>
+          <td>
+            <md-icon-button icon="delete" outlined>
+            </md-icon-button>
+          </td>
+        </tr>
+     `);
+    }
+    h.push("</tr>");
+    return h.join("");
   }
 
   static stylesheet() {
     return MdCard.stylesheet() + `
       $ table {
+        border: 0;
+        white-space: nowrap;
+        font-size: 16px;
+        text-align: left;
         width: 100%;
       }
-      $ td {
-        padding: 0px 12px;
+
+      $ thead {
+        padding-bottom: 3px;
       }
+
+      $ th {
+        vertical-align: bottom;
+        padding: 8px 12px;
+        box-sizing: border-box;
+        border-bottom: 1px solid rgba(0,0,0,.12);
+        text-overflow: ellipsis;
+        color: rgba(0,0,0,.54);
+      }
+
+      $ td {
+        vertical-align: middle;
+        border-bottom: 1px solid rgba(0,0,0,.12);
+        padding: 0px 12px;
+        box-sizing: border-box;
+        text-overflow: ellipsis;
+        overflow: hidden;
+      }
+
       $ tbody>tr:hover {
-        /*outline: 3px solid #eeeeee;*/
         background-color: #eeeeee;
         cursor: pointer;
       }
-      $ .right {
+
+      $ td:nth-child(1) { /* case# */
         text-align: right;
       }
-      $ .descr {
+
+      $ td:nth-child(3) { /* description */
         width: 100%;
       }
     `;
@@ -438,22 +528,7 @@ document.body.innerHTML = `
     </md-toolbar>
 
     <md-content>
-
-      <case-list id="mycases">
-        <md-card-toolbar>
-          <div>My cases</div>
-        </md-card-toolbar>
-        <md-data-table id="case-table">
-          <md-data-field field="type" html=1></md-data-field>
-          <md-data-field field="caseno" class="right">Case #</md-data-field>
-          <md-data-field field="name">Name</md-data-field>
-          <md-data-field field="descr" class="descr">Description</md-data-field>
-          <md-data-field field="created">Created</md-data-field>
-          <md-data-field field="modified">Modified</md-data-field>
-          <md-data-field field="actions" html=1></md-data-field>
-        </md-data-table>
-      </case-list>
-
+      <case-list id="cases"></case-list>
     </md-content>
   </md-column-layout>
 </kb-app>

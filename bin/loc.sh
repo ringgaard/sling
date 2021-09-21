@@ -4,6 +4,8 @@ exists() {
   [ -e "$1" ]
 }
 
+total=-16480
+
 loc() {
   path=$1
 
@@ -28,6 +30,8 @@ loc() {
   fi
 
   echo -e "${path}\t${cc}\t${h}\t${py}\t${js}"
+
+  total=$((total + cc + h + py + js))
 }
 
 echo -e "path\tcc\th\tpy\tjs"
@@ -73,4 +77,6 @@ loc "sling/myelin/cuda"
 loc "sling/myelin/generator"
 loc "sling/myelin/kernel"
 loc "third_party/jit"
+
+echo -e "total\t${total}"
 

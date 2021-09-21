@@ -105,7 +105,7 @@ delimiters = [
   " posing ", " photographed ", " dressed ", " former ", " formerly ",
 
   # For jounalists.
-  "FoxWeather", "News", "Fox13", "Weather Channel", "Court TV"
+  "FoxWeather", "News", "Fox13", "Weather Channel", "Court TV", "Fox News",
 ]
 
 # Initialize commons store.
@@ -254,7 +254,6 @@ for key, value in redditdb.items(chkpt.checkpoint):
     for pattern in patterns:
       m = pattern.fullmatch(title)
       if m != None:
-        print("*** Extract '%s' in '%s'" %  (m.group(1), title))
         title = m.group(1).strip()
 
   # Check for name match in general subreddit.
