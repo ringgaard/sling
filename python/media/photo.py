@@ -134,7 +134,8 @@ class Profile:
   def write(self):
     if self.itemid is None or self.itemid == "": raise Error("empty id")
     data = self.frame.data(binary=True)
-    photodb().put(self.itemid, data)
+    result = photodb().put(self.itemid, data)
+    if result == sling.DBUNCHANGED: print(self.itemid, "unchanged")
 
   # Clear all photos.
   def clear(self):

@@ -3,13 +3,13 @@
 
 // Case-based knowledge management app.
 
-import {Component} from "/common/lib/component.js";
+import {Component, OneOf} from "/common/lib/component.js";
 import {MdDialog, StdDialog, MdCard} from "/common/lib/material.js";
-import {Store, Encoder} from "/common/lib/frame.js";
+import {store, settings} from "./global.js";
+import {casedb} from "./database.js";
 
 const kbservice = "https://ringgaard.com/kb"
 
-let store = new Store();
 const n_id = store.id;
 const n_is = store.is;
 const n_isa = store.isa;
@@ -30,145 +30,10 @@ function date2str(date) {
 }
 
 //-----------------------------------------------------------------------------
-// Database
+// Case App
 //-----------------------------------------------------------------------------
 
-class Deferred {
-  constructor() {
-    this.promise = new Promise((resolve, reject) => {
-      this.resolve = resolve;
-      this.reject = reject;
-    });
-  }
-}
-
-class CaseDatabase {
-  // Open database.
-  open() {
-    // Open database.
-    let deferred = new Deferred();
-    let request = window.indexedDB.open("Case", 1);
-    request.onerror = e => {
-      deferred.reject(this);
-    };
-
-    // Create database if needed.
-    request.onupgradeneeded = e => {
-      console.log("Database upgrade");
-      let db = event.target.result;
-
-      // Create case directory.
-      let casedir = db.createObjectStore("casedir", { keyPath: "id" });
-      casedir.transaction.oncomplete = e => {
-        console.log("Case directory created");
-      };
-
-      // Create case data store.
-      let casedata = db.createObjectStore("casedata", { keyPath: "id" });
-      casedata.transaction.oncomplete = e => {
-        console.log("Case data store created");
-      };
-    }
-
-    // Store database connection and install global error handler on success.
-    request.onsuccess = e => {
-      this.db = event.target.result;
-      this.db.onerror = e => this.onerror(e);
-      deferred.resolve(this);
-    };
-
-    return deferred.promise;
-  }
-
-  onerror(e) {
-    console.log("Database error", e.target.error);
-  }
-
-  write(casefile) {
-    // Build case directory record.
-    let caseno = casefile.get(n_caseno);
-    let main = casefile.get(n_main);
-    let rec = {
-      id: caseno,
-      name: main.get(n_name),
-      description: main.get(n_description),
-      created: new Date(casefile.get(n_created)),
-      modified: new Date(casefile.get(n_modified)),
-    };
-
-    // Write record to database.
-    let tx = this.db.transaction(["casedir", "casedata"], "readwrite");
-    let casedir = tx.objectStore("casedir");
-    let dirrequest = casedir.add(rec);
-    dirrequest.onsuccess = e => {
-      console.log("Added record", e.target.result, "to case directory");
-    }
-
-    // Encode case data.
-    let encoder = new Encoder(store);
-    for (let topic of casefile.get(n_topics)) {
-      encoder.encode(topic);
-    }
-    encoder.encode(casefile);
-
-    // Write case data.
-    let casedata = tx.objectStore("casedata");
-    let datarequest = casedata.add({id: caseno, data: encoder.output()});
-    datarequest.onsuccess = e => {
-      console.log("Added record", e.target.result, "to case store");
-    }
-    datarequest.onerror = e => {
-      console.log("Error writing to case store", e.target.result);
-    }
-
-    return rec;
-  }
-
-  remove(caseid) {
-    // Remove case from directory.
-    let tx = this.db.transaction(["casedir", "casedata"], "readwrite");
-    let casedir = tx.objectStore("casedir");
-    let dirrequest = casedir.delete(caseid);
-    dirrequest.onsuccess = e => {
-      console.log("Removed record", caseid, "from case directory");
-    }
-
-    // Remove case from data store.
-    let casedata = tx.objectStore("casedata");
-    let datarequest = casedata.delete(caseid);
-    datarequest.onsuccess = e => {
-      console.log("Removed record", caseid, "from case store");
-    }
-    datarequest.onerror = e => {
-      console.log("Error removing data from case store", e.target.result);
-    }
-  }
-
-  readdir() {
-    // Read case directory and add to list.
-    let deferred = new Deferred();
-    let caselist = new Array();
-    let casedir = this.db.transaction("casedir").objectStore("casedir");
-    casedir.openCursor().onsuccess = e => {
-      var cursor = e.target.result;
-      if (cursor) {
-        caselist.push(cursor.value);
-        cursor.continue();
-      } else {
-        deferred.resolve(caselist);
-      }
-    };
-    return deferred.promise;
-  }
-};
-
-var casedb = new CaseDatabase();
-
-//-----------------------------------------------------------------------------
-// App
-//-----------------------------------------------------------------------------
-
-class CaseApp extends Component {
+class CaseApp extends OneOf {
   onconnected() {
     // Open local case database.
     casedb.open().then(() => {
@@ -224,13 +89,52 @@ class CaseApp extends Component {
     this.refresh();
   }
 
+  open_case(caseid) {
+    casedb.read(caseid).then(casefile => {
+      console.log("casefile", casefile.text(true));
+      this.update("case-editor", casefile);
+    });
+  }
+
   refresh() {
     this.caselist.sort((a, b) => a.modified > b.modified ? -1 : 1);
-    this.find("#cases").update(this.caselist);
+    manager.update(this.caselist);
   }
 }
 
 Component.register(CaseApp);
+
+//-----------------------------------------------------------------------------
+// Case Manager
+//-----------------------------------------------------------------------------
+
+class CaseManager extends Component {
+  onupdate() {
+    this.find("case-list").update(this.state);
+  }
+}
+
+Component.register(CaseManager);
+
+//-----------------------------------------------------------------------------
+// Case Editor
+//-----------------------------------------------------------------------------
+
+class CaseEditor extends Component {
+  onupdated() {
+    let casefile = this.state;
+    this.find("#caseno").update(casefile.get(n_caseno).toString());
+
+    let code = [];
+    code.push(casefile.text(true));
+    for (let topic of casefile.get(n_topics)) {
+      code.push(topic.text(true));
+    }
+    this.find("pre").innerHTML = code.join("\n");
+  }
+}
+
+Component.register(CaseEditor);
 
 //-----------------------------------------------------------------------------
 // New case
@@ -346,7 +250,7 @@ class CaseSearchBox extends Component {
     let dialog = new NewCaseDialog({topic, name});
     dialog.show().then(result => {
       if (result) {
-        this.match("#app").add_case(result.name, result.description, topic);
+        app.add_case(result.name, result.description, topic);
       }
     });
   }
@@ -422,11 +326,11 @@ class CaseList extends MdCard {
       let message = `Delete case #${caseid}?`;
       StdDialog.confirm("Delete case", message, "Delete").then(result => {
         if (result) {
-          this.match("#app").delete_case(caseid);
+          app.delete_case(caseid);
         }
       });
     } else {
-      StdDialog.alert("Open case", `Open case #${caseid}`);
+      app.open_case(caseid);
     }
   }
 
@@ -519,18 +423,39 @@ Component.register(CaseList);
 //-----------------------------------------------------------------------------
 
 document.body.innerHTML = `
-<case-app id="app">
-  <md-column-layout class="desktop">
-    <md-toolbar>
-      <md-toolbar-logo></md-toolbar-logo>
-      <div>Cases</div>
-      <case-search-box id="search"></kb-search-box>
-    </md-toolbar>
+<case-app id="app" selected="case-manager">
+  <case-manager id="manager">
+    <md-column-layout>
+      <md-toolbar>
+        <md-toolbar-logo></md-toolbar-logo>
+        <div>Cases</div>
+        <case-search-box id="search"></kb-search-box>
+      </md-toolbar>
 
-    <md-content>
-      <case-list id="cases"></case-list>
-    </md-content>
-  </md-column-layout>
-</kb-app>
+      <md-content>
+        <case-list></case-list>
+      </md-content>
+    </md-column-layout>
+  </case-manager>
+  <case-editor id="editor">
+    <md-column-layout>
+      <md-toolbar>
+        <md-toolbar-logo></md-toolbar-logo>
+        <div>Case #<md-text id="caseno"></md-text></div>
+        <case-search-box id="search"></kb-search-box>
+      </md-toolbar>
+
+      <md-content>
+        <md-card>
+          <pre id="code"></pre>
+        </md-card>
+      </md-content>
+    </md-column-layout>
+  </case-editor>
+</case-app>
 `;
+
+var app = document.getElementById("app");
+var manager = document.getElementById("manager");
+var editor = document.getElementById("editor");
 

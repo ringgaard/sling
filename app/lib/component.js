@@ -181,6 +181,7 @@ export class OneOf extends HTMLElement {
   connectedCallback() {
     this.innerHTML = "";
     if (this.active) this.appendChild(this.active);
+    if (this.onconnected) this.onconnected();
   }
 
   update(state, substate) {
@@ -194,6 +195,8 @@ export class OneOf extends HTMLElement {
         this.appendChild(this.active);
         if (substate && this.active.update) this.active.update(substate);
       }
+
+      if (this.onupdated) this.onupdated();
     }
   }
 

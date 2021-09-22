@@ -286,9 +286,11 @@ Component.register(MdDialogBottom);
 
 export class StdDialog extends MdDialog {
   onconnected() {
+    this.action = {};
     if (this.state && this.state.buttons) {
       for (let button of Object.keys(this.state.buttons)) {
         let id = button.replace(/ /g, "-").toLowerCase();
+        this.action[id] = this.state.buttons[button];
         this.bind("#" + id, "click", e => this.onclick(e));
       }
     }
@@ -296,7 +298,7 @@ export class StdDialog extends MdDialog {
 
   onclick(e) {
     if (e.target.id != "cancel" && e.target.id != "submit") {
-      this.close(this.state.buttons[e.target.id]);
+      this.close(this.action[e.target.id]);
     }
   }
 
@@ -342,12 +344,12 @@ export class StdDialog extends MdDialog {
   }
 
   static ask(title, message, yes = "Yes", no = "No") {
-    let buttons = {no: false, yes: true};
+    let buttons = {[no]: false, [yes]: true};
     return StdDialog.choose(title, message, buttons);
   }
 
   static confirm(title, message, ok = "OK", cancel = "Cancel") {
-    let buttons = {cancel: false, ok: true};
+    let buttons = {[cancel]: false, [ok]: true};
     return StdDialog.choose(title, message, buttons);
   }
 
