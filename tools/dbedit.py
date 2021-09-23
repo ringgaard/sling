@@ -125,6 +125,7 @@ if len(newcontent) == 0:
 
 if not flags.arg.raw:
   frame = store.parse(newcontent)
+  store.coalesce()
   newcontent = frame.data(binary=True)
 
 # Update database.

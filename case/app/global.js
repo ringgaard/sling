@@ -14,7 +14,9 @@ export function read_settings() {
   if (item) {
     settings = JSON.parse(item);
   } else {
-    settings = {};
+    settings = {
+      kbservice: "https://ringgaard.com",
+    };
   }
 }
 

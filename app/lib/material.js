@@ -618,6 +618,9 @@ export class MdIconButton extends Component {
         cursor: pointer;
         color: inherit;
         font-size: inherit;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
 
       $ button:hover:enabled {

@@ -61,7 +61,7 @@ app.page("/redreport",
         <md-toolbar-logo></md-toolbar-logo>
         <md-text id="title">Reddit photo report</md-text>
         <md-spacer></md-spacer>
-        <md-icon-button id="imgsearch" icon="image_search">
+        <md-icon-button id="imgsearch" icon="image_search"></<md-icon-button>
       </md-toolbar>
 
       <md-content>

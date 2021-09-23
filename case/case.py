@@ -63,7 +63,7 @@ def main_page(request):
 <meta charset="utf-8">
 <meta name=viewport content="width=device-width, initial-scale=1">
 <link rel="icon" href="/common/image/appicon.ico" type="image/x-icon" />
-<script type="module" src="/c/app/case.js"></script>
+<script type="module" src="/c/app/main.js"></script>
 </head>
 <body style="display: none;">
 </body>
