@@ -79,6 +79,7 @@ export class Store {
 
   // Create frame and add it to the store.
   frame(slots) {
+    if (typeof slots === 'string') slots = [this.id, slots];
     let f = new Frame(this, slots);
     this.add(f);
     return f;
@@ -145,16 +146,19 @@ export class Frame {
 
   // Add slot to frame.
   add(name, value) {
+    if (!this.slots) this.slots = new Array();
     this.slots.push(name);
     this.slots.push(value);
   }
 
   // Set (or add) slot value.
   set(name, value) {
-    for (let n = 0; n < this.slots.length; n += 2) {
-      if (this.slots[n] === name) {
-        this.slots[n + 1] = value;
-        return;
+    if (this.slots) {
+      for (let n = 0; n < this.slots.length; n += 2) {
+        if (this.slots[n] === name) {
+          this.slots[n + 1] = value;
+          return;
+        }
       }
     }
     add(name, value);
@@ -405,7 +409,6 @@ export class Decoder {
 
     // Assign slots to frame.
     frame.slots = slots;
-    frame.state = FULL;
 
     return frame;
   }

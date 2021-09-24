@@ -282,9 +282,9 @@ for key, value in redditdb.items(chkpt.checkpoint):
       if itemid is None:
         period = title.find(". ")
         if period != -1:
-          prefix = title[:period]
-          itemid = lookup_name(prefix)
-          query = prefix
+          name = title[:period]
+          itemid = lookup_name(name)
+          query = name
 
       # Try to match name prefix.
       if itemid is None:
@@ -292,6 +292,7 @@ for key, value in redditdb.items(chkpt.checkpoint):
         if prefix != None:
           itemid = lookup_name(prefix)
           query = prefix
+
     else:
       continue
 

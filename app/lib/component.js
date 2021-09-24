@@ -58,12 +58,12 @@ export class Component extends HTMLElement {
     this.onconnect && this.onconnect();
     if (this.visible) {
       if (this.visible()) {
-        this.generate();
+        this.generate(true);
       } else {
         this.style.display = "none";
       }
     } else {
-      this.generate();
+      this.generate(true);
     }
     this.onconnected && this.onconnected();
   }
@@ -76,35 +76,41 @@ export class Component extends HTMLElement {
     if (this.visible) {
       if (this.visible()) {
         this.style.display = "";
-        this.generate();
+        this.generate(false);
       } else {
         this.style.display = "none";
       }
     } else {
-      this.generate();
+      this.generate(false);
     }
     this.onupdated && this.onupdated();
   }
 
   // Generate component content.
-  generate() {
-    if (this.render) {
-      let content = this.render();
-      if (content instanceof Array) {
-        while (this.firstChild) this.removeChild(this.lastChild);
-        for (let n of content) {
-          if (n instanceof Node) {
-            this.appendChild(n);
-          } else {
-            this.insertAdjacentHTML("beforeend", n);
-          }
+  generate(pre) {
+    if (pre && this.prerender) {
+      this.mount(this.prerender());
+    } else if (this.render) {
+      this.mount(this.render());
+    }
+  }
+
+  // Insert content into element.
+  mount(content) {
+    if (content instanceof Array) {
+      while (this.firstChild) this.removeChild(this.lastChild);
+      for (let n of content) {
+        if (n instanceof Node) {
+          this.appendChild(n);
+        } else {
+          this.insertAdjacentHTML("beforeend", n);
         }
-      } else if (content instanceof Node) {
-        while (this.firstChild) this.removeChild(this.lastChild);
-        this.appendChild(content);
-      } else if (content != null) {
-        this.innerHTML = content;
       }
+    } else if (content instanceof Node) {
+      while (this.firstChild) this.removeChild(this.lastChild);
+      this.appendChild(content);
+    } else if (content != null) {
+      this.innerHTML = content;
     }
   }
 

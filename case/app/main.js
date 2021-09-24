@@ -22,8 +22,10 @@ const n_modified = store.lookup("modified");
 const n_topics = store.lookup("topics");
 const n_folders = store.lookup("folders");
 const n_next = store.lookup("next");
+const n_case_file = store.lookup("Q108673968");
 const n_main_subject = store.lookup("P921");
-const n_pcase = store.lookup("PCASE");
+const n_instance_of = store.lookup("P31");
+const n_sling_case_no = store.lookup("PCASE");
 
 //-----------------------------------------------------------------------------
 // Case App
@@ -41,29 +43,42 @@ class CaseApp extends OneOf {
     });
   }
 
-  add_case(name, description, topic) {
+  add_case(name, description, topicid) {
     fetch("/newcase")
     .then(response => store.parse(response))
     .then(casefile => {
       let caseno = casefile.get(n_caseno);
+      let next = 1;
+      let topics = new Array();
+      let main_topics = new Array();
 
-      // Create main topic.
-      let main = store.frame([
-        n_id, `t/${caseno}/1`,
-        n_pcase, `${caseno}`,
-      ]);
+      // Create main topic for case file.
+      let main = store.frame(`t/${caseno}/${next++}`);
+      topics.push(main);
+      main_topics.push(main);
+      main.add(n_instance_of, n_case_file);
       if (name) main.add(n_name, name);
       if (description) main.add(n_description, description);
-      if (topic) main.add(n_main_subject, store.lookup(topic));
+      main.add(n_sling_case_no, caseno.toString());
+
+      // Add initial topic.
+      if (topicid) {
+        let topic = store.frame(`t/${caseno}/${next++}`);
+        topics.push(topic);
+        main_topics.push(topic);
+        topic.add(n_is, store.lookup(topicid));
+        if (name) topic.add(n_name, name);
+      }
 
       // Initialize case.
       let ts = new Date().toJSON();
       casefile.add(n_created, ts);
       casefile.add(n_modified, ts);
       casefile.add(n_main, main);
-      casefile.add(n_topics, [main]);
-      casefile.add(n_folders, store.frame(["Main", [main]]));
-      casefile.add(n_next, 2);
+      casefile.add(n_topics, topics);
+      casefile.add(n_folders, store.frame(["Main", main_topics]));
+      casefile.add(n_next, next);
+
       console.log("main", main.text(true));
       console.log("add case", casefile.text(true));
 
@@ -87,7 +102,6 @@ class CaseApp extends OneOf {
 
   open_case(caseid) {
     casedb.read(caseid).then(casefile => {
-      console.log("casefile", casefile.text(true));
       this.update("case-editor", casefile);
     });
   }
@@ -110,36 +124,8 @@ Component.register(CaseApp);
 
 document.body.innerHTML = `
 <case-app id="app" selected="case-manager">
-  <case-manager id="manager">
-    <md-column-layout>
-      <md-toolbar>
-        <md-icon-button icon="menu"></md-icon-button>
-        <md-toolbar-logo></md-toolbar-logo>
-        <div>Cases</div>
-        <case-search-box id="search"></kb-search-box>
-      </md-toolbar>
-
-      <md-content>
-        <case-list></case-list>
-      </md-content>
-    </md-column-layout>
-  </case-manager>
-  <case-editor id="editor">
-    <md-column-layout>
-      <md-toolbar>
-        <md-icon-button id="back" icon="menu"></md-icon-button>
-        <md-toolbar-logo></md-toolbar-logo>
-        <div>Case #<md-text id="caseno"></md-text></div>
-        <case-search-box id="search"></kb-search-box>
-      </md-toolbar>
-
-      <md-content>
-        <md-card>
-          <pre id="code"></pre>
-        </md-card>
-      </md-content>
-    </md-column-layout>
-  </case-editor>
+  <case-manager id="manager"></case-manager>
+  <case-editor id="editor"></case-editor>
 </case-app>
 `;
 

@@ -6,6 +6,7 @@ import {store} from "./global.js";
 
 const n_caseno = store.lookup("caseno");
 const n_topics = store.lookup("topics");
+const n_folders = store.lookup("folders");
 
 //-----------------------------------------------------------------------------
 // Case Editor
@@ -34,6 +35,24 @@ export class CaseEditor extends Component {
     app.show_manager();
   }
 
+  prerender() {
+    return `
+      <md-column-layout>
+        <md-toolbar>
+          <md-icon-button id="back" icon="menu"></md-icon-button>
+          <md-toolbar-logo></md-toolbar-logo>
+          <div>Case #<md-text id="caseno"></md-text></div>
+          <case-search-box id="search"></kb-search-box>
+        </md-toolbar>
+
+        <md-content>
+          <md-card>
+            <pre id="code"></pre>
+          </md-card>
+        </md-content>
+      </md-column-layout>
+    `;
+  }
   static stylesheet() {
     return `
       $ md-toolbar {

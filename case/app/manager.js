@@ -17,8 +17,24 @@ function date2str(date) {
 
 class CaseManager extends Component {
   onupdate() {
-    console.log("update case list", this.state);
     this.find("case-list").update(this.state);
+  }
+
+  prerender() {
+    return `
+      <md-column-layout>
+        <md-toolbar>
+          <md-icon-button icon="menu"></md-icon-button>
+          <md-toolbar-logo></md-toolbar-logo>
+          <div>Cases</div>
+          <case-search-box id="search"></kb-search-box>
+        </md-toolbar>
+
+        <md-content>
+          <case-list></case-list>
+        </md-content>
+      </md-column-layout>
+    `;
   }
 
   static stylesheet() {
@@ -106,7 +122,6 @@ class CaseSearchBox extends Component {
       query = query.slice(0, -1);
     }
     params += `&q=${encodeURIComponent(query)}`;
-    console.log("url", `${settings.kbservice}/kb/query?${params}`);
 
     this.itemnames = new Map();
     fetch(`${settings.kbservice}/kb/query?${params}`)
