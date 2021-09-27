@@ -2,8 +2,11 @@
 // Licensed under the Apache License, Version 2
 
 import {Component} from "/common/lib/component.js";
+import {MdCard} from "/common/lib/material.js";
 import {store} from "./global.js";
 
+const n_id = store.id;
+const n_name = store.lookup("name");
 const n_caseno = store.lookup("caseno");
 const n_topics = store.lookup("topics");
 const n_folders = store.lookup("folders");
@@ -21,14 +24,9 @@ export class CaseEditor extends Component {
   onupdated() {
     if (!this.state) return;
     let casefile = this.state;
+    this.folder = casefile.get(n_folders).value(0);
     this.find("#caseno").update(casefile.get(n_caseno).toString());
-
-    let code = [];
-    code.push(casefile.text(true));
-    for (let topic of casefile.get(n_topics)) {
-      code.push(topic.text(true));
-    }
-    this.find("pre").innerHTML = code.join("\n");
+    this.find("topic-list").update(this.folder);
   }
 
   onback() {
@@ -46,9 +44,7 @@ export class CaseEditor extends Component {
         </md-toolbar>
 
         <md-content>
-          <md-card>
-            <pre id="code"></pre>
-          </md-card>
+          <topic-list></topic-list>
         </md-content>
       </md-column-layout>
     `;
@@ -63,4 +59,58 @@ export class CaseEditor extends Component {
 }
 
 Component.register(CaseEditor);
+
+export class TopicList extends Component {
+  onconnected() {
+  }
+
+  render() {
+    let topics = this.state;
+    if (!topics) return;
+    let h = [];
+    for (let topic of topics) {
+      h.push(new TopicCard(topic));
+    }
+    return h;
+  }
+
+  static stylesheet() {
+    return `
+    `;
+  }
+}
+
+Component.register(TopicList);
+
+export class TopicCard extends MdCard {
+  render() {
+    let topic = this.state;
+    if (!topic) return;
+
+    return `
+      <div id="name">${topic.get(n_name)}</div>
+      <div id="id">${topic.get(n_id)}</div>
+      <pre>${Component.escape(topic.text(true))}</pre>
+    `;
+  }
+
+  static stylesheet() {
+    return MdCard.stylesheet() + `
+      $ #name {
+        display: block;
+        font-size: 28px;
+      }
+      $ #id {
+        display: block;
+        font-size: 13px;
+        color: #808080;
+        text-decoration: none;
+        width: fit-content;
+        outline: none;
+      }
+    `;
+  }
+}
+
+Component.register(TopicCard);
 

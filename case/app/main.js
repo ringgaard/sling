@@ -88,6 +88,9 @@ class CaseApp extends OneOf {
       // Update case list.
       this.caselist.push(rec);
       this.refresh();
+
+      // Show new case.
+      this.open_case(caseno)
     });
   }
 

@@ -226,15 +226,28 @@ Component.register(CaseSearchBox);
 class CaseList extends MdCard {
   onupdated() {
     this.bind("table", "click", e => this.onclick(e));
+    this.bind("table", "mousedown", e => this.ondown(e));
+  }
+
+  ondown(e) {
+    this.ofsx = e.offsetX;
+    this.ofsy = e.offsetY;
   }
 
   onclick(e) {
+    // Ignore if selecting text.
+    let dx = this.ofsx - e.offsetX;
+    let dy = this.ofsy - e.offsetY;
+    if (Math.abs(dx) + Math.abs(dy) > 10) return;
+
+    // Get case number for clicked row.
     let row = e.target.closest("tr");
     let button = e.target.closest("md-icon-button");
     let caseid = row ? parseInt(row.getAttribute("case")) : undefined;
     if (!caseid) return;
 
     if (button) {
+      // Perform action on case.
       let action = button.getAttribute("icon");
       let message = `Delete case #${caseid}?`;
       StdDialog.confirm("Delete case", message, "Delete").then(result => {
@@ -243,6 +256,7 @@ class CaseList extends MdCard {
         }
       });
     } else {
+      // Open case.
       app.open_case(caseid);
     }
   }

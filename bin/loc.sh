@@ -55,6 +55,10 @@ loc "python/task"
 loc "python/crawl"
 loc "python/media"
 loc "python/dataset"
+loc "python/org"
+
+loc "case"
+loc "case/app"
 
 loc "sling/pyapi"
 loc "sling/web"
