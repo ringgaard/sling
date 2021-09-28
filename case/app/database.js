@@ -75,7 +75,7 @@ class CaseDatabase {
     });
   }
 
-  write(casefile) {
+  write(casefile, create) {
     // Build case directory record.
     let caseno = casefile.get(n_caseno);
     let main = casefile.get(n_main);
@@ -90,9 +90,9 @@ class CaseDatabase {
     // Write record to database.
     let tx = this.db.transaction(["casedir", "casedata"], "readwrite");
     let casedir = tx.objectStore("casedir");
-    let dirrequest = casedir.add(rec);
+    let dirrequest = create ? casedir.add(rec) : casedir.put(rec);;
     dirrequest.onsuccess = e => {
-      console.log("Added record", e.target.result, "to case directory");
+      console.log("Wrote record", e.target.result, "to case directory");
     }
 
     // Encode case data.
@@ -101,12 +101,13 @@ class CaseDatabase {
       encoder.encode(topic);
     }
     encoder.encode(casefile);
+    let data = {id: caseno, data: encoder.output()};
 
     // Write case data.
     let casedata = tx.objectStore("casedata");
-    let datarequest = casedata.add({id: caseno, data: encoder.output()});
+    let datarequest = create ? casedata.add(data) : casedata.put(data);
     datarequest.onsuccess = e => {
-      console.log("Added record", e.target.result, "to case store");
+      console.log("Wrote record", e.target.result, "to case store");
     }
     datarequest.onerror = e => {
       console.log("Error writing to case store", e.target.result);

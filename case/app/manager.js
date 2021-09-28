@@ -27,7 +27,7 @@ class CaseManager extends Component {
           <md-icon-button icon="menu"></md-icon-button>
           <md-toolbar-logo></md-toolbar-logo>
           <div>Cases</div>
-          <case-search-box id="search"></kb-search-box>
+          <case-search-box id="search"></case-search-box>
         </md-toolbar>
 
         <md-content>

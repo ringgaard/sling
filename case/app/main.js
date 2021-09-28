@@ -83,7 +83,7 @@ class CaseApp extends OneOf {
       console.log("add case", casefile.text(true));
 
       // Write case to database.
-      let rec = casedb.write(casefile);
+      let rec = casedb.write(casefile, true);
 
       // Update case list.
       this.caselist.push(rec);
@@ -99,7 +99,7 @@ class CaseApp extends OneOf {
     casedb.remove(caseid);
 
     // Update case list.
-    this.caselist = this.caselist.filter(rec => rec.id != caseid);
+    this.caselist = this.caselist.filter(r => r.id != caseid);
     this.refresh();
   }
 
@@ -107,6 +107,20 @@ class CaseApp extends OneOf {
     casedb.read(caseid).then(casefile => {
       this.update("case-editor", casefile);
     });
+  }
+
+  save_case(casefile) {
+    // Update modification time.
+    let ts = new Date().toJSON();
+    casefile.set(n_modified, ts);
+
+    // Write case to database.
+    let rec = casedb.write(casefile, false);
+
+    // Update case list.
+    this.caselist = this.caselist.filter(r => r.id != rec.id);
+    this.caselist.push(rec);
+    this.refresh();
   }
 
   show_manager() {

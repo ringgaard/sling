@@ -595,14 +595,14 @@ export class MdIconButton extends Component {
   disable() {
     if (!this.props.disabled) {
       this.props.disabled = true;
-      this.update();
+      this.update(this.state);
     }
   }
 
   enable() {
     if (this.props.disabled) {
       this.props.disabled = false;
-      this.update();
+      this.update(this.state);
     }
   }
 
