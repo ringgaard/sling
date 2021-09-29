@@ -358,7 +358,6 @@ export class StdDialog extends MdDialog {
       $ {
         font-size: 16px;
         min-width: 200px;
-        max-width: 80%;
       }
       $ md-icon {
          font-size: 32px;
@@ -714,6 +713,8 @@ Component.register(MdImage);
 // Icon
 //-----------------------------------------------------------------------------
 
+var custom_icons = {};
+
 export class MdIcon extends Component {
   constructor() {
     super();
@@ -725,7 +726,12 @@ export class MdIcon extends Component {
   }
 
   render() {
-    return this.props.icon;
+    let icon = custom_icons[this.props.icon]
+    return icon ? icon : this.props.icon;
+  }
+
+  static custom(name, code) {
+    custom_icons[name] = code;
   }
 
   static stylesheet() {
@@ -1031,8 +1037,13 @@ export class MdSearch extends Component {
       } else if (e.keyCode == 38) {
         list.prev();
       } else if (e.keyCode == 13) {
-        list.select(e.ctrlKey);
         e.preventDefault();
+        if (this.props.autoselect) {
+          list.select(e.ctrlKey);
+        } else {
+          this.find("md-search-list").expand(false);
+          this.dispatchEvent(new CustomEvent("enter", {detail: this.query()}));
+        }
       }
     }
   }

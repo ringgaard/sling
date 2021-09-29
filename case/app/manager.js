@@ -110,6 +110,7 @@ class CaseSearchBox extends Component {
   onconnected() {
     this.bind("md-search", "query", e => this.onquery(e));
     this.bind("md-search", "item", e => this.onitem(e));
+    this.bind("md-search", "enter", e => this.onenter(e));
   }
 
   onquery(e) {
@@ -160,10 +161,21 @@ class CaseSearchBox extends Component {
   onitem(e) {
     let topic = e.detail;
     let name = this.itemnames[topic];
-    let dialog = new NewCaseDialog({topic, name});
+    let dialog = new NewCaseDialog({name});
     dialog.show().then(result => {
       if (result) {
         app.add_case(result.name, result.description, topic);
+      }
+    });
+  }
+
+  onenter(e) {
+    let name = e.detail;
+    console.log("onenter", name);
+    let dialog = new NewCaseDialog({name});
+    dialog.show().then(result => {
+      if (result) {
+        app.add_case(result.name, result.description, null);
       }
     });
   }
@@ -249,12 +261,14 @@ class CaseList extends MdCard {
     if (button) {
       // Perform action on case.
       let action = button.getAttribute("icon");
-      let message = `Delete case #${caseid}?`;
-      StdDialog.confirm("Delete case", message, "Delete").then(result => {
-        if (result) {
-          app.delete_case(caseid);
-        }
-      });
+      if (action == "delete") {
+        let message = `Delete case #${caseid}?`;
+        StdDialog.confirm("Delete case", message, "Delete").then(result => {
+          if (result) {
+            app.delete_case(caseid);
+          }
+        });
+      }
     } else {
       // Open case.
       app.open_case(caseid);
@@ -338,6 +352,7 @@ class CaseList extends MdCard {
 
       $ td:nth-child(3) { /* description */
         width: 100%;
+        white-space: normal;
       }
     `;
   }

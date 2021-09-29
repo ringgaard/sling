@@ -230,6 +230,7 @@ class KbSearchBox extends Component {
         <md-search
           placeholder="Search knowledge base..."
           min-length=2
+          autoselect=1
           autofocus>
         </md-search>
       </form>
