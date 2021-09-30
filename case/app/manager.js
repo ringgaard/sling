@@ -16,31 +16,53 @@ function date2str(date) {
 //-----------------------------------------------------------------------------
 
 class CaseManager extends Component {
+  onconnected() {
+    this.bind("#settings", "click", e => this.onsettings(e));
+  }
+
   onupdate() {
+    if (!this.state) return;
     this.find("case-list").update(this.state);
+  }
+
+  onsettings(e) {
+    this.find("md-drawer").toogle();
   }
 
   prerender() {
     return `
       <md-column-layout>
         <md-toolbar>
-          <md-icon-button icon="menu"></md-icon-button>
           <md-toolbar-logo></md-toolbar-logo>
           <div>Cases</div>
           <case-search-box id="search"></case-search-box>
+          <md-spacer></md-spacer>
+          <md-icon-button id="settings" icon="settings"></md-icon-button>
         </md-toolbar>
 
-        <md-content>
-          <case-list></case-list>
-        </md-content>
+        <md-row-layout>
+          <md-content>
+            <case-list></case-list>
+          </md-content>
+          <md-drawer>
+            <div id="settings-title">Settings</div>
+          </md-drawer>
+        </md-row-layout>
+      </md-column-layout>
+
       </md-column-layout>
     `;
   }
 
   static stylesheet() {
     return `
-      $ md-toolbar {
-        padding-left: 2px;
+      $ md-row-layout {
+        overflow: auto;
+        height: 100%;
+      }
+      $ #settings-title {
+        font-size: 20px;
+        padding: 10px;
       }
     `;
   }
@@ -171,7 +193,6 @@ class CaseSearchBox extends Component {
 
   onenter(e) {
     let name = e.detail;
-    console.log("onenter", name);
     let dialog = new NewCaseDialog({name});
     dialog.show().then(result => {
       if (result) {

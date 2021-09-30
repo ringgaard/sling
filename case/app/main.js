@@ -33,14 +33,30 @@ const n_sling_case_no = store.lookup("PCASE");
 
 class CaseApp extends OneOf {
   onconnected() {
+    // Handle navigation events.
+    window.onpopstate = e => this.onpopstate(e);
+
     // Open local case database.
     casedb.open().then(() => {
-      // Read case directory.
-      casedb.readdir().then(caselist => {
-        this.caselist = caselist;
-        this.refresh();
-      });
+      let m = window.location.pathname.match(/\/c\/(\d+)/);
+      if (m) {
+        // Open case specified in url.
+        let caseid = parseInt(m[1]);
+        this.open_case(caseid);
+      } else {
+        // Show case list.
+        this.show_manager();
+      }
     });
+  }
+
+  onpopstate(e) {
+    let caseid = e.state;
+    if (caseid && caseid != "*") {
+      this.open_case(caseid);
+    } else {
+      this.find("#editor").close();
+    }
   }
 
   add_case(name, description, topicid) {
@@ -79,15 +95,12 @@ class CaseApp extends OneOf {
       casefile.add(n_folders, store.frame(["Main", main_topics]));
       casefile.add(n_next, next);
 
-      console.log("main", main.text(true));
-      console.log("add case", casefile.text(true));
-
       // Write case to database.
       let rec = casedb.write(casefile, true);
 
       // Update case list.
       this.caselist.push(rec);
-      this.refresh();
+      this.refresh_manager();
 
       // Show new case.
       this.open_case(caseno)
@@ -100,11 +113,13 @@ class CaseApp extends OneOf {
 
     // Update case list.
     this.caselist = this.caselist.filter(r => r.id != caseid);
-    this.refresh();
+    this.refresh_manager();
   }
 
   open_case(caseid) {
     casedb.read(caseid).then(casefile => {
+      let caseid = casefile.get(n_caseno);
+      history.pushState(caseid, "", "/c/" + caseid);
       this.update("case-editor", casefile);
     });
   }
@@ -120,16 +135,24 @@ class CaseApp extends OneOf {
     // Update case list.
     this.caselist = this.caselist.filter(r => r.id != rec.id);
     this.caselist.push(rec);
-    this.refresh();
   }
 
   show_manager() {
-    this.update("case-manager", this.caselist);
+    history.pushState("*", "", "/c/");
+    if (this.caselist) {
+      this.refresh_manager();
+    } else {
+      // Read case directory.
+      casedb.readdir().then(caselist => {
+        this.caselist = caselist;
+        this.refresh_manager();
+      });
+    }
   }
 
-  refresh() {
+  refresh_manager() {
     this.caselist.sort((a, b) => a.modified > b.modified ? -1 : 1);
-    manager.update(this.caselist);
+    this.update("#manager", this.caselist);
   }
 }
 
@@ -145,8 +168,4 @@ document.body.innerHTML = `
   <case-editor id="editor"></case-editor>
 </case-app>
 `;
-
-var app = document.getElementById("app");
-var manager = document.getElementById("manager");
-var editor = document.getElementById("editor");
 

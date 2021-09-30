@@ -399,6 +399,32 @@ export class MdToolbar extends Component {
 Component.register(MdToolbar);
 
 //-----------------------------------------------------------------------------
+// Menu drawer
+//-----------------------------------------------------------------------------
+
+export class MdDrawer extends Component {
+  visible() {
+    return this.state;
+  }
+
+  toogle() {
+    this.update(!this.state);
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        max-width: 30%;
+        height: 100%;
+        display: block;
+      }
+    `;
+  }
+}
+
+Component.register(MdDrawer);
+
+//-----------------------------------------------------------------------------
 // Tabs
 //-----------------------------------------------------------------------------
 

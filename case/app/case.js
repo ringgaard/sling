@@ -22,7 +22,8 @@ const n_sling_case_no = store.lookup("PCASE");
 export class CaseEditor extends Component {
   onconnected() {
     this.app = this.match("#app");
-    this.bind("#home", "click", e => this.onhome(e));
+    this.bind("#menu", "click", e => this.onmenu(e));
+    this.bind("#home", "click", e => this.close());
     this.bind("#save", "click", e => this.onsave(e));
     document.addEventListener("keydown", e => this.onkeydown(e));
     window.addEventListener("beforeunload", e => this.onbeforeunload(e));
@@ -74,6 +75,10 @@ export class CaseEditor extends Component {
     this.find("topic-list").update(this.folder);
   }
 
+  onmenu(e) {
+    this.find("md-drawer").toogle();
+  }
+
   onsave(e) {
     if (this.dirty) {
       this.match("#app").save_case(this.casefile);
@@ -81,13 +86,20 @@ export class CaseEditor extends Component {
     }
   }
 
-  onhome() {
+  close() {
     if (this.dirty) {
-      let msg = `
-        Changes to case #${this.caseno()} has not been saved.
-        Go to home and loose changes?`;
-      StdDialog.confirm("Discard changes?", msg, "Discard").then(result => {
-        if (result) {
+      let msg = `Changes to case #${this.caseno()} has not been saved.`;
+      let buttons = {
+        "Close without saving": "close",
+        "Cancel": "cancel",
+        "Save": "save",
+      }
+      StdDialog.choose("Discard changes?", msg, buttons).then(result => {
+        if (result == "save") {
+          this.match("#app").save_case(this.casefile);
+          this.mark_clean();
+          app.show_manager();
+        } else if (result == "close") {
           this.mark_clean();
           app.show_manager();
         }
@@ -163,7 +175,7 @@ export class CaseEditor extends Component {
     return `
       <md-column-layout>
         <md-toolbar>
-          <md-icon-button id="home" icon="menu"></md-icon-button>
+          <md-icon-button id="menu" icon="menu"></md-icon-button>
           <md-toolbar-logo></md-toolbar-logo>
           <div id="title">Case #<md-text id="caseno"></md-text></div>
           <topic-search-box id="search"></topic-search-box>
@@ -171,9 +183,17 @@ export class CaseEditor extends Component {
           <md-icon-button id="save" icon="save"></md-icon-button>
         </md-toolbar>
 
-        <md-content>
-          <topic-list></topic-list>
-        </md-content>
+        <md-row-layout>
+          <md-drawer>
+            <div id="home">
+              <md-icon-button icon="home"></md-icon-button>
+              SLING Cases Home
+            </div>
+          </md-drawer>
+          <md-content>
+            <topic-list></topic-list>
+          </md-content>
+        </md-row-layout>
       </md-column-layout>
     `;
   }
@@ -184,6 +204,18 @@ export class CaseEditor extends Component {
       }
       $ #title {
         white-space: nowrap;
+      }
+      $ md-row-layout {
+        overflow: auto;
+        height: 100%;
+      }
+      $ #home {
+        display: flex;
+        align-items: center;
+        padding-top: 5px;
+        padding-right: 16px;
+        white-space: nowrap;
+        cursor: pointer;
       }
     `;
   }

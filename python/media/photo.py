@@ -526,6 +526,10 @@ class Profile:
     if m != None:
       imagename = m.group(1)
       url = "https://i.redd.it/" + imagename
+    m = re.match("https://preview.redd.it/(\w+.jpg)\?", url)
+    if m != None:
+      imagename = m.group(1)
+      url = "https://i.redd.it/" + imagename
 
     # DR image scaler.
     m = re.match("https://asset.dr.dk/ImageScaler/\?(.+)", url)

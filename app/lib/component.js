@@ -185,6 +185,7 @@ export class OneOf extends HTMLElement {
   }
 
   connectedCallback() {
+    if (this.onconnect) this.onconnect();
     this.innerHTML = "";
     if (this.active) this.appendChild(this.active);
     if (this.onconnected) this.onconnected();
@@ -192,16 +193,16 @@ export class OneOf extends HTMLElement {
 
   update(state, substate) {
     let selected = this.find(state);
-    if (selected != this.active) {
-      if (this.active && this.active.update) this.active.update(null);
+
+    if (this.active) {
+      if (this.active.update) this.active.update(null);
       this.innerHTML = "";
+    }
 
-      this.active = selected;
-      if (this.active) {
-        this.appendChild(this.active);
-        if (substate && this.active.update) this.active.update(substate);
-      }
-
+    this.active = selected;
+    if (this.active) {
+      this.appendChild(this.active);
+      if (this.active.update) this.active.update(substate);
       if (this.onupdated) this.onupdated();
     }
   }
