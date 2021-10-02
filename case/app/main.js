@@ -119,8 +119,11 @@ class CaseApp extends OneOf {
   open_case(caseid) {
     casedb.read(caseid).then(casefile => {
       let caseid = casefile.get(n_caseno);
-      history.pushState(caseid, "", "/c/" + caseid);
+      let main = casefile.get(n_main);
+      let name = main.get(n_name);
+      window.document.title = `Case #${caseid}: ${name}`;
       this.update("case-editor", casefile);
+      history.pushState(caseid, "", "/c/" + caseid);
     });
   }
 
@@ -133,12 +136,16 @@ class CaseApp extends OneOf {
     let rec = casedb.write(casefile, false);
 
     // Update case list.
-    this.caselist = this.caselist.filter(r => r.id != rec.id);
-    this.caselist.push(rec);
+    if (this.caselist) {
+      this.caselist = this.caselist.filter(r => r.id != rec.id);
+      this.caselist.push(rec);
+    }
   }
 
   show_manager() {
     history.pushState("*", "", "/c/");
+    window.document.title = `SLING Cases`;
+
     if (this.caselist) {
       this.refresh_manager();
     } else {

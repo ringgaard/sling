@@ -417,6 +417,7 @@ export class MdDrawer extends Component {
         max-width: 30%;
         height: 100%;
         display: block;
+        overflow: auto;
       }
     `;
   }
@@ -745,6 +746,10 @@ export class MdIcon extends Component {
   constructor() {
     super();
     this.state = true;
+  }
+
+  onconnected() {
+    if (this.props.outlined != undefined) this.className = "outlined";
   }
 
   visible() {

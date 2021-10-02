@@ -2,7 +2,7 @@
 // Licensed under the Apache License, Version 2
 
 import {Component} from "/common/lib/component.js";
-import {MdCard, MdIcon, StdDialog} from "/common/lib/material.js";
+import {MdCard, MdIcon, MdDialog, StdDialog} from "/common/lib/material.js";
 import {store, settings} from "./global.js";
 
 const n_id = store.id;
@@ -19,12 +19,14 @@ const n_sling_case_no = store.lookup("PCASE");
 // Case Editor
 //-----------------------------------------------------------------------------
 
-export class CaseEditor extends Component {
+class CaseEditor extends Component {
   onconnected() {
     this.app = this.match("#app");
     this.bind("#menu", "click", e => this.onmenu(e));
     this.bind("#home", "click", e => this.close());
     this.bind("#save", "click", e => this.onsave(e));
+    this.bind("#newfolder", "click", e => this.onnewfolder(e));
+
     document.addEventListener("keydown", e => this.onkeydown(e));
     window.addEventListener("beforeunload", e => this.onbeforeunload(e));
   }
@@ -44,8 +46,48 @@ export class CaseEditor extends Component {
     }
   }
 
+  onnewfolder(e) {
+    let dialog = new NewFolderDialog();
+    dialog.show().then(result => {
+      if (result) {
+        this.add_folder(result);
+      }
+    });
+  }
+
+  onmenu(e) {
+    this.find("md-drawer").toogle();
+  }
+
+  onsave(e) {
+    if (this.dirty) {
+      this.match("#app").save_case(this.casefile);
+      this.mark_clean();
+    }
+  }
+
+  onupdated() {
+    if (!this.state) return;
+    this.mark_clean();
+
+    this.casefile = this.state;
+    this.main = this.casefile.get(n_main);
+    this.topics = this.casefile.get(n_topics);
+    this.folders = this.casefile.get(n_folders);
+    this.folder = this.casefile.get(n_folders).value(0);
+
+    this.find("#caseno").update(this.caseno().toString());
+    this.find("folder-list").update(this.folders);
+    this.find("topic-list").update(this.folder);
+    this.find("md-drawer").update(true);
+  }
+
   caseno() {
     return this.casefile.get(n_caseno);
+  }
+
+  name() {
+    return this.main.get(n_name);
   }
 
   next_topic() {
@@ -62,28 +104,6 @@ export class CaseEditor extends Component {
   mark_dirty() {
     this.dirty = true;
     this.find("#save").enable();
-  }
-
-  onupdated() {
-    if (!this.state) return;
-    this.mark_clean();
-
-    this.casefile = this.state;
-    this.topics = this.casefile.get(n_topics);
-    this.folder = this.casefile.get(n_folders).value(0);
-    this.find("#caseno").update(this.caseno().toString());
-    this.find("topic-list").update(this.folder);
-  }
-
-  onmenu(e) {
-    this.find("md-drawer").toogle();
-  }
-
-  onsave(e) {
-    if (this.dirty) {
-      this.match("#app").save_case(this.casefile);
-      this.mark_clean();
-    }
   }
 
   close() {
@@ -108,6 +128,21 @@ export class CaseEditor extends Component {
     } else {
       app.show_manager();
     }
+  }
+
+  add_folder(name) {
+    this.folder = new Array();
+    this.folders.add(name, this.folder);
+    this.find("folder-list").update(this.folders);
+    this.find("topic-list").update(this.folder);
+    this.mark_dirty();
+  }
+
+  show_folder(folder) {
+    this.folder = folder;
+    console.log("show folder", this.folder);
+    this.find("folder-list").update(this.folders);
+    this.find("topic-list").update(this.folder);
   }
 
   add_topic(itemid, name) {
@@ -189,6 +224,13 @@ export class CaseEditor extends Component {
               <md-icon-button icon="home"></md-icon-button>
               SLING Cases Home
             </div>
+            <div id="folders-top">
+              Folders
+              <md-spacer></md-spacer>
+              <md-icon-button id="newfolder" icon="create_new_folder">
+              </md-icon-button>
+            </div>
+            <folder-list></folder-list>
           </md-drawer>
           <md-content>
             <topic-list></topic-list>
@@ -209,13 +251,38 @@ export class CaseEditor extends Component {
         overflow: auto;
         height: 100%;
       }
+      $ md-drawer md-icon {
+        color: #808080;
+      }
+      $ md-drawer md-icon-button {
+        color: #808080;
+      }
+      $ topic-list md-icon {
+        color: #808080;
+      }
+      $ topic-list md-icon-button {
+        color: #808080;
+        fill: #808080;
+      }
+      $ md-drawer {
+        padding: 3px;
+        box-sizing: border-box;
+      }
       $ #home {
         display: flex;
         align-items: center;
-        padding-top: 5px;
         padding-right: 16px;
+        font-weight: bold;
         white-space: nowrap;
         cursor: pointer;
+      }
+      $ #folders-top {
+        display: flex;
+        align-items: center;
+        font-size: 16px;
+        font-weight: bold;
+        margin-left: 6px;
+        border-bottom: 1px solid #808080;
       }
     `;
   }
@@ -337,7 +404,114 @@ class TopicSearchBox extends Component {
 
 Component.register(TopicSearchBox);
 
-export class TopicList extends Component {
+class FolderList extends Component {
+  render() {
+    let folders = this.state;
+    if (!folders) return;
+    let current = this.match("#editor").folder;
+    let h = [];
+    for (let [name, folder] of folders) {
+      h.push(new CaseFolder({name, folder, marked: folder == current}));
+    }
+    return h;
+  }
+}
+
+Component.register(FolderList);
+
+class CaseFolder extends Component {
+  onconnected() {
+    this.bind(null, "click", e => this.onclick(e));
+  }
+
+  onclick(e) {
+    this.match("#editor").show_folder(this.state.folder);
+  }
+
+  render() {
+    return `
+      <md-icon icon="folder"></md-icon>
+      <div ${this.state.marked ? 'class="current"' : ''}>
+        ${Component.escape(this.state.name)}
+      </div>
+      <md-spacer></md-spacer>
+      <md-icon-button icon="more_vert"></md-icon-button>
+    `;
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        display: flex;
+        align-items: center;
+        padding-left: 6px;
+        white-space: nowrap;
+        cursor: pointer;
+        height: 30px;
+        border-radius: 15px;
+        border: 0;
+      }
+      $ md-icon-button button {
+        height: 30px;
+        width: 30px;
+        border-radius: 15px;
+      }
+      $:hover {
+        background-color: #eeeeee;
+      }
+      $ div {
+        padding-left: 6px;
+      }
+      $ div.current {
+        font-weight: bold;
+        padding-left: 6px;
+      }
+    `;
+  }
+}
+
+Component.register(CaseFolder);
+
+class NewFolderDialog extends MdDialog {
+  submit() {
+    this.close(this.find("#name").value.trim());
+  }
+
+  render() {
+    let p = this.state;
+    return `
+      <md-dialog-top>Create new case folder</md-dialog-top>
+      <div id="content">
+        <md-text-field
+          id="name"
+          value="${Component.escape(this.state)}"
+          label="Folder name">
+        </md-text-field>
+      </div>
+      <md-dialog-bottom>
+        <button id="cancel">Cancel</button>
+        <button id="submit">Create</button>
+      </md-dialog-bottom>
+    `;
+  }
+
+  static stylesheet() {
+    return MdDialog.stylesheet() + `
+      $ #content {
+        display: flex;
+        flex-direction: column;
+        row-gap: 16px;
+      }
+      $ #name {
+        width: 300px;
+      }
+    `;
+  }
+}
+
+Component.register(NewFolderDialog);
+
+class TopicList extends Component {
   scroll_to(topic) {
     this.card(topic).scrollIntoView();
   }
@@ -368,7 +542,7 @@ export class TopicList extends Component {
 
 Component.register(TopicList);
 
-export class TopicCard extends MdCard {
+class TopicCard extends MdCard {
   onconnected() {
     this.bind("#delete", "click", e => this.ondelete(e));
     this.bind("#moveup", "click", e => this.onmoveup(e));
@@ -419,7 +593,7 @@ export class TopicCard extends MdCard {
     return MdCard.stylesheet() + `
       $ #name {
         display: block;
-        font-size: 28px;
+        font-size: 24px;
       }
       $ #id {
         display: block;
