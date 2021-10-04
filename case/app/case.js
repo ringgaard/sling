@@ -43,6 +43,8 @@ class CaseEditor extends Component {
     if (e.ctrlKey && e.key === 's') {
       e.preventDefault();
       this.onsave(e);
+    } else if (e.key === "Escape") {
+      this.find("#search").clear();
     }
   }
 
@@ -140,7 +142,6 @@ class CaseEditor extends Component {
 
   show_folder(folder) {
     this.folder = folder;
-    console.log("show folder", this.folder);
     this.find("folder-list").update(this.folders);
     this.find("topic-list").update(this.folder);
   }
@@ -283,6 +284,7 @@ class CaseEditor extends Component {
         font-weight: bold;
         margin-left: 6px;
         border-bottom: 1px solid #808080;
+        margin-bottom: 6px;
       }
     `;
   }
@@ -422,10 +424,30 @@ Component.register(FolderList);
 class CaseFolder extends Component {
   onconnected() {
     this.bind(null, "click", e => this.onclick(e));
+    this.bind("#rename", "select", e => this.onrename(e));
+    this.bind("#moveup", "select", e => this.onmoveup(e));
+    this.bind("#movedown", "select", e => this.onmovedown(e));
+    this.bind("#delete", "select", e => this.ondelete(e));
   }
 
   onclick(e) {
     this.match("#editor").show_folder(this.state.folder);
+  }
+
+  onrename(e) {
+    console.log("rename", this);
+  }
+
+  onmoveup(e) {
+    console.log("move up", this);
+  }
+
+  onmovedown(e) {
+    console.log("move down", this);
+  }
+
+  ondelete(e) {
+    console.log("delete", this);
   }
 
   render() {
@@ -435,7 +457,12 @@ class CaseFolder extends Component {
         ${Component.escape(this.state.name)}
       </div>
       <md-spacer></md-spacer>
-      <md-icon-button icon="more_vert"></md-icon-button>
+      <md-menu>
+        <md-menu-item id="rename">Rename</md-menu-item>
+        <md-menu-item id="moveup">Move up</md-menu-item>
+        <md-menu-item id="movedown">Move down</md-menu-item>
+        <md-menu-item id="delete">Delete</md-menu-item>
+      </md-menu>
     `;
   }
 
@@ -455,6 +482,15 @@ class CaseFolder extends Component {
         height: 30px;
         width: 30px;
         border-radius: 15px;
+      }
+      $:hover {
+        background-color: #eeeeee;
+      }
+      $ md-menu #open {
+        visibility: hidden;
+      }
+      $:hover md-menu #open {
+        visibility: visible;
       }
       $:hover {
         background-color: #eeeeee;

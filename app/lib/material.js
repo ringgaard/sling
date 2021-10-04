@@ -399,6 +399,108 @@ export class MdToolbar extends Component {
 Component.register(MdToolbar);
 
 //-----------------------------------------------------------------------------
+// Menu
+//-----------------------------------------------------------------------------
+
+var current_menu;
+
+window.onclick = e => {
+  // Close menu on click outside menu.
+  if (current_menu && event.target != current_menu) current_menu.close();
+}
+
+export class MdMenu extends Component {
+  onconnected() {
+    this.bind("#open", "click", e => this.onmenu(e));
+  }
+
+  open() {
+    let content = this.find(".menu-content");
+    content.style.display = "block";
+    content.focus();
+    current_menu = this;
+  }
+
+  close() {
+    let content = this.find(".menu-content");
+    content.style.display = "none";
+    current_menu = null;
+  }
+
+  onmenu(e) {
+    if (current_menu && current_menu != this) current_menu.close();
+    let content = this.find(".menu-content");
+    if (content.style.display == "block") {
+      this.close();
+    } else {
+      this.open();
+    }
+    e.stopPropagation();
+  }
+
+  render() {
+    let h = [];
+    h.push('<md-icon-button id="open" icon="more_vert"></md-icon-button>');
+    let content = document.createElement("div");
+    content.className = "menu-content";
+    for (let item of this.elements) {
+      content.appendChild(item);
+    }
+    h.push(content);
+
+    return h;
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        display: inline-block;
+        position: relative;
+      }
+
+      $ .menu-content {
+        display: none;
+        position: absolute;
+        padding: 8px 0px 8px 0px;
+        font-size: 15px;
+        background-color: #f9f9f9;
+        box-shadow: 0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22);
+        z-index: 1;
+        right: 0;
+      }
+    `;
+  }
+}
+
+Component.register(MdMenu);
+
+export class MdMenuItem extends Component {
+  onconnected() {
+    this.bind(null, "click", e => this.onclick(e));
+  }
+
+  onclick(e) {
+    this.match("md-menu").close();
+    e.stopPropagation();
+    this.dispatchEvent(new CustomEvent("select"));
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        display: block;
+        padding: 8px 24px 8px 24px;
+      }
+      $:hover {
+        background-color: #f1f1f1;
+      }
+    `;
+  }
+}
+
+Component.register(MdMenuItem);
+
+//-----------------------------------------------------------------------------
 // Menu drawer
 //-----------------------------------------------------------------------------
 
@@ -1054,7 +1156,6 @@ export class MdSearch extends Component {
   onconnected() {
     this.bind("input", "input", e => this.oninput(e));
     this.bind("input", "keydown", e => this.onkeydown(e));
-    this.bind("input", "search", e => this.onsearch(e));
     this.bind(null, "focusin", e => this.onfocus(e));
     this.bind(null, "focusout", e => this.onunfocus(e));
     this.bind(null, "click", e => this.onclick(e));
@@ -1069,10 +1170,11 @@ export class MdSearch extends Component {
         list.prev();
       } else if (e.keyCode == 13) {
         e.preventDefault();
-        if (this.props.autoselect) {
-          list.select(e.ctrlKey);
+        if (this.props.autoselect && !list.active) list.next();
+        if (list.active) {
+          this.select(list.active, e.ctrlKey);
         } else {
-          this.find("md-search-list").expand(false);
+          list.expand(false);
           this.dispatchEvent(new CustomEvent("enter", {detail: this.query()}));
         }
       }
@@ -1095,11 +1197,6 @@ export class MdSearch extends Component {
     if (item) this.select(item, e.ctrlKey);
   }
 
-  onsearch(e) {
-    let list = this.find("md-search-list");
-    if (list) list.select();
-  }
-
   onfocus(e) {
     this.find("md-search-list").expand(true);
   }
@@ -1119,10 +1216,10 @@ export class MdSearch extends Component {
   }
 
   select(item, keep) {
-    if (!keep) this.find("md-search-list").expand(false);
-    let input = this.find("input");
+    let list = this.find("md-search-list");
+    if (!keep) list.expand(false);
     if (item != null) {
-      input.blur();
+      this.find("input").blur();
       this.dispatchEvent(new CustomEvent("item", {detail: item.props.value}));
     }
   }
@@ -1213,11 +1310,6 @@ export class MdSearchList extends Component {
     if (this.active) {
       this.activate(this.active.previousSibling);
     }
-  }
-
-  select(keep) {
-    if (!this.active) this.next();
-    this.match("md-search").select(this.active, keep);
   }
 
   activate(item) {

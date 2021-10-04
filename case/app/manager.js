@@ -185,7 +185,7 @@ class CaseSearchBox extends Component {
     let name = this.itemnames[topic];
     let dialog = new NewCaseDialog({name});
     dialog.show().then(result => {
-      if (result) {
+      if (result && result.name) {
         app.add_case(result.name, result.description, topic);
       }
     });

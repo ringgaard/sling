@@ -77,9 +77,11 @@ app.js("/redreport/app.js",
 """
 import {Component} from "/common/lib/component.js";
 import {MdCard, MdDialog} from "/common/lib/material.js";
+import {PhotoGallery, imageurl, use_mediadb} from "/common/lib/gallery.js";
 import {reddit_thumbnail} from "/common/lib/reddit.js";
 
 var sfw = false;
+use_mediadb(false);
 
 function current_date() {
   return new Date().toISOString().split('T')[0];
@@ -174,9 +176,34 @@ Component.register(PhotoDialog);
 
 class RedditPosting extends Component {
   onconnected() {
+    this.bind("img", "click", e => this.onphoto(e));
     if (this.find("#add")) {
       this.bind("#add", "click", e => this.onadd(e));
     }
+  }
+
+  onphoto(e) {
+    let item = this.state;
+    let posting = item.posting;
+
+    fetch("/redreport/photos", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        url: posting.url,
+        nsfw: posting.over_18,
+      }),
+    })
+    .then((response) => {
+      if (!response.ok) throw Error(response.statusText);
+      return response.json();
+    })
+    .then((response) => {
+      let gallery = new PhotoGallery();
+      gallery.open(response.photos);
+    });
   }
 
   onadd(e) {
@@ -268,11 +295,7 @@ class RedditPosting extends Component {
     }
 
     return `
-      <div class="photo">
-        <a href="${posting.url}" target="_blank">
-          <img src="${thumb.url}" width=${thumb.width} height=${thumb.height}>
-        </a>
-      </div>
+      <img src="${thumb.url}" width="${thumb.width}" height="${thumb.height}">
       <div class="descr">
         <div class="title">${posting.title}</div>
         <div class="info">
@@ -298,7 +321,7 @@ class RedditPosting extends Component {
       $ a {
         text-decoration: none;
       }
-      $ .photo {
+      $ img {
         margin: 5px;
       }
       $ .title {
@@ -439,6 +462,31 @@ def add_media(request):
 
   sys.stdout.flush()
   return {"images": n}
+
+@app.route("/redreport/photos", method="POST")
+def photos(request):
+  # Get request.
+  r = request.json();
+  url = r.get("url")
+  nsfw = r.get("nsfw")
+  if url is None or url == "": return 400
+
+  # Get photos from url.
+  profile = photo.Profile(None)
+  profile.add_media(url, None, nsfw)
+
+  # Return extracted photos.
+  photos = []
+  for media in profile.frame(photo.n_media):
+    if type(media) is sling.Frame:
+      photos.append({
+        "url": media.resolve(),
+        "nsfw": media[photo.n_has_quality] == photo.n_nsfw,
+        "text": media[photo.n_legend],
+      });
+    else:
+      photos.append({"url": media})
+  return {"photos": photos}
 
 # Run app until shutdown.
 log.info("running")

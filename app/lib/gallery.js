@@ -6,7 +6,11 @@
 import {Component} from "./component.js";
 import {MdModal} from "./material.js";
 
-const mediadb = true;
+var mediadb = true;
+
+export function use_mediadb(v) {
+  mediadb = v;
+}
 
 const photo_sources = {
   "upload.wikimedia.org": "wikimedia.org",

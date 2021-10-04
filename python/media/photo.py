@@ -123,7 +123,10 @@ class Profile:
     self.itemid = itemid
     self.excluded = None
     self.isnew = False
-    data, _ = photodb().get(itemid)
+    if itemid is None:
+      data = None
+    else:
+      data, _ = photodb().get(itemid)
     if data is None:
       self.frame = store.frame({})
       self.isnew = True
