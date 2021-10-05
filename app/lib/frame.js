@@ -179,6 +179,21 @@ export class Frame {
     return this.slots[n * 2 + 1];
   }
 
+  // Set name for nth slot.
+  set_name(n, name) {
+    this.slots[n * 2] = name;
+  }
+
+  // Set value for nth slot.
+  set_value(n, value) {
+    this.slots[n * 2 + 1] = value;
+  }
+
+  // Remove nth slot.
+  remove(n) {
+    this.slots.splice(n * 2, 2);
+  }
+
   // Convert frame to human-readable representation.
   text(pretty) {
     let printer = new Printer(this.store);

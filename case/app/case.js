@@ -68,7 +68,7 @@ class CaseEditor extends Component {
     }
   }
 
-  onupdated() {
+  onupdate() {
     if (!this.state) return;
     this.mark_clean();
 
@@ -77,7 +77,9 @@ class CaseEditor extends Component {
     this.topics = this.casefile.get(n_topics);
     this.folders = this.casefile.get(n_folders);
     this.folder = this.casefile.get(n_folders).value(0);
+  }
 
+  onupdated() {
     this.find("#caseno").update(this.caseno().toString());
     this.find("folder-list").update(this.folders);
     this.find("topic-list").update(this.folder);
@@ -132,6 +134,22 @@ class CaseEditor extends Component {
     }
   }
 
+  folderno(folder) {
+    let f = this.folders;
+    for (let i = 0; i < f.length; ++i) {
+      if (f.value(i) == folder) return i;
+    }
+    return undefined;
+  }
+
+  show_folder(folder) {
+    if (folder != this.folder) {
+      this.folder = folder;
+      this.find("folder-list").update(this.folders);
+      this.find("topic-list").update(this.folder);
+    }
+  }
+
   add_folder(name) {
     this.folder = new Array();
     this.folders.add(name, this.folder);
@@ -140,10 +158,63 @@ class CaseEditor extends Component {
     this.mark_dirty();
   }
 
-  show_folder(folder) {
-    this.folder = folder;
-    this.find("folder-list").update(this.folders);
-    this.find("topic-list").update(this.folder);
+  rename_folder(folder, name) {
+    let pos = this.folderno(folder);
+    if (pos > 0 && pos < this.folders.length) {
+      this.folders.set_name(pos, name);
+      this.find("folder-list").update(this.folders);
+      this.mark_dirty();
+    }
+  }
+
+  move_folder_up(folder) {
+    let pos = this.folderno(folder);
+    if (pos > 1 && pos < this.folders.length) {
+      // Swap with previous folder.
+      let tmp_name = this.folders.name(pos);
+      let tmp_value = this.folders.value(pos);
+      this.folders.set_name(pos, this.folders.name(pos - 1));
+      this.folders.set_value(pos, this.folders.value(pos - 1));
+      this.folders.set_name(pos - 1, tmp_name);
+      this.folders.set_value(pos - 1, tmp_value);
+      this.mark_dirty();
+      this.find("folder-list").update(this.folders);
+    }
+  }
+
+  move_folder_down(folder) {
+    let pos = this.folderno(folder);
+    if (pos > 0 && pos < this.folders.length - 1) {
+      // Swap with next folder.
+      let tmp_name = this.folders.name(pos);
+      let tmp_value = this.folders.value(pos);
+      this.folders.set_name(pos, this.folders.name(pos + 1));
+      this.folders.set_value(pos, this.folders.value(pos + 1));
+      this.folders.set_name(pos + 1, tmp_name);
+      this.folders.set_value(pos + 1, tmp_value);
+      this.mark_dirty();
+      this.find("folder-list").update(this.folders);
+    }
+  }
+
+  delete_folder(folder) {
+    if (folder.length != 0) {
+      StdDialog.alert("Cannot delete folder",
+                      "Folder must be empty to be deleted");
+    } else {
+      let pos = this.folderno(folder);
+      if (pos >= 0 && pos < this.folders.length) {
+        this.folders.remove(pos);
+        if (pos == this.folders.length) {
+          this.folder = this.folders.value(pos - 1);
+        } else {
+          this.folder = this.folders.value(pos);
+        }
+        this.find("folder-list").update(this.folders);
+        this.find("topic-list").update(this.folder);
+        this.mark_dirty();
+      }
+    }
   }
 
   add_topic(itemid, name) {
@@ -177,7 +248,7 @@ class CaseEditor extends Component {
     this.find("topic-list").update(this.folder);
   }
 
-  move_up(topic) {
+  move_topic_up(topic) {
     let pos = this.folder.indexOf(topic);
     if (pos == -1) return;
     if (pos == 0 || this.folder.length == 1) return;
@@ -192,7 +263,7 @@ class CaseEditor extends Component {
     this.find("topic-list").update(this.folder);
   }
 
-  move_down(topic) {
+  move_topic_down(topic) {
     let pos = this.folder.indexOf(topic);
     if (pos == -1) return;
     if (pos == this.folder.length - 1 || this.folder.length == 1) return;
@@ -410,7 +481,9 @@ class FolderList extends Component {
   render() {
     let folders = this.state;
     if (!folders) return;
-    let current = this.match("#editor").folder;
+    let editor = this.match("#editor");
+    if (!editor) return;
+    let current = editor.folder;
     let h = [];
     for (let [name, folder] of folders) {
       h.push(new CaseFolder({name, folder, marked: folder == current}));
@@ -435,19 +508,24 @@ class CaseFolder extends Component {
   }
 
   onrename(e) {
-    console.log("rename", this);
+    let dialog = new RenameFolderDialog(this.state.name);
+    dialog.show().then(result => {
+      if (result) {
+        this.match("#editor").rename_folder(this.state.folder, result);
+      }
+    });
   }
 
   onmoveup(e) {
-    console.log("move up", this);
+    this.match("#editor").move_folder_up(this.state.folder);
   }
 
   onmovedown(e) {
-    console.log("move down", this);
+    this.match("#editor").move_folder_down(this.state.folder);
   }
 
   ondelete(e) {
-    console.log("delete", this);
+    this.match("#editor").delete_folder(this.state.folder);
   }
 
   render() {
@@ -458,10 +536,18 @@ class CaseFolder extends Component {
       </div>
       <md-spacer></md-spacer>
       <md-menu>
-        <md-menu-item id="rename">Rename</md-menu-item>
-        <md-menu-item id="moveup">Move up</md-menu-item>
-        <md-menu-item id="movedown">Move down</md-menu-item>
-        <md-menu-item id="delete">Delete</md-menu-item>
+        <md-menu-item id="rename">
+          <md-icon icon="drive_file_rename_outline"></md-icon>Rename
+        </md-menu-item>
+        <md-menu-item id="moveup">
+          <md-icon icon="move-up"></md-icon>Move up
+        </md-menu-item>
+        <md-menu-item id="movedown">
+          <md-icon icon="move-down"></md-icon>Move down
+        </md-menu-item>
+        <md-menu-item id="delete">
+         <md-icon icon="delete"></md-icon>Delete
+        </md-menu-item>
       </md-menu>
     `;
   }
@@ -477,6 +563,7 @@ class CaseFolder extends Component {
         height: 30px;
         border-radius: 15px;
         border: 0;
+        fill: #808080;
       }
       $ md-icon-button button {
         height: 30px;
@@ -547,6 +634,45 @@ class NewFolderDialog extends MdDialog {
 
 Component.register(NewFolderDialog);
 
+class RenameFolderDialog extends MdDialog {
+  submit() {
+    this.close(this.find("#name").value.trim());
+  }
+
+  render() {
+    let p = this.state;
+    return `
+      <md-dialog-top>Rename case folder</md-dialog-top>
+      <div id="content">
+        <md-text-field
+          id="name"
+          value="${Component.escape(this.state)}"
+          label="Folder name">
+        </md-text-field>
+      </div>
+      <md-dialog-bottom>
+        <button id="cancel">Cancel</button>
+        <button id="submit">Rename</button>
+      </md-dialog-bottom>
+    `;
+  }
+
+  static stylesheet() {
+    return MdDialog.stylesheet() + `
+      $ #content {
+        display: flex;
+        flex-direction: column;
+        row-gap: 16px;
+      }
+      $ #name {
+        width: 300px;
+      }
+    `;
+  }
+}
+
+Component.register(RenameFolderDialog);
+
 class TopicList extends Component {
   scroll_to(topic) {
     this.card(topic).scrollIntoView();
@@ -579,10 +705,63 @@ class TopicList extends Component {
 Component.register(TopicList);
 
 class TopicCard extends MdCard {
-  onconnected() {
+  bind_actions() {
     this.bind("#delete", "click", e => this.ondelete(e));
     this.bind("#moveup", "click", e => this.onmoveup(e));
     this.bind("#movedown", "click", e => this.onmovedown(e));
+    this.bind("#edit", "click", e => this.onedit(e));
+    this.bind("#save", "click", e => this.onsave(e));
+    this.bind("#discard", "click", e => this.ondiscard(e));
+
+    this.bind("pre", "keydown", e => this.onkeydown(e));
+  }
+
+  onconnected() {
+    this.update_editmode(false);
+    this.bind_actions();
+  }
+
+  onupdated() {
+    this.update_editmode(false);
+    this.bind_actions();
+  }
+
+  update_editmode(editmode) {
+    if (editmode == this.editmode) return false;
+    this.editmode = editmode;
+    this.find("#edit").update(!editmode);
+    this.find("#save").update(editmode);
+    this.find("#discard").update(editmode);
+
+    this.find("#delete").update(!editmode);
+    this.find("#moveup").update(!editmode);
+    this.find("#movedown").update(!editmode);
+
+    this.find("pre").setAttribute("contenteditable", editmode);
+  }
+
+  onedit(e) {
+    this.update_editmode(true);
+
+    let pre = this.find("pre");
+    pre.setAttribute("contenteditable", "true");
+    pre.focus();
+  }
+
+  onsave(e) {
+    let pre = this.find("pre");
+    let content = pre.textContent;
+    console.log("content", content);
+    let frame = store.parse(content);
+
+    this.update(frame);
+    this.update_editmode(false);
+    this.match("#editor").mark_dirty();
+  }
+
+  ondiscard(e) {
+    this.update(this.state);
+    this.update_editmode(false);
   }
 
   ondelete(e) {
@@ -596,11 +775,23 @@ class TopicCard extends MdCard {
   }
 
   onmoveup(e) {
-    this.match("#editor").move_up(this.state);
+    this.match("#editor").move_topic_up(this.state);
   }
 
   onmovedown(e) {
-    this.match("#editor").move_down(this.state);
+    this.match("#editor").topic_move_down(this.state);
+  }
+
+  onkeydown(e) {
+    if (e.key === "s" && e.ctrlKey && this.editmode) {
+      this.onsave(e);
+      e.stopPropagation();
+      e.preventDefault();
+    } else if (e.key === "Escape" && this.editmode) {
+      this.ondiscard(e);
+      e.stopPropagation();
+      e.preventDefault();
+    }
   }
 
   render() {
@@ -615,13 +806,15 @@ class TopicCard extends MdCard {
         </div>
         <md-spacer></md-spacer>
         <div id="actions">
+          <md-icon-button id="save" icon="save_alt"></md-icon-button>
+          <md-icon-button id="discard" icon="cancel"></md-icon-button>
           <md-icon-button id="edit" icon="edit"></md-icon-button>
           <md-icon-button id="moveup" icon="move-up"></md-icon-button>
           <md-icon-button id="movedown" icon="move-down"></md-icon-button>
           <md-icon-button id="delete" icon="delete"></md-icon-button>
         </div>
       </md-card-toolbar>
-      <pre>${Component.escape(topic.text(true))}</pre>
+      <pre spellcheck="false">${Component.escape(topic.text(true))}</pre>
     `;
   }
 
@@ -638,6 +831,10 @@ class TopicCard extends MdCard {
         text-decoration: none;
         width: fit-content;
         outline: none;
+      }
+      $ pre {
+        font-size: 12px;
+        padding: 6px;
       }
       $ #actions {
         display: flex;

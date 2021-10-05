@@ -488,11 +488,15 @@ export class MdMenuItem extends Component {
   static stylesheet() {
     return `
       $ {
-        display: block;
+        display: flex;
+        align-items: center;
         padding: 8px 24px 8px 24px;
       }
       $:hover {
         background-color: #f1f1f1;
+      }
+      $ md-icon {
+        width: 40px;
       }
     `;
   }
