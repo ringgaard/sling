@@ -81,6 +81,7 @@ import {PhotoGallery, imageurl, use_mediadb} from "/common/lib/gallery.js";
 import {reddit_thumbnail} from "/common/lib/reddit.js";
 
 var sfw = false;
+var hits = false;
 use_mediadb(false);
 
 function current_date() {
@@ -99,6 +100,7 @@ class PhotoReportApp extends Component {
     if (date.length == 0) date = current_date();
     let qs = new URLSearchParams(window.location.search);
     if (qs.get("sfw") == "1") sfw = true;
+    if (qs.get("hits") == "1") hits = true;
 
     // Retrieve report.
     let url = `https://ringgaard.com/reddit/report/${date}.json`;
@@ -281,7 +283,22 @@ class RedditPosting extends Component {
     }
 
     let match = "";
-    if (item.matches == 0) {
+    let add = `
+      <md-icon-button id="add" icon="add_a_photo" outlined></md-icon-button>
+      <md-text id="msg"></md-text>
+    `;
+    if (hits) {
+      add = "";
+      match = "";
+      if (item.query) {
+        match += `<b>${item.query}</b>: `;
+      }
+      if (item.itemid) {
+        let kburl = `https://ringgaard.com/kb/${item.itemid}`;
+        if (!sfw) kburl += "?nsfw=1";
+        match += `<a href="${kburl}" target="_blank">${item.itemid}</a>`;
+      }
+    } else if (item.matches == 0) {
       match = `No matches for <em>${item.query}</em>`
     } else if (item.matches == 1) {
       let kburl = `https://ringgaard.com/kb/${item.match}`;
@@ -305,8 +322,7 @@ class RedditPosting extends Component {
         </div>
         <div class="match">
           <div>${match}</div>
-          <md-icon-button id="add" icon="add_a_photo" outlined></md-icon-button>
-          <md-text id="msg"></md-text>
+          ${add}
         </div>
       </div>
     `;
@@ -344,6 +360,7 @@ class RedditPosting extends Component {
         display: flex;
         align-items: center;
         font-size: 16px;
+        min-height: 40px;
       }
       $ .nsfw {
         border-radius: 3px;
@@ -374,7 +391,8 @@ class SubredditCard extends MdCard {
     `);
 
     // Render postings.
-    for (let item of sr.unmatched) {
+    let items = hits ? sr.matched : sr.unmatched;
+    for (let item of items) {
       if (sfw && item.posting.over_18) continue;
       h.push(new RedditPosting(item));
     }
@@ -413,7 +431,11 @@ class SubredditList extends Component {
     let cards = [];
     for (let name of srnames) {
       let report = subreddits[name]
-      if (report.unmatched.length == 0) continue;
+      if (hits) {
+        if (report.matched.length == 0) continue;
+      } else {
+        if (report.unmatched.length == 0) continue;
+      }
       report["name"] = name;
       let card = new SubredditCard(report);
       cards.push(card);
