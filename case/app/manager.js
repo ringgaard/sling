@@ -2,7 +2,7 @@
 // Licensed under the Apache License, Version 2
 
 import {Component} from "/common/lib/component.js";
-import {MdDialog, StdDialog, MdCard} from "/common/lib/material.js";
+import * as material from "/common/lib/material.js";
 import {store, settings} from "./global.js";
 
 const kbservice = "https://ringgaard.com"
@@ -74,7 +74,7 @@ Component.register(CaseManager);
 // New case
 //-----------------------------------------------------------------------------
 
-class NewCaseDialog extends MdDialog {
+class NewCaseDialog extends material.MdDialog {
   submit() {
     this.close({
       name: this.find("#name").value.trim(),
@@ -106,7 +106,7 @@ class NewCaseDialog extends MdDialog {
   }
 
   static stylesheet() {
-    return MdDialog.stylesheet() + `
+    return material.MdDialog.stylesheet() + `
       $ #content {
         display: flex;
         flex-direction: column;
@@ -146,30 +146,16 @@ class CaseSearchBox extends Component {
     }
     params += `&q=${encodeURIComponent(query)}`;
 
-    this.itemnames = new Map();
     fetch(`${settings.kbservice}/kb/query?${params}`)
     .then(response => response.json())
     .then((data) => {
       let items = [];
       for (let item of data.matches) {
-        let elem = document.createElement("md-search-item");
-        elem.setAttribute("name", item.text);
-        elem.setAttribute("value", item.ref);
-
-        let title = document.createElement("span");
-        title.className = "item-title";
-        title.appendChild(document.createTextNode(item.text));
-        elem.appendChild(title);
-
-        if (item.description) {
-          let desciption = document.createElement("span");
-          desciption.className = "item-description";
-          desciption.appendChild(document.createTextNode(item.description));
-          elem.appendChild(desciption);
-        }
-
-        items.push(elem);
-        this.itemnames[item.ref] = item.text;
+        items.push(new material.MdSearchResult({
+          ref: item.ref,
+          name: item.text,
+          description: item.description
+        }));
       }
       target.populate(detail, items);
     })
@@ -181,12 +167,11 @@ class CaseSearchBox extends Component {
   }
 
   onitem(e) {
-    let topic = e.detail;
-    let name = this.itemnames[topic];
-    let dialog = new NewCaseDialog({name});
+    let item = e.detail;
+    let dialog = new NewCaseDialog({name: item.name});
     dialog.show().then(result => {
       if (result && result.name) {
-        app.add_case(result.name, result.description, topic);
+        app.add_case(result.name, result.description, item.ref);
       }
     });
   }
@@ -230,21 +215,9 @@ class CaseSearchBox extends Component {
         padding-left: 10px;
         padding-right: 3px;
       }
-
       $ form {
         display: flex;
         width: 100%;
-      }
-
-      $ .item-title {
-        font-weight: bold;
-        display: block;
-        padding: 2px 10px 2px 10px;
-      }
-
-      $ .item-description {
-        display: block;
-        padding: 0px 10px 0px 10px;
       }
     `;
   }
@@ -256,7 +229,7 @@ Component.register(CaseSearchBox);
 // Case list
 //-----------------------------------------------------------------------------
 
-class CaseList extends MdCard {
+class CaseList extends material.MdCard {
   onupdated() {
     this.bind("table", "click", e => this.onclick(e));
     this.bind("table", "mousedown", e => this.ondown(e));
@@ -284,7 +257,8 @@ class CaseList extends MdCard {
       let action = button.getAttribute("icon");
       if (action == "delete") {
         let message = `Delete case #${caseid}?`;
-        StdDialog.confirm("Delete case", message, "Delete").then(result => {
+        material.StdDialog.confirm("Delete case", message, "Delete")
+        .then(result => {
           if (result) {
             app.delete_case(caseid);
           }
@@ -331,7 +305,7 @@ class CaseList extends MdCard {
   }
 
   static stylesheet() {
-    return MdCard.stylesheet() + `
+    return material.MdCard.stylesheet() + `
       $ table {
         border: 0;
         white-space: nowrap;

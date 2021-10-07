@@ -1162,7 +1162,6 @@ export class MdSearch extends Component {
     this.bind("input", "keydown", e => this.onkeydown(e));
     this.bind(null, "focusin", e => this.onfocus(e));
     this.bind(null, "focusout", e => this.onunfocus(e));
-    this.bind(null, "click", e => this.onclick(e));
   }
 
   onkeydown(e) {
@@ -1196,11 +1195,6 @@ export class MdSearch extends Component {
     }
   }
 
-  onclick(e) {
-    let item = e.target.closest("md-search-item");
-    if (item) this.select(item, e.ctrlKey);
-  }
-
   onfocus(e) {
     this.find("md-search-list").expand(true);
   }
@@ -1224,7 +1218,7 @@ export class MdSearch extends Component {
     if (!keep) list.expand(false);
     if (item != null) {
       this.find("input").blur();
-      this.dispatchEvent(new CustomEvent("item", {detail: item.props.value}));
+      this.dispatchEvent(new CustomEvent("item", {detail: item.state}));
     }
   }
 
@@ -1365,6 +1359,11 @@ Component.register(MdSearchList);
 export class MdSearchItem extends Component {
   onconnected() {
     this.bind(null, "mousemove", this.onmousemove);
+    this.bind(null, "click", e => this.onclick(e));
+  }
+
+  onclick(e) {
+    this.match("md-search").select(this, e.ctrlKey);
   }
 
   onmousemove(e) {
@@ -1387,6 +1386,40 @@ export class MdSearchItem extends Component {
 }
 
 Component.register(MdSearchItem);
+
+export class MdSearchResult extends MdSearchItem {
+  render() {
+    let h = [];
+    if (this.state.name) {
+      h.push('<span class="item-title">');
+      h.push(Component.escape(this.state.name));
+      h.push('</span>');
+    }
+    if (this.state.description) {
+      h.push('<span class="item-description">');
+      h.push(Component.escape(this.state.description));
+      h.push('</span>');
+    }
+    return h.join("");
+  }
+
+  static stylesheet() {
+    return MdSearchItem.stylesheet() + `
+      $ .item-title {
+        font-weight: bold;
+        display: block;
+        padding: 2px 10px 2px 10px;
+      }
+
+      $ .item-description {
+        display: block;
+        padding: 0px 10px 0px 10px;
+      }
+    `;
+  }
+}
+
+Component.register(MdSearchResult);
 
 //-----------------------------------------------------------------------------
 // Data table

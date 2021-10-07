@@ -4,7 +4,7 @@
 // Knowledge base browser.
 
 import {Component} from "/common/lib/component.js";
-import {MdCard, MdModal} from "/common/lib/material.js";
+import {MdCard, MdModal, MdSearchResult} from "/common/lib/material.js";
 import {PhotoGallery, imageurl} from "/common/lib/gallery.js";
 
 var mobile_ckecked = false;
@@ -186,23 +186,11 @@ class KbSearchBox extends Component {
       .then((data) => {
         let items = [];
         for (let item of data.matches) {
-          let elem = document.createElement("md-search-item");
-          elem.setAttribute("name", item.text);
-          elem.setAttribute("value", item.ref);
-
-          let title = document.createElement("span");
-          title.className = "item-title";
-          title.appendChild(document.createTextNode(item.text));
-          elem.appendChild(title);
-
-          if (item.description) {
-            let desciption = document.createElement("span");
-            desciption.className = "item-description";
-            desciption.appendChild(document.createTextNode(item.description));
-            elem.appendChild(desciption);
-          }
-
-          items.push(elem);
+        items.push(new MdSearchResult({
+          ref: item.ref,
+          name: item.text,
+          description: item.description
+        }));
         }
         target.populate(detail, items);
       })
@@ -212,8 +200,8 @@ class KbSearchBox extends Component {
   }
 
   onitem(e) {
-    let id = e.detail;
-    this.match("#app").navigate(id);
+    let item = e.detail;
+    this.match("#app").navigate(item.ref);
   }
 
   query() {
@@ -250,17 +238,6 @@ class KbSearchBox extends Component {
       $ form {
         display: flex;
         width: 100%;
-      }
-
-      $ .item-title {
-        font-weight: bold;
-        display: block;
-        padding: 2px 10px 2px 10px;
-      }
-
-      $ .item-description {
-        display: block;
-        padding: 0px 10px 0px 10px;
       }
     `;
   }

@@ -2,7 +2,7 @@
 // Licensed under the Apache License, Version 2
 
 import {Component} from "/common/lib/component.js";
-import {MdCard, MdIcon, MdDialog, StdDialog} from "/common/lib/material.js";
+import * as material from "/common/lib/material.js";
 import {store, settings} from "./global.js";
 
 const n_id = store.id;
@@ -118,7 +118,8 @@ class CaseEditor extends Component {
         "Cancel": "cancel",
         "Save": "save",
       }
-      StdDialog.choose("Discard changes?", msg, buttons).then(result => {
+      material.StdDialog.choose("Discard changes?", msg, buttons)
+      .then(result => {
         if (result == "save") {
           this.match("#app").save_case(this.casefile);
           this.mark_clean();
@@ -199,7 +200,7 @@ class CaseEditor extends Component {
 
   delete_folder(folder) {
     if (folder.length != 0) {
-      StdDialog.alert("Cannot delete folder",
+      material.StdDialog.alert("Cannot delete folder",
                       "Folder must be empty to be deleted");
     } else {
       let pos = this.folderno(folder);
@@ -381,36 +382,22 @@ class TopicSearchBox extends Component {
     }
     params += `&q=${encodeURIComponent(query)}`;
 
-    this.itemnames = new Map();
     fetch(`${settings.kbservice}/kb/query?${params}`)
     .then(response => response.json())
     .then((data) => {
       let items = [];
       for (let item of data.matches) {
-        let elem = document.createElement("md-search-item");
-        elem.setAttribute("name", item.text);
-        elem.setAttribute("value", item.ref);
-
-        let title = document.createElement("span");
-        title.className = "item-title";
-        title.appendChild(document.createTextNode(item.text));
-        elem.appendChild(title);
-
-        if (item.description) {
-          let desciption = document.createElement("span");
-          desciption.className = "item-description";
-          desciption.appendChild(document.createTextNode(item.description));
-          elem.appendChild(desciption);
-        }
-
-        items.push(elem);
-        this.itemnames[item.ref] = item.text;
+        items.push(new material.MdSearchResult({
+          ref: item.ref,
+          name: item.text,
+          description: item.description
+        }));
       }
       target.populate(detail, items);
     })
     .catch(error => {
       console.log("Query error", query, error.message, error.stack);
-      StdDialog.error(error.message);
+      material.StdDialog.error(error.message);
       target.populate(detail, null);
     });
   }
@@ -421,9 +408,9 @@ class TopicSearchBox extends Component {
   }
 
   onitem(e) {
-    let topic = e.detail;
-    let name = this.itemnames[topic];
-    this.match("#editor").add_topic(topic, name);
+    let item = e.detail;
+    console.log("selected item", item);
+    this.match("#editor").add_topic(item.ref, item.name);
   }
 
   query() {
@@ -459,17 +446,6 @@ class TopicSearchBox extends Component {
       $ form {
         display: flex;
         width: 100%;
-      }
-
-      $ .item-title {
-        font-weight: bold;
-        display: block;
-        padding: 2px 10px 2px 10px;
-      }
-
-      $ .item-description {
-        display: block;
-        padding: 0px 10px 0px 10px;
       }
     `;
   }
@@ -595,7 +571,7 @@ class CaseFolder extends Component {
 
 Component.register(CaseFolder);
 
-class NewFolderDialog extends MdDialog {
+class NewFolderDialog extends material.MdDialog {
   submit() {
     this.close(this.find("#name").value.trim());
   }
@@ -619,7 +595,7 @@ class NewFolderDialog extends MdDialog {
   }
 
   static stylesheet() {
-    return MdDialog.stylesheet() + `
+    return material.MdDialog.stylesheet() + `
       $ #content {
         display: flex;
         flex-direction: column;
@@ -634,7 +610,7 @@ class NewFolderDialog extends MdDialog {
 
 Component.register(NewFolderDialog);
 
-class RenameFolderDialog extends MdDialog {
+class RenameFolderDialog extends material.MdDialog {
   submit() {
     this.close(this.find("#name").value.trim());
   }
@@ -658,7 +634,7 @@ class RenameFolderDialog extends MdDialog {
   }
 
   static stylesheet() {
-    return MdDialog.stylesheet() + `
+    return material.MdDialog.stylesheet() + `
       $ #content {
         display: flex;
         flex-direction: column;
@@ -674,6 +650,38 @@ class RenameFolderDialog extends MdDialog {
 Component.register(RenameFolderDialog);
 
 class TopicList extends Component {
+  constructor(state) {
+    super(state);
+    this.selection = new Set();
+  }
+
+  onupdate() {
+    this.selection.clear();
+  }
+
+  clear_selection() {
+    console.log("selection", this.selection);
+    for (let topic of this.selection) {
+      console.log("unselect", topic.id);
+      this.card(topic).unselect();
+    }
+    this.selection.clear();
+  }
+
+  select(topic, extend) {
+    console.log("select", topic.id, extend);
+    if (!extend) this.clear_selection();
+    this.selection.add(topic);
+    this.card(topic).select();
+  }
+
+  unselect(topic) {
+    if (this.selection.has(topic)) {
+      this.selection.delete(topic);
+      this.card(topic).unselect();
+    }
+  }
+
   scroll_to(topic) {
     this.card(topic).scrollIntoView();
   }
@@ -704,7 +712,7 @@ class TopicList extends Component {
 
 Component.register(TopicList);
 
-class TopicCard extends MdCard {
+class TopicCard extends material.MdCard {
   bind_actions() {
     this.bind("#delete", "click", e => this.ondelete(e));
     this.bind("#moveup", "click", e => this.onmoveup(e));
@@ -714,6 +722,7 @@ class TopicCard extends MdCard {
     this.bind("#discard", "click", e => this.ondiscard(e));
 
     this.bind("pre", "keydown", e => this.onkeydown(e));
+    this.bind(null, "click", e => this.onclick(e));
   }
 
   onconnected() {
@@ -724,6 +733,18 @@ class TopicCard extends MdCard {
   onupdated() {
     this.update_editmode(false);
     this.bind_actions();
+  }
+
+  selected() {
+    return this.classList.contains("selected");
+  }
+
+  select() {
+    this.classList.add("selected");
+  }
+
+  unselect() {
+    this.classList.remove("selected");
   }
 
   update_editmode(editmode) {
@@ -767,7 +788,8 @@ class TopicCard extends MdCard {
   ondelete(e) {
     let topic = this.state;
     let message = `Delete topic '${topic.get(n_name)}'?`;
-    StdDialog.confirm("Delete topic", message, "Delete").then(result => {
+    material.StdDialog.confirm("Delete topic", message, "Delete")
+    .then(result => {
       if (result) {
         this.match("#editor").delete_topic(topic);
       }
@@ -791,6 +813,24 @@ class TopicCard extends MdCard {
       this.ondiscard(e);
       e.stopPropagation();
       e.preventDefault();
+    }
+  }
+
+  onclick(e) {
+    let topic = this.state;
+    let list = this.match("topic-list");
+    if (e.ctrlKey) {
+      if (this.selected()) {
+        list.unselect(topic);
+      } else {
+        list.select(topic, true);
+      }
+    } else {
+      if (this.selected()) {
+        list.clear_selection();
+      } else {
+        list.select(topic, false);
+      }
     }
   }
 
@@ -819,7 +859,16 @@ class TopicCard extends MdCard {
   }
 
   static stylesheet() {
-    return MdCard.stylesheet() + `
+    return material.MdCard.stylesheet() + `
+      $ {
+        margin: 5px 5px 15px 5px;
+        border: 1px solid #ffffff;
+      }
+      $.selected {
+        border: 1px solid #d0d0d0;
+        box-shadow: rgb(0 0 0 / 16%) 0px 4px 8px 0px,
+                    rgb(0 0 0 / 23%) 0px 4px 8px 0px;
+      }
       $ #name {
         display: block;
         font-size: 24px;
@@ -845,13 +894,13 @@ class TopicCard extends MdCard {
 
 Component.register(TopicCard);
 
-MdIcon.custom("move-down", `
+material.MdIcon.custom("move-down", `
 <svg width="24" height="24" viewBox="0 0 32 32">
   <g><polygon points="30,16 22,16 22,2 10,2 10,16 2,16 16,30"/></g>
 </svg>
 `);
 
-MdIcon.custom("move-up", `
+material.MdIcon.custom("move-up", `
 <svg width="24" height="24" viewBox="0 0 32 32">
   <g><polygon points="30,14 22,14 22,28 10,28 10,14 2,14 16,0"/></g>
 </svg>

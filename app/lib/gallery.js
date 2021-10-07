@@ -38,6 +38,11 @@ export function imageurl(url, thumb) {
 }
 
 export class PhotoGallery extends MdModal {
+  constructor() {
+    super();
+    this.first = true;
+  }
+
   onconnected() {
     this.bind(".photo", "click", e => this.onclick(e));
     this.bind(".prev", "click", e => this.onprev(e));
@@ -87,6 +92,10 @@ export class PhotoGallery extends MdModal {
       let w = photo.width;
       let h = photo.height;
       this.find(".size").update(w && h ? `${w} x ${h}`: null);
+    }
+    if (this.first) {
+      this.first = false;
+      this.preload(this.current, 1);
     }
   }
 
@@ -186,7 +195,8 @@ export class PhotoGallery extends MdModal {
   }
 
   preload(position, direction) {
-    for (var i = 0; i < 5; ++i) {
+    let lookahead = this.first ? 1 : 5;
+    for (var i = 0; i < lookahead; ++i) {
       let n = mod(position + i * direction, this.photos.length);
       if (this.photos[n].image == null) {
         let url = this.photos[n].url;

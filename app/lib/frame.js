@@ -769,7 +769,7 @@ export class Reader {
         case 59:  // ';'
           // Skip comment.
           this.read();
-          while (this.ch != -1 && this.ch != 13) this.read();
+          while (this.ch != -1 && this.ch != 10) this.read();
           break;
 
         default:
