@@ -4,6 +4,11 @@
     P8168, ; FactGrid item ID
   ]
 
+  ; Mnemonics for cross-referenced properties.
+  mnemonics: {
+    "fg": "P8168"      ; FactGrid item ID
+  }
+
   ; Pre-resolved reference mappings for ambiguous references.
   mappings: {
     ; after
