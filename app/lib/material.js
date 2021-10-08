@@ -1153,6 +1153,41 @@ export class MdInput extends Component {
 Component.register(MdInput);
 
 //-----------------------------------------------------------------------------
+// Toolbox
+//-----------------------------------------------------------------------------
+
+export class MdToolbox extends Component {
+  visible() {
+    return this.state;
+  }
+
+  onconnected() {
+    let parent = this.parentElement;
+    parent.addEventListener("mouseenter", e => this.onenter(e));
+    parent.addEventListener("mouseleave", e => this.onleave(e));
+  }
+
+  onenter(e) {
+    if (!this.state) this.update(true);
+  }
+
+  onleave(e) {
+    if (this.state) this.update(false);
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        display: flex;
+        flex-direction: row;
+      }
+    `;
+  }
+}
+
+Component.register(MdToolbox);
+
+//-----------------------------------------------------------------------------
 // Search box
 //-----------------------------------------------------------------------------
 

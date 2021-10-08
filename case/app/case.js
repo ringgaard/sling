@@ -48,13 +48,12 @@ class CaseEditor extends Component {
     }
   }
 
-  onnewfolder(e) {
+  async onnewfolder(e) {
     let dialog = new NewFolderDialog();
-    dialog.show().then(result => {
-      if (result) {
-        this.add_folder(result);
-      }
-    });
+    let result = await dialog.show();
+    if (result) {
+      this.add_folder(result);
+    }
   }
 
   onmenu(e) {
@@ -483,13 +482,12 @@ class CaseFolder extends Component {
     this.match("#editor").show_folder(this.state.folder);
   }
 
-  onrename(e) {
+  async onrename(e) {
     let dialog = new RenameFolderDialog(this.state.name);
-    dialog.show().then(result => {
-      if (result) {
-        this.match("#editor").rename_folder(this.state.folder, result);
-      }
-    });
+    let result = await dialog.show();
+    if (result) {
+      this.match("#editor").rename_folder(this.state.folder, result);
+    }
   }
 
   onmoveup(e) {
@@ -713,7 +711,7 @@ class TopicList extends Component {
 Component.register(TopicList);
 
 class TopicCard extends material.MdCard {
-  bind_actions() {
+  onconnected() {
     this.bind("#delete", "click", e => this.ondelete(e));
     this.bind("#moveup", "click", e => this.onmoveup(e));
     this.bind("#movedown", "click", e => this.onmovedown(e));
@@ -723,16 +721,22 @@ class TopicCard extends material.MdCard {
 
     this.bind("pre", "keydown", e => this.onkeydown(e));
     this.bind(null, "click", e => this.onclick(e));
+    this.update_editmode(false);
   }
 
-  onconnected() {
-    this.update_editmode(false);
-    this.bind_actions();
-  }
+  update_editmode(editmode) {
+    if (editmode == this.editmode) return false;
+    this.editmode = editmode;
 
-  onupdated() {
-    this.update_editmode(false);
-    this.bind_actions();
+    this.find("#edit").update(!editmode);
+    this.find("#delete").update(!editmode);
+    this.find("#moveup").update(!editmode);
+    this.find("#movedown").update(!editmode);
+
+    this.find("#save").update(editmode);
+    this.find("#discard").update(editmode);
+
+    this.find("pre").setAttribute("contenteditable", editmode);
   }
 
   selected() {
@@ -747,21 +751,8 @@ class TopicCard extends material.MdCard {
     this.classList.remove("selected");
   }
 
-  update_editmode(editmode) {
-    if (editmode == this.editmode) return false;
-    this.editmode = editmode;
-    this.find("#edit").update(!editmode);
-    this.find("#save").update(editmode);
-    this.find("#discard").update(editmode);
-
-    this.find("#delete").update(!editmode);
-    this.find("#moveup").update(!editmode);
-    this.find("#movedown").update(!editmode);
-
-    this.find("pre").setAttribute("contenteditable", editmode);
-  }
-
   onedit(e) {
+    e.stopPropagation();
     this.update_editmode(true);
 
     let pre = this.find("pre");
@@ -770,6 +761,7 @@ class TopicCard extends material.MdCard {
   }
 
   onsave(e) {
+    e.stopPropagation();
     let pre = this.find("pre");
     let content = pre.textContent;
     console.log("content", content);
@@ -785,23 +777,26 @@ class TopicCard extends material.MdCard {
     this.update_editmode(false);
   }
 
-  ondelete(e) {
+  async ondelete(e) {
+    e.stopPropagation();
     let topic = this.state;
-    let message = `Delete topic '${topic.get(n_name)}'?`;
-    material.StdDialog.confirm("Delete topic", message, "Delete")
-    .then(result => {
-      if (result) {
-        this.match("#editor").delete_topic(topic);
-      }
-    });
+    let result = await material.StdDialog.confirm(
+      "Delete topic",
+      `Delete topic '${topic.get(n_name)}'?`,
+      "Delete");
+    if (result) {
+      this.match("#editor").delete_topic(topic);
+    }
   }
 
   onmoveup(e) {
+    e.stopPropagation();
     this.match("#editor").move_topic_up(this.state);
   }
 
   onmovedown(e) {
-    this.match("#editor").topic_move_down(this.state);
+    e.stopPropagation();
+    this.match("#editor").move_topic_down(this.state);
   }
 
   onkeydown(e) {
@@ -834,7 +829,7 @@ class TopicCard extends material.MdCard {
     }
   }
 
-  render() {
+  prerender() {
     let topic = this.state;
     if (!topic) return;
 
@@ -845,14 +840,16 @@ class TopicCard extends material.MdCard {
           <div id="id">${topic.get(n_id)}</div>
         </div>
         <md-spacer></md-spacer>
-        <div id="actions">
+        <div id="edit-actions">
           <md-icon-button id="save" icon="save_alt"></md-icon-button>
           <md-icon-button id="discard" icon="cancel"></md-icon-button>
+        </div>
+        <md-toolbox id="topic-actions">
           <md-icon-button id="edit" icon="edit"></md-icon-button>
           <md-icon-button id="moveup" icon="move-up"></md-icon-button>
           <md-icon-button id="movedown" icon="move-down"></md-icon-button>
           <md-icon-button id="delete" icon="delete"></md-icon-button>
-        </div>
+        </md-toolbox>
       </md-card-toolbar>
       <pre spellcheck="false">${Component.escape(topic.text(true))}</pre>
     `;
@@ -885,7 +882,7 @@ class TopicCard extends material.MdCard {
         font-size: 12px;
         padding: 6px;
       }
-      $ #actions {
+      $ #edit-actions {
         display: flex;
       }
     `;

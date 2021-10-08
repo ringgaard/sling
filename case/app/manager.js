@@ -293,10 +293,7 @@ class CaseList extends material.MdCard {
           <td>${Component.escape(rec.description)}</td>
           <td>${date2str(rec.created)}</td>
           <td>${date2str(rec.modified)}</td>
-          <td>
-            <md-icon-button icon="delete" outlined>
-            </md-icon-button>
-          </td>
+          <td><md-icon-button icon="delete"></md-icon-button></td>
         </tr>
      `);
     }
@@ -349,6 +346,10 @@ class CaseList extends material.MdCard {
         width: 100%;
         white-space: normal;
       }
+      $ md-icon-button {
+        color: #808080;
+      }
+
     `;
   }
 }

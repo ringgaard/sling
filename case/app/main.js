@@ -32,22 +32,23 @@ const n_sling_case_no = store.lookup("PCASE");
 //-----------------------------------------------------------------------------
 
 class CaseApp extends OneOf {
-  onconnected() {
+  async onconnected() {
     // Handle navigation events.
     window.onpopstate = e => this.onpopstate(e);
 
     // Open local case database.
-    casedb.open().then(() => {
-      let m = window.location.pathname.match(/\/c\/(\d+)/);
-      if (m) {
-        // Open case specified in url.
-        let caseid = parseInt(m[1]);
-        this.open_case(caseid);
-      } else {
-        // Show case list.
-        this.show_manager();
-      }
-    });
+    await casedb.open();
+
+    // Parse url.
+    let m = window.location.pathname.match(/\/c\/(\d+)/);
+    if (m) {
+      // Open case specified in url.
+      let caseid = parseInt(m[1]);
+      this.open_case(caseid);
+    } else {
+      // Show case list.
+      this.show_manager();
+    }
   }
 
   onpopstate(e) {
@@ -59,52 +60,50 @@ class CaseApp extends OneOf {
     }
   }
 
-  add_case(name, description, topicid) {
-    fetch("/newcase")
-    .then(response => store.parse(response))
-    .then(casefile => {
-      let caseno = casefile.get(n_caseno);
-      let next = 1;
-      let topics = new Array();
-      let main_topics = new Array();
+  async add_case(name, description, topicid) {
+    let response = await fetch("/newcase");
+    let casefile = await store.parse(response);
+    let caseno = casefile.get(n_caseno);
+    let next = 1;
+    let topics = new Array();
+    let main_topics = new Array();
 
-      // Create main topic for case file.
-      let main = store.frame(`t/${caseno}/${next++}`);
-      topics.push(main);
-      main_topics.push(main);
-      main.add(n_instance_of, n_case_file);
-      if (name) main.add(n_name, name);
-      if (description) main.add(n_description, description);
-      main.add(n_sling_case_no, caseno.toString());
+    // Create main topic for case file.
+    let main = store.frame(`t/${caseno}/${next++}`);
+    topics.push(main);
+    main_topics.push(main);
+    main.add(n_instance_of, n_case_file);
+    if (name) main.add(n_name, name);
+    if (description) main.add(n_description, description);
+    main.add(n_sling_case_no, caseno.toString());
 
-      // Add initial topic.
-      if (topicid) {
-        let topic = store.frame(`t/${caseno}/${next++}`);
-        topics.push(topic);
-        main_topics.push(topic);
-        topic.add(n_is, store.lookup(topicid));
-        if (name) topic.add(n_name, name);
-      }
+    // Add initial topic.
+    if (topicid) {
+      let topic = store.frame(`t/${caseno}/${next++}`);
+      topics.push(topic);
+      main_topics.push(topic);
+      topic.add(n_is, store.lookup(topicid));
+      if (name) topic.add(n_name, name);
+    }
 
-      // Initialize case.
-      let ts = new Date().toJSON();
-      casefile.add(n_created, ts);
-      casefile.add(n_modified, ts);
-      casefile.add(n_main, main);
-      casefile.add(n_topics, topics);
-      casefile.add(n_folders, store.frame(["Main", main_topics]));
-      casefile.add(n_next, next);
+    // Initialize case.
+    let ts = new Date().toJSON();
+    casefile.add(n_created, ts);
+    casefile.add(n_modified, ts);
+    casefile.add(n_main, main);
+    casefile.add(n_topics, topics);
+    casefile.add(n_folders, store.frame(["Main", main_topics]));
+    casefile.add(n_next, next);
 
-      // Write case to database.
-      let rec = casedb.write(casefile, true);
+    // Write case to database.
+    let rec = casedb.write(casefile, true);
 
-      // Update case list.
-      this.caselist.push(rec);
-      this.refresh_manager();
+    // Update case list.
+    this.caselist.push(rec);
+    this.refresh_manager();
 
-      // Show new case.
-      this.open_case(caseno)
-    });
+    // Show new case.
+    return this.open_case(caseno)
   }
 
   delete_case(caseid) {
@@ -116,15 +115,14 @@ class CaseApp extends OneOf {
     this.refresh_manager();
   }
 
-  open_case(caseid) {
-    casedb.read(caseid).then(casefile => {
-      let caseid = casefile.get(n_caseno);
-      let main = casefile.get(n_main);
-      let name = main.get(n_name);
-      window.document.title = `Case #${caseid}: ${name}`;
-      this.update("case-editor", casefile);
-      history.pushState(caseid, "", "/c/" + caseid);
-    });
+  async open_case(caseid) {
+    let casefile = await casedb.read(caseid);
+    let main = casefile.get(n_main);
+    let name = main.get(n_name);
+    window.document.title = `Case #${caseid}: ${name}`;
+    this.update("case-editor", casefile);
+    history.pushState(caseid, "", "/c/" + caseid);
+    return casefile;
   }
 
   save_case(casefile) {
