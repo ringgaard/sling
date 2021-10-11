@@ -160,7 +160,7 @@ static void AddMeta(HTTPResponse *response,
 }
 
 void KnowledgeService::Load(Store *kb, const string &name_table) {
-  // Bind names and freeze store.
+  // Bind names.
   kb_ = kb;
   CHECK(names_.Bind(kb_));
   docnames_ = new DocumentNames(kb);

@@ -60,6 +60,38 @@ const char *property_order[] = {
   "P1549",      // demonym
   "P6271",      // demonym of
 
+  // Person.
+  "P21",        // sex or gender
+  "P91",        // sexual orientation
+  "P172",       // ethnic group
+  "P27",        // country of citizenship
+  "P551",       // residence
+  "P937",       // work location
+
+  // Birth and death.
+  "P3150",      // birthday
+  "P569",       // date of birth
+  "P19",        // place of birth
+  "P1636",      // date of baptism in early childhood
+  "P570",       // date of death
+  "P20",        // place of death
+  "P4602",      // date of burial or cremation
+  "P119",       // place of burial
+  "P1196",      // manner of death
+  "P509",       // cause of death
+  "P157",       // killed by
+
+  // Physical attributes.
+  "P1884",      // hair color
+  "P1340",      // eye color
+  "P552",       // handedness
+  "P423",       // shooting handedness
+  "P741",       // playing hand
+  "P1853",      // blood type
+  "P1050",      // medical condition
+  "P3828",      // wears
+  "P1576",      // lifestyle
+
   // Organization.
   "P122",       // basic form of government
   "P1454",      // legal form
@@ -172,38 +204,6 @@ const char *property_order[] = {
   "P126",       // maintained by
   "P1398",      // structure replaces
   "P167",       // structure replaced by
-
-  // Birth and death.
-  "P3150",      // birthday
-  "P569",       // date of birth
-  "P19",        // place of birth
-  "P1636",      // date of baptism in early childhood
-  "P570",       // date of death
-  "P20",        // place of death
-  "P4602",      // date of burial or cremation
-  "P119",       // place of burial
-  "P1196",      // manner of death
-  "P509",       // cause of death
-  "P157",       // killed by
-
-  // Person.
-  "P21",        // sex or gender
-  "P91",        // sexual orientation
-  "P172",       // ethnic group
-  "P27",        // country of citizenship
-  "P551",       // residence
-  "P937",       // work location
-
-  "P1884",      // hair color
-  "P1340",      // eye color
-  "P552",       // handedness
-  "P423",       // shooting handedness
-  "P741",       // playing hand
-  "P1853",      // blood type
-  "P1050",      // medical condition
-
-  "P3828",      // wears
-  "P1576",      // lifestyle
 
   // Proportions.
   "P2043",      // length
@@ -363,6 +363,8 @@ const char *property_order[] = {
   "P1619",      // date of official opening
   "P729",       // service entry
   "P2047",      // duration
+  "P1319",      // earliest date
+  "P1326",      // latest date
 
   // Language.
   "P103",       // native language
@@ -370,6 +372,27 @@ const char *property_order[] = {
   "P6886",      // writing language
   "P37",        // official language
   "P2936",      // language used
+
+  // Place.
+  "P263",       // official residence
+  "P669",       // located on street
+  "P6375",      // located at street address
+  "P670",       // street number
+  "P281",       // postal code
+  "P276",       // location
+  "P17",        // country
+  "P495",       // country of origin
+  "P30",        // continent
+  "P625",       // coordinate location
+  "P5140",      // coordinates of geographic center
+  "P1332",      // coordinates of northernmost point
+  "P1334",      // coordinates of easternmost point
+  "P1333",      // coordinates of southernmost point
+  "P1335",      // coordinates of westernmost point
+  "P131",       // located in the administrative territorial entity
+  "P706",       // located on terrain feature
+  "P206",       // located in or next to body of water
+  "P421",       // located in time zone
 
   // Location.
   "P1376",      // capital of
@@ -420,27 +443,6 @@ const char *property_order[] = {
   "P610",       // highest point
   "P1589",      // lowest point
   "P2044",      // elevation above sea level
-
-  // Place.
-  "P263",       // official residence
-  "P669",       // located on street
-  "P6375",      // located at street address
-  "P670",       // street number
-  "P281",       // postal code
-  "P276",       // location
-  "P17",        // country
-  "P495",       // country of origin
-  "P30",        // continent
-  "P625",       // coordinate location
-  "P5140",      // coordinates of geographic center
-  "P1332",      // coordinates of northernmost point
-  "P1334",      // coordinates of easternmost point
-  "P1333",      // coordinates of southernmost point
-  "P1335",      // coordinates of westernmost point
-  "P131",       // located in the administrative territorial entity
-  "P706",       // located on terrain feature
-  "P206",       // located in or next to body of water
-  "P421",       // located in time zone
 
   // Taxon.
   "P225",       // taxon name

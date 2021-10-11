@@ -132,6 +132,7 @@ export class Frame {
 
   // Return (first) value for frame slot.
   get(name) {
+    if (typeof name === 'string') name = this.store.lookup(name);
     for (let n = 0; n < this.slots.length; n += 2) {
       if (this.slots[n] === name) return this.slots[n + 1];
     }
@@ -231,14 +232,12 @@ export class Frame {
   // Iterator over all slots with name.
   all(name) {
     if (typeof name === 'string') name = this.store.lookup(name);
-    let slots = this.slots;
-    let it = function* () {
+    let it = function* (slots, name) {
       for (let pos = 0; pos < slots.length; pos += 2) {
         if (slots[pos] === name) yield slots[pos + 1];
-        pos += 2;
       }
     };
-    return it();
+    return it(this.slots, name);
   }
 
   // Resolve frame by following is: chain.
@@ -252,6 +251,20 @@ export class Frame {
     }
   }
 }
+
+// Qualified string.
+export class QString {
+  // Create string with qualifier.
+  constructor(text, qual) {
+    this.text = text;
+    this.qual = qual;
+  }
+
+  // Use text part of qstring as string representation.
+  toString() {
+    return this.text;
+  }
+};
 
 // Binary SLING decoder.
 export class Decoder {
@@ -384,6 +397,11 @@ export class Decoder {
             var replace = this.readVarint32();
             object = this.readFrame(slots, replace);
             break;
+
+          case 8:
+            // QSTRING.
+            object = this.readQString(arg);
+            break;
         }
         break;
     }
@@ -443,6 +461,21 @@ export class Decoder {
     }
 
     return array;
+  }
+
+  // Read qstring from input.
+  readQString() {
+    // Get string size.
+    let size = this.readVarint32();
+
+    // Read string.
+    let text = this.readString(size);
+    let qstr = new QString(text);
+    this.refs.push(qstr);
+
+    // Read qualifier.
+    qstr.qual = this.read();
+    return qstr;
   }
 
   // Read symbol from from input.

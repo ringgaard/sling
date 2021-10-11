@@ -149,7 +149,7 @@ export class Component extends HTMLElement {
 
   static escape(s) {
     if (s == undefined) return "";
-    return s.replace(/["&'<>`/]/g, c => htmlmap[c]);
+    return s.toString().replace(/["&'<>`/]/g, c => htmlmap[c]);
   }
 
   // Register class as a HTML web component.

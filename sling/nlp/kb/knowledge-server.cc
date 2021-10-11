@@ -19,6 +19,7 @@
 #include "sling/net/http-server.h"
 #include "sling/net/media-service.h"
 #include "sling/nlp/kb/knowledge-service.h"
+#include "sling/nlp/kb/schema-service.h"
 
 DEFINE_string(host, "", "HTTP server host address");
 DEFINE_int32(port, 8080, "HTTP server port");
@@ -57,7 +58,10 @@ int main(int argc, char *argv[]) {
     LOG(INFO) << "Conect to item database " << FLAGS_itemdb;
     kb.OpenItemDatabase(FLAGS_itemdb);
   }
+
   commons.Freeze();
+
+  SchemaService schemas(&commons);
 
   MediaService media("/media", FLAGS_mediadb);
   media.set_redirect(true);
@@ -65,6 +69,8 @@ int main(int argc, char *argv[]) {
   http.Register("/thumb", &media, &MediaService::Handle);
 
   kb.Register(&http);
+  schemas.Register(&http);
+
   http.Register("/", [](HTTPRequest *req, HTTPResponse *rsp) {
     rsp->TempRedirectTo("/kb");
   });

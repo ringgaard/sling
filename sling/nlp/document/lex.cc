@@ -143,7 +143,7 @@ bool DocumentLexer::Lex(Document *document, Text lex) const {
       for (int i = 0; i < evoked.length(); ++i) {
         Handle frame = evoked.get(i);
         span->Evoke(frame);
-        added.insert(frame);
+        added.add(frame);
       }
     }
   }
@@ -151,7 +151,7 @@ bool DocumentLexer::Lex(Document *document, Text lex) const {
   // Add thematic frames. Do not add frames that are evoked by spans.
   for (int theme : themes) {
     Handle frame = objects[theme];
-    if (added.count(frame) == 0) {
+    if (added.has(frame)) {
       document->AddTheme(frame);
     }
   }

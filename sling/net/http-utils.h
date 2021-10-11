@@ -16,6 +16,7 @@
 #define SLING_NET_HTTP_UTILS_H_
 
 #include <string.h>
+#include <time.h>
 #include <string>
 #include <vector>
 

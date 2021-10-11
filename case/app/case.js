@@ -286,6 +286,7 @@ class CaseEditor extends Component {
           <md-toolbar-logo></md-toolbar-logo>
           <div id="title">Case #<md-text id="caseno"></md-text></div>
           <topic-search-box id="search"></topic-search-box>
+          <property-search-box id="props"></property-search-box>
           <md-spacer></md-spacer>
           <md-icon-button id="save" icon="save"></md-icon-button>
         </md-toolbar>

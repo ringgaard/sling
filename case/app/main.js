@@ -6,6 +6,7 @@
 import {Component, OneOf} from "/common/lib/component.js";
 import {store, settings} from "./global.js";
 import {casedb} from "./database.js";
+import {get_schema} from "./schema.js";
 
 import "./manager.js";
 import "./case.js";
@@ -35,6 +36,9 @@ class CaseApp extends OneOf {
   async onconnected() {
     // Handle navigation events.
     window.onpopstate = e => this.onpopstate(e);
+
+    // Pre-fetch knowledge base schema.
+    get_schema();
 
     // Open local case database.
     await casedb.open();

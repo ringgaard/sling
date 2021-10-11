@@ -375,6 +375,7 @@ class WikidataPruner : public task::FrameProcessor {
     // Get parameters.
     task->Fetch("prune_names", &prune_names_);
     task->Fetch("prune_aliases", &prune_aliases_);
+    task->Fetch("prune_property_aliases", &prune_property_aliases_);
     task->Fetch("prune_wiki_links", &prune_wiki_links_);
     task->Fetch("prune_wiki_maps", &prune_wiki_maps_);
     task->Fetch("prune_category_members", &prune_category_members_);
@@ -392,6 +393,7 @@ class WikidataPruner : public task::FrameProcessor {
     // Check if item is an auxiliary item. This need to be checked before the
     // item is pruned.
     bool aux = filter_.IsAux(frame);
+    bool property = frame.IsA(n_property_);
 
     // Optionally, remove names, aliases, wikilinks, and categories from item.
     Store *store = frame.store();
@@ -411,15 +413,23 @@ class WikidataPruner : public task::FrameProcessor {
         }
       }
 
-      // Only keep description matching the language of the first name.
+      // Only keep description and aliases matching the language of the first
+      // name.
       for (int i = 0; i < item.size(); ++i) {
-        if (item[i].name != n_description_) continue;
-        String descrption(store, store->Resolve(item[i].value));
-        if (descrption.qualifier() != lang) item[i].name = Handle::nil();
+        Handle name = item[i].name;
+        if (name == n_description_ ||
+            (name == n_alias_ && property && !prune_property_aliases_)) {
+          String value(store, store->Resolve(item[i].value));
+          if (value.qualifier() != lang) item[i].name = Handle::nil();
+        }
       }
       item.Prune();
     }
-    if (prune_aliases_) item.Delete(n_alias_);
+    if (property) {
+      if (prune_property_aliases_) item.Delete(n_alias_);
+    } else {
+      if (prune_aliases_) item.Delete(n_alias_);
+    }
     if (prune_wiki_links_) item.Delete(n_links_);
     if (prune_wiki_maps_) item.Delete(n_wikipedia_);
     if (prune_category_members_) item.Delete(n_member_);
@@ -447,6 +457,7 @@ class WikidataPruner : public task::FrameProcessor {
   Name n_wikipedia_{names_, "/w/item/wikipedia"};
   Name n_links_{names_, "/w/item/links"};
   Name n_member_{names_, "/w/item/member"};
+  Name n_property_{names_, "/w/property"};
 
   // Item filter.
   AuxFilter filter_;
@@ -457,6 +468,7 @@ class WikidataPruner : public task::FrameProcessor {
   // Parameters.
   bool prune_names_ = true;
   bool prune_aliases_ = true;
+  bool prune_property_aliases_ = false;
   bool prune_wiki_links_ = true;
   bool prune_wiki_maps_ = true;
   bool prune_category_members_ = true;

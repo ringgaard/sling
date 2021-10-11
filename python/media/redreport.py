@@ -386,7 +386,11 @@ class SubredditCard extends MdCard {
 
     // Render header.
     h.push(`
-      <h1><a href="https://www.reddit.com/r/${sr.name}/">${sr.name}</a></h1>
+      <h1>
+        <a href="https://www.reddit.com/r/${sr.name}/" target="_blank">
+          ${sr.name}
+        </a>
+      </h1>
       <p>${sr.matches} / ${sr.total} matched</p>
     `);
 

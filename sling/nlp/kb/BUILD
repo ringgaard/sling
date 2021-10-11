@@ -223,11 +223,26 @@ cc_library(
   ],
 )
 
+cc_library(
+  name = "schema-service",
+  srcs = ["schema-service.cc"],
+  hdrs = ["schema-service.h"],
+  deps = [
+    "//sling/base",
+    "//sling/frame:object",
+    "//sling/frame:serialization",
+    "//sling/frame:store",
+    "//sling/net:http-server",
+    "//sling/net:http-utils",
+  ],
+)
+
 cc_binary(
   name = "knowledge-server",
   srcs = ["knowledge-server.cc"],
   deps = [
     ":knowledge-service",
+    ":schema-service",
     "//sling/base",
     "//sling/file",
     "//sling/file:embed",
