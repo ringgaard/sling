@@ -84,6 +84,9 @@ class KnowledgeService {
   // Handle KB frame requests.
   void HandleGetFrame(HTTPRequest *request, HTTPResponse *response);
 
+  // Handle KB topic requests.
+  void HandleGetTopic(HTTPRequest *request, HTTPResponse *response);
+
  private:
   // Get item from id. This also resolves cross-reference and loads offline
   // items from the item database.
@@ -95,8 +98,11 @@ class KnowledgeService {
   // Pre-load proxies into store from offline database.
   void Preload(const Frame &item, Store *store);
 
-  // Get standard properties (ref, name, and description).
-  void GetStandardProperties(Frame &item, Builder *builder) const;
+  // Get standard properties (ref, name, and optinally description).
+  void GetStandardProperties(Frame &item, Builder *builder, bool full) const;
+
+  // Compare values. Return true if a is before b.
+  bool Compare(Store *store, Handle a, Handle b) const;
 
   // Sort items in cronological order.
   void SortChronologically(Store *store, Handles *values) const;
@@ -123,6 +129,12 @@ class KnowledgeService {
     int order = kint32max;
   };
 
+  // Get property descriptor.
+  Property *GetProperty(Handle h) {
+    auto f = properties_.find(h);
+    return f != properties_.end() ? &f->second : nullptr;
+  }
+
   // Property name and id for sorting xref properties.
   struct PropName {
     PropName(Text name, Handle id) : name(name), id(id) {}
@@ -135,6 +147,9 @@ class KnowledgeService {
     Text name;
     Handle id;
   };
+
+  // Statement with property and value.
+  typedef std::pair<Property *, Handle> Statement;
 
   // Knowledge base store.
   Store *kb_ = nullptr;

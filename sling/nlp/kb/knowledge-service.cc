@@ -279,6 +279,7 @@ void KnowledgeService::Register(HTTPServer *http) {
   http->Register("/kb/query", this, &KnowledgeService::HandleQuery);
   http->Register("/kb/item", this, &KnowledgeService::HandleGetItem);
   http->Register("/kb/frame", this, &KnowledgeService::HandleGetFrame);
+  http->Register("/kb/topic", this, &KnowledgeService::HandleGetTopic);
   common_.Register(http);
   app_.Register(http);
 }
@@ -447,7 +448,7 @@ void KnowledgeService::HandleQuery(HTTPRequest *request,
     Frame item(ws.store(), idmatch);
     if (item.valid()) {
       Builder match(ws.store());
-      GetStandardProperties(item, &match);
+      GetStandardProperties(item, &match, true);
       results.push_back(match.Create().handle());
     }
   }
@@ -459,7 +460,7 @@ void KnowledgeService::HandleQuery(HTTPRequest *request,
     Frame item(ws.store(), RetrieveItem(ws.store(), id));
     if (item.invalid()) continue;
     Builder match(ws.store());
-    GetStandardProperties(item, &match);
+    GetStandardProperties(item, &match, true);
     results.push_back(match.Create().handle());
   }
   b.Add(n_matches_,  Array(ws.store(), results));
@@ -488,7 +489,7 @@ void KnowledgeService::HandleGetItem(HTTPRequest *request,
     return;
   }
   Builder b(ws.store());
-  GetStandardProperties(item, &b);
+  GetStandardProperties(item, &b, true);
   Handle datatype = item.GetHandle(n_target_);
   if (!datatype.IsNil()) {
     Frame dt(ws.store(), datatype);
@@ -536,7 +537,7 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
     if (s.name == n_category_) {
       Builder b(item.store());
       Frame cat(item.store(), s.value);
-      GetStandardProperties(cat, &b);
+      GetStandardProperties(cat, &b, false);
       info->categories.push_back(b.Create().handle());
       continue;
     }
@@ -547,9 +548,8 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
     }
 
     // Look up property. Skip non-property slots.
-    auto f = properties_.find(s.name);
-    if (f == properties_.end()) continue;
-    Property *property = &f->second;
+    Property *property = GetProperty(s.name);
+    if (!property) continue;
 
     // Get property list for property.
     Handles *&property_list = property_groups[property];
@@ -569,7 +569,7 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
   // Build property lists.
   Store *store = item.store();
   for (auto &group : property_groups.array) {
-    const Property *property = group->first;
+    Property *property = group->first;
 
     // Add property information.
     Builder p(item.store());
@@ -593,7 +593,7 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
         if (store->IsFrame(value)) {
           // Add reference to other item.
           Frame ref(store, value);
-          GetStandardProperties(ref, &v);
+          GetStandardProperties(ref, &v, false);
         } else {
           v.Add(n_text_, value);
         }
@@ -605,7 +605,7 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
         // Add reference to property.
         Frame ref(store, value);
         if (ref.valid()) {
-          GetStandardProperties(ref, &v);
+          GetStandardProperties(ref, &v, false);
         }
       } else if (property->datatype == n_string_type_) {
         // Add string value.
@@ -673,7 +673,7 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
         if (store->IsFrame(value)) {
           // Add reference to other item.
           Frame ref(store, value);
-          GetStandardProperties(ref, &v);
+          GetStandardProperties(ref, &v, false);
         } else {
           v.Add(n_text_, value);
         }
@@ -755,7 +755,8 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
 }
 
 void KnowledgeService::GetStandardProperties(Frame &item,
-                                             Builder *builder) const {
+                                             Builder *builder,
+                                             bool full) const {
   // Try to retrieve item from offline storage if it is a proxy.
   if (item.IsProxy()) {
     Store *store = item.store();
@@ -775,40 +776,46 @@ void KnowledgeService::GetStandardProperties(Frame &item,
   }
 
   // Get description.
-  Handle description = item.GetHandle(n_description_);
-  if (!description.IsNil()) builder->Add(n_description_, description);
+  if (full) {
+    Handle description = item.GetHandle(n_description_);
+    if (!description.IsNil()) builder->Add(n_description_, description);
+  }
+}
+
+bool KnowledgeService::Compare(Store *store, Handle a, Handle b) const {
+  if (!store->IsFrame(b)) return true;
+  if (!store->IsFrame(a)) return false;
+
+  Frame a_frame(store, a);
+  int a_order = GetCanonicalOrder(a_frame);
+  bool a_ordered = a_order != kint32max;
+  Date a_date = GetCanonicalDate(a_frame);
+  bool a_dated = a_date.precision != Date::NONE;
+
+  Frame b_frame(store, b);
+  int b_order = GetCanonicalOrder(b_frame);
+  bool b_ordered = b_order != kint32max;
+  Date b_date = GetCanonicalDate(b_frame);
+  bool b_dated = b_date.precision != Date::NONE;
+
+  if (a_ordered && b_ordered) {
+    // Compare by series ordinal.
+    return a_order < b_order;
+  } else if (a_dated || b_dated) {
+    // Compare by date.
+    if (!b_dated) return true;
+    if (!a_dated) return false;
+    return a_date < b_date;
+  } else {
+    return false;
+  }
 }
 
 void KnowledgeService::SortChronologically(Store *store,
                                            Handles *values) const {
   if (values->size() < 2) return;
   std::stable_sort(values->begin(), values->end(), [&](Handle a, Handle b) {
-    if (!store->IsFrame(b)) return true;
-    if (!store->IsFrame(a)) return false;
-
-    Frame a_frame(store, a);
-    int a_order = GetCanonicalOrder(a_frame);
-    bool a_ordered = a_order != kint32max;
-    Date a_date = GetCanonicalDate(a_frame);
-    bool a_dated = a_date.precision != Date::NONE;
-
-    Frame b_frame(store, b);
-    int b_order = GetCanonicalOrder(b_frame);
-    bool b_ordered = b_order != kint32max;
-    Date b_date = GetCanonicalDate(b_frame);
-    bool b_dated = b_date.precision != Date::NONE;
-
-    if (a_ordered && b_ordered) {
-      // Compare by series ordinal.
-      return a_order < b_order;
-    } else if (a_dated || b_dated) {
-      // Compare by date.
-      if (!b_dated) return true;
-      if (!a_dated) return false;
-      return a_date < b_date;
-    } else {
-      return false;
-    }
+    return Compare(store, a, b);
   });
 }
 
@@ -918,12 +925,104 @@ void KnowledgeService::HandleGetFrame(HTTPRequest *request,
   Text id = ws.Get("id");
   Handle handle = RetrieveItem(ws.store(), id);
   if (handle.IsNil()) {
-    response->SendError(404, nullptr, "Frame not found");
+    response->SendError(404, nullptr, "Item not found");
     return;
   }
 
   // Return frame as response.
   ws.set_output(Object(ws.store(), handle));
+}
+
+void KnowledgeService::HandleGetTopic(HTTPRequest *request,
+                                      HTTPResponse *response) {
+  WebService ws(kb_, request, response);
+  Store *store = ws.store();
+
+  // Look up frame in knowledge base.
+  Text id = ws.Get("id");
+  Handle handle = RetrieveItem(store, id);
+  if (handle.IsNil()) {
+    response->SendError(404, nullptr, "Topic not found");
+    return;
+  }
+
+  // Collect properties.
+  Frame item(store, handle);
+  std::vector<Statement> statements;
+  std::vector<Handle> media;
+  for (const Slot &s : item) {
+    // Skip categories.
+    if (s.name == n_category_) continue;
+
+    // Collect media.
+    if (s.name == n_media_) {
+      media.push_back(s.value);
+      continue;
+    }
+
+    // Look up property. Skip non-property slots.
+    Property *property = GetProperty(s.name);
+    if (!property) continue;
+
+    // Add statement.
+    statements.emplace_back(property, s.value);
+  }
+
+  // Sort statements in display order.
+  std::stable_sort(statements.begin(), statements.end(),
+    [&](const Statement &s1, const Statement &s2) {
+      if (s1.first->order == s2.first->order) {
+        return Compare(store, s1.second, s2.second);
+      } else {
+        return s1.first->order < s2.first->order;
+      }
+    });
+
+  // Build display frame.
+  Builder b(store);
+  b.AddId(id);
+  Handle name = item.GetHandle(n_name_);
+  if (!name.IsNil()) {
+    b.Add(n_name_, name);
+  }
+  Handle description = item.GetHandle(n_description_);
+  if (!description.IsNil()) {
+    b.Add(n_description_, description);
+  }
+
+  // Add statements in display order.
+  for (const Statement &s : statements) {
+    bool qualified = s.second != store->Resolve(s.second);
+    if (qualified) {
+      // Sort statement qualifiers.
+      Builder q(store);
+      q.AddFrom(s.second);
+      std::stable_sort(q.begin(), q.end(),
+        [&](const Slot &s1, const Slot &s2) {
+          if (s1.name == s2.name) {
+            return Compare(store, s1.value, s2.value);
+          } else {
+            Property *p1 = GetProperty(s1.name);
+            Property *p2 = GetProperty(s2.name);
+            if (!p1) return false;
+            if (!p2) return true;
+            return p1->order < p2->order;
+          }
+        });
+      b.Add(s.first->id, q.Create());
+    } else {
+      // Add non-qualified statement.
+      b.Add(s.first->id, s.second);
+    }
+  }
+
+  // Add media.
+  for (Handle &m : media) {
+    b.Add(n_media_, m);
+  }
+
+  // Return frame as response.
+  ws.set_output(b.Create());
 }
 
 }  // namespace nlp

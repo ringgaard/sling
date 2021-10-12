@@ -5,7 +5,7 @@
 
 import {Component} from "/common/lib/component.js";
 import {MdSearchResult} from "/common/lib/material.js";
-import {store} from "./global.js";
+import {store, settings} from "./global.js";
 
 const n_name = store.lookup("name");
 const n_alias = store.lookup("alias");
@@ -89,7 +89,7 @@ export async function get_schema() {
 
   // Fetch schema from server and decode it.
   var start = performance.now();
-  let response = await fetch("http://dev.ringgaard.com:8090/schema");
+  let response = await fetch(settings.kbservice + "/schema");
   kbschema = await store.parse(response);
   var end = performance.now()
 

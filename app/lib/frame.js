@@ -1072,6 +1072,12 @@ export class Printer {
       this.write(JSON.stringify(obj));
     } else if (Array.isArray(obj)) {
       this.printArray(obj);
+    } else if (obj instanceof QString) {
+      this.write(JSON.stringify(obj.text));
+      if (obj.qual) {
+        this.write("@");
+        this.print(obj.qual);
+      }
     } else {
       // Number expected.
       this.write(obj.toString());

@@ -30,6 +30,7 @@ SchemaService::SchemaService(Store *kb) {
   property_fields.insert(store.Lookup("alias"));
   property_fields.insert(store.Lookup("description"));
   property_fields.insert(store.Lookup("target"));
+  property_fields.insert(store.Lookup("P1630")); // formatter url
 
   // Collect properties.
   Handles properties(&store);
@@ -86,7 +87,6 @@ void SchemaService::HandleSchema(HTTPRequest *request, HTTPResponse *response) {
   // Set HTTP headers.
   char datebuf[RFCTIME_SIZE];
   response->Set("Last-Modified", RFCTime(timestamp_, datebuf));
-  response->Set("Access-Control-Allow-Origin", "*"); // TODO: remove
   response->set_content_type("application/sling");
 
   // Do not return content if only headers were requested.
