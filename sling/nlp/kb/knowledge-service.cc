@@ -280,6 +280,7 @@ void KnowledgeService::Register(HTTPServer *http) {
   http->Register("/kb/item", this, &KnowledgeService::HandleGetItem);
   http->Register("/kb/frame", this, &KnowledgeService::HandleGetFrame);
   http->Register("/kb/topic", this, &KnowledgeService::HandleGetTopic);
+  http->Register("/kb/stubs", this, &KnowledgeService::HandleGetStubs);
   common_.Register(http);
   app_.Register(http);
 }
@@ -950,6 +951,7 @@ void KnowledgeService::HandleGetTopic(HTTPRequest *request,
   Frame item(store, handle);
   std::vector<Statement> statements;
   std::vector<Handle> media;
+  Handles images(store);
   for (const Slot &s : item) {
     // Skip categories.
     if (s.name == n_category_) continue;
@@ -963,6 +965,25 @@ void KnowledgeService::HandleGetTopic(HTTPRequest *request,
     // Look up property. Skip non-property slots.
     Property *property = GetProperty(s.name);
     if (!property) continue;
+
+    // Collect Commons images.
+    if (property->image) {
+      Handle filename = store->Resolve(s.value);
+      String url(store, CommonsUrl(store->GetString(filename)->str()));
+      if (filename != s.value) {
+        Builder m(store);
+        for (const Slot &s : Frame(store, s.value)) {
+          if (s.name == Handle::is()) {
+            m.AddIs(url);
+          } else {
+            m.Add(s.name, s.value);
+          }
+        }
+        images.push_back(m.Create().handle());
+      } else {
+        images.push_back(url.handle());
+      }
+    }
 
     // Add statement.
     statements.emplace_back(property, s.value);
@@ -1017,12 +1038,47 @@ void KnowledgeService::HandleGetTopic(HTTPRequest *request,
   }
 
   // Add media.
+  for (Handle &m : images) {
+    b.Add(n_media_, m);
+  }
   for (Handle &m : media) {
     b.Add(n_media_, m);
   }
 
   // Return frame as response.
   ws.set_output(b.Create());
+}
+
+void KnowledgeService::HandleGetStubs(HTTPRequest *request,
+                                      HTTPResponse *response) {
+  WebService ws(kb_, request, response);
+  Store *store = ws.store();
+
+  // Expected input is an array of frames.
+  if (!ws.input().IsArray()) {
+    response->set_status(400);
+    return;
+  }
+  Array frames = ws.input().AsArray();
+  int size = frames.length();
+
+  // Return array of stub frames with id and name.
+  IOBufferOutputStream stream(response->buffer());
+  Output out(&stream);
+  response->set_content_type("application/sling");
+  Encoder encoder(store, &out);
+  Array stubs(store, size);
+  for (int i = 0; i < size; ++i) {
+    Frame item(store, frames.get(i));
+    Builder b(store);
+    b.AddId(item.Id());
+    Handle name = item.GetHandle(n_name_);
+    if (!name.IsNil()) b.Add(n_name_, name);
+    Frame stub = b.Create();
+    stubs.set(i, stub.handle());
+    encoder.Encode(stub);
+  }
+  encoder.Encode(stubs);
 }
 
 }  // namespace nlp

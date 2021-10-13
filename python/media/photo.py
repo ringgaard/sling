@@ -242,7 +242,7 @@ class Profile:
       print("Skip existing photo", url)
       return 0
 
-    print("Add", url,
+    print("Photo", url,
           caption if caption != None else "",
           "NSFW" if nsfw else "")
 
@@ -395,7 +395,7 @@ class Profile:
         # Fetch albums from text.
         selftext = reply["selftext"]
         for m in re.finditer("\[(.+)\]\((https?://imgur.com/a/\w+)\)", selftext):
-          print("Add album", m[2], m[1])
+          print("Album", m[2], m[1])
           count += self.add_media(m[2], m[1], nsfw)
       else:
         # Add media to profile frame.

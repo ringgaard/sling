@@ -274,7 +274,7 @@ for key, value in redditdb.items(chkpt.checkpoint):
       for d in delimiters:
         p = name.find(d)
         if p != -1 and p < cut: cut = p
-      name = name[:cut].strip(" .-?")
+      name = name[:cut].strip(" .,-?")
       itemid = lookup_name(name)
       query = name
 

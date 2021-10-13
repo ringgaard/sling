@@ -87,6 +87,9 @@ class KnowledgeService {
   // Handle KB topic requests.
   void HandleGetTopic(HTTPRequest *request, HTTPResponse *response);
 
+  // Handle KB stubs requests.
+  void HandleGetStubs(HTTPRequest *request, HTTPResponse *response);
+
  private:
   // Get item from id. This also resolves cross-reference and loads offline
   // items from the item database.

@@ -90,7 +90,7 @@ export class Store {
     let proxy = new Frame(this);
     proxy.state = PROXY;
     proxy.slots = [this.id, id];
-    this.register(id, proxy);
+    this.frames.set(id, proxy);
     return proxy;
   }
 
@@ -119,6 +119,13 @@ export class Store {
       return reader.parse();
     }
   }
+
+  // Encode object and return binary representation.
+  encode(obj) {
+    let encoder = new Encoder(this);
+    encoder.encode(obj);
+    return encoder.output();
+  }
 }
 
 // A frame has a list of (name,value) slots.
@@ -143,6 +150,21 @@ export class Frame {
   get id() {
     if (this.state == ANONYMOUS) return undefined;
     return this.get(this.store.id);
+  }
+
+  // Check if frame is a proxy.
+  isproxy() {
+    return this.state == PROXY;
+  }
+
+  // Check is frame is anonymous.
+  isanonymous() {
+    return this.state == ANONYMOUS;
+  }
+
+  // Mark frame as a stub.
+  markstub() {
+    if (this.state == FULL) this.state = STUB;
   }
 
   // Add slot to frame.
@@ -217,16 +239,12 @@ export class Frame {
 
   // Iterator over all slots.
   [Symbol.iterator]() {
-    let pos = 0;
-    let slots = this.slots;
-    return {
-      next() {
-        if (pos == slots.length) return { value: undefined, done: true};
-        let name = slots[pos++];
-        let value = slots[pos++];
-        return { value: [name, value], done: false };
+    let it = function* (slots, name) {
+      for (let pos = 0; pos < slots.length; pos += 2) {
+        yield [slots[pos], slots[pos + 1]];
       }
     };
+    return it(this.slots);
   }
 
   // Iterator over all slots with name.
@@ -485,16 +503,7 @@ export class Decoder {
 
   // Read link from input.
   readLink(size) {
-    // Read symbol name.
-    let symbol = this.readSymbol(size);
-
-    // Lookup symbol in store.
-    let link = this.store.lookup(symbol);
-
-    // Create proxy for symbol if not found.
-    if (link == undefined) link = this.store.proxy(symbol);
-
-    return link;
+    return this.store.lookup(this.readSymbol(size));
   }
 }
 

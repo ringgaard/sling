@@ -64,7 +64,7 @@ SchemaService::SchemaService(Store *kb) {
   encoder.Encode(schemas);
   encoded_schemas_ = encoder.buffer();
   timestamp_ = time(0);
-  LOG(INFO) << "Pre-encoded schema size: " << encoded_schemas_.size();
+  VLOG(1) << "Pre-encoded schema size: " << encoded_schemas_.size();
 }
 
 void SchemaService::Register(HTTPServer *http) {
