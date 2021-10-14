@@ -93,6 +93,11 @@ export async function get_schema() {
   kbschema = await store.parse(response);
   var end = performance.now()
 
+  // Mark all properties as stubs.
+  for (let type : kbschema.get("properties")) {
+    type.markstub();
+  }
+
   console.log("schema", end - start, "ms",
               kbschema.get("properties").length, "properties");
 

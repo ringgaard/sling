@@ -122,6 +122,7 @@ const char *property_order[] = {
   "P749",       // parent organization
   "P355",       // subsidiary
   "P199",       // business division
+  "Q67205181",  // business division of
   "P127",       // owned by
   "P1830",      // owner of
   "P361",       // part of
@@ -255,6 +256,8 @@ const char *property_order[] = {
   "Q65971578",  // wrote script of
   "Q66318312",  // cast member of
   "Q78522641",  // creator of
+  "Q66796038",  // award received by
+  "Q101072499", // award conferred
 
   "P1595",      // charge
   "P1399",      // convicted of

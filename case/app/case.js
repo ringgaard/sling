@@ -3,6 +3,7 @@
 
 import {Component} from "/common/lib/component.js";
 import * as material from "/common/lib/material.js";
+import {Frame, QString} from "/common/lib/frame.js";
 import {store, settings} from "./global.js";
 
 const n_id = store.id;
@@ -14,6 +15,50 @@ const n_topics = store.lookup("topics");
 const n_folders = store.lookup("folders");
 const n_next = store.lookup("next");
 const n_sling_case_no = store.lookup("PCASE");
+
+class LabelCollector {
+  constructor(store) {
+    this.store = store;
+    this.items = new Set();
+  }
+
+  add(item) {
+    // Add all missing values to collector.
+    for (let [name, value] of item) {
+      if (value instanceof Frame) {
+        if (value.isanonymous()) {
+          this.add(value);
+        } else if (value.isproxy()) {
+          this.items.add(value);
+        }
+      } else if (value instanceof QString) {
+        if (value.qual) this.items.add(value.qual);
+      }
+    }
+  }
+
+  async retrieve() {
+    // Skip if all labels has already been resolved.
+    if (this.items.size == 0) return null;
+
+    // Retrieve stubs from knowledge service.
+    let response = await fetch(settings.kbservice + "/kb/stubs", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/sling',
+      },
+      body: this.store.encode(Array.from(this.items)),
+    });
+    let stubs = await this.store.parse(response);
+
+    // Mark as stubs.
+    for (let stub of stubs) {
+      if (stub) stub.markstub();
+    }
+
+    return stubs;
+  }
+};
 
 //-----------------------------------------------------------------------------
 // Case Editor
@@ -409,7 +454,6 @@ class TopicSearchBox extends Component {
 
   onitem(e) {
     let item = e.detail;
-    console.log("selected item", item);
     this.match("#editor").add_topic(item.ref, item.name);
   }
 
@@ -659,16 +703,13 @@ class TopicList extends Component {
   }
 
   clear_selection() {
-    console.log("selection", this.selection);
     for (let topic of this.selection) {
-      console.log("unselect", topic.id);
       this.card(topic).unselect();
     }
     this.selection.clear();
   }
 
   select(topic, extend) {
-    console.log("select", topic.id, extend);
     if (!extend) this.clear_selection();
     this.selection.add(topic);
     this.card(topic).select();
@@ -722,30 +763,59 @@ class TopicCard extends material.MdCard {
 
     this.bind("pre", "keydown", e => this.onkeydown(e));
     this.bind(null, "click", e => this.onclick(e));
-    this.update_editmode(false);
+    this.update_mode(false);
   }
 
-  update_editmode(editmode) {
-    if (editmode == this.editmode) return false;
-    this.editmode = editmode;
+  update_mode(editing) {
+    if (editing == this.editing) return false;
+    this.editing = editing;
 
-    this.find("#edit").update(!editmode);
-    this.find("#delete").update(!editmode);
-    this.find("#moveup").update(!editmode);
-    this.find("#movedown").update(!editmode);
+    this.find("#edit").update(!editing);
+    this.find("#delete").update(!editing);
+    this.find("#moveup").update(!editing);
+    this.find("#movedown").update(!editing);
 
-    this.find("#save").update(editmode);
-    this.find("#discard").update(editmode);
+    this.find("#save").update(editing);
+    this.find("#discard").update(editing);
 
-    this.find("pre").setAttribute("contenteditable", editmode);
+    this.find("pre").setAttribute("contenteditable", editing);
   }
 
   selected() {
     return this.classList.contains("selected");
   }
 
+  async test(item) {
+    let start = performance.now();
+
+    // Retrieve item if needed.
+    if (!item.ispublic()) {
+      let url = `${settings.kbservice}/kb/topic?id=${item.id}`;
+      let response = await fetch(url);
+      item = await store.parse(response);
+    }
+
+    // Retrieve labels.
+    let labels = new LabelCollector(store)
+    labels.add(item);
+    let labeled = await labels.retrieve();
+
+    if (labeled) {
+      let end = performance.now();
+      console.log("time:", end - start, "labels", labeled.length);
+    }
+
+    this.appendChild(new PropertyPanel(item));
+  }
+
+
   select() {
     this.classList.add("selected");
+
+    // TODO remove
+    let topic = this.state;
+    let item = topic.get(n_is);
+    if (item) this.test(item);
   }
 
   unselect() {
@@ -754,7 +824,7 @@ class TopicCard extends material.MdCard {
 
   onedit(e) {
     e.stopPropagation();
-    this.update_editmode(true);
+    this.update_mode(true);
 
     let pre = this.find("pre");
     pre.setAttribute("contenteditable", "true");
@@ -765,17 +835,16 @@ class TopicCard extends material.MdCard {
     e.stopPropagation();
     let pre = this.find("pre");
     let content = pre.textContent;
-    console.log("content", content);
     let frame = store.parse(content);
 
     this.update(frame);
-    this.update_editmode(false);
+    this.update_mode(false);
     this.match("#editor").mark_dirty();
   }
 
   ondiscard(e) {
     this.update(this.state);
-    this.update_editmode(false);
+    this.update_mode(false);
   }
 
   async ondelete(e) {
@@ -801,11 +870,11 @@ class TopicCard extends material.MdCard {
   }
 
   onkeydown(e) {
-    if (e.key === "s" && e.ctrlKey && this.editmode) {
+    if (e.key === "s" && e.ctrlKey && this.editing) {
       this.onsave(e);
       e.stopPropagation();
       e.preventDefault();
-    } else if (e.key === "Escape" && this.editmode) {
+    } else if (e.key === "Escape" && this.editing) {
       this.ondiscard(e);
       e.stopPropagation();
       e.preventDefault();
@@ -891,6 +960,207 @@ class TopicCard extends material.MdCard {
 }
 
 Component.register(TopicCard);
+
+class KbLink extends Component {
+  onconnected() {
+    this.bind(null, "click", e => this.onclick(e));
+  }
+
+  onclick(e) {
+    window.open(`${settings.kbservice}/kb/${this.props.ref}`, "_blank");
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        color: #0b0080;
+      }
+
+      $:hover {
+        cursor: pointer;
+      }
+    `;
+  }
+}
+
+Component.register(KbLink);
+
+class PropertyPanel extends Component {
+  render() {
+    let item = this.state;
+    let store = item.store;
+    let h = [];
+
+    function propname(prop) {
+      let name = prop.get(n_name);
+      if (!name) name = prop.id;
+      h.push(`<kb-link ref="${prop.id}">`);
+      h.push(Component.escape(name));
+      h.push('</kb-link>');
+    }
+
+    function propval(val) {
+      if (val instanceof Frame) {
+        let name = val.get(n_name);
+        if (!name) name = val.id;
+        h.push(`<kb-link ref="${val.id}">`);
+        h.push(Component.escape(name));
+        h.push('</kb-link>');
+      } else {
+        h.push(Component.escape(val));
+      }
+    }
+
+    let prev = null;
+    for (let [name, value] of item) {
+      if (name == n_id) continue;
+      if (name.isproxy()) continue;
+
+      if (name != prev) {
+        // Start new property group for new property.
+        if (prev != null) h.push('</div></div>');
+        h.push('<div class="prop-row">');
+
+        // Property name.
+        h.push('<div class="prop-name">');
+        propname(name);
+        h.push('</div>');
+        h.push('<div class="prop-values">');
+        prev = name;
+      }
+
+      // Property value.
+      let v = store.resolve(value);
+      h.push('<div class="prop-value">');
+      propval(v);
+      h.push('</div>');
+
+      // Qualifiers.
+      if (v != value) {
+        h.push('<div class="qual-tab">');
+        let qprev = null;
+        for (let [qname, qvalue] of value) {
+          if (qname == n_is) continue;
+          if (qname.isproxy()) continue;
+
+          if (qname != qprev) {
+            // Start new property group for new property.
+            if (qprev != null) h.push('</div></div>');
+            h.push('<div class="qual-row">');
+
+            // Qualified property name.
+            h.push('<div class="qprop-name">');
+            propname(qname);
+            h.push('</div>');
+            h.push('<div class="qprop-values">');
+            qprev = qname;
+          }
+
+          // Qualified property value.
+          h.push('<div class="qprop-value">');
+          propval(qvalue);
+          h.push('</div>');
+        }
+        if (qprev != null) h.push('</div></div>');
+        h.push('</div>');
+      }
+    }
+    if (prev != null) h.push('</div></div>');
+
+    return h.join("");
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        display: table;
+        font-size: 16px;
+        border-collapse: collapse;
+        width: 100%;
+        table-layout: fixed;
+      }
+
+      $ .prop-row {
+        display: table-row;
+        border-top: 1px solid lightgrey;
+      }
+
+      $ .prop-row:first-child {
+        display: table-row;
+        border-top: none;
+      }
+
+      $ .prop-name {
+        display: table-cell;
+        font-weight: 500;
+        width: 20%;
+        padding: 8px;
+        vertical-align: top;
+        overflow-wrap: break-word;
+      }
+
+      $ .prop-values {
+        display: table-cell;
+        vertical-align: top;
+        padding-bottom: 8px;
+      }
+
+      $ .prop-value {
+        padding: 8px 8px 0px 8px;
+        overflow-wrap: break-word;
+      }
+
+      $ .prop-lang {
+        color: #808080;
+        font-size: 13px;
+      }
+
+      $ .prop-value a {
+        color: #0b0080;
+        text-decoration: none;
+        cursor: pointer;
+        outline: none;
+      }
+
+      $ .qual-tab {
+        display: table;
+        border-collapse: collapse;
+      }
+
+      $ .qual-row {
+        display: table-row;
+      }
+
+      $ .qprop-name {
+        display: table-cell;
+        font-size: 13px;
+        vertical-align: top;
+        padding: 1px 3px 1px 30px;
+        width: 150px;
+      }
+
+      $ .qprop-values {
+        display: table-cell;
+        vertical-align: top;
+      }
+
+      $ .qprop-value {
+        font-size: 13px;
+        vertical-align: top;
+        padding: 1px 1px 1px 1px;
+      }
+
+      $ .qprop-value a {
+        color: #0b0080;
+        text-decoration: none;
+        cursor: pointer;
+        outline: none;
+      }
+    `;
+  }
+}
+
+Component.register(PropertyPanel);
 
 material.MdIcon.custom("move-down", `
 <svg width="24" height="24" viewBox="0 0 32 32">

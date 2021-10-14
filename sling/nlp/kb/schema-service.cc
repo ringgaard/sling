@@ -25,18 +25,31 @@ SchemaService::SchemaService(Store *kb) {
   // Initialize local store for schemas.
   Store store(kb);
   Handle n_role = store.Lookup("role");
+  Handle n_inverse_label_item = store.Lookup("P7087");
+  Handle n_formatter_url = store.Lookup("P1630");
+
   HandleSet property_fields;
   property_fields.insert(store.Lookup("name"));
   property_fields.insert(store.Lookup("alias"));
   property_fields.insert(store.Lookup("description"));
   property_fields.insert(store.Lookup("target"));
-  property_fields.insert(store.Lookup("P1630")); // formatter url
+  property_fields.insert(n_formatter_url);
+  property_fields.insert(n_inverse_label_item);
+
+  // Build set of properties and inverse properties.
+  HandleSet propset;
+  for (const Slot &s : Frame(kb, kb->Lookup("/w/entity"))) {
+    if (s.name != n_role) continue;
+    propset.add(s.value);
+    Frame property(kb, s.value);
+    Handle inverse = property.GetHandle(n_inverse_label_item);
+    if (!inverse.IsNil()) propset.add(inverse);
+  }
 
   // Collect properties.
   Handles properties(&store);
-  for (const Slot &s : Frame(kb, kb->Lookup("/w/entity"))) {
-    if (s.name != n_role) continue;
-    Frame property(kb, s.value);
+  for (Handle prop : propset) {
+    Frame property(kb, prop);
 
     // Build client property frame.
     Builder b(&store);

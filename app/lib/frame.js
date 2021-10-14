@@ -34,8 +34,8 @@ function hasBinaryMarker(data) {
 // Frame states.
 const PROXY = 0;      // placeholder object with only the id
 const STUB = 1;       // object with id(s) and name(s)
-const FULL = 2;       // fully loaded object with all the slots
-const ANONYMOUS = 3;  // frame with no identifiers
+const PUBLIC = 2;     // frame with id(s)
+const ANONYMOUS = 3;  // frame with no id(s)
 
 // Frame store.
 export class Store {
@@ -64,7 +64,7 @@ export class Store {
   // Register frame under id in store.
   register(id, frame) {
     this.frames.set(id, frame);
-    frame.state = FULL;
+    frame.state = PUBLIC;
   }
 
   // Add frame to store.
@@ -94,6 +94,11 @@ export class Store {
     return proxy;
   }
 
+  // Try to find frame in store. Return undefined if frame is not found.
+  find(id) {
+    return this.frames.get(id);
+  }
+
   // Look up frame in store. This also searches the global store. Returns a new
   // proxy if frame is not found.
   lookup(id) {
@@ -103,6 +108,20 @@ export class Store {
     }
     if (frame) return frame;
     return this.proxy(id);
+  }
+
+  // Resolve value by following is: chain.
+  resolve(obj) {
+    while (true) {
+      if (obj instanceof Frame) {
+        if (!obj.isanonymous()) return obj;
+        let qua = obj.get(this.is);
+        if (!qua) return obj;
+        obj = qua;
+      } else {
+        return obj;
+      }
+    }
   }
 
   // Parse input data and return first object.
@@ -157,14 +176,19 @@ export class Frame {
     return this.state == PROXY;
   }
 
-  // Check is frame is anonymous.
+  // Check if frame is public.
+  ispublic() {
+    return this.state == PUBLIC;
+  }
+
+  // Check if frame is anonymous.
   isanonymous() {
     return this.state == ANONYMOUS;
   }
 
   // Mark frame as a stub.
   markstub() {
-    if (this.state == FULL) this.state = STUB;
+    if (this.state == PUBLIC) this.state = STUB;
   }
 
   // Add slot to frame.
@@ -349,8 +373,8 @@ export class Decoder {
   // Read one object from the input.
   read() {
     // Read next tag.
-    var [op, arg] = this.readTag();
-    var object;
+    let [op, arg] = this.readTag();
+    let object;
     switch (op) {
       case 0:
         // REF.
@@ -411,8 +435,8 @@ export class Decoder {
 
           case 7:
             // RESOLVE.
-            var slots = this.readVarint32();
-            var replace = this.readVarint32();
+            let slots = this.readVarint32();
+            let replace = this.readVarint32();
             object = this.readFrame(slots, replace);
             break;
 
@@ -430,7 +454,8 @@ export class Decoder {
   // Read frame from from input.
   readFrame = function(size, replace) {
     // Make new frame or replace existing frame.
-    var frame;
+    let frame;
+    let refidx = this.refs.length;
     if (replace == -1) {
       // Create new frame.
       frame = new Frame(this.store);
@@ -438,12 +463,12 @@ export class Decoder {
     } else {
       // Replace exising frame.
       frame = this.refs[replace];
-      if (frame == undefined) throw "Invalid replacement reference";
+      if (frame === undefined) throw "Invalid replacement reference";
     }
 
     // Read all the frame slots.
     let slots = new Array(size * 2);
-    for (var n = 0; n < size; ++n) {
+    for (let n = 0; n < size; ++n) {
       // Read key and value.
       let name = this.read();
       let value = this.read();
@@ -454,7 +479,16 @@ export class Decoder {
 
       // Register frame for id: slots.
       if (name === this.store.id) {
-        this.store.register(value, frame);
+        let existing = this.store.find(value);
+        if (existing) {
+          // Replace existing proxy/stub.
+          existing.state = PUBLIC;
+          this.refs[refidx] = existing;
+          frame = existing;
+        } else {
+          // Register new frame.
+          this.store.register(value, frame);
+        }
       }
     }
 
@@ -467,14 +501,14 @@ export class Decoder {
   // Read array from from input.
   readArray() {
     // Get array size.
-    var size = this.readVarint32();
+    let size = this.readVarint32();
 
     // Allocate array.
-    var array = new Array(size);
+    let array = new Array(size);
     this.refs.push(array);
 
     // Read array elements.
-    for (var i = 0; i < size; ++i) {
+    for (let i = 0; i < size; ++i) {
       array[i] = this.read();
     }
 
@@ -1029,7 +1063,6 @@ export class Reader {
       if (index != -1) this.refs[index] = frame;
     } else {
       frame.slots = slots;
-      frame.state = FULL;
       this.store.add(frame);
     }
 
@@ -1043,7 +1076,7 @@ export class Reader {
     this.next();
 
     // Allocate array.
-    var array = new Array();
+    let array = new Array();
 
     // Read array elements.
     while (this.token != 93) {  // ']'

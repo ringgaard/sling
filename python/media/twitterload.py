@@ -61,6 +61,7 @@ if flags.arg.mediadb: mediadb = sling.Database(flags.arg.mediadb, "twitterpic")
 
 bad_images = set([
   "http://pbs.twimg.com/profile_images/1302121919014207490/KaYYEC8b.jpg"
+  "http://pbs.twimg.com/profile_images/1339205747499028482/Ko4OEMrD.jpg",
   "https://pbs.twimg.com/static/dmca/dmca-med.jpg",
   "",
 ])
