@@ -91,10 +91,10 @@ export async function get_schema() {
   var start = performance.now();
   let response = await fetch(settings.kbservice + "/schema/");
   kbschema = await store.parse(response);
-  var end = performance.now()
+  var end = performance.now();
 
   // Mark all properties as stubs.
-  for (let type : kbschema.get("properties")) {
+  for (let type of kbschema.get("properties")) {
     type.markstub();
   }
 

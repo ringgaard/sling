@@ -1070,7 +1070,7 @@ void KnowledgeService::HandleGetStubs(HTTPRequest *request,
   Array stubs(store, size);
   for (int i = 0; i < size; ++i) {
     Frame item(store, frames.get(i));
-    if (!item.valid() && !item.IsProxy()) {
+    if (item.valid() && !item.IsProxy()) {
       Builder b(store);
       b.AddId(item.Id());
       Handle name = item.GetHandle(n_name_);
