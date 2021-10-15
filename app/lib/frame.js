@@ -165,6 +165,22 @@ export class Frame {
     return undefined;
   }
 
+  // Return (first) resolved value for frame slot.
+  resolved(name) {
+    let v = this.get(name);
+    if (v instanceof Frame) v = this.store.resolve(v);
+    return v;
+  }
+
+  // Check if frame has slot with name.
+  has(name) {
+    if (typeof name === 'string') name = this.store.lookup(name);
+    for (let n = 0; n < this.slots.length; n += 2) {
+      if (this.slots[n] === name) return true;
+    }
+    return false;
+  }
+
   // Return id for frame.
   get id() {
     if (this.state == ANONYMOUS) return undefined;

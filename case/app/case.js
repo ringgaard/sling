@@ -3,8 +3,11 @@
 
 import {Component} from "/common/lib/component.js";
 import * as material from "/common/lib/material.js";
+import {PhotoGallery, imageurl, use_mediadb} from "/common/lib/gallery.js";
 import {Frame, QString} from "/common/lib/frame.js";
 import {store, settings} from "./global.js";
+
+//use_mediadb(false);
 
 const n_id = store.id;
 const n_is = store.is;
@@ -15,6 +18,115 @@ const n_topics = store.lookup("topics");
 const n_folders = store.lookup("folders");
 const n_next = store.lookup("next");
 const n_sling_case_no = store.lookup("PCASE");
+
+const n_target = store.lookup("target");
+const n_media = store.lookup("media");
+
+const n_item_type = store.lookup("/w/item");
+const n_lexeme_type = store.lookup("/w/lexeme");
+const n_string_type = store.lookup("/w/string");
+const n_xref_type = store.lookup("/w/xref");
+const n_time_type = store.lookup("/w/time");
+const n_url_type = store.lookup("/w/url");
+const n_media_type = store.lookup("/w/media");
+const n_quantity_type = store.lookup("/w/quantity");
+const n_geo_type = store.lookup("/w/geo");
+
+const n_amount = store.lookup("/w/amount");
+const n_unit = store.lookup("/w/unit");
+const n_lat = store.lookup("/w/lat");
+const n_lng = store.lookup("/w/lng");
+const n_formatter_url = store.lookup("P1630");
+const n_media_legend = store.lookup("P2096");
+const n_has_quality = store.lookup("P1552");
+const n_not_safe_for_work = store.lookup("Q2716583");
+
+// Granularity for time.
+const MILLENNIUM = 1;
+const CENTURY = 2;
+const DECADE = 3
+const YEAR = 4;
+const MONTH = 5
+const DAY = 6;
+
+const month_names = [
+  "January", "February", "March",
+  "April", "May", "June",
+  "July", "August", "September",
+  "October", "November", "December",
+];
+
+class Time {
+  constructor(t) {
+    if (typeof(t) === "number") {
+      if (t >= 1000000) {
+        // YYYYMMDD
+        this.year = Math.floor(t / 10000);
+        this.month = Math.floor((t % 10000) / 100);
+        this.day = Math.floor(t % 100);
+        this.precision = DAY;
+      } else if (t >= 10000) {
+        // YYYYMM
+        this.year = Math.floor(t / 100);
+        this.month = Math.floor(t % 100);
+        this.precision = MONTH;
+      } else if (t >= 1000) {
+        // YYYY
+        this.year = Math.floor(t);
+        this.precision = YEAR;
+      } else if (t >= 100) {
+        // YYY*
+        this.year = Math.floor(t * 10);
+        this.precision = DECADE;
+      } else if (t >= 10) {
+        // YY**
+        this.year = Math.floor(t * 100 + 1);
+        this.precision = CENTURY;
+      } else if (t >= 0) {
+        // Y***
+        this.year = Math.floor(t * 1000 + 1);
+        this.precision = MILLENNIUM;
+      }
+    }
+  }
+
+  text() {
+    switch (this.precision) {
+      case MILLENNIUM:
+        if (this.year > 0) {
+          let millennium = Math.floor((this.year - 1) / 1000 + 1);
+          return millennium + ". millennium AD";
+        } else {
+          let millennium = Math.floor(-((this.year + 1) / 100 - 1));
+          return millennium + ". millennium BC";
+        }
+
+      case CENTURY:
+        if (this.year > 0) {
+          let century = Math.floor((this.year - 1) / 100 + 1);
+          return century + ". century AD";
+        } else {
+          let century = Math.floor(-((this.year + 1) / 100 - 1));
+          return century + ". century BC";
+        }
+
+      case DECADE:
+        return this.year + "s";
+
+      case YEAR:
+        return this.year.toString();
+
+      case MONTH:
+        return month_names[this.month - 1] + " " + this.year;
+
+      case DAY:
+        return month_names[this.month - 1] + " " + this.day + ", " + this.year;
+
+      default:
+        return "???";
+    }
+  }
+}
 
 class LabelCollector {
   constructor(store) {
@@ -805,7 +917,7 @@ class TopicCard extends material.MdCard {
       console.log("time:", end - start, "labels", labeled.length);
     }
 
-    this.appendChild(new PropertyPanel(item));
+    this.appendChild(new ItemPanel(item));
   }
 
 
@@ -985,13 +1097,45 @@ class KbLink extends Component {
 
 Component.register(KbLink);
 
+// Convert geo coordinate from decimal to degrees, minutes and seconds.
+function convert_geo_coord(coord, latitude) {
+  // Compute direction.
+  var direction;
+  if (coord < 0) {
+    coord = -coord;
+    direction = latitude ? "S" : "W";
+  } else {
+    direction = latitude ? "N" : "E";
+  }
+
+  // Compute degrees.
+  let degrees = Math.floor(coord);
+
+  // Compute minutes.
+  let minutes = Math.floor(coord * 60) % 60;
+
+  // Compute seconds.
+  let seconds = Math.floor(coord * 3600) % 60;
+
+  // Build coordinate string.
+  return degrees +  "°" + minutes + "′" + seconds + "″" + direction;
+}
+
 class PropertyPanel extends Component {
+  onconnected() {
+    this.bind(null, "click", e => { e.stopPropagation(); });
+  }
+
+  visible() {
+    return this.state && this.state.length > 0;
+  }
+
   render() {
     let item = this.state;
     let store = item.store;
     let h = [];
 
-    function propname(prop) {
+    function render_name(prop) {
       let name = prop.get(n_name);
       if (!name) name = prop.id;
       h.push(`<kb-link ref="${prop.id}">`);
@@ -999,15 +1143,139 @@ class PropertyPanel extends Component {
       h.push('</kb-link>');
     }
 
-    function propval(val) {
+    function render_quantity(val) {
+      var amount, unit;
       if (val instanceof Frame) {
-        let name = val.get(n_name);
-        if (!name) name = val.id;
+        amount = val.get(n_amount);
+        unit = val.get(n_unit);
+      } else {
+        amount = val;
+      }
+
+      if (typeof amount === 'number') {
+        amount = Math.round(amount * 1000) / 1000;
+      }
+
+      h.push(Component.escape(amount));
+      if (unit) {
+        h.push(" ");
+        render_value(unit);
+      }
+    }
+
+    function render_time(val) {
+      let t = new Time(val);
+      h.push(t.text());
+    }
+
+    function render_link(val) {
+      let name = val.get(n_name);
+      if (!name) name = val.id;
+      if (name) {
         h.push(`<kb-link ref="${val.id}">`);
         h.push(Component.escape(name));
         h.push('</kb-link>');
       } else {
+        render_fallback(val);
+      }
+    }
+
+    function render_text(val) {
+      if (val instanceof QString) {
+        h.push(Component.escape(val.text));
+        if (val.qual) {
+          h.push(' <span class="prop-lang">[');
+          render_value(val.qual.get(n_name));
+          h.push(']</span>');
+        }
+      } else {
         h.push(Component.escape(val));
+      }
+    }
+
+    function render_xref(val, prop) {
+      let formatter = prop.resolved(n_formatter_url);
+      if (formatter) {
+        let url = formatter.replace("$1", val);
+        h.push('<a href="');
+        h.push(url);
+        h.push('" target="_blank" rel="noreferrer">');
+        render_value(val);
+        h.push('</a>');
+      } else {
+        render_value(val);
+      }
+    }
+
+    function render_url(val) {
+      h.push('<a href="');
+      h.push(val);
+      h.push('" target="_blank" rel="noreferrer">');
+      render_value(val);
+      h.push('</a>');
+    }
+
+    function render_coord(val) {
+      let lat = val.get(n_lat);
+      let lng = val.get(n_lng);
+      let url = `http://maps.google.com/maps?q=${lat},${lng}`;
+
+      h.push('<a href="');
+      h.push(url);
+      h.push('" target="_blank" rel="noreferrer">');
+      h.push(convert_geo_coord(lat, true));
+      h.push(", ");
+      h.push(convert_geo_coord(lng, false));
+      h.push('</a>');
+    }
+
+    function render_fallback(val) {
+      if (val instanceof Frame) {
+        if (val.isanonymous()) {
+          if (val.has(n_amount)) {
+            render_quantity(val);
+          } else {
+            h.push(Component.escape(val.text()));
+          }
+        } else {
+          render_link(val);
+        }
+      } else {
+        render_text(val);
+      }
+    }
+
+    function render_value(val, prop) {
+      let dt = prop ? prop.get(n_target) : undefined;
+      switch (dt) {
+        case n_item_type:
+          if (val instanceof Frame) {
+            render_link(val);
+          } else {
+            render_fallback(val);
+          }
+          break;
+        case n_xref_type:
+        case n_media_type:
+          render_xref(val, prop);
+          break;
+        case n_time_type:
+          render_time(val);
+          break;
+        case n_quantity_type:
+          render_quantity(val);
+          break;
+        case n_string_type:
+          render_text(val);
+          break;
+        case n_url_type:
+          render_url(val);
+          break;
+        case n_geo_type:
+          render_coord(val);
+          break;
+        default:
+          render_fallback(val);
       }
     }
 
@@ -1023,7 +1291,7 @@ class PropertyPanel extends Component {
 
         // Property name.
         h.push('<div class="prop-name">');
-        propname(name);
+        render_name(name);
         h.push('</div>');
         h.push('<div class="prop-values">');
         prev = name;
@@ -1032,7 +1300,7 @@ class PropertyPanel extends Component {
       // Property value.
       let v = store.resolve(value);
       h.push('<div class="prop-value">');
-      propval(v);
+      render_value(v, name);
       h.push('</div>');
 
       // Qualifiers.
@@ -1050,7 +1318,7 @@ class PropertyPanel extends Component {
 
             // Qualified property name.
             h.push('<div class="qprop-name">');
-            propname(qname);
+            render_name(qname);
             h.push('</div>');
             h.push('<div class="qprop-values">');
             qprev = qname;
@@ -1058,7 +1326,7 @@ class PropertyPanel extends Component {
 
           // Qualified property value.
           h.push('<div class="qprop-value">');
-          propval(qvalue);
+          render_value(qvalue, qname);
           h.push('</div>');
         }
         if (qprev != null) h.push('</div></div>');
@@ -1161,6 +1429,170 @@ class PropertyPanel extends Component {
 }
 
 Component.register(PropertyPanel);
+
+class XrefPanel extends PropertyPanel {
+  static stylesheet() {
+    return PropertyPanel.stylesheet() + `
+      $ .prop-name {
+        font-size: 13px;
+        font-weight: normal;
+        width: 40%;
+        padding: 8px;
+        vertical-align: top;
+      }
+
+      $ .prop-values {
+        font-size: 13px;
+        max-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      $ .qprop-name {
+        font-size: 11px;
+        vertical-align: top;
+        padding: 1px 3px 1px 20px;
+        width: 100px;
+      }
+
+      $ .qprop-value {
+        font-size: 11px;
+        padding: 1px 1px 1px 1px;
+      }
+    `;
+  }
+}
+
+Component.register(XrefPanel);
+
+class PicturePanel extends Component {
+  onconnected() {
+    this.bind(null, "click", e => this.onopen(e));
+  }
+
+  onupdated() {
+    let images = this.state;
+    if (images && images.length > 0) {
+      let index = 0;
+      for (let i = 0; i < images.length; ++i) {
+        if (!images[i].nsfw) {
+          index = i;
+          break;
+        }
+      }
+      let image = images[index];
+      let caption = image.text;
+      if (caption) {
+        caption = caption.replace(/\[\[|\]\]/g, '');
+      }
+      if (images.length > 1) {
+        if (!caption) caption = "";
+        caption += ` [${index + 1}/${images.length}]`;
+      }
+
+      this.find(".photo").update(imageurl(image.url, true));
+      this.find(".caption").update(caption);
+    } else {
+      this.find(".photo").update(null);
+      this.find(".caption").update(null);
+    }
+  }
+
+  visible() {
+    return this.state && this.state.length > 0;
+  }
+
+  onopen(e) {
+    let modal = new PhotoGallery();
+    modal.open(this.state);
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        text-align: center;
+        cursor: pointer;
+      }
+
+      $ .caption {
+        display: block;
+        font-size: 13px;
+        color: #808080;
+        padding: 5px;
+      }
+
+      $ img {
+        max-width: 100%;
+        max-height: 480px;
+        vertical-align: middle
+      }
+    `;
+  }
+}
+
+Component.register(PicturePanel);
+
+class ItemPanel extends Component {
+  onconnected() {
+    this.bind(null, "click", e => { e.stopPropagation(); });
+
+    // Split item into properties, media, and xrefs.
+    let item = this.state;
+    let props = new Frame(store);
+    let xrefs = new Frame(store);
+    let gallery = [];
+    for (let [name, value] of item) {
+      if (name === n_media) {
+        if (value instanceof Frame) {
+          gallery.push({
+            url: store.resolve(value),
+            caption: value.get(n_media_legend),
+            nsfw: value.get(n_has_quality) == n_not_safe_for_work,
+          });
+        } else {
+          gallery.push({url: value});
+        }
+      } else if ((name instanceof Frame) && name.get(n_target) == n_xref_type) {
+        xrefs.add(name, value);
+      } else {
+        props.add(name, value);
+      }
+    }
+
+    // Update panels.
+    this.find("#properties").update(props);
+    this.find("#picture").update(gallery);
+    this.find("#xrefs").update(xrefs);
+  }
+
+  visible() {
+    return this.state && this.state.length > 0;
+  }
+
+  prerender() {
+    return `
+      <md-row-layout>
+        <md-column-layout style="flex: 1 1 66%;">
+          <property-panel id="properties">
+          </property-panel>
+        </md-column-layout>
+
+        <md-column-layout style="flex: 1 1 33%;">
+          <picture-panel id="picture">
+            <md-image class="photo"></md-image>
+            <md-text class="caption"></md-text>
+          </picture-panel>
+
+          <xref-panel id="xrefs">
+          </xref-panel>
+        </md-column-layout>
+      </md-row-layout>
+    `;
+  }
+};
+
+Component.register(ItemPanel);
 
 material.MdIcon.custom("move-down", `
 <svg width="24" height="24" viewBox="0 0 32 32">
