@@ -13,6 +13,7 @@ use_mediadb(false);
 const n_id = store.id;
 const n_is = store.is;
 const n_name = store.lookup("name");
+const n_description = store.lookup("description");
 const n_caseno = store.lookup("caseno");
 const n_main = store.lookup("main");
 const n_topics = store.lookup("topics");
@@ -1015,10 +1016,10 @@ class TopicCard extends material.MdCard {
       <md-card-toolbar>
         <div id="name">${topic.get(n_name)}</div>
         <md-spacer></md-spacer>
-        <div id="edit-actions">
+        <md-toolbox id="edit-actions">
           <md-icon-button id="save" icon="save_alt"></md-icon-button>
           <md-icon-button id="discard" icon="cancel"></md-icon-button>
-        </div>
+        </md-toolbox>
         <md-toolbox id="topic-actions">
           <md-icon-button id="edit" icon="edit"></md-icon-button>
           <md-icon-button id="moveup" icon="move-up"></md-icon-button>
@@ -1045,7 +1046,10 @@ class TopicCard extends material.MdCard {
                     rgb(0 0 0 / 23%) 0px 4px 8px 0px;
       }
       $ md-card-toolbar {
-        min-height: 40px;
+        position: relative;
+      }
+      $ md-toolbox {
+        top: -6px;
       }
       $ #name {
         display: block;
@@ -1612,8 +1616,8 @@ class TopicBar extends Component {
     return `
       $ {
         display: flex;
-        align-items: center;
-        flex-direction: column;
+        justify-content: space-evenly;
+        flex-direction: row;
       }
     `;
   }
@@ -1668,6 +1672,7 @@ class ItemPanel extends Component {
 
     // Update panels.
     this.find("#identifier").update(item.id);
+    this.find("#description").update(item.get(n_description));
     this.find("#properties").update(props);
     this.find("#picture").update(gallery);
     this.find("#xrefs").update(xrefs);
@@ -1692,8 +1697,8 @@ class ItemPanel extends Component {
 
   render() {
     return `
-      <div id="separator"></div>
-      <md-text id="identifier"></md-text>
+      <div><md-text id="identifier"></md-text>:</div>
+      <div><md-text id="description"></md-text></div>
       <md-row-layout>
         <md-column-layout style="flex: 1 1 66%;">
           <property-panel id="properties">
@@ -1718,16 +1723,13 @@ class ItemPanel extends Component {
 
   static stylesheet() {
     return `
-      $ #separator {
-        background-color: lightgrey;
-        height: 1px;
-        max-height: 1px;
-        margin-bottom: 5px;
-      }
-
       $ #identifier {
         font-size: 13px;
         color: #808080;
+      }
+
+      $ #description {
+        font-size: 16px;
       }
 
       $ #vruler {

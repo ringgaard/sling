@@ -1178,8 +1178,13 @@ export class MdToolbox extends Component {
   static stylesheet() {
     return `
       $ {
+        position: absolute;
+        background-color: #ffffff;
+        top: 0;
+        right: 0;
         display: flex;
         flex-direction: row;
+        box-shadow: -20px 0px 20px #ffffff;
       }
     `;
   }
