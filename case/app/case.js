@@ -6,8 +6,9 @@ import * as material from "/common/lib/material.js";
 import {PhotoGallery, imageurl, use_mediadb} from "/common/lib/gallery.js";
 import {Frame, QString} from "/common/lib/frame.js";
 import {store, settings} from "./global.js";
+import {get_schema} from "./schema.js";
 
-//use_mediadb(false);
+use_mediadb(false);
 
 const n_id = store.id;
 const n_is = store.is;
@@ -512,7 +513,7 @@ class CaseEditor extends Component {
         font-size: 16px;
         font-weight: bold;
         margin-left: 6px;
-        border-bottom: 1px solid #808080;
+        border-bottom: thin solid #808080;
         margin-bottom: 6px;
       }
     `;
@@ -810,7 +811,21 @@ class TopicList extends Component {
     this.selection = new Set();
   }
 
-  onupdate() {
+  async onupdate() {
+    // Retrieve labels for all topics.
+    let topics = this.state;
+    if (topics) {
+      // Wait until schema loaded.
+      await get_schema();
+
+      let labels = new LabelCollector(store)
+      for (let topic of topics) {
+        labels.add(topic);
+      }
+      await labels.retrieve();
+    }
+
+    // Clear selection.
     this.selection.clear();
   }
 
@@ -873,14 +888,21 @@ class TopicCard extends material.MdCard {
     this.bind("#save", "click", e => this.onsave(e));
     this.bind("#discard", "click", e => this.ondiscard(e));
 
-    this.bind("pre", "keydown", e => this.onkeydown(e));
     this.bind(null, "click", e => this.onclick(e));
+    this.bind(null, "keydown", e => this.onkeydown(e));
+
     this.update_mode(false);
   }
 
   update_mode(editing) {
     if (editing == this.editing) return false;
     this.editing = editing;
+
+    if (editing) {
+      this.find("#mode").update("#edit");
+    } else {
+      this.find("#mode").update("#view", this.state);
+    }
 
     this.find("#edit").update(!editing);
     this.find("#delete").update(!editing);
@@ -889,45 +911,14 @@ class TopicCard extends material.MdCard {
 
     this.find("#save").update(editing);
     this.find("#discard").update(editing);
-
-    this.find("pre").setAttribute("contenteditable", editing);
   }
 
   selected() {
     return this.classList.contains("selected");
   }
 
-  async test(item) {
-    let start = performance.now();
-
-    // Retrieve item if needed.
-    if (!item.ispublic()) {
-      let url = `${settings.kbservice}/kb/topic?id=${item.id}`;
-      let response = await fetch(url);
-      item = await store.parse(response);
-    }
-
-    // Retrieve labels.
-    let labels = new LabelCollector(store)
-    labels.add(item);
-    let labeled = await labels.retrieve();
-
-    if (labeled) {
-      let end = performance.now();
-      console.log("time:", end - start, "labels", labeled.length);
-    }
-
-    this.appendChild(new ItemPanel(item));
-  }
-
-
   select() {
     this.classList.add("selected");
-
-    // TODO remove
-    let topic = this.state;
-    let item = topic.get(n_is);
-    if (item) this.test(item);
   }
 
   unselect() {
@@ -938,18 +929,23 @@ class TopicCard extends material.MdCard {
     e.stopPropagation();
     this.update_mode(true);
 
+    let topic = this.state;
     let pre = this.find("pre");
-    pre.setAttribute("contenteditable", "true");
+    pre.innerHTML = Component.escape(topic.text(true));
     pre.focus();
   }
 
-  onsave(e) {
+  async onsave(e) {
     e.stopPropagation();
     let pre = this.find("pre");
     let content = pre.textContent;
-    let frame = store.parse(content);
+    let topic = store.parse(content);
 
-    this.update(frame);
+    let labels = new LabelCollector(store)
+    labels.add(topic);
+    await labels.retrieve();
+
+    this.update(topic);
     this.update_mode(false);
     this.match("#editor").mark_dirty();
   }
@@ -1017,10 +1013,7 @@ class TopicCard extends material.MdCard {
 
     return `
       <md-card-toolbar>
-        <div>
-          <div id="name">${topic.get(n_name)}</div>
-          <div id="id">${topic.get(n_id)}</div>
-        </div>
+        <div id="name">${topic.get(n_name)}</div>
         <md-spacer></md-spacer>
         <div id="edit-actions">
           <md-icon-button id="save" icon="save_alt"></md-icon-button>
@@ -1033,7 +1026,10 @@ class TopicCard extends material.MdCard {
           <md-icon-button id="delete" icon="delete"></md-icon-button>
         </md-toolbox>
       </md-card-toolbar>
-      <pre spellcheck="false">${Component.escape(topic.text(true))}</pre>
+      <one-of id="mode">
+        <item-panel id="view"></item-panel>
+        <pre id="edit" spellcheck="false" contenteditable="true"></pre>
+      </one-of>
     `;
   }
 
@@ -1048,17 +1044,12 @@ class TopicCard extends material.MdCard {
         box-shadow: rgb(0 0 0 / 16%) 0px 4px 8px 0px,
                     rgb(0 0 0 / 23%) 0px 4px 8px 0px;
       }
+      $ md-card-toolbar {
+        min-height: 40px;
+      }
       $ #name {
         display: block;
         font-size: 24px;
-      }
-      $ #id {
-        display: block;
-        font-size: 13px;
-        color: #808080;
-        text-decoration: none;
-        width: fit-content;
-        outline: none;
       }
       $ pre {
         font-size: 12px;
@@ -1184,8 +1175,10 @@ class PropertyPanel extends Component {
       if (val instanceof QString) {
         h.push(Component.escape(val.text));
         if (val.qual) {
+          let lang = val.qual.get(n_name);
+          if (!lang) lang = val.qual.id;
           h.push(' <span class="prop-lang">[');
-          render_value(val.qual.get(n_name));
+          render_value(lang);
           h.push(']</span>');
         }
       } else {
@@ -1350,7 +1343,7 @@ class PropertyPanel extends Component {
 
       $ .prop-row {
         display: table-row;
-        border-top: 1px solid lightgrey;
+        border-top: thin solid lightgrey;
       }
 
       $ .prop-row:first-child {
@@ -1415,7 +1408,7 @@ class PropertyPanel extends Component {
       $ .qprop-value {
         font-size: 13px;
         vertical-align: top;
-        padding: 1px 1px 1px 1px;
+        padding: 1px;
       }
 
       $ .qprop-value a {
@@ -1458,7 +1451,7 @@ class XrefPanel extends PropertyPanel {
 
       $ .qprop-value {
         font-size: 11px;
-        padding: 1px 1px 1px 1px;
+        padding: 1px;
       }
     `;
   }
@@ -1533,15 +1526,126 @@ class PicturePanel extends Component {
 
 Component.register(PicturePanel);
 
+class TopicExpander extends Component {
+  onconnected() {
+    this.bind(null, "click", e => this.onclick(e));
+  }
+
+  onclick(e) {
+    if (this.expansion) {
+      this.close();
+    } else {
+      this.open();
+    }
+  }
+
+  async open() {
+    let item = this.state;
+
+    // Retrieve item if needed.
+    if (!item.ispublic()) {
+      let url = `${settings.kbservice}/kb/topic?id=${item.id}`;
+      let response = await fetch(url);
+      item = await store.parse(response);
+    }
+
+    // Retrieve labels.
+    let labels = new LabelCollector(store)
+    labels.add(item);
+    await labels.retrieve();
+
+    // Add item panel for subtopic.
+    let panel = this.match("subtopic-panel");
+    this.expansion = new ItemPanel(item);
+    panel.appendChild(this.expansion);
+    this.update(this.state);
+  }
+
+  close() {
+    // Add item panel for subtopic.
+    let panel = this.match("subtopic-panel");
+    panel.removeChild(this.expansion);
+    this.expansion = undefined;
+    this.update(this.state);
+  }
+
+  render() {
+    let topic = this.state;
+    if (!topic) return;
+    return `
+      <div>${Component.escape(topic.id)}</div>
+      <md-icon icon="${this.expansion ? "expand_less" : "expand_more"}">
+      </md-icon>
+    `;
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        font-size: 13px;
+        color: #808080;
+      }
+    `;
+  }
+}
+
+Component.register(TopicExpander);
+
+class TopicBar extends Component {
+  visible() {
+    return this.state && this.state.length > 0;
+  }
+
+  render() {
+    if (!this.state) return;
+    let h = new Array();
+    for (let subtopic of this.state) {
+      h.push(new TopicExpander(subtopic));
+    }
+    return h;
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        display: flex;
+        align-items: center;
+        flex-direction: column;
+      }
+    `;
+  }
+}
+
+Component.register(TopicBar);
+
+class SubtopicPanel extends Component {
+  visible() {
+    return this.state && this.state.length > 0;
+  }
+
+  render() {
+    return new TopicBar(this.state);
+  }
+}
+
+Component.register(SubtopicPanel);
+
 class ItemPanel extends Component {
   onconnected() {
-    this.bind(null, "click", e => { e.stopPropagation(); });
+    if (this.state) this.onupdated();
+  }
 
-    // Split item into properties, media, and xrefs.
+  onupdated() {
+    // Split item into properties, media, xrefs, and subtopics.
     let item = this.state;
+    if (!item) return;
     let props = new Frame(store);
     let xrefs = new Frame(store);
     let gallery = [];
+    let subtopics = new Array();
     for (let [name, value] of item) {
       if (name === n_media) {
         if (value instanceof Frame) {
@@ -1553,6 +1657,8 @@ class ItemPanel extends Component {
         } else {
           gallery.push({url: value});
         }
+      } else if (name === n_is) {
+        subtopics.push(value);
       } else if ((name instanceof Frame) && name.get(n_target) == n_xref_type) {
         xrefs.add(name, value);
       } else {
@@ -1561,33 +1667,84 @@ class ItemPanel extends Component {
     }
 
     // Update panels.
+    this.find("#identifier").update(item.id);
     this.find("#properties").update(props);
     this.find("#picture").update(gallery);
     this.find("#xrefs").update(xrefs);
+    this.find("#subtopics").update(subtopics);
+
+    // Update rulers.
+    if (props.length == 0 || (gallery.length == 0 && xrefs.length == 0)) {
+      this.find("#vruler").style.display = "none";
+    } else {
+      this.find("#vruler").style.display = "";
+    }
+    if (gallery.length == 0 || xrefs.length == 0) {
+      this.find("#hruler").style.display = "none";
+    } else {
+      this.find("#hruler").style.display = "";
+    }
   }
 
   visible() {
     return this.state && this.state.length > 0;
   }
 
-  prerender() {
+  render() {
     return `
+      <div id="separator"></div>
+      <md-text id="identifier"></md-text>
       <md-row-layout>
         <md-column-layout style="flex: 1 1 66%;">
           <property-panel id="properties">
           </property-panel>
         </md-column-layout>
 
+        <div id="vruler"></div>
+
         <md-column-layout style="flex: 1 1 33%;">
           <picture-panel id="picture">
             <md-image class="photo"></md-image>
             <md-text class="caption"></md-text>
           </picture-panel>
-
+          <div id="hruler"></div>
           <xref-panel id="xrefs">
           </xref-panel>
         </md-column-layout>
       </md-row-layout>
+      <subtopic-panel id="subtopics"></subtopic-panel>
+    `;
+  }
+
+  static stylesheet() {
+    return `
+      $ #separator {
+        background-color: lightgrey;
+        height: 1px;
+        max-height: 1px;
+        margin-bottom: 5px;
+      }
+
+      $ #identifier {
+        font-size: 13px;
+        color: #808080;
+      }
+
+      $ #vruler {
+        background-color: lightgrey;
+        width: 1px;
+        max-width: 1px;
+        margin-left: 10px;
+        margin-right: 10px;
+      }
+
+      $ #hruler {
+        background-color: lightgrey;
+        height: 1px;
+        max-height: 1px;
+        margin-top: 10px;
+        margin-bottom: 10px;
+      }
     `;
   }
 };

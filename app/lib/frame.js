@@ -229,7 +229,7 @@ export class Frame {
 
   // Return number of slots for frame.
   get length() {
-    return this.slots.length / 2;
+    return this.slots ? this.slots.length / 2 : 0;
   }
 
   // Return name for nth slot.

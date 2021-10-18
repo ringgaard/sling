@@ -32,6 +32,11 @@ flags.define("--redditdb",
              default="reddit",
              metavar="DB")
 
+flags.define("--posting",
+             help="single reddit posting",
+             default=None,
+             metavar="SID")
+
 flags.define("--checkpoint",
              help="file with latest checkpoint for scanning reddit db",
              default=None,
@@ -202,7 +207,7 @@ def name_prefix(name):
     else:
       break
   if len(prefix) < 2: return None
-  return " ".join(prefix)
+  return " ".join(prefix).strip(" .,-?")
 
 # Find new postings to subreddits.
 batch = None
@@ -216,7 +221,12 @@ profiles = {}
 num_profiles = 0
 num_photos = 0
 
-for key, value in redditdb.items(chkpt.checkpoint):
+if flags.arg.posting:
+  postings = [(flags.arg.posting, redditdb[flags.arg.posting])]
+else:
+  postings = redditdb.items(chkpt.checkpoint)
+
+for key, value in postings:
   # Parse reddit posting.
   store = sling.Store(commons)
   posting = store.parse(value, json=True)
@@ -292,7 +302,6 @@ for key, value in redditdb.items(chkpt.checkpoint):
         if prefix != None:
           itemid = lookup_name(prefix)
           query = prefix
-
     else:
       continue
 

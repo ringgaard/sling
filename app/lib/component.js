@@ -55,35 +55,46 @@ export class Component extends HTMLElement {
     }
 
     // Render component.
-    this.onconnect && this.onconnect();
-    if (this.visible) {
-      if (this.visible()) {
-        this.generate(true);
-      } else {
-        this.style.display = "none";
-      }
+    let p = this.onconnect && this.onconnect();
+    if (p instanceof Promise) {
+      p.then(() => {
+        if (!this.hide()) this.generate(true);
+        this.onconnected && this.onconnected();
+      });
     } else {
-      this.generate(true);
+      if (!this.hide()) this.generate(true);
+      this.onconnected && this.onconnected();
     }
-    this.onconnected && this.onconnected();
   }
 
   // Update component state.
   update(state) {
     this.state = state;
 
-    this.onupdate && this.onupdate();
+    let p = this.onupdate && this.onupdate();
+    if (p instanceof Promise) {
+      p.then(() => {
+        if (!this.hide()) this.generate(false);
+        this.onupdated && this.onupdated();
+      });
+    } else {
+      if (!this.hide()) this.generate(false);
+      this.onupdated && this.onupdated();
+    }
+  }
+
+  // Hide component if it is not visible.
+  hide() {
     if (this.visible) {
       if (this.visible()) {
         this.style.display = "";
-        this.generate(false);
+        return false;
       } else {
         this.style.display = "none";
+        return true;
       }
-    } else {
-      this.generate(false);
     }
-    this.onupdated && this.onupdated();
+    return false;
   }
 
   // Generate component content.
