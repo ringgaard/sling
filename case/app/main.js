@@ -90,8 +90,8 @@ class CaseApp extends OneOf {
     let ts = new Date().toJSON();
     casefile.add(n_created, ts);
     casefile.add(n_modified, ts);
-    casefile.add(n_main, main);
     casefile.add(n_topics, topics);
+    casefile.add(n_main, main);
     casefile.add(n_folders, store.frame(["Main", main_topics]));
     casefile.add(n_next, next);
 

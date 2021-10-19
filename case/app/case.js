@@ -4,7 +4,7 @@
 import {Component} from "/common/lib/component.js";
 import * as material from "/common/lib/material.js";
 import {PhotoGallery, imageurl, use_mediadb} from "/common/lib/gallery.js";
-import {Frame, QString} from "/common/lib/frame.js";
+import {Frame, QString, Encoder} from "/common/lib/frame.js";
 import {store, settings} from "./global.js";
 import {get_schema} from "./schema.js";
 
@@ -13,12 +13,15 @@ use_mediadb(false);
 const n_id = store.id;
 const n_is = store.is;
 const n_name = store.lookup("name");
+const n_alias = store.lookup("alias");
 const n_description = store.lookup("description");
 const n_caseno = store.lookup("caseno");
 const n_main = store.lookup("main");
 const n_topics = store.lookup("topics");
 const n_folders = store.lookup("folders");
 const n_next = store.lookup("next");
+const n_publish = store.lookup("publish");
+const n_share = store.lookup("share");
 const n_sling_case_no = store.lookup("PCASE");
 
 const n_target = store.lookup("target");
@@ -184,6 +187,7 @@ class CaseEditor extends Component {
     this.bind("#menu", "click", e => this.onmenu(e));
     this.bind("#home", "click", e => this.close());
     this.bind("#save", "click", e => this.onsave(e));
+    this.bind("#share", "click", e => this.onshare(e));
     this.bind("#newfolder", "click", e => this.onnewfolder(e));
 
     document.addEventListener("keydown", e => this.onkeydown(e));
@@ -226,6 +230,44 @@ class CaseEditor extends Component {
     }
   }
 
+  async onshare(e) {
+    let share = this.casefile.get(n_share);
+    let publish = this.casefile.get(n_publish);
+    let dialog = new SharingDialog({share, publish});
+    let result = await dialog.show();
+    if (result && result.share) {
+      // Update sharing information.
+      if (result.share != share) {
+        this.casefile.set(n_share, result.share);
+        this.dirty = true;
+      }
+      if (result.publish != publish) {
+        this.casefile.set(n_publish, result.publish);
+        this.dirty = true;
+      }
+
+      // Make sure the case is saved.
+      if (this.dirty) {
+        this.match("#app").save_case(this.casefile);
+        this.mark_clean();
+      }
+
+      // Send case to server.
+      let r = await fetch("/share", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/sling'
+        },
+        body: this.encoded()
+      });
+      if (!r.ok) {
+        console.log("Sharing error", r);
+        material.StdDialog.error(
+          `Error ${r.status} sharing case: ${r.statusText}`);
+      }
+    }
+  }
+
   onupdate() {
     if (!this.state) return;
     this.mark_clean();
@@ -250,6 +292,15 @@ class CaseEditor extends Component {
 
   name() {
     return this.main.get(n_name);
+  }
+
+  encoded() {
+    let encoder = new Encoder(store);
+    for (let topic of this.casefile.get(n_topics)) {
+      encoder.encode(topic);
+    }
+    encoder.encode(this.casefile);
+    return encoder.output();
   }
 
   next_topic() {
@@ -382,6 +433,7 @@ class CaseEditor extends Component {
     let topic = store.frame(`t/${this.caseno()}/${topicid}`);
     if (itemid) topic.add(n_is, store.lookup(itemid));
     if (name) topic.add(n_name, name);
+    this.mark_dirty();
 
     // Add topic to current folder.
     this.topics.push(topic);
@@ -391,7 +443,6 @@ class CaseEditor extends Component {
     let topic_list = this.find("topic-list");
     topic_list.update(this.folder);
     topic_list.scroll_to(topic);
-    this.mark_dirty();
   }
 
   delete_topic(topic) {
@@ -448,6 +499,7 @@ class CaseEditor extends Component {
           <property-search-box id="props"></property-search-box>
           <md-spacer></md-spacer>
           <md-icon-button id="save" icon="save"></md-icon-button>
+          <md-icon-button id="share" icon="share"></md-icon-button>
         </md-toolbar>
 
         <md-row-layout>
@@ -806,6 +858,48 @@ class RenameFolderDialog extends material.MdDialog {
 
 Component.register(RenameFolderDialog);
 
+class SharingDialog extends material.MdDialog {
+  onconnected() {
+    this.find("#share").update(this.state.share);
+    this.find("#publish").update(this.state.publish);
+  }
+
+  submit() {
+    this.close({
+      share: this.find("#share").checked,
+      publish: this.find("#publish").checked,
+    });
+  }
+
+  render() {
+    return `
+      <md-dialog-top>Share case</md-dialog-top>
+      <div id="content">
+        <md-checkbox id="share" label="Share case in the public case store">
+        </md-checkbox>
+        <md-checkbox id="publish" label="Publish case topics in knowledge base">
+        </md-checkbox>
+      </div>
+      <md-dialog-bottom>
+        <button id="cancel">Cancel</button>
+        <button id="submit">Share</button>
+      </md-dialog-bottom>
+    `;
+  }
+
+  static stylesheet() {
+    return material.MdDialog.stylesheet() + `
+      $ #content {
+        display: flex;
+        flex-direction: column;
+        row-gap: 16px;
+      }
+    `;
+  }
+}
+
+Component.register(SharingDialog);
+
 class TopicList extends Component {
   constructor(state) {
     super(state);
@@ -896,7 +990,6 @@ class TopicCard extends material.MdCard {
   }
 
   update_mode(editing) {
-    if (editing == this.editing) return false;
     this.editing = editing;
 
     if (editing) {
@@ -905,13 +998,8 @@ class TopicCard extends material.MdCard {
       this.find("#mode").update("#view", this.state);
     }
 
-    this.find("#edit").update(!editing);
-    this.find("#delete").update(!editing);
-    this.find("#moveup").update(!editing);
-    this.find("#movedown").update(!editing);
-
-    this.find("#save").update(editing);
-    this.find("#discard").update(editing);
+    this.find("#topic-actions").update(!editing);
+    this.find("#edit-actions").update(editing);
   }
 
   selected() {
@@ -1047,6 +1135,7 @@ class TopicCard extends material.MdCard {
       }
       $ md-card-toolbar {
         position: relative;
+        margin-bottom: 0px;
       }
       $ md-toolbox {
         top: -6px;
@@ -1646,6 +1735,9 @@ class ItemPanel extends Component {
     // Split item into properties, media, xrefs, and subtopics.
     let item = this.state;
     if (!item) return;
+    let top = this.parentNode.closest("item-panel") == null;
+    let names = new Array();
+    let title = item.get(n_name);
     let props = new Frame(store);
     let xrefs = new Frame(store);
     let gallery = [];
@@ -1663,6 +1755,9 @@ class ItemPanel extends Component {
         }
       } else if (name === n_is) {
         subtopics.push(value);
+      } else if (name === n_name || name === n_alias) {
+        let n = store.resolve(value).toString();
+        if (!top || n != title) names.push(n);
       } else if ((name instanceof Frame) && name.get(n_target) == n_xref_type) {
         xrefs.add(name, value);
       } else {
@@ -1672,6 +1767,7 @@ class ItemPanel extends Component {
 
     // Update panels.
     this.find("#identifier").update(item.id);
+    this.find("#names").update(names.join(" • "));
     this.find("#description").update(item.get(n_description));
     this.find("#properties").update(props);
     this.find("#picture").update(gallery);
@@ -1697,7 +1793,10 @@ class ItemPanel extends Component {
 
   render() {
     return `
-      <div><md-text id="identifier"></md-text>:</div>
+      <div>
+        <md-text id="identifier"></md-text>:
+        <md-text id="names"></md-text>
+      </div>
       <div><md-text id="description"></md-text></div>
       <md-row-layout>
         <md-column-layout style="flex: 1 1 66%;">
@@ -1724,6 +1823,11 @@ class ItemPanel extends Component {
   static stylesheet() {
     return `
       $ #identifier {
+        font-size: 13px;
+        color: #808080;
+      }
+
+      $ #names {
         font-size: 13px;
         color: #808080;
       }

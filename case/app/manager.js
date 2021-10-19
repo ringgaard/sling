@@ -130,6 +130,7 @@ Component.register(NewCaseDialog);
 
 class CaseSearchBox extends Component {
   onconnected() {
+    this.bind("#add", "click", e => this.onadd(e));
     this.bind("md-search", "query", e => this.onquery(e));
     this.bind("md-search", "item", e => this.onitem(e));
     this.bind("md-search", "enter", e => this.onenter(e));
@@ -186,6 +187,17 @@ class CaseSearchBox extends Component {
     });
   }
 
+  onadd(e) {
+    e.preventDefault();
+    let name = this.query();
+    let dialog = new NewCaseDialog({name});
+    dialog.show().then(result => {
+      if (result) {
+        app.add_case(result.name, result.description, null);
+      }
+    });
+  }
+
   query() {
     return this.find("md-search").query();
   }
@@ -202,6 +214,7 @@ class CaseSearchBox extends Component {
           min-length=2
           autofocus>
         </md-search>
+        <md-icon-button id="add" icon="add"></md-icon-button>
       </form>
     `;
   }
@@ -286,10 +299,21 @@ class CaseList extends material.MdCard {
    `);
     h.push("<tbody>");
     for (let rec of this.state) {
+      let icon = "";
+      if (rec.publish) {
+        icon = '<md-icon icon="group" outlined></md-icon>';
+      } else if (rec.share) {
+        icon = '<md-icon icon="share" outlined></md-icon>';
+      }
       h.push(`
         <tr case="${rec.id}">
           <td>${rec.id}</td>
-          <td>${Component.escape(rec.name)}</td>
+          <td>
+            <div>
+              <span>${Component.escape(rec.name)}</span>
+              ${icon}
+            </div>
+          </td>
           <td>${Component.escape(rec.description)}</td>
           <td>${date2str(rec.created)}</td>
           <td>${date2str(rec.modified)}</td>
@@ -342,10 +366,21 @@ class CaseList extends material.MdCard {
         text-align: right;
       }
 
-      $ td:nth-child(3) { /* description */
+      /* name */
+      $ td:nth-child(2) div {
+        display: flex;
+        align-items: center;
+      }
+      $ td:nth-child(2) md-icon {
+        padding-left: 6px;
+      }
+
+      /* description */
+      $ td:nth-child(3) {
         width: 100%;
         white-space: normal;
       }
+
       $ md-icon-button {
         color: #808080;
       }

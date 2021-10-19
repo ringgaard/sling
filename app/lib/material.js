@@ -1157,8 +1157,13 @@ Component.register(MdInput);
 //-----------------------------------------------------------------------------
 
 export class MdToolbox extends Component {
+  constructor(state) {
+    super(state);
+    this.hover = false;
+  }
+
   visible() {
-    return this.state;
+    return this.state && this.hover;
   }
 
   onconnected() {
@@ -1168,18 +1173,24 @@ export class MdToolbox extends Component {
   }
 
   onenter(e) {
-    if (!this.state) this.update(true);
+    if (!this.hover) {
+      this.hover = true;
+      this.update(this.state);
+    }
   }
 
   onleave(e) {
-    if (this.state) this.update(false);
+    if (this.hover) {
+      this.hover = false;
+      this.update(this.state);
+    }
   }
 
   static stylesheet() {
     return `
       $ {
         position: absolute;
-        background-color: #ffffff;
+        background-color: inherit;
         top: 0;
         right: 0;
         display: flex;

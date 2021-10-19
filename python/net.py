@@ -132,9 +132,11 @@ class HTTPHandler:
         ret = self.func(request)
 
         # Format response.
-        formatter = http_reponse_formatters.get(type(ret))
-        if formatter is None: raise "No HTTP formatter for " + str(type())
-        formatter(ret, request, response)
+        if ret is not None:
+          formatter = http_reponse_formatters.get(type(ret))
+          if formatter is None:
+            raise Exception("No HTTP formatter for " + str(type(ret)))
+          formatter(ret, request, response)
 
     except Exception as e:
       # Return error response with stack trace.

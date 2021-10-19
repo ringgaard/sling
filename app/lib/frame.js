@@ -224,7 +224,7 @@ export class Frame {
         }
       }
     }
-    add(name, value);
+    this.add(name, value);
   }
 
   // Return number of slots for frame.
@@ -599,6 +599,8 @@ export class Encoder {
       } else {
         this.writeTag(6, FloatToBits(obj) >> 2);
       }
+    } else if (typeof obj === 'boolean') {
+      this.writeTag(5, obj ? 1 : 0);
     } else {
       let ref = this.refs.get(obj);
       if (!ref) {

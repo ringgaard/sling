@@ -83,10 +83,10 @@ void DisplayObject(const Slice &value) {
   if (FLAGS_json) {
     StringReader reader(&store, encoded);
     reader.reader()->set_json(true);
-    DisplayObject(reader.Read());
+    DisplayObject(reader.ReadAll());
   } else {
     StringDecoder decoder(&store, encoded);
-    DisplayObject(decoder.Decode());
+    DisplayObject(decoder.DecodeAll());
   }
 }
 

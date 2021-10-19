@@ -13,6 +13,8 @@ const n_caseno = store.lookup("caseno");
 const n_created = store.lookup("created");
 const n_modified = store.lookup("modified");
 const n_topics = store.lookup("topics");
+const n_share = store.lookup("share");
+const n_publish = store.lookup("publish");
 
 class CaseDatabase {
   // Open database.
@@ -86,6 +88,8 @@ class CaseDatabase {
       created: new Date(casefile.get(n_created)),
       modified: new Date(casefile.get(n_modified)),
     };
+    if (casefile.get(n_share)) rec.share = true;
+    if (casefile.get(n_publish)) rec.publish = true;
 
     // Write record to database.
     let tx = this.db.transaction(["casedir", "casedata"], "readwrite");
