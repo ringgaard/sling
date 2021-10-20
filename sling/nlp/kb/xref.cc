@@ -41,7 +41,7 @@ XRef::Property *XRef::CreateProperty(Handle handle, Text name) {
   p->priority = properties_.size();
   p->name = name.str();
   p->hash = Fingerprint(name.data(), name.size());
-  properties_[handle] = p;
+  if (!handle.IsNil()) properties_[handle] = p;
   property_map_[p->name] = p;
   return p;
 }

@@ -4,6 +4,7 @@
 // Case-based knowledge management app.
 
 import {Component, OneOf} from "/common/lib/component.js";
+import {StdDialog} from "/common/lib/material.js";
 import {store, settings} from "./global.js";
 import {casedb} from "./database.js";
 
@@ -22,6 +23,7 @@ const n_modified = store.lookup("modified");
 const n_topics = store.lookup("topics");
 const n_folders = store.lookup("folders");
 const n_next = store.lookup("next");
+const n_link = store.lookup("link");
 const n_case_file = store.lookup("Q108673968");
 const n_main_subject = store.lookup("P921");
 const n_instance_of = store.lookup("P31");
@@ -116,7 +118,21 @@ class CaseApp extends OneOf {
   }
 
   async open_case(caseid) {
+    // Try to read case from local database.
     let casefile = await casedb.read(caseid);
+    if (!casefile || casefile.get(n_link)) {
+      // Try to get case from server.
+      let response = await fetch(`/case?id=c/${caseid}`);
+      if (!response.ok) {
+        StdDialog.error(`Case #${caseid} not found`);
+        return;
+      }
+      casefile = await store.parse(response);
+      casefile.add(n_link, true);
+
+      // TODO: Add linked case to directory.
+    }
+
     let main = casefile.get(n_main);
     let name = main.get(n_name);
     window.document.title = `Case #${caseid}: ${name}`;

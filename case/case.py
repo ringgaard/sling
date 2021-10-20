@@ -12,8 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""SLING case system"""
+
 import requests
 import datetime
+import time
 
 import sling
 import sling.net
@@ -49,6 +52,10 @@ def iso2ts(t):
   if t is None: return None
   if t.endswith("Z"): t = t[:-1] + "+00:00"
   return int(datetime.datetime.fromisoformat(t).timestamp())
+
+# Conver unix epoch to RFC time.
+def ts2rfc(t):
+  return time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime(t))
 
 # Connect to case database.
 casedb = sling.Database(flags.arg.casedb, "case.py")
@@ -118,6 +125,29 @@ def new_case(request):
     return sling.net.HTTPRedirect(flags.arg.number_service)
   else:
     return 500
+
+class CaseFile:
+ def __init__(self, content, modified):
+   self.content = content
+   self.modified = modified
+
+@sling.net.response(CaseFile)
+def case_reponse(value, request, response):
+  response.ct = "application/sling"
+  response["Last-Modified"] = ts2rfc(value.modified)
+  response.body = value.content
+
+@app.route("/case")
+def fetch_case(request):
+  # Get case id.
+  caseid = request.params()["id"][0]
+
+  # Fetch case file from database.
+  rec, ts  = casedb.get(caseid)
+  if rec is None: return 404;
+
+  # Return case file.
+  return CaseFile(rec, ts)
 
 @app.route("/share", method="POST")
 def share_case(request):

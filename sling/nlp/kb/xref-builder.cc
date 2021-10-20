@@ -39,6 +39,10 @@ class XRefBuilder : public task::FrameProcessor {
       xref_.AddProperty(property);
     }
 
+    // Add properties for cases and topics.
+    xref_.CreateProperty(commons_->Lookup("PCASE"), "c");
+    xref_.CreateProperty(Handle::nil(), "t");
+
     // Get pre-resolved reference mappings.
     Frame mappings = config.GetFrame("mappings");
     CHECK(mappings.valid());

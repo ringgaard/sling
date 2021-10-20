@@ -1,6 +1,8 @@
 {
   ; Properties that are cross-referenced in knowledge base in priority order.
   properties: [
+    PCASE, ; SLING case number
+
     P1059, ; Danish CVR company number
     P7972, ; Danish CVR person ID
     P2814, ; Danish CVR branch P-number
@@ -53,6 +55,8 @@
 
   ; Mnemonics for cross-referenced properties.
   mnemonics: {
+    "case": "PCASE"     ; SLING case number
+
     "cvr": "P1059"      ; Danish CVR company number
     "coh": "P2622"      ; UK Companies House company ID
     "sec": "P5531"      ; US SEC Central Index Key

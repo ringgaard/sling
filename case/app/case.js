@@ -22,6 +22,7 @@ const n_folders = store.lookup("folders");
 const n_next = store.lookup("next");
 const n_publish = store.lookup("publish");
 const n_share = store.lookup("share");
+const n_link = store.lookup("link");
 const n_sling_case_no = store.lookup("PCASE");
 
 const n_target = store.lookup("target");
@@ -212,6 +213,7 @@ class CaseEditor extends Component {
   }
 
   async onnewfolder(e) {
+    if (this.readonly) return;
     let dialog = new NewFolderDialog();
     let result = await dialog.show();
     if (result) {
@@ -224,6 +226,7 @@ class CaseEditor extends Component {
   }
 
   onsave(e) {
+    if (this.readonly) return;
     if (this.dirty) {
       this.match("#app").save_case(this.casefile);
       this.mark_clean();
@@ -231,6 +234,7 @@ class CaseEditor extends Component {
   }
 
   async onshare(e) {
+    if (this.readonly) return;
     let share = this.casefile.get(n_share);
     let publish = this.casefile.get(n_publish);
     let dialog = new SharingDialog({share, publish});
@@ -277,6 +281,11 @@ class CaseEditor extends Component {
     this.topics = this.casefile.get(n_topics);
     this.folders = this.casefile.get(n_folders);
     this.folder = this.casefile.get(n_folders).value(0);
+    this.readonly = this.casefile.get(n_link);
+
+    for (let e of ["#save", "#share", "#newfolder"]) {
+      this.find(e).update(!this.readonly);
+    }
   }
 
   onupdated() {
@@ -361,6 +370,7 @@ class CaseEditor extends Component {
   }
 
   add_folder(name) {
+    if (this.readonly) return;
     this.folder = new Array();
     this.folders.add(name, this.folder);
     this.find("folder-list").update(this.folders);
@@ -369,6 +379,7 @@ class CaseEditor extends Component {
   }
 
   rename_folder(folder, name) {
+    if (this.readonly) return;
     let pos = this.folderno(folder);
     if (pos > 0 && pos < this.folders.length) {
       this.folders.set_name(pos, name);
@@ -378,6 +389,7 @@ class CaseEditor extends Component {
   }
 
   move_folder_up(folder) {
+    if (this.readonly) return;
     let pos = this.folderno(folder);
     if (pos > 1 && pos < this.folders.length) {
       // Swap with previous folder.
@@ -393,6 +405,7 @@ class CaseEditor extends Component {
   }
 
   move_folder_down(folder) {
+    if (this.readonly) return;
     let pos = this.folderno(folder);
     if (pos > 0 && pos < this.folders.length - 1) {
       // Swap with next folder.
@@ -408,6 +421,7 @@ class CaseEditor extends Component {
   }
 
   delete_folder(folder) {
+    if (this.readonly) return;
     if (folder.length != 0) {
       material.StdDialog.alert("Cannot delete folder",
                       "Folder must be empty to be deleted");
@@ -428,6 +442,8 @@ class CaseEditor extends Component {
   }
 
   add_topic(itemid, name) {
+    if (this.readonly) return;
+
     // Create new topic.
     let topicid = this.next_topic();
     let topic = store.frame(`t/${this.caseno()}/${topicid}`);
@@ -446,6 +462,8 @@ class CaseEditor extends Component {
   }
 
   delete_topic(topic) {
+    if (this.readonly) return;
+
     // Do not delete main topic.
     if (topic == this.casefile.get(n_main)) return;
 
@@ -459,6 +477,7 @@ class CaseEditor extends Component {
   }
 
   move_topic_up(topic) {
+    if (this.readonly) return;
     let pos = this.folder.indexOf(topic);
     if (pos == -1) return;
     if (pos == 0 || this.folder.length == 1) return;
@@ -474,6 +493,7 @@ class CaseEditor extends Component {
   }
 
   move_topic_down(topic) {
+    if (this.readonly) return;
     let pos = this.folder.indexOf(topic);
     if (pos == -1) return;
     if (pos == this.folder.length - 1 || this.folder.length == 1) return;
@@ -496,7 +516,6 @@ class CaseEditor extends Component {
           <md-toolbar-logo></md-toolbar-logo>
           <div id="title">Case #<md-text id="caseno"></md-text></div>
           <topic-search-box id="search"></topic-search-box>
-          <property-search-box id="props"></property-search-box>
           <md-spacer></md-spacer>
           <md-icon-button id="save" icon="save"></md-icon-button>
           <md-icon-button id="share" icon="share"></md-icon-button>
@@ -665,6 +684,7 @@ Component.register(TopicSearchBox);
 
 class FolderList extends Component {
   render() {
+    let readonly = this.match("#editor").readonly;
     let folders = this.state;
     if (!folders) return;
     let editor = this.match("#editor");
@@ -672,7 +692,8 @@ class FolderList extends Component {
     let current = editor.folder;
     let h = [];
     for (let [name, folder] of folders) {
-      h.push(new CaseFolder({name, folder, marked: folder == current}));
+      let marked = folder == current;
+      h.push(new CaseFolder({name, folder, readonly, marked}));
     }
     return h;
   }
@@ -683,10 +704,12 @@ Component.register(FolderList);
 class CaseFolder extends Component {
   onconnected() {
     this.bind(null, "click", e => this.onclick(e));
-    this.bind("#rename", "select", e => this.onrename(e));
-    this.bind("#moveup", "select", e => this.onmoveup(e));
-    this.bind("#movedown", "select", e => this.onmovedown(e));
-    this.bind("#delete", "select", e => this.ondelete(e));
+    if (!this.state.readonly) {
+      this.bind("#rename", "select", e => this.onrename(e));
+      this.bind("#moveup", "select", e => this.onmoveup(e));
+      this.bind("#movedown", "select", e => this.onmovedown(e));
+      this.bind("#delete", "select", e => this.ondelete(e));
+    }
   }
 
   onclick(e) {
@@ -714,11 +737,7 @@ class CaseFolder extends Component {
   }
 
   render() {
-    return `
-      <md-icon icon="folder"></md-icon>
-      <div ${this.state.marked ? 'class="current"' : ''}>
-        ${Component.escape(this.state.name)}
-      </div>
+    let menu = `
       <md-spacer></md-spacer>
       <md-menu>
         <md-menu-item id="rename">
@@ -734,6 +753,14 @@ class CaseFolder extends Component {
          <md-icon icon="delete"></md-icon>Delete
         </md-menu-item>
       </md-menu>
+    `;
+
+    return `
+      <md-icon icon="folder"></md-icon>
+      <div ${this.state.marked ? 'class="current"' : ''}>
+        ${Component.escape(this.state.name)}
+      </div>
+      ${this.state.readonly ? "" : menu}
     `;
   }
 
@@ -976,12 +1003,15 @@ Component.register(TopicList);
 
 class TopicCard extends material.MdCard {
   onconnected() {
-    this.bind("#delete", "click", e => this.ondelete(e));
-    this.bind("#moveup", "click", e => this.onmoveup(e));
-    this.bind("#movedown", "click", e => this.onmovedown(e));
-    this.bind("#edit", "click", e => this.onedit(e));
-    this.bind("#save", "click", e => this.onsave(e));
-    this.bind("#discard", "click", e => this.ondiscard(e));
+    this.readonly = this.match("#editor").readonly;
+    if (!this.readonly) {
+      this.bind("#delete", "click", e => this.ondelete(e));
+      this.bind("#moveup", "click", e => this.onmoveup(e));
+      this.bind("#movedown", "click", e => this.onmovedown(e));
+      this.bind("#edit", "click", e => this.onedit(e));
+      this.bind("#save", "click", e => this.onsave(e));
+      this.bind("#discard", "click", e => this.ondiscard(e));
+    }
 
     this.bind(null, "click", e => this.onclick(e));
     this.bind(null, "keydown", e => this.onkeydown(e));
@@ -998,8 +1028,8 @@ class TopicCard extends material.MdCard {
       this.find("#mode").update("#view", this.state);
     }
 
-    this.find("#topic-actions").update(!editing);
-    this.find("#edit-actions").update(editing);
+    this.find("#topic-actions").update(!editing && !this.readonly);
+    this.find("#edit-actions").update(editing && !this.readonly);
   }
 
   selected() {
@@ -1028,7 +1058,14 @@ class TopicCard extends material.MdCard {
     e.stopPropagation();
     let pre = this.find("pre");
     let content = pre.textContent;
-    let topic = store.parse(content);
+    var topic;
+    try {
+      topic = store.parse(content);
+    } catch (error) {
+      console.log("parse error", content);
+      material.StdDialog.error(`Error parsing topic: ${error}`);
+      return;
+    }
 
     let labels = new LabelCollector(store)
     labels.add(topic);

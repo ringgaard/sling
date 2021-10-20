@@ -67,9 +67,13 @@ class CaseDatabase {
       let request = casedata.get(caseid);
       request.onsuccess = e => {
         let rec = e.target.result;
-        let decoder = new Decoder(store, rec.data);
-        let casefile = decoder.readAll();
-        resolve(casefile);
+        if (rec) {
+          let decoder = new Decoder(store, rec.data);
+          let casefile = decoder.readAll();
+          resolve(casefile);
+        } else {
+          resolve(null);
+        }
       }
       request.onerror = e => {
         reject(e);

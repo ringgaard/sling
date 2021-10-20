@@ -135,7 +135,9 @@ export class Store {
       return decoder.readAll();
     } else {
       let reader = new Reader(this, data);
-      return reader.parse();
+      let obj = reader.parse();
+      if (!reader.done()) throw "Unexpected end of input";
+      return obj;
     }
   }
 
@@ -652,6 +654,14 @@ export class Encoder {
         for (let n = 0; n < obj.length; ++n) {
           this.encodeLink(obj[n]);
         }
+      } else if (obj instanceof QString) {
+        if (ref.status == Status.STRING) {
+          this.encodeRef(ref);
+        } else {
+          ref.status == Status.STRING
+          ref.index = this.next++;
+          this.encodeQString(obj);
+        }
       } else {
         throw "Object type cannot be encoded";
       }
@@ -709,6 +719,18 @@ export class Encoder {
     this.ensure(len);
     this.buffer.subarray(this.pos, this.pos + len).set(utf8);
     this.pos += len;
+  }
+
+  // Encode qualified string.
+  encodeQString(str) {
+    let utf8 = strencoder.encode(str.text);
+    let len = utf8.byteLength;
+    this.writeTag(7, 8);
+    this.writeVarInt(len);
+    this.ensure(len);
+    this.buffer.subarray(this.pos, this.pos + len).set(utf8);
+    this.pos += len;
+    this.encodeLink(str.qual);
   }
 
   // Encode reference to previous object.
@@ -813,6 +835,11 @@ export class Reader {
     }
   }
 
+  // Check that all input has been read.
+  done() {
+    return this.token == -1;
+  }
+
   // Read next token from input.
   next() {
     // Keep reading until we either read a token or reach the end of the input.
@@ -838,6 +865,7 @@ export class Reader {
         case 44: case 61:    // ',' '='
         case 91: case 93:    // '[' ']'
         case 123: case 125:  // '{' '}'
+        case 64:             // @
           this.token = this.ch;
           this.read();
           return;
@@ -990,10 +1018,19 @@ export class Reader {
         return true;
 
       case -5:  // string
-      case -6:  // number
-        let v = this.value;
+        let str = this.value;
         this.next();
-        return v;
+        if (this.token == 64) {
+          this.next();
+          let qual = this.parse();
+          str = new QString(str, qual);
+        }
+        return str;
+
+      case -6:  // number
+        let num = this.value;
+        this.next();
+        return num;
 
       case -7:  // index
         let obj = this.refs[this.value];

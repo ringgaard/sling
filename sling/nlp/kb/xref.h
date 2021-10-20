@@ -66,6 +66,9 @@ class XRef {
   XRef();
   ~XRef();
 
+  // Create new property for handle.
+  Property *CreateProperty(Handle handle, Text name);
+
   // Add property type to cross reference. Identifier property types should be
   // added in priority order. The property frames must be in a global store.
   const Property *AddProperty(const Frame &property);
@@ -99,9 +102,6 @@ class XRef {
   // Number of hash buckets for identifier hash table.
   static constexpr uint64 LOG_NUM_BUCKETS = 20;
   static constexpr uint64 NUM_BUCKETS = (1 << LOG_NUM_BUCKETS);
-
-  // Create new property for handle.
-  Property *CreateProperty(Handle handle, Text name);
 
   // Compute hash code for identifier.
   uint64 Hash(const Property *type, Text value) {

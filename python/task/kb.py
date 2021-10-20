@@ -42,6 +42,12 @@ class KnowledgeBaseWorkflow:
                             dir=corpora.kbdir(),
                             format="store/frame")
 
+  def topics(self):
+    """Resource for public case topics."""
+    return self.wf.resource("topics.rec",
+                            dir=corpora.workdir("case"),
+                            format="records/frame")
+
   def media(self):
     """Resource for media file items."""
     return self.wf.resource("*-media.sling",
@@ -78,6 +84,7 @@ class KnowledgeBaseWorkflow:
 
   def extended_item_sources(self):
     return self.wf.bundle(
+      self.topics(),
       self.media(),
       self.imdb(),
       self.celebs(),
@@ -91,6 +98,7 @@ class KnowledgeBaseWorkflow:
     items = self.wf.bundle(
       self.data.wikidata_redirects(),
       self.data.wikidata_items(),
+      self.topics(),
       self.elf(),
       self.gleif(),
       self.celebs())
