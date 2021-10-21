@@ -63,7 +63,7 @@ class CaseApp extends OneOf {
   }
 
   async add_case(name, description, topicid) {
-    let response = await fetch("/newcase");
+    let response = await fetch("/case/new");
     let casefile = await store.parse(response);
     let caseno = casefile.get(n_caseno);
     let next = 1;
@@ -98,7 +98,7 @@ class CaseApp extends OneOf {
     casefile.add(n_next, next);
 
     // Write case to database.
-    let rec = casedb.write(casefile, true);
+    let rec = casedb.write(casefile);
 
     // Update case list.
     this.caselist.push(rec);
@@ -108,7 +108,7 @@ class CaseApp extends OneOf {
     return this.open_case(caseno)
   }
 
-  delete_case(caseid) {
+  delete_case(caseid, link) {
     // Remove case from database.
     casedb.remove(caseid);
 
@@ -120,9 +120,9 @@ class CaseApp extends OneOf {
   async open_case(caseid) {
     // Try to read case from local database.
     let casefile = await casedb.read(caseid);
-    if (!casefile || casefile.get(n_link)) {
+    if (!casefile) {
       // Try to get case from server.
-      let response = await fetch(`/case?id=c/${caseid}`);
+      let response = await fetch(`/case/fetch?id=c/${caseid}`);
       if (!response.ok) {
         StdDialog.error(`Case #${caseid} not found`);
         return;
@@ -130,9 +130,18 @@ class CaseApp extends OneOf {
       casefile = await store.parse(response);
       casefile.add(n_link, true);
 
-      // TODO: Add linked case to directory.
+      // Add linked case to directory.
+      let rec = casedb.writemeta(casefile);
+
+      // Update case list.
+      if (this.caselist) {
+        this.caselist = this.caselist.filter(r => r.id != caseid);
+        this.caselist.push(rec);
+        this.refresh_manager();
+      }
     }
 
+    // Switch to case editor with new case.
     let main = casefile.get(n_main);
     let name = main.get(n_name);
     window.document.title = `Case #${caseid}: ${name}`;
@@ -147,7 +156,7 @@ class CaseApp extends OneOf {
     casefile.set(n_modified, ts);
 
     // Write case to database.
-    let rec = casedb.write(casefile, false);
+    let rec = casedb.write(casefile);
 
     // Update case list.
     if (this.caselist) {

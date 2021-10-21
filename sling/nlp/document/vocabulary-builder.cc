@@ -123,7 +123,7 @@ class WordVocabularyReducer : public SumReducer {
     word_count_->Increment(sum);
   }
 
-  void Done(Task *task) override {
+  void Flush(Task *task) override {
     // Sort word entries in decreasing frequency. The OOV entry is kept as the
     // first entry.
     std::sort(vocabulary_.begin() + 1, vocabulary_.end(),

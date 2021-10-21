@@ -67,6 +67,9 @@ class Reducer : public Processor {
   // messages for that key.
   virtual void Reduce(const ReduceInput &input) = 0;
 
+  // Called when all input have been received.
+  virtual void Flush(Task *task);
+
   // Output message to output shard.
   void Output(int shard, Message *message);
 

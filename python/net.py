@@ -16,7 +16,6 @@
 
 import json
 import os
-import sys
 import threading
 import time
 import traceback
@@ -142,8 +141,7 @@ class HTTPHandler:
       # Return error response with stack trace.
       trace = traceback.format_exception(type(e), e, tb=e.__traceback__)
       errmsg = "".join(trace)
-      print(errmsg)
-      sys.stdout.flush()
+      log.error(errmsg)
       response.error(500, errmsg)
 
     # Return response.

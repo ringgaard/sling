@@ -387,7 +387,7 @@ class ItemMerger : public task::Reducer {
   }
 
   // Output property catalog.
-  void Done(task::Task *task) override {
+  void Flush(task::Task *task) override {
     Store store;
     Builder catalog(&store);
     catalog.AddId("/w/entity");

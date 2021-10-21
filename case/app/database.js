@@ -15,6 +15,7 @@ const n_modified = store.lookup("modified");
 const n_topics = store.lookup("topics");
 const n_share = store.lookup("share");
 const n_publish = store.lookup("publish");
+const n_link = store.lookup("link");
 
 class CaseDatabase {
   // Open database.
@@ -81,7 +82,7 @@ class CaseDatabase {
     });
   }
 
-  write(casefile, create) {
+  writemeta(casefile) {
     // Build case directory record.
     let caseno = casefile.get(n_caseno);
     let main = casefile.get(n_main);
@@ -91,18 +92,22 @@ class CaseDatabase {
       description: main.get(n_description),
       created: new Date(casefile.get(n_created)),
       modified: new Date(casefile.get(n_modified)),
+      share: !!casefile.get(n_share),
+      publish: !!casefile.get(n_publish),
+      link: !!casefile.get(n_link),
     };
-    if (casefile.get(n_share)) rec.share = true;
-    if (casefile.get(n_publish)) rec.publish = true;
 
     // Write record to database.
-    let tx = this.db.transaction(["casedir", "casedata"], "readwrite");
+    let tx = this.db.transaction(["casedir"], "readwrite");
     let casedir = tx.objectStore("casedir");
-    let dirrequest = create ? casedir.add(rec) : casedir.put(rec);;
+    let dirrequest = casedir.put(rec);
     dirrequest.onsuccess = e => {
       console.log("Wrote record", e.target.result, "to case directory");
     }
+    return rec;
+  }
 
+  write(casefile) {
     // Encode case data.
     let encoder = new Encoder(store);
     for (let topic of casefile.get(n_topics)) {
@@ -112,8 +117,9 @@ class CaseDatabase {
     let data = {id: caseno, data: encoder.output()};
 
     // Write case data.
+    let tx = this.db.transaction(["casedata"], "readwrite");
     let casedata = tx.objectStore("casedata");
-    let datarequest = create ? casedata.add(data) : casedata.put(data);
+    let datarequest = casedata.put(data);
     datarequest.onsuccess = e => {
       console.log("Wrote record", e.target.result, "to case store");
     }
@@ -121,10 +127,11 @@ class CaseDatabase {
       console.log("Error writing to case store", e.target.result);
     }
 
-    return rec;
+    // Write case metadata to case directory.
+    return this.writemeta(casefile);
   }
 
-  remove(caseid) {
+  remove(caseid, link) {
     // Remove case from directory.
     let tx = this.db.transaction(["casedir", "casedata"], "readwrite");
     let casedir = tx.objectStore("casedir");
@@ -133,14 +140,16 @@ class CaseDatabase {
       console.log("Removed record", caseid, "from case directory");
     }
 
-    // Remove case from data store.
-    let casedata = tx.objectStore("casedata");
-    let datarequest = casedata.delete(caseid);
-    datarequest.onsuccess = e => {
-      console.log("Removed record", caseid, "from case store");
-    }
-    datarequest.onerror = e => {
-      console.log("Error removing data from case store", e.target.result);
+    if (!link) {
+      // Remove case from data store.
+      let casedata = tx.objectStore("casedata");
+      let datarequest = casedata.delete(caseid);
+      datarequest.onsuccess = e => {
+        console.log("Removed record", caseid, "from case store");
+      }
+      datarequest.onerror = e => {
+        console.log("Error removing data from case store", e.target.result);
+      }
     }
   }
 

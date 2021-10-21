@@ -38,7 +38,7 @@ void Reducer::Receive(Channel *channel, Message *message) {
 
   MutexLock lock(&s->mu);
   if (s->messages.empty()) {
-   s->key = message->key();
+    s->key = message->key();
   } else if (message->key() != s->key) {
     ReduceShard(shard);
     s->key = message->key();
@@ -56,12 +56,16 @@ void Reducer::ReduceShard(int shard) {
   s->clear();
 }
 
+void Reducer::Flush(Task *task) {
+}
+
 void Reducer::Done(Task *task) {
   for (int shard = 0; shard < shards_.size(); ++shard) {
     ReduceShard(shard);
     delete shards_[shard];
   }
   shards_.clear();
+  Flush(task);
 }
 
 void Reducer::Output(int shard, Message *message) {

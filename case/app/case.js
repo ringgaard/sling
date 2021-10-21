@@ -257,7 +257,7 @@ class CaseEditor extends Component {
       }
 
       // Send case to server.
-      let r = await fetch("/share", {
+      let r = await fetch("/case/share", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/sling'
@@ -684,11 +684,11 @@ Component.register(TopicSearchBox);
 
 class FolderList extends Component {
   render() {
-    let readonly = this.match("#editor").readonly;
     let folders = this.state;
     if (!folders) return;
     let editor = this.match("#editor");
     if (!editor) return;
+    let readonly = editor.readonly;
     let current = editor.folder;
     let h = [];
     for (let [name, folder] of folders) {
@@ -1003,7 +1003,8 @@ Component.register(TopicList);
 
 class TopicCard extends material.MdCard {
   onconnected() {
-    this.readonly = this.match("#editor").readonly;
+    let editor = this.match("#editor");
+    this.readonly = editor && editor.readonly;
     if (!this.readonly) {
       this.bind("#delete", "click", e => this.ondelete(e));
       this.bind("#moveup", "click", e => this.onmoveup(e));
@@ -1017,6 +1018,11 @@ class TopicCard extends material.MdCard {
     this.bind(null, "keydown", e => this.onkeydown(e));
 
     this.update_mode(false);
+    this.find("#name").update(this.state.get(n_name));
+  }
+
+  onupdated() {
+    this.find("#name").update(this.state.get(n_name));
   }
 
   update_mode(editing) {
@@ -1139,7 +1145,7 @@ class TopicCard extends material.MdCard {
 
     return `
       <md-card-toolbar>
-        <div id="name">${topic.get(n_name)}</div>
+        <md-text id="name"></md-text>
         <md-spacer></md-spacer>
         <md-toolbox id="edit-actions">
           <md-icon-button id="save" icon="save_alt"></md-icon-button>
@@ -1647,7 +1653,7 @@ class PicturePanel extends Component {
 
       $ img {
         max-width: 100%;
-        max-height: 480px;
+        max-height: 320px;
         vertical-align: middle
       }
     `;

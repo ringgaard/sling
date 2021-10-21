@@ -1,8 +1,6 @@
 {
   ; Properties that are cross-referenced in knowledge base in priority order.
   properties: [
-    PCASE, ; SLING case number
-
     P1059, ; Danish CVR company number
     P7972, ; Danish CVR person ID
     P2814, ; Danish CVR branch P-number

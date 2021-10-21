@@ -37,7 +37,7 @@ flags.define("--number",
 
 flags.define("--number_service",
              help="Endpoint for assigning new case numbers",
-             default="https://ringgaard.com/newcase",
+             default="https://ringgaard.com/case/new",
              metavar="URL")
 
 flags.define("--casedb",
@@ -66,7 +66,7 @@ app.redirect("/", "/c")
 
 # Add static files.
 app.static("/common", "app", internal=True)
-app.static("/c/app", "case/app")
+app.static("/case/app", "case/app")
 
 # Commons store.
 commons = sling.Store()
@@ -86,7 +86,7 @@ main_page_template = """<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name=viewport content="width=device-width, initial-scale=1">
 <link rel="icon" href="/common/image/appicon.ico" type="image/x-icon" />
-<script type="module" src="/c/app/main.js"></script>
+<script type="module" src="/case/app/main.js"></script>
 </head>
 <body style="display: none;">
 </body>
@@ -105,7 +105,7 @@ case_template = """
 }
 """
 
-@app.route("/newcase")
+@app.route("/case/new")
 def new_case(request):
   if numbering:
     # Get new case number.
@@ -137,7 +137,7 @@ def case_reponse(value, request, response):
   response["Last-Modified"] = ts2rfc(value.modified)
   response.body = value.content
 
-@app.route("/case")
+@app.route("/case/fetch")
 def fetch_case(request):
   # Get case id.
   caseid = request.params()["id"][0]
@@ -149,7 +149,7 @@ def fetch_case(request):
   # Return case file.
   return CaseFile(rec, ts)
 
-@app.route("/share", method="POST")
+@app.route("/case/share", method="POST")
 def share_case(request):
   # Get shared case.
   store = sling.Store(commons)
@@ -169,7 +169,7 @@ def share_case(request):
 
   # Log case updates with IP address.
   client = request["X-Forwarded-For"]
-  log.info("Share case %s version %d from client %s" % (caseid, ts, client))
+  log.info("Share case %s version %d for client %s" % (caseid, ts, client))
 
 # Run HTTP server.
 log.info("HTTP server listening on port", flags.arg.port)

@@ -665,7 +665,7 @@ class SummarySelector : public task::Reducer {
     Output(input.shard(), task::CreateMessage(input.key(), b.Create()));
   }
 
-  void Done(task::Task *task) override {
+  void Flush(task::Task *task) override {
     if (docnames_) {
       docnames_->Release();
       docnames_ = nullptr;

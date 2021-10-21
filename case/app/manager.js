@@ -263,17 +263,18 @@ class CaseList extends material.MdCard {
     let row = e.target.closest("tr");
     let button = e.target.closest("md-icon-button");
     let caseid = row ? parseInt(row.getAttribute("case")) : undefined;
+    let link = row ? row.getAttribute("link") == "true" : undefined;
     if (!caseid) return;
 
     if (button) {
       // Perform action on case.
       let action = button.getAttribute("icon");
       if (action == "delete") {
-        let message = `Delete case #${caseid}?`;
+        let message = `Delete ${link ? "link to " : ""} case #${caseid}?`;
         material.StdDialog.confirm("Delete case", message, "Delete")
         .then(result => {
           if (result) {
-            app.delete_case(caseid);
+            app.delete_case(caseid, link);
           }
         });
       }
@@ -300,13 +301,15 @@ class CaseList extends material.MdCard {
     h.push("<tbody>");
     for (let rec of this.state) {
       let icon = "";
-      if (rec.publish) {
-        icon = '<md-icon icon="group" outlined></md-icon>';
+      if (rec.link) {
+        icon = '<md-icon icon="link" outlined></md-icon>';
+      } else if (rec.publish) {
+        icon = '<md-icon icon="public" outlined></md-icon>';
       } else if (rec.share) {
         icon = '<md-icon icon="share" outlined></md-icon>';
       }
       h.push(`
-        <tr case="${rec.id}">
+        <tr case="${rec.id}" link="${rec.link}">
           <td>${rec.id}</td>
           <td>
             <div>
