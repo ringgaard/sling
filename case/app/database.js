@@ -114,7 +114,7 @@ class CaseDatabase {
       encoder.encode(topic);
     }
     encoder.encode(casefile);
-    let data = {id: caseno, data: encoder.output()};
+    let data = {id: casefile.get(n_caseno), data: encoder.output()};
 
     // Write case data.
     let tx = this.db.transaction(["casedata"], "readwrite");

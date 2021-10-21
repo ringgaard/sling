@@ -972,7 +972,7 @@ class TopicList extends Component {
   }
 
   scroll_to(topic) {
-    this.card(topic).scrollIntoView();
+    //this.card(topic).scrollIntoView();
   }
 
   card(topic) {
