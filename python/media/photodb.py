@@ -171,6 +171,7 @@ else:
   num_added = 0
   num_removed = 0
   if not profile.isnew: print(profile.count(), "exisiting photos")
+  if flags.arg.dedup: profile.skipdups = False
 
   # Delete all existing media on overwrite mode.
   if flags.arg.overwrite:

@@ -185,6 +185,10 @@ class LabelCollector {
 class CaseEditor extends Component {
   onconnected() {
     this.app = this.match("#app");
+
+    this.bind("md-search", "item", e => this.onitem(e));
+    this.bind("md-search", "enter", e => this.onenter(e));
+
     this.bind("#menu", "click", e => this.onmenu(e));
     this.bind("#home", "click", e => this.close());
     this.bind("#save", "click", e => this.onsave(e));
@@ -209,6 +213,20 @@ class CaseEditor extends Component {
       this.onsave(e);
     } else if (e.key === "Escape") {
       this.find("#search").clear();
+    }
+  }
+
+  onenter(e) {
+    let name = e.detail;
+    this.add_topic(null, name);
+  }
+
+  onitem(e) {
+    let item = e.detail;
+    if (item.topic) {
+      this.navigate_to(item.topic);
+    } else {
+      this.add_topic(item.ref, item.name);
     }
   }
 
@@ -290,9 +308,9 @@ class CaseEditor extends Component {
 
   onupdated() {
     this.find("#caseno").update(this.caseno().toString());
-    this.find("folder-list").update(this.folders);
-    this.find("topic-list").update(this.folder);
     this.find("md-drawer").update(true);
+    this.update_folders();
+    this.update_topics();
   }
 
   caseno() {
@@ -353,6 +371,42 @@ class CaseEditor extends Component {
     }
   }
 
+  search(query, full) {
+    query = query.toLowerCase();
+    let results = [];
+    let partial = [];
+    for (let topic of this.topics) {
+      let match = false;
+      let submatch = false;
+      if (topic.id == query) {
+        match = true;
+      } else {
+        let names = [];
+        names.push(...topic.all(n_name));
+        names.push(...topic.all(n_alias));
+        for (let name of names) {
+          let normalized = name.toString().toLowerCase();
+          if (full) {
+            match = normalized == query;
+          } else {
+            match = normalized.startsWith(query);
+            if (!match && normalized.includes(query)) {
+              submatch = true;
+            }
+          }
+          if (match) break;
+        }
+      }
+      if (match) {
+        results.push(topic);
+      } else if (submatch) {
+        partial.push(topic);
+      }
+    }
+    results.push(...partial);
+    return results;
+  }
+
   folderno(folder) {
     let f = this.folders;
     for (let i = 0; i < f.length; ++i) {
@@ -361,11 +415,11 @@ class CaseEditor extends Component {
     return undefined;
   }
 
-  show_folder(folder) {
+  async show_folder(folder) {
     if (folder != this.folder) {
       this.folder = folder;
-      this.find("folder-list").update(this.folders);
-      this.find("topic-list").update(this.folder);
+      await this.update_folders();
+      await this.update_topics();
     }
   }
 
@@ -373,9 +427,9 @@ class CaseEditor extends Component {
     if (this.readonly) return;
     this.folder = new Array();
     this.folders.add(name, this.folder);
-    this.find("folder-list").update(this.folders);
-    this.find("topic-list").update(this.folder);
     this.mark_dirty();
+    this.update_folders();
+    this.update_topics();
   }
 
   rename_folder(folder, name) {
@@ -383,8 +437,8 @@ class CaseEditor extends Component {
     let pos = this.folderno(folder);
     if (pos > 0 && pos < this.folders.length) {
       this.folders.set_name(pos, name);
-      this.find("folder-list").update(this.folders);
       this.mark_dirty();
+      this.update_folders();
     }
   }
 
@@ -400,7 +454,7 @@ class CaseEditor extends Component {
       this.folders.set_name(pos - 1, tmp_name);
       this.folders.set_value(pos - 1, tmp_value);
       this.mark_dirty();
-      this.find("folder-list").update(this.folders);
+      this.update_folders();
     }
   }
 
@@ -416,7 +470,7 @@ class CaseEditor extends Component {
       this.folders.set_name(pos + 1, tmp_name);
       this.folders.set_value(pos + 1, tmp_value);
       this.mark_dirty();
-      this.find("folder-list").update(this.folders);
+      this.update_folders();
     }
   }
 
@@ -434,11 +488,19 @@ class CaseEditor extends Component {
         } else {
           this.folder = this.folders.value(pos);
         }
-        this.find("folder-list").update(this.folders);
-        this.find("topic-list").update(this.folder);
         this.mark_dirty();
+        this.update_folders();
+        this.update_topics();
       }
     }
+  }
+
+  async update_folders() {
+    await this.find("folder-list").update({
+      folders: this.folders,
+      current: this.folder,
+      readonly: this.readonly
+    });
   }
 
   add_topic(itemid, name) {
@@ -456,9 +518,8 @@ class CaseEditor extends Component {
     this.folder.push(topic);
 
     // Update topic list.
-    let topic_list = this.find("topic-list");
-    topic_list.update(this.folder);
-    topic_list.scroll_to(topic);
+    this.update_topics();
+    this.navigate_to(topic);
   }
 
   delete_topic(topic) {
@@ -473,7 +534,7 @@ class CaseEditor extends Component {
     this.mark_dirty();
 
     // Update topic list.
-    this.find("topic-list").update(this.folder);
+    this.update_topics();
   }
 
   move_topic_up(topic) {
@@ -489,7 +550,7 @@ class CaseEditor extends Component {
     this.mark_dirty();
 
     // Update topic list.
-    this.find("topic-list").update(this.folder);
+    this.update_topics();
   }
 
   move_topic_down(topic) {
@@ -505,7 +566,28 @@ class CaseEditor extends Component {
     this.mark_dirty();
 
     // Update topic list.
-    this.find("topic-list").update(this.folder);
+    this.update_topics();
+  }
+
+  async update_topics() {
+    await this.find("topic-list").update(this.folder);
+  }
+
+  async navigate_to(topic) {
+    console.log("navigate to", topic.id);
+    if (!this.folder.includes(topic)) {
+      // Switch to folder with topic.
+      for (let [name, folder] of this.folders) {
+        if (folder.includes(topic)) {
+          console.log("switch to folder", folder);
+          await this.show_folder(folder);
+          break;
+        }
+      }
+    }
+
+    // Scroll to topic in folder.
+    this.find("topic-list").navigate_to(topic);
   }
 
   prerender() {
@@ -597,49 +679,53 @@ Component.register(CaseEditor);
 class TopicSearchBox extends Component {
   onconnected() {
     this.bind("md-search", "query", e => this.onquery(e));
-    this.bind("md-search", "item", e => this.onitem(e));
-    this.bind("md-search", "enter", e => this.onenter(e));
   }
 
-  onquery(e) {
+  async onquery(e) {
     let detail = e.detail
     let target = e.target;
-    let params = "fmt=cjson";
     let query = detail.trim();
+
+    // Do full match if query ends with period.
+    let full = false;
     if (query.endsWith(".")) {
-      params += "&fullmatch=1";
+      full = true;
       query = query.slice(0, -1);
     }
-    params += `&q=${encodeURIComponent(query)}`;
 
-    fetch(`${settings.kbservice}/kb/query?${params}`)
-    .then(response => response.json())
-    .then((data) => {
-      let items = [];
+    // Get local results.
+    let items = [];
+    for (let result of this.match("#editor").search(query, full)) {
+      items.push(new material.MdSearchResult({
+        ref: result.id,
+        name: result.get(n_name),
+        description: result.get(n_description),
+        topic: result,
+      }));
+    }
+
+    // Get global results.
+    try {
+      let params = "fmt=cjson";
+      if (full) params += "&fullmatch=1";
+      params += `&q=${encodeURIComponent(query)}`;
+      let response = await fetch(`${settings.kbservice}/kb/query?${params}`);
+      let data = await response.json();
       for (let item of data.matches) {
         items.push(new material.MdSearchResult({
           ref: item.ref,
-          name: item.text,
-          description: item.description
+          name: item.text + " 🌍",
+          description: item.description,
         }));
       }
-      target.populate(detail, items);
-    })
-    .catch(error => {
+    } catch (error) {
       console.log("Query error", query, error.message, error.stack);
       material.StdDialog.error(error.message);
       target.populate(detail, null);
-    });
-  }
+      return;
+    }
 
-  onenter(e) {
-    let name = e.detail;
-    this.match("#editor").add_topic(null, name);
-  }
-
-  onitem(e) {
-    let item = e.detail;
-    this.match("#editor").add_topic(item.ref, item.name);
+    target.populate(detail, items);
   }
 
   query() {
@@ -653,10 +739,7 @@ class TopicSearchBox extends Component {
   render() {
     return `
       <form>
-        <md-search
-          placeholder="Search for topic..."
-          min-length=2
-          autofocus>
+        <md-search placeholder="Search for topic..." min-length=2>
         </md-search>
       </form>
     `;
@@ -684,12 +767,10 @@ Component.register(TopicSearchBox);
 
 class FolderList extends Component {
   render() {
-    let folders = this.state;
-    if (!folders) return;
-    let editor = this.match("#editor");
-    if (!editor) return;
-    let readonly = editor.readonly;
-    let current = editor.folder;
+    if (!this.state) return;
+    let folders = this.state.folders;
+    let current = this.state.current;
+    let readonly = this.state.readonly
     let h = [];
     for (let [name, folder] of folders) {
       let marked = folder == current;
@@ -949,6 +1030,8 @@ class TopicList extends Component {
 
     // Clear selection.
     this.selection.clear();
+    console.log("scroll to 0");
+    this.scrollTop = 0;
   }
 
   clear_selection() {
@@ -971,8 +1054,14 @@ class TopicList extends Component {
     }
   }
 
-  scroll_to(topic) {
-    //this.card(topic).scrollIntoView();
+  navigate_to(topic) {
+    let card = this.card(topic);
+    if (card) {
+      console.log("scroll into view");
+      card.scrollIntoView();
+    } else {
+      console.log("topic card not found for", topic.id);
+    }
   }
 
   card(topic) {
@@ -991,11 +1080,6 @@ class TopicList extends Component {
       h.push(new TopicCard(topic));
     }
     return h;
-  }
-
-  static stylesheet() {
-    return `
-    `;
   }
 }
 
@@ -1028,11 +1112,15 @@ class TopicCard extends material.MdCard {
   update_mode(editing) {
     this.editing = editing;
 
+    let scrollpos = this.match("md-content").scrollTop;
     if (editing) {
-      this.find("#mode").update("#edit");
+      this.find("item-editor").update(this.state);
+      this.find("item-panel").update(null);
     } else {
-      this.find("#mode").update("#view", this.state);
+      this.find("item-panel").update(this.state);
+      this.find("item-editor").update();
     }
+    this.match("md-content").scrollTop = scrollpos;
 
     this.find("#topic-actions").update(!editing && !this.readonly);
     this.find("#edit-actions").update(editing && !this.readonly);
@@ -1053,17 +1141,12 @@ class TopicCard extends material.MdCard {
   onedit(e) {
     e.stopPropagation();
     this.update_mode(true);
-
-    let topic = this.state;
-    let pre = this.find("pre");
-    pre.innerHTML = Component.escape(topic.text(true));
-    pre.focus();
   }
 
   async onsave(e) {
     e.stopPropagation();
-    let pre = this.find("pre");
-    let content = pre.textContent;
+    let edit = this.find("item-editor");
+    let content = edit.value();
     var topic;
     try {
       topic = store.parse(content);
@@ -1158,10 +1241,8 @@ class TopicCard extends material.MdCard {
           <md-icon-button id="delete" icon="delete"></md-icon-button>
         </md-toolbox>
       </md-card-toolbar>
-      <one-of id="mode">
-        <item-panel id="view"></item-panel>
-        <pre id="edit" spellcheck="false" contenteditable="true"></pre>
-      </one-of>
+      <item-panel></item-panel>
+      <item-editor><item-editor>
     `;
   }
 
@@ -1187,10 +1268,6 @@ class TopicCard extends material.MdCard {
         display: block;
         font-size: 24px;
       }
-      $ pre {
-        font-size: 12px;
-        padding: 6px;
-      }
       $ #edit-actions {
         display: flex;
       }
@@ -1199,6 +1276,84 @@ class TopicCard extends material.MdCard {
 }
 
 Component.register(TopicCard);
+
+class ItemEditor extends Component {
+  visible() {
+    return this.state;
+  }
+
+  onupdated() {
+    if (!this.state) return;
+    this.bind("#property-search md-search", "item", e => this.onitem(e, true));
+    this.bind("#topic-search md-search", "item", e => this.onitem(e, false));
+    this.bind("textarea", "input", e => this.adjust());
+    this.adjust();
+    this.find("textarea").focus();
+  }
+
+  value() {
+    return this.find("textarea").value;
+  }
+
+  adjust() {
+    let textarea = this.find("textarea");
+    textarea.style.height = (textarea.scrollHeight) + "px";
+  }
+
+  onitem(e, isprop) {
+    e.target.clear();
+    let item = e.detail;
+    let text = isprop ? item.ref + ": " : item.ref;
+    let textarea = this.find("textarea");
+    let start = textarea.selectionStart;
+    let end = textarea.selectionEnd;
+    textarea.setRangeText(text, start, end, "end");
+    if (item.property && item.property.get(n_target) == n_item_type) {
+      this.find("#topic-search input").focus();
+    } else {
+      textarea.focus();
+    }
+  }
+
+  render() {
+    let topic = this.state;
+    let content = topic ? topic.text(true) : "";
+    return `
+      <div id="search-box">
+        <property-search-box id="property-search"></property-search-box>
+        <topic-search-box id="topic-search"></topic-search-box>
+      </div>
+      <textarea>${Component.escape(content)}</textarea>
+    `
+  }
+
+  static stylesheet() {
+    return `
+      $ #search-box {
+        display: flex;
+      }
+      $ property-search-box {
+        border: 1px solid #d0d0d0;
+        margin: 10px 5px 5px 0px;
+      }
+      $ topic-search-box {
+        border: 1px solid #d0d0d0;
+        margin: 10px 0px 5px 5px;
+      }
+      $ textarea {
+        font-size: 12px;
+        box-sizing: border-box;
+        resize: none;
+        width: 100%;
+        height: auto;
+        overflow-y: hidden;
+        border: 1px solid #d0d0d0;
+      }
+    `;
+  }
+}
+
+Component.register(ItemEditor);
 
 class KbLink extends Component {
   onconnected() {

@@ -123,6 +123,7 @@ class Profile:
     self.itemid = itemid
     self.excluded = None
     self.isnew = False
+    self.skipdups = True
     if itemid is None:
       data = None
     else:
@@ -238,7 +239,7 @@ class Profile:
       alturl = "https://i.imgur.com/" + url[18:]
     elif url.startswith("https://i.imgur.com/"):
       alturl = "https://imgur.com/" + url[20:]
-    if self.has(url, alturl):
+    if self.skipdups and self.has(url, alturl):
       print("Skip existing photo", url)
       return 0
 

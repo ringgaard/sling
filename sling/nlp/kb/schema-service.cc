@@ -33,6 +33,7 @@ SchemaService::SchemaService(Store *kb) {
   property_fields.insert(store.Lookup("alias"));
   property_fields.insert(store.Lookup("description"));
   property_fields.insert(store.Lookup("target"));
+  property_fields.insert(store.Lookup("/w/item/fanin"));
   property_fields.insert(n_formatter_url);
   property_fields.insert(n_inverse_label_item);
 

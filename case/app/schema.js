@@ -11,6 +11,7 @@ const n_name = store.lookup("name");
 const n_alias = store.lookup("alias");
 const n_description = store.lookup("description");
 const n_properties = store.lookup("properties");
+const n_fanin = store.lookup("/w/item/fanin");
 
 var kbschema;
 var kbpropidx;
@@ -58,7 +59,7 @@ class PropertyIndex {
     }
 
     // Find all names matching the prefix. Stop if we hit the limit.
-    let matches = new Array();
+    let matches = new Set();
     let index = lo;
     while (index < this.names.length) {
       // Check if we have reached the limit.
@@ -72,14 +73,21 @@ class PropertyIndex {
         if (entry.name != normalized_query) break;
       }
 
-      // TODO: Add boost for exact match.
-
-      matches.push(entry);
+      matches.add(entry.property);
       index++;
     }
 
-    // TODO: Sort matching entities by decreasing frequency.
-    return matches;
+    // Rank search results.
+    let results = Array.from(matches);
+    results.sort((a, b) => {
+      let fa = a.get(n_fanin);
+      let fb = b.get(n_fanin);
+      if (!fb) return 1;
+      if (!fa) return -1;
+      return fa >= fb ? -1 : 1;
+    });
+
+    return results;
   }
 };
 
@@ -114,7 +122,6 @@ export async function get_property_index() {
 class PropertySearchBox extends Component {
   onconnected() {
     this.bind("md-search", "query", e => this.onquery(e));
-    this.bind("md-search", "item", e => this.onitem(e));
   }
 
   async onquery(e) {
@@ -127,17 +134,13 @@ class PropertySearchBox extends Component {
     let items = [];
     for (let match of matches) {
       items.push(new MdSearchResult({
-        ref: match.property.id,
-        name: match.property.get(n_name),
-        description: match.property.get(n_description),
+        ref: match.id,
+        name: match.get(n_name),
+        description: match.get(n_description),
+        property: match,
       }));
     }
     target.populate(detail, items);
-  }
-
-  onitem(e) {
-    let item = e.detail;
-    console.log("selected property", item);
   }
 
   render() {
