@@ -308,6 +308,11 @@ class CaseList extends material.MdCard {
       } else if (rec.share) {
         icon = '<md-icon icon="share" outlined></md-icon>';
       }
+      if (rec.share) {
+        if (rec.shared && rec.shared < rec.modified) {
+          icon += " *";
+        }
+      }
       h.push(`
         <tr case="${rec.id}" link="${rec.link}">
           <td>${rec.id}</td>

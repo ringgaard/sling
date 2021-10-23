@@ -603,6 +603,8 @@ export class Encoder {
       }
     } else if (typeof obj === 'boolean') {
       this.writeTag(5, obj ? 1 : 0);
+    } else if (obj === null) {
+      this.writeTag(7, 1);
     } else {
       let ref = this.refs.get(obj);
       if (!ref) {

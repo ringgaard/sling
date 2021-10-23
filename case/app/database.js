@@ -12,6 +12,7 @@ const n_main = store.lookup("main");
 const n_caseno = store.lookup("caseno");
 const n_created = store.lookup("created");
 const n_modified = store.lookup("modified");
+const n_shared = store.lookup("shared");
 const n_topics = store.lookup("topics");
 const n_share = store.lookup("share");
 const n_publish = store.lookup("publish");
@@ -83,6 +84,10 @@ class CaseDatabase {
   }
 
   writemeta(casefile) {
+    function date(ts) {
+      return ts ? new Date(ts) : null;
+    }
+
     // Build case directory record.
     let caseno = casefile.get(n_caseno);
     let main = casefile.get(n_main);
@@ -90,8 +95,9 @@ class CaseDatabase {
       id: caseno,
       name: main.get(n_name),
       description: main.get(n_description),
-      created: new Date(casefile.get(n_created)),
-      modified: new Date(casefile.get(n_modified)),
+      created: date(casefile.get(n_created)),
+      modified: date(casefile.get(n_modified)),
+      shared: date(casefile.get(n_shared)),
       share: !!casefile.get(n_share),
       publish: !!casefile.get(n_publish),
       link: !!casefile.get(n_link),

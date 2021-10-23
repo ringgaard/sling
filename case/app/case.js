@@ -23,6 +23,8 @@ const n_next = store.lookup("next");
 const n_publish = store.lookup("publish");
 const n_share = store.lookup("share");
 const n_link = store.lookup("link");
+const n_modified = store.lookup("modified");
+const n_shared = store.lookup("shared");
 const n_sling_case_no = store.lookup("PCASE");
 
 const n_target = store.lookup("target");
@@ -246,6 +248,10 @@ class CaseEditor extends Component {
   onsave(e) {
     if (this.readonly) return;
     if (this.dirty) {
+      // Update modification time.
+      let ts = new Date().toJSON();
+      this.casefile.set(n_modified, ts);
+
       this.match("#app").save_case(this.casefile);
       this.mark_clean();
     }
@@ -257,22 +263,23 @@ class CaseEditor extends Component {
     let publish = this.casefile.get(n_publish);
     let dialog = new SharingDialog({share, publish});
     let result = await dialog.show();
-    if (result && result.share) {
+    if (result) {
       // Update sharing information.
-      if (result.share != share) {
-        this.casefile.set(n_share, result.share);
-        this.dirty = true;
-      }
-      if (result.publish != publish) {
-        this.casefile.set(n_publish, result.publish);
-        this.dirty = true;
+      this.casefile.set(n_share, result.share);
+      this.casefile.set(n_publish, result.publish);
+
+      // Update modification and sharing time.
+      let ts = new Date().toJSON();
+      this.casefile.set(n_modified, ts);
+      if (result.share) {
+        this.casefile.set(n_shared, ts);
+      } else {
+        this.casefile.set(n_shared, null);
       }
 
-      // Make sure the case is saved.
-      if (this.dirty) {
-        this.match("#app").save_case(this.casefile);
-        this.mark_clean();
-      }
+      // Save case before sharing.
+      this.match("#app").save_case(this.casefile);
+      this.mark_clean();
 
       // Send case to server.
       let r = await fetch("/case/share", {
@@ -574,12 +581,10 @@ class CaseEditor extends Component {
   }
 
   async navigate_to(topic) {
-    console.log("navigate to", topic.id);
     if (!this.folder.includes(topic)) {
       // Switch to folder with topic.
       for (let [name, folder] of this.folders) {
         if (folder.includes(topic)) {
-          console.log("switch to folder", folder);
           await this.show_folder(folder);
           break;
         }
@@ -968,25 +973,43 @@ Component.register(RenameFolderDialog);
 
 class SharingDialog extends material.MdDialog {
   onconnected() {
-    this.find("#share").update(this.state.share);
-    this.find("#publish").update(this.state.publish);
+    if (this.state.publish) {
+      this.find("#publish").update(true);
+    } else if (this.state.share) {
+      this.find("#share").update(true);
+    } else {
+      this.find("#private").update(true);
+    }
   }
 
   submit() {
-    this.close({
-      share: this.find("#share").checked,
-      publish: this.find("#publish").checked,
-    });
+    let publish = this.find("#publish").checked;
+    let share = publish || this.find("#share").checked;
+    this.close({share, publish});
   }
 
   render() {
     return `
       <md-dialog-top>Share case</md-dialog-top>
       <div id="content">
-        <md-checkbox id="share" label="Share case in the public case store">
-        </md-checkbox>
-        <md-checkbox id="publish" label="Publish case topics in knowledge base">
-        </md-checkbox>
+        <md-radio-button
+          id="private"
+          name="sharing"
+          value="0"
+          label="Private case only stored on local computer">
+        </md-radio-button>
+        <md-radio-button
+          id="share"
+          name="sharing"
+          value="1"
+          label="Share case publicly so other users can view it">
+        </md-radio-button>
+        <md-radio-button
+          id="publish"
+          name="sharing"
+          value="2"
+          label="Publish case topics in public knowledge base">
+        </md-radio-button>
       </div>
       <md-dialog-bottom>
         <button id="cancel">Cancel</button>
@@ -1030,7 +1053,6 @@ class TopicList extends Component {
 
     // Clear selection.
     this.selection.clear();
-    console.log("scroll to 0");
     this.scrollTop = 0;
   }
 
@@ -1057,7 +1079,6 @@ class TopicList extends Component {
   navigate_to(topic) {
     let card = this.card(topic);
     if (card) {
-      console.log("scroll into view");
       card.scrollIntoView();
     } else {
       console.log("topic card not found for", topic.id);
@@ -1112,7 +1133,8 @@ class TopicCard extends material.MdCard {
   update_mode(editing) {
     this.editing = editing;
 
-    let scrollpos = this.match("md-content").scrollTop;
+    let content = this.match("md-content");
+    let scrollpos = content ? content.scrollTop : undefined;
     if (editing) {
       this.find("item-editor").update(this.state);
       this.find("item-panel").update(null);
@@ -1120,7 +1142,7 @@ class TopicCard extends material.MdCard {
       this.find("item-panel").update(this.state);
       this.find("item-editor").update();
     }
-    this.match("md-content").scrollTop = scrollpos;
+    if (scrollpos) content.scrollTop = scrollpos;
 
     this.find("#topic-actions").update(!editing && !this.readonly);
     this.find("#edit-actions").update(editing && !this.readonly);
@@ -1297,7 +1319,7 @@ class ItemEditor extends Component {
 
   adjust() {
     let textarea = this.find("textarea");
-    textarea.style.height = (textarea.scrollHeight) + "px";
+    textarea.style.height = textarea.scrollHeight + "px";
   }
 
   onitem(e, isprop) {

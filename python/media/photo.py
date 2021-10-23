@@ -19,7 +19,9 @@ import json
 import os
 import re
 import requests
+import ssl
 import urllib.parse
+import urllib3
 
 import sling
 import sling.flags as flags
@@ -83,8 +85,20 @@ db = None
 # Media database.
 mediadb = None
 
-# Session for fetching image data.
+# Session for fetching image data. Disable SSL checking.
+class TLSAdapter(requests.adapters.HTTPAdapter):
+  def init_poolmanager(self, *args, **kwargs):
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    ctx.set_ciphers('DEFAULT@SECLEVEL=1')
+    kwargs['ssl_context'] = ctx
+    return super(TLSAdapter, self).init_poolmanager(*args, **kwargs)
+
 session = requests.Session()
+session.verify = False
+session.mount('https://', TLSAdapter())
+urllib3.disable_warnings()
 
 # Fingerprints for bad photos.
 bad_photos = set([
@@ -567,7 +581,7 @@ class Profile:
       # Get image from database or fetch directly.
       image = mediadb[url]
       if image is None:
-        r = requests.get(url)
+        r = session.get(url)
         if r.status_code != 200:
           print(self.itemid, url, "missing", r.status_code)
           missing.add(url)

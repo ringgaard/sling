@@ -72,6 +72,7 @@ app.static("/case/app", "case/app")
 commons = sling.Store()
 n_id = commons["id"]
 n_modified = commons["modified"]
+n_share = commons["share"]
 commons.freeze()
 
 # Checkpoint with next case number.
@@ -152,6 +153,7 @@ def fetch_case(request):
 @app.route("/case/share", method="POST")
 def share_case(request):
   # Get shared case.
+  client = request["X-Forwarded-For"]
   store = sling.Store(commons)
   casefile = request.frame(store);
 
@@ -164,12 +166,19 @@ def share_case(request):
   ts = iso2ts(modified)
   if ts is None: return 400;
 
-  # Store case in database.
-  casedb.put(caseid, request.body, version=ts)
+  # Share or unshare.
+  if casefile[n_share]:
+    # Store case in database.
+    casedb.put(caseid, request.body, version=ts)
 
-  # Log case updates with IP address.
-  client = request["X-Forwarded-For"]
-  log.info("Share case %s version %d for client %s" % (caseid, ts, client))
+    # Log case updates with IP address.
+    log.info("Share case %s version %d for client %s" % (caseid, ts, client))
+  else:
+    # Delete case from database.
+    casedb.delete(caseid)
+
+    # Log case delete with IP address.
+    log.info("Unshare case %s version %d for client %s" % (caseid, ts, client))
 
 # Run HTTP server.
 log.info("HTTP server listening on port", flags.arg.port)

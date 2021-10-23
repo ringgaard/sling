@@ -151,10 +151,6 @@ class CaseApp extends OneOf {
   }
 
   save_case(casefile) {
-    // Update modification time.
-    let ts = new Date().toJSON();
-    casefile.set(n_modified, ts);
-
     // Write case to database.
     let rec = casedb.write(casefile);
 

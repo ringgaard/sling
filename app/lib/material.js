@@ -903,33 +903,37 @@ Component.register(MdIcon);
 
 export class MdRadioButton extends Component {
   render() {
+    let label = this.props.label ? Component.escape(this.props.label) : "";
     return `
-      <input type="radio"
-             name="${this.props.name}"
-             value="${this.props.value}"
-             ${this.props.selected ? "checked" : ""}>`;
+      <label>
+        <input type="radio"
+               name="${this.props.name}"
+               value="${this.props.value}"
+               ${this.props.selected || this.state ? "checked" : ""}>
+        <div>${label}</div>
+      </label>
+    `;
+  }
+
+  get checked() {
+    return this.find("input").checked;
   }
 
   static stylesheet() {
     return `
-      $ {
-        display: flex;
-        height: 30px;
-        width: 30px;
-        border-radius: 50%;
-      }
-
-      $:hover {
-        background-color: rgba(0,0,0,0.07);
-      }
-
       $ input {
         height: 15px;
         width: 15px;
-        margin: 8px;
         background: transparent;
         user-select: none;
         cursor: pointer;
+      }
+
+      $ label {
+        display: flex;
+      }
+      $ div {
+        font-size: 16px;
       }
     `;
   }

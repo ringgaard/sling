@@ -20,9 +20,9 @@ import hashlib
 import requests
 import sys
 import traceback
-import urllib
 
 import sling
+import sling.media.photo
 import sling.flags as flags
 
 flags.define("--kb",
@@ -59,7 +59,9 @@ wiki_base_url = "https://upload.wikimedia.org/wikipedia/"
 commons_base_url = "https://upload.wikimedia.org/wikipedia/commons"
 commons_redirect = "https://commons.wikimedia.org/wiki/Special:Redirect/file/"
 user_agent = "SLING/1.0 bot (https://github.com/ringgaard/sling)"
-session = requests.Session()
+
+# Session for fetching image data.
+session = sling.media.photo.session
 
 # Read list of urls.
 def read_urls(filename):
