@@ -86,6 +86,7 @@ class CaseApp extends OneOf {
       main_topics.push(topic);
       topic.add(n_is, store.lookup(topicid));
       if (name) topic.add(n_name, name);
+      main.add(n_main_subject, topic);
     }
 
     // Initialize case.

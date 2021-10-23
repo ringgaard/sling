@@ -372,8 +372,8 @@ class Profile:
   # Add Reddit gallery.
   def add_reddit_gallery(self, galleryid, caption, isnsfw=False):
     print("Redit posting", galleryid)
-    r = session.get("https://api.reddit.com/api/info/?id=t3_" + galleryid,
-                    headers = {"User-agent": "SLING Bot 1.0"})
+    r = requests.get("https://api.reddit.com/api/info/?id=t3_" + galleryid,
+                     headers = {"User-agent": "SLING Bot 1.0"})
     r.raise_for_status()
     children = r.json()["data"]["children"]
     if len(children) == 0:
