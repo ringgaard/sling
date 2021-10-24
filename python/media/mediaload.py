@@ -29,11 +29,6 @@ flags.define("--kb",
              default="data/e/kb/kb.sling",
              help="Knowledge base with media references")
 
-flags.define("--mediadb",
-             default="media",
-             help="Media database",
-             metavar="DB")
-
 flags.define("--max_media_size",
              help="Maximum media file size",
              default=63*1024*1024,

@@ -228,7 +228,7 @@ class CaseEditor extends Component {
     if (item.topic) {
       this.navigate_to(item.topic);
     } else {
-      this.add_topic(item.ref, item.name);
+      this.add_topic(item.ref, item.topic.get(n_name));
     }
   }
 
