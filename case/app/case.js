@@ -228,7 +228,7 @@ class CaseEditor extends Component {
     if (item.topic) {
       this.navigate_to(item.topic);
     } else {
-      this.add_topic(item.ref, item.topic.get(n_name));
+      this.add_topic(item.ref, item.name);
     }
   }
 
@@ -719,7 +719,8 @@ class TopicSearchBox extends Component {
       for (let item of data.matches) {
         items.push(new material.MdSearchResult({
           ref: item.ref,
-          name: item.text + " 🌍",
+          name: item.text,
+          title: item.text + " 🌍",
           description: item.description,
         }));
       }
@@ -1123,11 +1124,11 @@ class TopicCard extends material.MdCard {
     this.bind(null, "keydown", e => this.onkeydown(e));
 
     this.update_mode(false);
-    this.find("#name").update(this.state.get(n_name));
+    this.update_name();
   }
 
   onupdated() {
-    this.find("#name").update(this.state.get(n_name));
+    this.update_name();
   }
 
   update_mode(editing) {
@@ -1146,6 +1147,12 @@ class TopicCard extends material.MdCard {
 
     this.find("#topic-actions").update(!editing && !this.readonly);
     this.find("#edit-actions").update(editing && !this.readonly);
+  }
+
+  update_name() {
+    let name = this.state.get(n_name);
+    if (!name) name = "(no name)";
+    this.find("#name").update(name.toString());
   }
 
   selected() {

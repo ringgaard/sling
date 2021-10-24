@@ -1445,14 +1445,18 @@ Component.register(MdSearchItem);
 export class MdSearchResult extends MdSearchItem {
   render() {
     let h = [];
-    if (this.state.name) {
+    let title = this.state.title;
+    if (!title) title = this.state.name;
+    let description = this.state.description;
+
+    if (title) {
       h.push('<span class="item-title">');
-      h.push(Component.escape(this.state.name));
+      h.push(Component.escape(title));
       h.push('</span>');
     }
-    if (this.state.description) {
+    if (description) {
       h.push('<span class="item-description">');
-      h.push(Component.escape(this.state.description));
+      h.push(Component.escape(description));
       h.push('</span>');
     }
     return h.join("");
