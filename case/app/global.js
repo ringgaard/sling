@@ -10,17 +10,11 @@ export var store = new Store();
 export var settings = {}
 
 export function read_settings() {
-  let item = window.localStorage.getItem("settings");
-  if (item) {
-    settings = JSON.parse(item);
-  } else {
-    settings = {
-      kbservice: "https://ringgaard.com",
-    };
-  }
+  settings = JSON.parse(window.localStorage.getItem("settings") || "{}");
+  if (!settings.kbservice) settings.kbservice = "https://ringgaard.com";
 }
 
-export function write_settings() {
+export function save_settings() {
   window.localStorage.setItem("settings", JSON.stringify(settings));
 }
 

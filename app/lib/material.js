@@ -515,6 +515,7 @@ export class MdDrawer extends Component {
 
   toogle() {
     this.update(!this.state);
+    return this.state;
   }
 
   static stylesheet() {
@@ -524,6 +525,7 @@ export class MdDrawer extends Component {
         height: 100%;
         display: block;
         overflow: auto;
+        box-sizing: border-box;
       }
     `;
   }
@@ -958,6 +960,7 @@ export class MdCheckbox extends Component {
 
   onchange(e) {
     this.state = this.find("input").checked;
+    this.find("label").classList.toggle("checked");
   }
 
   get checked() {
@@ -973,7 +976,7 @@ export class MdCheckbox extends Component {
   render() {
     let label = this.props.label ? Component.escape(this.props.label) : "";
     return `
-      <label>
+      <label ${this.state ? 'class="checked"' : ''}>
         <input type="checkbox" ${this.state ? "checked" : ""}>
         <div>${label}</div>
       </label>
@@ -998,6 +1001,81 @@ export class MdCheckbox extends Component {
 }
 
 Component.register(MdCheckbox);
+
+//-----------------------------------------------------------------------------
+// Switch
+//-----------------------------------------------------------------------------
+
+export class MdSwitch extends MdCheckbox {
+  static stylesheet() {
+    return `
+      $ {
+        display: inline-block;
+        position: relative;
+        margin: 0 0 10px;
+        font-size: 16px;
+        line-height: 24px;
+      }
+
+      $ input {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 36px;
+        height: 20px;
+        opacity: 0;
+        z-index: 0;
+      }
+
+      $ label {
+        display: block;
+        padding: 0 0 0 44px;
+        cursor: pointer;
+      }
+
+      $ label::before {
+        content: '';
+        position: absolute;
+        top: 5px;
+        left: 0;
+        width: 36px;
+        height: 14px;
+        background-color: rgba(0, 0, 0, .26);
+        border-radius: 14px;
+        z-index: 1;
+        transition: background-color 0.28s cubic-bezier(.4, 0, .2, 1);
+      }
+
+      $ label::after {
+        content: '';
+        position: absolute;
+        top: 2px;
+        left: 0;
+        width: 20px;
+        height: 20px;
+        background-color: #fff;
+        border-radius: 14px;
+        box-shadow: 0 2px 2px 0 rgba(0, 0, 0, .14),
+                    0 3px 1px -2px rgba(0, 0, 0, .2),
+                    0 1px 5px 0 rgba(0, 0, 0, .12);
+        z-index: 2;
+        transition: all 0.28s cubic-bezier(.4, 0, .2, 1);
+        transition-property: left, background-color;
+      }
+
+      $ label.checked::before  {
+        background-color: rgba(0, 160, 214, .5);
+      }
+
+      $ label.checked::after {
+        left: 16px;
+        background-color: #00A0D6;
+      }
+    `;
+  }
+}
+
+Component.register(MdSwitch);
 
 //-----------------------------------------------------------------------------
 // Text field

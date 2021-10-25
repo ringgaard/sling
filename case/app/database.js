@@ -17,6 +17,8 @@ const n_topics = store.lookup("topics");
 const n_share = store.lookup("share");
 const n_publish = store.lookup("publish");
 const n_link = store.lookup("link");
+const n_has_quality = store.lookup("P1552");
+const n_not_safe_for_work = store.lookup("Q2716583");
 
 class CaseDatabase {
   // Open database.
@@ -101,6 +103,7 @@ class CaseDatabase {
       share: !!casefile.get(n_share),
       publish: !!casefile.get(n_publish),
       link: !!casefile.get(n_link),
+      nsfw: main.get(n_has_quality) == n_not_safe_for_work,
     };
 
     // Write record to database.

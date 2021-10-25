@@ -37,6 +37,20 @@ export function imageurl(url, thumb) {
   }
 }
 
+export function censor(gallery, nsfw) {
+  let filtered = [];
+  let urls = new Set();
+  for (let image of gallery) {
+    if (!image.url) continue;
+    if (!nsfw && image.nsfw) continue;
+    if (urls.has(image.url)) continue;
+    if (image.url.endsWith(".tif") || image.url.endsWith(".tiff")) continue;
+    filtered.push(image);
+    urls.add(image.url);
+  }
+  return filtered;
+}
+
 export class PhotoGallery extends MdModal {
   constructor() {
     super();

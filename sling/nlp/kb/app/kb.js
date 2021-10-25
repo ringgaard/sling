@@ -5,11 +5,12 @@
 
 import {Component} from "/common/lib/component.js";
 import {MdCard, MdModal, MdSearchResult} from "/common/lib/material.js";
-import {PhotoGallery, imageurl} from "/common/lib/gallery.js";
+import {PhotoGallery, imageurl, censor} from "/common/lib/gallery.js";
+
+var settings = JSON.parse(window.localStorage.getItem("settings") || "{}");
 
 var mobile_ckecked = false;
 var is_mobile = false;
-var allow_nsfw = false;
 
 function isMobile() {
   if (mobile_ckecked) return is_mobile;
@@ -22,7 +23,7 @@ function isMobile() {
     is_mobile = true;
   }
   mobile_ckecked = true;
-  if (qs.get("nsfw") == "1") allow_nsfw = true;
+  if (qs.get("nsfw") == "1") settings.nsfw = true;
   return is_mobile;
 }
 
@@ -34,20 +35,6 @@ function wikiurl(id) {
   } else {
     return null;
   }
-}
-
-function filterGallery(gallery) {
-  let filtered = [];
-  let urls = new Set();
-  for (let image of gallery) {
-    if (!image.url) continue;
-    if (!allow_nsfw && image.nsfw) continue;
-    if (urls.has(image.url)) continue;
-    if (image.url.endsWith(".tif") || image.url.endsWith(".tiff")) continue;
-    filtered.push(image);
-    urls.add(image.url);
-  }
-  return filtered;
 }
 
 //-----------------------------------------------------------------------------
@@ -93,7 +80,7 @@ class KbApp extends Component {
   display(item) {
     this.find("#item").update(item);
     this.find("#document").update(item);
-    this.find("#picture").update(filterGallery(item.gallery));
+    this.find("#picture").update(censor(item.gallery, settings.nsfw));
     this.find("#properties").update(item);
     this.find("#categories").update(item);
     this.find("#xrefs").update(item);
@@ -561,7 +548,7 @@ class KbItemCard extends MdCard {
   onimgsearch(e) {
     let item = this.state;
     let url = `/photosearch?q="${encodeURIComponent(item.text)}"`;
-    if (allow_nsfw) url += "&nsfw=1";
+    if (settings.nsfw) url += "&nsfw=1";
     window.open(url, "_blank");
   }
 

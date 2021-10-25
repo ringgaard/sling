@@ -3,7 +3,7 @@
 
 import {Component} from "/common/lib/component.js";
 import * as material from "/common/lib/material.js";
-import {store, settings} from "./global.js";
+import {store, settings, save_settings} from "./global.js";
 
 const kbservice = "https://ringgaard.com"
 
@@ -26,7 +26,13 @@ class CaseManager extends Component {
   }
 
   onsettings(e) {
-    this.find("md-drawer").toogle();
+    let s = this.find("settings-panel");
+    if (this.find("md-drawer").toogle()) {
+      s.onopen();
+    } else {
+      s.onclose();
+      location.reload();
+    }
   }
 
   prerender() {
@@ -44,8 +50,8 @@ class CaseManager extends Component {
           <md-content>
             <case-list></case-list>
           </md-content>
-          <md-drawer>
-            <div id="settings-title">Settings</div>
+          <md-drawer id="settings">
+            <settings-panel></settings-panel>
           </md-drawer>
         </md-row-layout>
       </md-column-layout>
@@ -60,8 +66,7 @@ class CaseManager extends Component {
         overflow: auto;
         height: 100%;
       }
-      $ #settings-title {
-        font-size: 20px;
+      $ md-drawer {
         padding: 10px;
       }
     `;
@@ -300,6 +305,7 @@ class CaseList extends material.MdCard {
    `);
     h.push("<tbody>");
     for (let rec of this.state) {
+      if (rec.nsfw && !settings.nsfw) continue;
       let icon = "";
       if (rec.link) {
         icon = '<md-icon icon="link" outlined></md-icon>';
@@ -398,4 +404,60 @@ class CaseList extends material.MdCard {
 }
 
 Component.register(CaseList);
+
+//-----------------------------------------------------------------------------
+// Settings panel
+//-----------------------------------------------------------------------------
+
+class SettingsPanel extends Component {
+  onopen() {
+    this.find("#picturesize").value = settings.picturesize;
+    this.find("#kbservice").value = settings.kbservice;
+    this.find("#nsfw").checked = settings.nsfw;
+  }
+
+  onclose() {
+    settings.picturesize = this.find("#picturesize").value;
+    settings.kbservice = this.find("#kbservice").value;
+    settings.nsfw = this.find("#nsfw").checked;
+    save_settings();
+  }
+
+  render() {
+    return `
+      <div id="settings-title">Settings</div>
+      <hr>
+      <div id="content">
+        <md-text-field
+          id="picturesize"
+          label="Profile picture size">
+        </md-text-field>
+        <md-text-field
+          id="kbservice"
+          label="Knowledge service URL">
+        </md-text-field>
+        <md-switch id="nsfw" label="Show adult content (NSFW)"></md-switch>
+      </div>
+    `;
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        padding: 10px;
+      }
+      $ #settings-title {
+        font-size: 20px;
+        font-weight: bold;
+      }
+      $ #content {
+        display: flex;
+        flex-direction: column;
+        row-gap: 16px;
+      }
+    `;
+  }
+}
+
+Component.register(SettingsPanel);
 

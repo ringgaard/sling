@@ -65,23 +65,23 @@ class CaseApp extends OneOf {
   async add_case(name, description, topicid) {
     let response = await fetch("/case/new");
     let casefile = await store.parse(response);
-    let caseno = casefile.get(n_caseno);
+    let caseid = casefile.get(n_caseno);
     let next = 1;
     let topics = new Array();
     let main_topics = new Array();
 
     // Create main topic for case file.
-    let main = store.frame(`t/${caseno}/${next++}`);
+    let main = store.frame(`t/${caseid}/${next++}`);
     topics.push(main);
     main_topics.push(main);
     main.add(n_instance_of, n_case_file);
     if (name) main.add(n_name, name);
     if (description) main.add(n_description, description);
-    main.add(n_sling_case_no, caseno.toString());
+    main.add(n_sling_case_no, caseid.toString());
 
     // Add initial topic.
     if (topicid) {
-      let topic = store.frame(`t/${caseno}/${next++}`);
+      let topic = store.frame(`t/${caseid}/${next++}`);
       topics.push(topic);
       main_topics.push(topic);
       topic.add(n_is, store.lookup(topicid));
@@ -98,15 +98,12 @@ class CaseApp extends OneOf {
     casefile.add(n_folders, store.frame(["Main", main_topics]));
     casefile.add(n_next, next);
 
-    // Write case to database.
-    let rec = casedb.write(casefile);
-
-    // Update case list.
-    this.caselist.push(rec);
-    this.refresh_manager();
-
-    // Show new case.
-    return this.open_case(caseno)
+    // Switch to case editor with new case.
+    window.document.title = `Case #${caseid}: ${name}`;
+    this.update("case-editor", casefile);
+    this.find("case-editor").mark_dirty();
+    history.pushState(caseid, "", "/c/" + caseid);
+    return casefile;
   }
 
   delete_case(caseid, link) {
