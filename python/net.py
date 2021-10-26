@@ -21,6 +21,7 @@ import time
 import traceback
 import urllib.parse
 import sling
+import sling.log as log
 import sling.pysling as api
 
 # Map of HTTP response formatters for each handler return type.

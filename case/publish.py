@@ -43,7 +43,7 @@ recout = sling.RecordWriter(flags.arg.output)
 commons = sling.Store()
 n_id = commons["id"]
 n_name = commons["name"]
-n_caseno = commons["caseno"]
+n_caseid = commons["caseid"]
 n_main = commons["main"]
 n_publish = commons["publish"]
 n_modified = commons["modified"]
@@ -68,43 +68,28 @@ for rec in casedb.values():
   num_published += 1
 
   # Get case metadata.
-  caseno = casefile[n_caseno]
+  caseid = casefile[n_caseid]
   modified = casefile[n_modified]
   publication_date = sling.Date(modified)
   main = casefile[n_main]
   topics = casefile[n_topics]
-  print(f"Publish case #{caseno}: {main[n_name]}")
+  print(f"Publish case #{caseid}: {main[n_name]}")
 
-  # Build case item.
-  slots = []
-  slots.append((n_id, "c/" + str(caseno)))
+  # Add case publication date.
+  main[n_publication_date] = publication_date.value()
 
-  # Case title.
-  name = store.resolve(main[n_name])
-  if name:
-    slots.append((n_name, f"Case #{caseno}: {name}"))
-
-  # Case publication date.
-  slots.append((n_publication_date, publication_date.value()))
-
-  # Additional case properties.
-  for name, value in main:
-    if name != n_id and name != n_name:
-      slots.append((name, value))
-
-  # Case topis.
+  # Add case topics.
   for topic in topics:
     if topic == main: continue
-    slots.append((n_has_part, topic))
+    main.append(n_has_part, topic)
 
   # Write case item to output.
-  caseitem = store.frame(slots)
-  recout.write(caseitem.id, caseitem.data(binary=True))
+  recout.write(main.id, main.data(binary=True))
 
   # Build topic items.
   for topic in topics:
     if topic == main: continue
-    topic.append(n_described_by_source, caseitem)
+    topic.append(n_described_by_source, main)
     recout.write(topic.id, topic.data(binary=True))
     num_topics += 1
 

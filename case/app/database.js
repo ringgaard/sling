@@ -9,7 +9,7 @@ import {store} from "./global.js";
 const n_name = store.lookup("name");
 const n_description = store.lookup("description");
 const n_main = store.lookup("main");
-const n_caseno = store.lookup("caseno");
+const n_caseid = store.lookup("caseid");
 const n_created = store.lookup("created");
 const n_modified = store.lookup("modified");
 const n_shared = store.lookup("shared");
@@ -91,10 +91,10 @@ class CaseDatabase {
     }
 
     // Build case directory record.
-    let caseno = casefile.get(n_caseno);
+    let caseid = casefile.get(n_caseid);
     let main = casefile.get(n_main);
     let rec = {
-      id: caseno,
+      id: caseid,
       name: main.get(n_name),
       description: main.get(n_description),
       created: date(casefile.get(n_created)),
@@ -123,7 +123,7 @@ class CaseDatabase {
       encoder.encode(topic);
     }
     encoder.encode(casefile);
-    let data = {id: casefile.get(n_caseno), data: encoder.output()};
+    let data = {id: casefile.get(n_caseid), data: encoder.output()};
 
     // Write case data.
     let tx = this.db.transaction(["casedata"], "readwrite");

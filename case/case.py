@@ -70,7 +70,7 @@ app.static("/case/app", "case/app")
 
 # Commons store.
 commons = sling.Store()
-n_id = commons["id"]
+n_caseid = commons["caseid"]
 n_modified = commons["modified"]
 n_share = commons["share"]
 commons.freeze()
@@ -97,30 +97,20 @@ main_page_template = """<!DOCTYPE html>
 def main_page(request):
   return main_page_template
 
-# Frame template for new case.
-case_template = """
-{
-  =c/#
-  :casefile
-  caseno: #
-}
-"""
-
 @app.route("/case/new")
 def new_case(request):
   if numbering:
     # Get new case number.
     client = request["X-Forwarded-For"]
-    caseno = numbering.checkpoint
-    numbering.commit(caseno + 1)
+    caseid = numbering.checkpoint
+    numbering.commit(caseid + 1)
 
     # Log new case requests with IP address.
-    log.info("Assign case #%d to client %s" % (caseno, client))
+    log.info("Assign case #%d to client %s" % (caseid, client))
 
-    # Make new case from with the assigned case number.
+    # Return the newly assigned case number.
     store = sling.Store(commons)
-    newcase = store.parse(case_template.replace("#", str(caseno)))
-    return newcase
+    return  store.frame((n_caseid, caseid))
   elif flags.arg.number_service:
     # Redirect to remote case numbering service.
     return sling.net.HTTPRedirect(flags.arg.number_service)
@@ -141,10 +131,10 @@ def case_reponse(value, request, response):
 @app.route("/case/fetch")
 def fetch_case(request):
   # Get case id.
-  caseid = request.params()["id"][0]
+  caseid = int(request.params()["id"][0])
 
   # Fetch case file from database.
-  rec, ts  = casedb.get(caseid)
+  rec, ts  = casedb.get(str(caseid))
   if rec is None: return 404;
 
   # Return case file.
@@ -158,7 +148,7 @@ def share_case(request):
   casefile = request.frame(store);
 
   # Get case id.
-  caseid = casefile[n_id]
+  caseid = casefile[n_caseid]
   if caseid is None: return 400;
 
   # Get modification time.
@@ -169,16 +159,16 @@ def share_case(request):
   # Share or unshare.
   if casefile[n_share]:
     # Store case in database.
-    casedb.put(caseid, request.body, version=ts)
+    casedb.put(str(caseid), request.body, version=ts)
 
     # Log case updates with IP address.
-    log.info("Share case %s version %d for client %s" % (caseid, ts, client))
+    log.info("Share case #%d version %d for client %s" % (caseid, ts, client))
   else:
     # Delete case from database.
-    casedb.delete(caseid)
+    casedb.delete(str(caseid))
 
     # Log case delete with IP address.
-    log.info("Unshare case %s version %d for client %s" % (caseid, ts, client))
+    log.info("Unshare case #%d version %d for client %s" % (caseid, ts, client))
 
 # Run HTTP server.
 log.info("HTTP server listening on port", flags.arg.port)

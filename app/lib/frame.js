@@ -67,6 +67,17 @@ export class Store {
     frame.state = PUBLIC;
   }
 
+  // Unregister public frame from store.
+  unregister(frame) {
+    if (frame.isanonymous()) return;
+    let slots = frame.slots;
+    for (let n = 0; n < slots.length; n += 2) {
+      if (slots[n] === this.id) this.frames.delete(slots[n + 1]);
+    }
+    frame.remove(this.id);
+    frame.state = ANONYMOUS;
+  }
+
   // Add frame to store.
   add(frame) {
     let slots = frame.slots;
@@ -254,9 +265,39 @@ export class Frame {
     this.slots[n * 2 + 1] = value;
   }
 
-  // Remove nth slot.
+  // Remove all slots with name or nth slot.
   remove(n) {
-    this.slots.splice(n * 2, 2);
+    if (n instanceof Frame) {
+      let slots = this.slots;
+      let i = 0;
+      let l = slots.length;
+      while (i < l && slots[i] != n) i += 2;
+      if (i != l) {
+        let j = i;
+        while (i < l) {
+          if (slots[i] == n) {
+            i += 2;
+          } else {
+            slots[j++] = slots[i++];
+            slots[j++] = slots[i++];
+          }
+        }
+        slots.length = j;
+      }
+    } else {
+      this.slots.splice(n * 2, 2);
+    }
+  }
+
+  // Rename slots.
+  rename(from, to) {
+    if (this.slots) {
+      for (let n = 0; n < this.slots.length; n += 2) {
+        if (this.slots[n] === from) {
+          this.slots[n] = to;
+        }
+      }
+    }
   }
 
   // Convert frame to human-readable representation.

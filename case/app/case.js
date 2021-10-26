@@ -13,7 +13,7 @@ const n_is = store.is;
 const n_name = store.lookup("name");
 const n_alias = store.lookup("alias");
 const n_description = store.lookup("description");
-const n_caseno = store.lookup("caseno");
+const n_caseid = store.lookup("caseid");
 const n_main = store.lookup("main");
 const n_topics = store.lookup("topics");
 const n_folders = store.lookup("folders");
@@ -161,14 +161,14 @@ class CaseEditor extends Component {
   }
 
   onupdated() {
-    this.find("#caseno").update(this.caseno().toString());
+    this.find("#caseid").update(this.caseid().toString());
     this.find("md-drawer").update(true);
     this.update_folders();
     this.update_topics();
   }
 
-  caseno() {
-    return this.casefile.get(n_caseno);
+  caseid() {
+    return this.casefile.get(n_caseid);
   }
 
   name() {
@@ -202,7 +202,7 @@ class CaseEditor extends Component {
 
   close() {
     if (this.dirty) {
-      let msg = `Changes to case #${this.caseno()} has not been saved.`;
+      let msg = `Changes to case #${this.caseid()} has not been saved.`;
       let buttons = {
         "Close without saving": "close",
         "Cancel": "cancel",
@@ -362,7 +362,7 @@ class CaseEditor extends Component {
 
     // Create new topic.
     let topicid = this.next_topic();
-    let topic = store.frame(`t/${this.caseno()}/${topicid}`);
+    let topic = store.frame(`t/${this.caseid()}/${topicid}`);
     if (itemid) topic.add(n_is, store.lookup(itemid));
     if (name) topic.add(n_name, name);
     this.mark_dirty();
@@ -448,7 +448,7 @@ class CaseEditor extends Component {
         <md-toolbar>
           <md-icon-button id="menu" icon="menu"></md-icon-button>
           <md-toolbar-logo></md-toolbar-logo>
-          <div id="title">Case #<md-text id="caseno"></md-text></div>
+          <div id="title">Case #<md-text id="caseid"></md-text></div>
           <topic-search-box id="search"></topic-search-box>
           <md-spacer></md-spacer>
           <md-icon-button id="save" icon="save"></md-icon-button>
@@ -843,19 +843,19 @@ class SharingDialog extends material.MdDialog {
           id="private"
           name="sharing"
           value="0"
-          label="Private case only stored on local computer">
+          label="Private (only stored on local computer)">
         </md-radio-button>
         <md-radio-button
           id="share"
           name="sharing"
           value="1"
-          label="Share case publicly so other users can view it">
+          label="Share (public so other users can view it)">
         </md-radio-button>
         <md-radio-button
           id="publish"
           name="sharing"
           value="2"
-          label="Publish case topics in public knowledge base">
+          label="Publish (case topics in public knowledge base)">
         </md-radio-button>
       </div>
       <md-dialog-bottom>

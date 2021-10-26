@@ -16,8 +16,9 @@ const n_is = store.is;
 const n_isa = store.isa;
 const n_name = store.lookup("name");
 const n_description = store.lookup("description");
+const n_caseno = store.lookup("caseno"); // TODO remove
+const n_caseid = store.lookup("caseid");
 const n_main = store.lookup("main");
-const n_caseno = store.lookup("caseno");
 const n_created = store.lookup("created");
 const n_modified = store.lookup("modified");
 const n_topics = store.lookup("topics");
@@ -27,7 +28,7 @@ const n_link = store.lookup("link");
 const n_case_file = store.lookup("Q108673968");
 const n_main_subject = store.lookup("P921");
 const n_instance_of = store.lookup("P31");
-const n_sling_case_no = store.lookup("PCASE");
+const n_case = store.lookup("PCASE");
 
 //-----------------------------------------------------------------------------
 // Case App
@@ -64,20 +65,22 @@ class CaseApp extends OneOf {
 
   async add_case(name, description, topicid) {
     let response = await fetch("/case/new");
-    let casefile = await store.parse(response);
-    let caseid = casefile.get(n_caseno);
+    let newcase = await store.parse(response);
+    let caseid = newcase.get(n_caseid);
+    if (!caseid) caseid = newcase.get(n_caseno); // TODO: remove
     let next = 1;
     let topics = new Array();
     let main_topics = new Array();
 
     // Create main topic for case file.
-    let main = store.frame(`t/${caseid}/${next++}`);
+    let casefile = store.frame();
+    let main = store.frame(`c/${caseid}`);
     topics.push(main);
     main_topics.push(main);
     main.add(n_instance_of, n_case_file);
     if (name) main.add(n_name, name);
     if (description) main.add(n_description, description);
-    main.add(n_sling_case_no, caseid.toString());
+    main.add(n_case, caseid.toString());
 
     // Add initial topic.
     if (topicid) {
@@ -91,12 +94,15 @@ class CaseApp extends OneOf {
 
     // Initialize case.
     let ts = new Date().toJSON();
+    casefile.add(n_caseid, caseid);
     casefile.add(n_created, ts);
     casefile.add(n_modified, ts);
     casefile.add(n_topics, topics);
     casefile.add(n_main, main);
     casefile.add(n_folders, store.frame(["Main", main_topics]));
     casefile.add(n_next, next);
+
+    console.log("newcase", casefile.text());
 
     // Switch to case editor with new case.
     window.document.title = `Case #${caseid}: ${name}`;
@@ -120,7 +126,7 @@ class CaseApp extends OneOf {
     let casefile = await casedb.read(caseid);
     if (!casefile) {
       // Try to get case from server.
-      let response = await fetch(`/case/fetch?id=c/${caseid}`);
+      let response = await fetch(`/case/fetch?id=${caseid}`);
       if (!response.ok) {
         StdDialog.error(`Case #${caseid} not found`);
         return;
@@ -137,6 +143,18 @@ class CaseApp extends OneOf {
         this.caselist.push(rec);
         this.refresh_manager();
       }
+    }
+
+    // Upgrade legacy cases.
+    // TODO remove after legacy upgrade.
+    if (casefile.get("caseno")) {
+      console.log("Upgrading legacy case file:", casefile.text(true));
+      store.unregister(casefile);
+      casefile.rename(n_caseno, n_caseid);
+      let main = casefile.get(n_main);
+      main.slots[1] = "c/" + caseid;
+      store.frames.set("c/" + caseid, main);
+      console.log("Upgraded:", casefile.text(true));
     }
 
     // Switch to case editor with new case.
