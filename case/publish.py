@@ -75,6 +75,13 @@ for rec in casedb.values():
   topics = casefile[n_topics]
   print(f"Publish case #{caseid}: {main[n_name]}")
 
+  # Update case title.
+  name = main[n_name]
+  if name:
+    main[n_name] = f"Case #{caseid}: {name}"
+  else:
+    main[n_name] = f"Case #{caseid}"
+
   # Add case publication date.
   main[n_publication_date] = publication_date.value()
 

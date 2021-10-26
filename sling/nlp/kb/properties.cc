@@ -462,6 +462,7 @@ const char *property_order[] = {
 
   // Low priority properties.
   "P166",       // award received
+  "P2522",      // victory
 
   // Media.
   "P18",        // image

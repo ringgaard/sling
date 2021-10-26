@@ -223,6 +223,34 @@ class KbLink extends Component {
 
 Component.register(KbLink);
 
+class KbRef extends Component {
+  onconnected() {
+    this.bind(null, "click", e => this.onclick(e));
+  }
+
+  onclick(e) {
+    window.open(`${settings.kbservice}/kb/${this.state}`, "_blank");
+  }
+
+  render() {
+    return Component.escape(this.state);
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        color: #0b0080;
+      }
+
+      $:hover {
+        cursor: pointer;
+      }
+    `;
+  }
+}
+
+Component.register(KbRef);
+
 class PropertyPanel extends Component {
   onconnected() {
     this.bind(null, "click", e => { e.stopPropagation(); });
@@ -821,7 +849,7 @@ class ItemPanel extends Component {
   render() {
     return `
       <div>
-        <md-text id="identifier"></md-text>:
+        <kb-ref id="identifier"></kb-ref>:
         <md-text id="names"></md-text>
       </div>
       <div><md-text id="description"></md-text></div>
