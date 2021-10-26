@@ -110,7 +110,7 @@ def new_case(request):
 
     # Return the newly assigned case number.
     store = sling.Store(commons)
-    return  store.frame((n_caseid, caseid))
+    return store.frame([(n_caseid, caseid)])
   elif flags.arg.number_service:
     # Redirect to remote case numbering service.
     return sling.net.HTTPRedirect(flags.arg.number_service)
