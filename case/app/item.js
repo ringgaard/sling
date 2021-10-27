@@ -205,7 +205,8 @@ class KbLink extends Component {
   }
 
   onclick(e) {
-    window.open(`${settings.kbservice}/kb/${this.props.ref}`, "_blank");
+    let args = {bubbles: true, detail: this.props.ref};
+    this.dispatchEvent(new CustomEvent("navigate", args));
   }
 
   static stylesheet() {
@@ -229,7 +230,8 @@ class KbRef extends Component {
   }
 
   onclick(e) {
-    window.open(`${settings.kbservice}/kb/${this.state}`, "_blank");
+    let args = {bubbles: true, detail: this.state};
+    this.dispatchEvent(new CustomEvent("navigate", args));
   }
 
   render() {
@@ -787,7 +789,7 @@ class ItemPanel extends Component {
     // Split item into properties, media, xrefs, and subtopics.
     let item = this.state;
     if (!item) return;
-    let top = this.parentNode.closest("item-panel") == null;
+    let top = this.parentNode && this.parentNode.closest("item-panel") == null;
     let names = new Array();
     let title = item.get(n_name);
     let props = new Frame(store);

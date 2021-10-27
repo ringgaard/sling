@@ -33,8 +33,6 @@ const n_item_type = store.lookup("/w/item");
 
 class CaseEditor extends Component {
   onconnected() {
-    this.app = this.match("#app");
-
     this.bind("md-search", "item", e => this.onitem(e));
     this.bind("md-search", "enter", e => this.onenter(e));
 
@@ -43,6 +41,8 @@ class CaseEditor extends Component {
     this.bind("#save", "click", e => this.onsave(e));
     this.bind("#share", "click", e => this.onshare(e));
     this.bind("#newfolder", "click", e => this.onnewfolder(e));
+
+    this.bind(null, "navigate", e => this.onnavigate(e));
 
     document.addEventListener("keydown", e => this.onkeydown(e));
     window.addEventListener("beforeunload", e => this.onbeforeunload(e));
@@ -53,6 +53,16 @@ class CaseEditor extends Component {
     if (this.dirty) {
       e.preventDefault();
       e.returnValue = "";
+    }
+  }
+
+  onnavigate(e) {
+    let ref = e.detail;
+    let item = store.find(ref);
+    if (item && this.topics.includes(item)) {
+      this.navigate_to(item);
+    } else {
+      window.open(`${settings.kbservice}/kb/${ref}`, "_blank");
     }
   }
 
@@ -299,7 +309,7 @@ class CaseEditor extends Component {
   move_folder_up(folder) {
     if (this.readonly) return;
     let pos = this.folderno(folder);
-    if (pos > 1 && pos < this.folders.length) {
+    if (pos > 0 && pos < this.folders.length) {
       // Swap with previous folder.
       let tmp_name = this.folders.name(pos);
       let tmp_value = this.folders.value(pos);
@@ -315,7 +325,7 @@ class CaseEditor extends Component {
   move_folder_down(folder) {
     if (this.readonly) return;
     let pos = this.folderno(folder);
-    if (pos > 0 && pos < this.folders.length - 1) {
+    if (pos >= 0 && pos < this.folders.length - 1) {
       // Swap with next folder.
       let tmp_name = this.folders.name(pos);
       let tmp_value = this.folders.value(pos);
@@ -357,7 +367,7 @@ class CaseEditor extends Component {
     });
   }
 
-  add_topic(itemid, name) {
+  async add_topic(itemid, name) {
     if (this.readonly) return;
 
     // Create new topic.
@@ -372,7 +382,7 @@ class CaseEditor extends Component {
     this.folder.push(topic);
 
     // Update topic list.
-    this.update_topics();
+    await this.update_topics();
     this.navigate_to(topic);
   }
 
@@ -884,6 +894,10 @@ class TopicList extends Component {
     this.selection = new Set();
   }
 
+  onconnected() {
+    this.bind(null, "keydown", e => this.onkeydown(e));
+  }
+
   async onupdate() {
     // Retrieve labels for all topics.
     let topics = this.state;
@@ -901,6 +915,10 @@ class TopicList extends Component {
     // Clear selection.
     this.selection.clear();
     this.scrollTop = 0;
+  }
+
+  onkeydown(e) {
+    console.log("keydown", e.key);
   }
 
   clear_selection() {
@@ -927,6 +945,7 @@ class TopicList extends Component {
     let card = this.card(topic);
     if (card) {
       card.scrollIntoView();
+      this.select(topic)
     } else {
       console.log("topic card not found for", topic.id);
     }
@@ -943,9 +962,17 @@ class TopicList extends Component {
   render() {
     let topics = this.state;
     if (!topics) return;
+
+    let existing = new Map();
+    for (let e = this.firstChild; e; e = e.nextSibling) {
+      existing[e.state] = e;
+    }
+
     let h = [];
     for (let topic of topics) {
-      h.push(new TopicCard(topic));
+      let e = existing[topic];
+      if (!e) e = new TopicCard(topic);
+      h.push(e);
     }
     return h;
   }

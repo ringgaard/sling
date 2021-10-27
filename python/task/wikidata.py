@@ -138,6 +138,7 @@ class WikidataWorkflow:
                              output=self.data.fanin(),
                              mapper="item-fanin-mapper",
                              reducer="item-fanin-reducer",
+                             params={"buckets": 16 * 1024 * 1024},
                              format="message/int")
 
 def import_wikidata():

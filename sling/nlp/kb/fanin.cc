@@ -23,24 +23,38 @@ namespace nlp {
 class ItemFaninMapper : public task::FrameProcessor {
  public:
   void Startup(task::Task *task) override {
-    accumulator_.Init(output());
+    accumulator_.Init(output(), task->Get("buckets", 1 << 20));
   }
 
   void Process(Slice key, const Frame &frame) override {
-    // Accumulate fact targets for the item.
+    // Accumulate fact properties and value counts for the item.
     Store *store = frame.store();
     for (const Slot &slot : frame) {
+      if (slot.name == Handle::id()) continue;
       if (slot.name == Handle::isa()) continue;
-      if (slot.name == n_lang_) continue;
 
-      Handle target = store->Resolve(slot.value);
-      if (!store->IsFrame(target)) continue;
+      // Add slot name.
+      if (store->IsFrame(slot.name)) Add(store, slot.name);
 
-      Text id = store->FrameId(target);
-      if (id.empty()) continue;
-
-      accumulator_.Increment(id);
+      // Add slot value.
+      Handle value = store->Resolve(slot.value);
+      if (!store->IsFrame(value)) continue;
+      if (value == slot.value) {
+        Add(store, value);
+      } else {
+        Frame qualifiers(store, value);
+        for (const Slot &qslot : qualifiers) {
+          if (store->IsFrame(qslot.name)) Add(store, qslot.name);
+          Handle qvalue = store->Resolve(qslot.value);
+          if (store->IsFrame(qvalue)) Add(store, qvalue);
+        }
+      }
     }
+  }
+
+  void Add(Store *store, Handle target) {
+    Text id = store->FrameId(target);
+    if (!id.empty()) accumulator_.Increment(id);
   }
 
   void Flush(task::Task *task) override {
@@ -50,9 +64,6 @@ class ItemFaninMapper : public task::FrameProcessor {
  private:
   // Accumulator for fanin counts.
   task::Accumulator accumulator_;
-
-  // Symbols.
-  Name n_lang_{names_, "lang"};
 };
 
 REGISTER_TASK_PROCESSOR("item-fanin-mapper", ItemFaninMapper);

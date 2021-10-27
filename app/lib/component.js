@@ -57,13 +57,13 @@ export class Component extends HTMLElement {
     // Render component.
     let p = this.onconnect && this.onconnect();
     if (p instanceof Promise) {
-      p.then(() => {
+      return p.then(() => {
         if (!this.hide()) this.generate(true);
-        this.onconnected && this.onconnected();
+        return this.onconnected && this.onconnected();
       });
     } else {
       if (!this.hide()) this.generate(true);
-      this.onconnected && this.onconnected();
+      return this.onconnected && this.onconnected();
     }
   }
 
@@ -73,13 +73,13 @@ export class Component extends HTMLElement {
 
     let p = this.onupdate && this.onupdate();
     if (p instanceof Promise) {
-      p.then(() => {
+      return p.then(() => {
         if (!this.hide()) this.generate(false);
-        this.onupdated && this.onupdated();
+        return this.onupdated && this.onupdated();
       });
     } else {
       if (!this.hide()) this.generate(false);
-      this.onupdated && this.onupdated();
+      return this.onupdated && this.onupdated();
     }
   }
 
