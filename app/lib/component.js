@@ -109,10 +109,44 @@ export class Component extends HTMLElement {
   // Insert content into element.
   mount(content) {
     if (content instanceof Array) {
-      while (this.firstChild) this.removeChild(this.lastChild);
-      for (let n of content) {
+      let begin = 0;
+      let end = content.length;
+      let anchor = null;
+      if (end > 0 && this.firstChild) {
+        // Find unchanged head.
+        let head = this.firstChild;
+        while (begin < end && content[begin] == head) {
+          head = head.nextSibling;
+          begin++;
+        }
+
+        // Find unchanged tail.
+        let tail = this.lastChild;
+        while (begin < end && content[end - 1] == tail) {
+          tail = tail.previousSibling;
+          end--;
+        }
+
+        // Insert new elements before tail.
+        if (tail) anchor = tail.nextSibling;
+
+        // Remove all existing elements between head and tail.
+        if (head && tail) {
+          while (head != tail) {
+            let e = tail;
+            tail = tail.previousSibling;
+            this.removeChild(e);
+          }
+          this.removeChild(tail);
+        }
+      } else {
+        while (this.firstChild) this.removeChild(this.lastChild);
+      }
+
+      for (let i = begin; i < end; ++i) {
+        let n = content[i];
         if (n instanceof Node) {
-          this.appendChild(n);
+          this.insertBefore(n, anchor);
         } else {
           this.insertAdjacentHTML("beforeend", n);
         }

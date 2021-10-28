@@ -216,8 +216,7 @@ class CaseSearchBox extends Component {
       <form>
         <md-search
           placeholder="Search for case or topic..."
-          min-length=2
-          autofocus>
+          min-length=2>
         </md-search>
         <md-icon-button id="add" icon="add"></md-icon-button>
       </form>

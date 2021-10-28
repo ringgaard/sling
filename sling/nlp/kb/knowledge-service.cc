@@ -533,11 +533,12 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
   GroupMap property_groups;
   std::vector<Handle> external_media;
   std::unordered_set<string> media_urls;
+  Store *store = item.store();
   for (const Slot &s : item) {
     // Collect categories.
     if (s.name == n_category_) {
-      Builder b(item.store());
-      Frame cat(item.store(), s.value);
+      Builder b(store);
+      Frame cat(store, s.value);
       GetStandardProperties(cat, &b, false);
       info->categories.push_back(b.Create().handle());
       continue;
@@ -555,7 +556,7 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
     // Get property list for property.
     Handles *&property_list = property_groups[property];
     if (property_list == nullptr) {
-      property_list = new Handles(item.store());
+      property_list = new Handles(store);
     }
 
     // Add property value.
@@ -568,28 +569,27 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
   });
 
   // Build property lists.
-  Store *store = item.store();
   for (auto &group : property_groups.array) {
     Property *property = group->first;
 
     // Add property information.
-    Builder p(item.store());
+    Builder p(store);
     p.Add(n_property_, property->name);
     p.Add(n_ref_, property->id);
     p.Add(n_type_, property->datatype);
 
     // Add property values.
     if (!property->image) {
-      SortChronologically(item.store(), group->second);
+      SortChronologically(store, group->second);
     }
-    Handles values(item.store());
+    Handles values(store);
     for (Handle h : *group->second) {
       // Resolve value.
-      Handle value = item.store()->Resolve(h);
+      Handle value = store->Resolve(h);
       bool qualified = value != h;
 
       // Add property value based on property type.
-      Builder v(item.store());
+      Builder v(store);
       if (property->datatype == n_item_type_) {
         if (store->IsFrame(value)) {
           // Add reference to other item.
@@ -694,14 +694,14 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
 
       // Get qualifiers.
       if (qualified) {
-        Item qualifiers(item.store());
-        FetchProperties(Frame(item.store(), h), &qualifiers);
+        Item qualifiers(store);
+        FetchProperties(Frame(store, h), &qualifiers);
         for (Handle xref : qualifiers.xrefs) {
           // Treat xrefs as properties for qualifiers.
           qualifiers.properties.push_back(xref);
         }
         if (!qualifiers.properties.empty()) {
-          v.Add(n_qualifiers_, Array(item.store(), qualifiers.properties));
+          v.Add(n_qualifiers_, Array(store, qualifiers.properties));
         }
       }
 
@@ -709,8 +709,8 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
 
       // Collect media files for gallery.
       if (property->image) {
-        Text filename = String(item.store(), value).text();
-        Builder m(item.store());
+        Text filename = String(store, value).text();
+        Builder m(store);
         string url = CommonsUrl(filename);
         media_urls.insert(url);
         m.Add(n_url_, url);
@@ -722,7 +722,7 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
         info->gallery.push_back(m.Create().handle());
       }
     }
-    p.Add(n_values_, Array(item.store(), values));
+    p.Add(n_values_, Array(store, values));
 
     // Add property to property list.
     if (property->datatype == n_xref_type_) {
@@ -739,7 +739,7 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
     string url = store->GetString(store->Resolve(media))->str().str();
     if (media_urls.count(url) > 0) continue;
 
-    Builder m(item.store());
+    Builder m(store);
     m.Add(n_url_, url);
     if (store->IsFrame(media)) {
       Frame image(store, media);

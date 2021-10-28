@@ -918,7 +918,7 @@ class TopicList extends Component {
   }
 
   onkeydown(e) {
-    console.log("keydown", e.key);
+    //console.log("keydown", e.key);
   }
 
   clear_selection() {
@@ -946,8 +946,6 @@ class TopicList extends Component {
     if (card) {
       card.scrollIntoView();
       this.select(topic)
-    } else {
-      console.log("topic card not found for", topic.id);
     }
   }
 
@@ -1011,7 +1009,7 @@ class TopicCard extends material.MdCard {
     let scrollpos = content ? content.scrollTop : undefined;
     if (editing) {
       this.find("item-editor").update(this.state);
-      this.find("item-panel").update(null);
+      this.find("item-panel").update();
     } else {
       this.find("item-panel").update(this.state);
       this.find("item-editor").update();
@@ -1067,9 +1065,18 @@ class TopicCard extends material.MdCard {
     this.match("#editor").mark_dirty();
   }
 
-  ondiscard(e) {
-    this.update(this.state);
-    this.update_mode(false);
+  async ondiscard(e) {
+    let topic = this.state;
+    let result = await material.StdDialog.confirm(
+      "Discard changes",
+      `Discard changes to topic '${topic.get(n_name)}'?`,
+      "Discard");
+    if (result) {
+      this.update(this.state);
+      this.update_mode(false);
+    } else {
+      this.find("item-editor").focus();
+    }
   }
 
   async ondelete(e) {
@@ -1186,8 +1193,12 @@ class ItemEditor extends Component {
 
   onupdated() {
     if (!this.state) return;
-    this.bind("#property-search md-search", "item", e => this.onitem(e, true));
+    this.bind("md-search", "enter", e => this.onenter(e));
+
+    this.bind("#prop-search md-search", "item", e => this.onitem(e, true));
     this.bind("#topic-search md-search", "item", e => this.onitem(e, false));
+    this.bind("#prop-search md-search", "enter", e => this.onenter(e, true));
+    this.bind("#topic-search md-search", "enter", e => this.onenter(e, false));
     this.bind("textarea", "input", e => this.adjust());
     this.adjust();
     this.find("textarea").focus();
@@ -1205,16 +1216,36 @@ class ItemEditor extends Component {
   onitem(e, isprop) {
     e.target.clear();
     let item = e.detail;
-    let text = isprop ? item.ref + ": " : item.ref;
+    let text = item.ref;
+    if (isprop) text += ": "
+    this.insert(text);
+
+    if (isprop) {
+      this.find("#topic-search input").focus();
+    } else {
+      this.find("textarea").focus();
+    }
+  }
+
+  onenter(e, isprop) {
+    e.target.clear();
+    let name = e.detail;
+    let text = JSON.stringify(name);
+    if (isprop) text += ": "
+    this.insert(text);
+
+    if (isprop) {
+      this.find("#topic-search input").focus();
+    } else {
+      this.find("textarea").focus();
+    }
+  }
+
+  insert(text) {
     let textarea = this.find("textarea");
     let start = textarea.selectionStart;
     let end = textarea.selectionEnd;
     textarea.setRangeText(text, start, end, "end");
-    if (item.property && item.property.get(n_target) == n_item_type) {
-      this.find("#topic-search input").focus();
-    } else {
-      textarea.focus();
-    }
   }
 
   render() {
@@ -1222,7 +1253,7 @@ class ItemEditor extends Component {
     let content = topic ? topic.text(true) : "";
     return `
       <div id="search-box">
-        <property-search-box id="property-search"></property-search-box>
+        <property-search-box id="prop-search"></property-search-box>
         <topic-search-box id="topic-search"></topic-search-box>
       </div>
       <textarea>${Component.escape(content)}</textarea>

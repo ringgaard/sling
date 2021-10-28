@@ -72,7 +72,11 @@ void PyHTTPServer::Dealloc() {
 }
 
 PyObject *PyHTTPServer::Start() {
-  httpd->Start();
+  Status st = httpd->Start();
+  if (!st) {
+    PyErr_SetString(PyExc_IOError, st.message());
+    return nullptr;
+  }
   Py_RETURN_NONE;
 }
 

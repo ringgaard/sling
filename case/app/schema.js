@@ -80,11 +80,9 @@ class PropertyIndex {
     // Rank search results.
     let results = Array.from(matches);
     results.sort((a, b) => {
-      let fa = a.get(n_fanin);
-      let fb = b.get(n_fanin);
-      if (!fb) return 1;
-      if (!fa) return -1;
-      return fa >= fb ? -1 : 1;
+      let fa = a.get(n_fanin) || 0;
+      let fb = b.get(n_fanin) || 0;
+      return fb - fa;
     });
 
     return results;
@@ -149,8 +147,7 @@ class PropertySearchBox extends Component {
         <md-search
           placeholder="Search for property..."
           min-length=2
-          autoselect=1
-          autofocus>
+          autoselect=1>
         </md-search>
       </form>
     `;

@@ -114,6 +114,7 @@ class KnowledgeBaseWorkflow:
   def reconcile_items(self, items=None, output=None):
     """Reconcile items."""
     items = self.wf.bundle(
+      self.data.schema_defs(),
       self.data.properties(),
       self.data.standard_item_sources(),
       self.extended_item_sources(),
@@ -138,6 +139,7 @@ class KnowledgeBaseWorkflow:
   def fuse_items(self, items=None, extras=None, output=None):
     """Fuse items."""
     items = self.wf.bundle(
+      self.data.schema_defs(),
       self.data.standard_item_sources(),
       self.data.wikidata_properties(),
       items,
@@ -155,7 +157,6 @@ class KnowledgeBaseWorkflow:
   def build_knowledge_base(self):
     """Task for building knowledge base store with items, and schemas."""
     items = self.data.items()
-    schemas = self.data.schema_defs()
 
     with self.wf.namespace("kb"):
       # Prune information from Wikidata items.
@@ -165,8 +166,7 @@ class KnowledgeBaseWorkflow:
                 "prune_category_members": True})
 
       # Collect frames into knowledge base store.
-      parts = self.wf.collect(pruned_items, schemas)
-      return self.wf.write(parts, self.data.knowledge_base(),
+      return self.wf.write(pruned_items, self.data.knowledge_base(),
                            params={"snapshot": True})
 
   def load_items(self):
