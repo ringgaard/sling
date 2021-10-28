@@ -24,6 +24,12 @@ class ItemFaninMapper : public task::FrameProcessor {
  public:
   void Startup(task::Task *task) override {
     accumulator_.Init(output(), task->Get("buckets", 1 << 20));
+    system_properties_.add(Handle::id());
+    system_properties_.add(Handle::is());
+    system_properties_.add(Handle::isa());
+    system_properties_.add(commons_->Lookup("name"));
+    system_properties_.add(commons_->Lookup("alias"));
+    system_properties_.add(commons_->Lookup("description"));
   }
 
   void Process(Slice key, const Frame &frame) override {
@@ -53,6 +59,7 @@ class ItemFaninMapper : public task::FrameProcessor {
   }
 
   void Add(Store *store, Handle target) {
+    if (system_properties_.has(target)) return;
     Text id = store->FrameId(target);
     if (!id.empty()) accumulator_.Increment(id);
   }
@@ -64,6 +71,9 @@ class ItemFaninMapper : public task::FrameProcessor {
  private:
   // Accumulator for fanin counts.
   task::Accumulator accumulator_;
+
+  // Special properties where fanin is not computed.
+  HandleSet system_properties_;
 };
 
 REGISTER_TASK_PROCESSOR("item-fanin-mapper", ItemFaninMapper);
