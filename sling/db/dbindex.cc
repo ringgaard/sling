@@ -214,10 +214,13 @@ uint64 DatabaseIndex::Add(uint64 key, uint64 value) {
   for (;;) {
     Entry &e = entries_[pos];
     if (e.key == EMPTY || e.key == TOMBSTONE) {
-      if (e.key == TOMBSTONE) header_->deletions--;
+      if (e.key == TOMBSTONE) {
+        header_->deletions--;
+      } else {
+        header_->size++;
+      }
       e.key = key;
       e.value = value;
-      header_->size++;
       return pos;
     }
     pos = (pos + 1) & mask_;
@@ -250,7 +253,6 @@ uint64 DatabaseIndex::Delete(uint64 key, uint64 value) {
       // Match found.
       e.key = TOMBSTONE;
       header_->deletions++;
-      header_->size--;
       return pos;
     } else if (e.value == EMPTY) {
       // No match found.
@@ -283,6 +285,36 @@ void DatabaseIndex::CopyFrom(const DatabaseIndex *index) {
 
 Status DatabaseIndex::Write(File *file) const {
   return file->Write(mapped_addr_, mapped_size_);
+}
+
+bool DatabaseIndex::Check(bool fix) {
+  // Count the number of active entries and tombstones in index.
+  Entry *entry = entries_;
+  Entry *end = entries_ + header_->capacity;
+  uint64 num_used = 0;
+  uint64 num_tombstones = 0;
+  while (entry < end) {
+    if (entry->key == TOMBSTONE) {
+      num_tombstones++;
+    } else if (entry->key != EMPTY) {
+      num_used++;
+    }
+    entry++;
+  }
+  uint64 size = num_used + num_tombstones;
+
+  // Check if index size in header is correct.
+  if (size != header_->size) {
+    LOG(WARNING) << "Index size wrong: " << header_->size
+                 << " (" << size << " expected)";
+    if (fix) {
+      // Correct index size header.
+      header_->size = size;
+    }
+    return false;
+  } else {
+    return true;
+  }
 }
 
 }  // namespace sling

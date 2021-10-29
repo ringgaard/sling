@@ -178,3 +178,5 @@ class DbStatisticsCard extends MdCard {
 
 Component.register(DbStatisticsCard);
 
+document.body.style = null;
+

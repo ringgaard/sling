@@ -86,3 +86,13 @@ cc_binary(
   ],
 )
 
+cc_binary(
+  name = "check-index",
+  srcs = ["check-index.cc"],
+  deps = [
+    ":dbserver",
+    "//sling/base",
+    "//sling/file:posix",
+  ],
+)
+

@@ -82,6 +82,9 @@ class DatabaseIndex {
   // Write index to file.
   Status Write(File *file) const;
 
+  // Check index integrity. Return false if index is corrupted.
+  bool Check(bool fix);
+
   // Check for index overflow, i.e. the fill factor is above the limit.
   bool full() const {
     return header_->size + header_->deletions >= header_->limit;
@@ -131,10 +134,10 @@ class DatabaseIndex {
     uint32 version;   // index file format version
     uint64 offset;    // offset of entry table in index
     uint64 epoch;     // epoch when index was created/updated
-    uint64 size;      // number of used entries in index
+    uint64 size;      // number of used entries in index incl. tombstones
     uint64 capacity;  // maximum capacity of index
     uint64 limit;     // index size limit, i.e. capacity * load factor
-    uint64 deletions; // number of deleted entries in index
+    uint64 deletions; // number of deleted entries (tombstones) in index
   };
 
   // Index entry. If key is EMPTY, the entry is unused, and if the key is
