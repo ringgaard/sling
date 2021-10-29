@@ -624,7 +624,7 @@ class PicturePanel extends Component {
       let image = images[index];
       let caption = image.text;
       if (caption) {
-        caption = caption.replace(/\[\[|\]\]/g, '');
+        caption = caption.toString().replace(/\[\[|\]\]/g, '');
       }
       if (images.length > 1) {
         if (!caption) caption = "";
@@ -801,7 +801,7 @@ class ItemPanel extends Component {
         if (value instanceof Frame) {
           gallery.push({
             url: store.resolve(value),
-            caption: value.get(n_media_legend),
+            text: value.get(n_media_legend),
             nsfw: value.get(n_has_quality) == n_not_safe_for_work,
           });
         } else {

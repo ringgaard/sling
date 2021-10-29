@@ -28,6 +28,9 @@ loc() {
   if exists $path/*.js; then
     js=$(cat $path/*.js | wc -l)
   fi
+  if exists $path/app/*.js; then
+    js=$((js + $(cat $path/app/*.js | wc -l)))
+  fi
 
   echo -e "${path}\t${cc}\t${h}\t${py}\t${js}"
 
@@ -58,23 +61,19 @@ loc "python/dataset"
 loc "python/org"
 
 loc "case"
-loc "case/app"
 
 loc "sling/pyapi"
 loc "sling/web"
 
 loc "sling/nlp/document"
-loc "sling/nlp/document/app"
 loc "sling/nlp/embedding"
 loc "sling/nlp/kb"
-loc "sling/nlp/kb/app"
 loc "sling/nlp/parser"
 loc "sling/nlp/silver"
 loc "sling/nlp/web"
 loc "sling/nlp/wiki"
 
 loc "sling/task"
-loc "sling/task/app"
 
 loc "sling/myelin"
 loc "sling/myelin/cuda"

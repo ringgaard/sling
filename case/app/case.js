@@ -170,11 +170,11 @@ class CaseEditor extends Component {
     }
   }
 
-  onupdated() {
+  async onupdated() {
     this.find("#caseid").update(this.caseid().toString());
     this.find("md-drawer").update(true);
-    this.update_folders();
-    this.update_topics();
+    await this.update_folders();
+    await this.update_topics();
   }
 
   caseid() {
@@ -284,6 +284,9 @@ class CaseEditor extends Component {
       this.folder = folder;
       await this.update_folders();
       await this.update_topics();
+      if (folder.length > 0) {
+        await this.navigate_to(folder[0]);
+      }
     }
   }
 
@@ -401,7 +404,7 @@ class CaseEditor extends Component {
     this.update_topics();
   }
 
-  move_topic_up(topic) {
+  async move_topic_up(topic) {
     if (this.readonly) return;
     let pos = this.folder.indexOf(topic);
     if (pos == -1) return;
@@ -414,10 +417,11 @@ class CaseEditor extends Component {
     this.mark_dirty();
 
     // Update topic list.
-    this.update_topics();
+    await this.update_topics();
+    await this.navigate_to(topic);
   }
 
-  move_topic_down(topic) {
+  async move_topic_down(topic) {
     if (this.readonly) return;
     let pos = this.folder.indexOf(topic);
     if (pos == -1) return;
@@ -430,7 +434,8 @@ class CaseEditor extends Component {
     this.mark_dirty();
 
     // Update topic list.
-    this.update_topics();
+    await this.update_topics();
+    await this.navigate_to(topic);
   }
 
   async update_topics() {
@@ -918,7 +923,31 @@ class TopicList extends Component {
   }
 
   onkeydown(e) {
-    //console.log("keydown", e.key);
+    let active = this.active();
+    if (active) {
+      let topics = this.state;
+      let pos = topics.indexOf(active);
+      if (pos != -1) {
+        if (e.key == "Enter") {
+          e.preventDefault();
+          this.card(active).onedit(e);
+        } else if (e.key == "Delete") {
+          this.card(active).ondelete(e);
+        } else if (e.key == "ArrowDown" && pos < topics.length - 1) {
+          if (e.ctrlKey) {
+            this.card(active).onmovedown(e);
+          } else {
+            this.select(topics[pos + 1], e.shiftKey);
+          }
+        } else if (e.key == "ArrowUp" && pos > 0) {
+          if (e.ctrlKey) {
+            this.card(active).onmoveup(e);
+          } else {
+            this.select(topics[pos - 1], e.shiftKey);
+          }
+        }
+      }
+    }
   }
 
   clear_selection() {
@@ -944,7 +973,11 @@ class TopicList extends Component {
   navigate_to(topic) {
     let card = this.card(topic);
     if (card) {
-      card.scrollIntoView();
+      if (topic == this.state[0]) {
+        this.scrollTop = 0;
+      } else {
+        card.scrollIntoView({behavior: "smooth"});
+      }
       this.select(topic)
     }
   }
@@ -954,6 +987,12 @@ class TopicList extends Component {
       let card = this.children[i];
       if (card.state == topic) return card;
     }
+    return null;
+  }
+
+  active() {
+    let e = document.activeElement;
+    if (e instanceof TopicCard) return e.state;
     return null;
   }
 
@@ -978,7 +1017,12 @@ class TopicList extends Component {
 
 Component.register(TopicList);
 
-class TopicCard extends material.MdCard {
+class TopicCard extends Component {
+  constructor(state) {
+    super(state);
+    this.tabIndex = -1;
+  }
+
   onconnected() {
     let editor = this.match("#editor");
     this.readonly = editor && editor.readonly;
@@ -989,6 +1033,12 @@ class TopicCard extends material.MdCard {
       this.bind("#edit", "click", e => this.onedit(e));
       this.bind("#save", "click", e => this.onsave(e));
       this.bind("#discard", "click", e => this.ondiscard(e));
+    }
+
+    if (settings.imagesearch) {
+      this.bind("#imgsearch", "click", e => this.onimgsearch(e));
+    } else {
+      this.find("#imgsearch").update(false);
     }
 
     this.bind(null, "click", e => this.onclick(e));
@@ -1032,10 +1082,13 @@ class TopicCard extends material.MdCard {
 
   select() {
     this.classList.add("selected");
+    console.log("focus", this.state.id);
+    this.focus();
   }
 
   unselect() {
     this.classList.remove("selected");
+    this.blur();
   }
 
   onedit(e) {
@@ -1063,17 +1116,22 @@ class TopicCard extends material.MdCard {
     this.update(topic);
     this.update_mode(false);
     this.match("#editor").mark_dirty();
+    this.focus();
   }
 
   async ondiscard(e) {
-    let topic = this.state;
-    let result = await material.StdDialog.confirm(
-      "Discard changes",
-      `Discard changes to topic '${topic.get(n_name)}'?`,
-      "Discard");
-    if (result) {
+    let discard = true;
+    if (this.find("item-editor").dirty) {
+      let topic = this.state;
+      discard = await material.StdDialog.confirm(
+        "Discard changes",
+        `Discard changes to topic '${topic.get(n_name)}'?`,
+        "Discard");
+    }
+    if (discard) {
       this.update(this.state);
       this.update_mode(false);
+      this.focus();
     } else {
       this.find("item-editor").focus();
     }
@@ -1113,10 +1171,24 @@ class TopicCard extends material.MdCard {
     }
   }
 
+  onimgsearch(e) {
+    let topic = this.state;
+    let name = topic.get(n_name);
+    if (name) {
+      let query = encodeURIComponent(name);
+      let url = `${settings.kbservice}/photosearch?q="${query}"`;
+      if (settings.nsfw) url += "&nsfw=1";
+      window.open(url, "_blank");
+    }
+  }
+
   onclick(e) {
     let topic = this.state;
     let list = this.match("topic-list");
-    if (e.ctrlKey) {
+    if (e.shiftKey) {
+      e.preventDefault();
+      document.getSelection().removeAllRanges();
+
       if (this.selected()) {
         list.unselect(topic);
       } else {
@@ -1145,6 +1217,10 @@ class TopicCard extends material.MdCard {
         </md-toolbox>
         <md-toolbox id="topic-actions">
           <md-icon-button id="edit" icon="edit"></md-icon-button>
+          <md-icon-button
+            id="imgsearch"
+            icon="image_search">
+          </md-icon-button>
           <md-icon-button id="moveup" icon="move-up"></md-icon-button>
           <md-icon-button id="movedown" icon="move-down"></md-icon-button>
           <md-icon-button id="delete" icon="delete"></md-icon-button>
@@ -1156,15 +1232,19 @@ class TopicCard extends material.MdCard {
   }
 
   static stylesheet() {
-    return material.MdCard.stylesheet() + `
+    return `
       $ {
+        display: block;
+        background-color: rgb(255, 255, 255);
+        box-shadow: rgb(0 0 0 / 15%) 0px 2px 4px 0px,
+                    rgb(0 0 0 / 25%) 0px 2px 4px 0px;
+        border: 1px solid white;
+        padding: 10px;
         margin: 5px 5px 15px 5px;
-        border: 1px solid #ffffff;
+        outline: none;
       }
       $.selected {
-        border: 1px solid #d0d0d0;
-        box-shadow: rgb(0 0 0 / 16%) 0px 4px 8px 0px,
-                    rgb(0 0 0 / 23%) 0px 4px 8px 0px;
+        border: 1px solid black;
       }
       $ md-card-toolbar {
         position: relative;
@@ -1202,6 +1282,7 @@ class ItemEditor extends Component {
     this.bind("textarea", "input", e => this.adjust());
     this.adjust();
     this.find("textarea").focus();
+    this.dirty = false;
   }
 
   value() {
@@ -1211,6 +1292,7 @@ class ItemEditor extends Component {
   adjust() {
     let textarea = this.find("textarea");
     textarea.style.height = textarea.scrollHeight + "px";
+    this.dirty = true;
   }
 
   onitem(e, isprop) {

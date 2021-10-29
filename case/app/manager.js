@@ -412,12 +412,14 @@ class SettingsPanel extends Component {
   onopen() {
     this.find("#picturesize").value = settings.picturesize;
     this.find("#kbservice").value = settings.kbservice;
+    this.find("#imagesearch").checked = settings.imagesearch;
     this.find("#nsfw").checked = settings.nsfw;
   }
 
   onclose() {
     settings.picturesize = this.find("#picturesize").value;
     settings.kbservice = this.find("#kbservice").value;
+    settings.imagesearch = this.find("#imagesearch").checked;
     settings.nsfw = this.find("#nsfw").checked;
     save_settings();
   }
@@ -435,6 +437,7 @@ class SettingsPanel extends Component {
           id="kbservice"
           label="Knowledge service URL">
         </md-text-field>
+        <md-switch id="imagesearch" label="Enable image search"></md-switch>
         <md-switch id="nsfw" label="Show adult content (NSFW)"></md-switch>
       </div>
     `;

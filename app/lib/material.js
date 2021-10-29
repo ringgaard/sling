@@ -703,9 +703,9 @@ Component.register(MdToolbarLogo);
 //-----------------------------------------------------------------------------
 
 export class MdIconButton extends Component {
-  constructor() {
-    super();
-    this.state = true;
+  constructor(state) {
+    super(state);
+    if (this.state == undefined) this.state = true;
   }
 
   visible() {

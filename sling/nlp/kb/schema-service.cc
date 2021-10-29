@@ -27,6 +27,7 @@ SchemaService::SchemaService(Store *kb) {
   Handle n_role = store.Lookup("role");
   Handle n_inverse_label_item = store.Lookup("P7087");
   Handle n_formatter_url = store.Lookup("P1630");
+  Handle n_property_constraint = store.Lookup("P2302");
 
   HandleSet property_fields;
   property_fields.insert(store.Lookup("name"));
@@ -36,6 +37,7 @@ SchemaService::SchemaService(Store *kb) {
   property_fields.insert(store.Lookup("/w/item/fanin"));
   property_fields.insert(n_formatter_url);
   property_fields.insert(n_inverse_label_item);
+  property_fields.insert(n_property_constraint);
 
   // Build set of properties and inverse properties.
   HandleSet propset;
