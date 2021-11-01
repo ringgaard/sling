@@ -999,10 +999,12 @@ class TopicList extends Component {
 
   onfocusout(e) {
     // Clear selection if focus leaves the topic list.
-    if (this.contains(e.target) && !this.contains(e.relatedTarget)) {
-      console.log("clear selection");
-      this.clear_selection();
-    }
+    if (!e.relatedTarget) return;
+    if (this.contains(e.relatedTarget)) return;
+    if (!this.contains(e.target)) return;
+
+    console.log("clear selection", e.target, e.relatedTarget);
+    this.clear_selection();
   }
 
   clear_selection() {
