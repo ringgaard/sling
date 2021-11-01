@@ -644,6 +644,7 @@ class PicturePanel extends Component {
   }
 
   onopen(e) {
+    e.stopPropagation();
     let modal = new PhotoGallery();
     modal.open(this.state);
   }
@@ -781,7 +782,12 @@ class SubtopicPanel extends Component {
 Component.register(SubtopicPanel);
 
 class ItemPanel extends Component {
+  visible() {
+    return this.state && this.state.length > 0;
+  }
+
   onconnected() {
+    this.bind(null, "click", e => this.onclick(e));
     if (this.state) this.onupdated();
   }
 
@@ -844,8 +850,8 @@ class ItemPanel extends Component {
     }
   }
 
-  visible() {
-    return this.state && this.state.length > 0;
+  onclick(e) {
+    e.stopPropagation();
   }
 
   render() {

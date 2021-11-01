@@ -103,6 +103,11 @@ pages = [
   ("kb.js",                re.compile(r"^\/kb/app/kb.js")),
   ("KB home",              re.compile(r"^\/kb\/$")),
   ("KB item",              re.compile(r"^\/kb\/(.+)$")),
+  ("Case app",             re.compile(r"^\/(case|c)\/app\/(.+)$")),
+  ("Case view",            re.compile(r"^\/c\/\d+$")),
+  ("Case fetch",           re.compile(r"^\/case/fetch\/?\?(.+)$")),
+  ("schema",               re.compile(r"^\/schema(.+)$")),
+  ("Photo search",         re.compile(r"^\/photosearch\/(.+)$")),
 ]
 
 bots = [

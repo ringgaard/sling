@@ -279,6 +279,16 @@ class CaseEditor extends Component {
     return undefined;
   }
 
+  folders_for_topic(topic) {
+    let folders = new Array();
+    for (let f of this.folders) {
+      if (f.includes(topic)) {
+        folders.push(f);
+      }
+    }
+    return folders;
+  }
+
   async show_folder(folder) {
     if (folder != this.folder) {
       this.folder = folder;
@@ -398,6 +408,23 @@ class CaseEditor extends Component {
     // Delete topic from case and current folder.
     this.topics.splice(this.topics.indexOf(topic), 1);
     this.folder.splice(this.folder.indexOf(topic), 1);
+    this.mark_dirty();
+
+    // Update topic list.
+    this.update_topics();
+  }
+
+  delete_topics(topics) {
+    if (this.readonly) return;
+
+    for (let topic of topics) {
+      // Do not delete main topic.
+      if (topic == this.casefile.get(n_main)) return;
+
+      // Delete topic from case and current folder.
+      this.topics.splice(this.topics.indexOf(topic), 1);
+      this.folder.splice(this.folder.indexOf(topic), 1);
+    }
     this.mark_dirty();
 
     // Update topic list.
@@ -562,9 +589,11 @@ class TopicSearchBox extends Component {
     // Get local results.
     let items = [];
     for (let result of this.match("#editor").search(query, full)) {
+      let name = result.get(n_name);
       items.push(new material.MdSearchResult({
         ref: result.id,
-        name: result.get(n_name),
+        name: name,
+        title: name + " ⭐",
         description: result.get(n_description),
         topic: result,
       }));
@@ -581,7 +610,6 @@ class TopicSearchBox extends Component {
         items.push(new material.MdSearchResult({
           ref: item.ref,
           name: item.text,
-          title: item.text + " 🌍",
           description: item.description,
         }));
       }
@@ -901,6 +929,7 @@ class TopicList extends Component {
 
   onconnected() {
     this.bind(null, "keydown", e => this.onkeydown(e));
+    this.bind(null, "focusout", e => this.onfocusout(e));
   }
 
   async onupdate() {
@@ -930,23 +959,49 @@ class TopicList extends Component {
       if (pos != -1) {
         if (e.key == "Enter") {
           e.preventDefault();
-          this.card(active).onedit(e);
+          if (this.selection.size == 1) {
+            this.card(active).onedit(e);
+          }
         } else if (e.key == "Delete") {
-          this.card(active).ondelete(e);
+          this.delete_selected();
         } else if (e.key == "ArrowDown" && pos < topics.length - 1) {
+          let next = topics[pos + 1];
           if (e.ctrlKey) {
             this.card(active).onmovedown(e);
+          } else if (e.shiftKey) {
+            if (this.selection.has(next)) {
+              this.select(next, true);
+              this.unselect(active);
+            } else {
+              this.select(next, true);
+            }
           } else {
-            this.select(topics[pos + 1], e.shiftKey);
+            this.select(next, false);
           }
         } else if (e.key == "ArrowUp" && pos > 0) {
+          let prev = topics[pos - 1];
           if (e.ctrlKey) {
             this.card(active).onmoveup(e);
+          } else if (e.shiftKey) {
+            if (this.selection.has(prev)) {
+              this.select(prev, true);
+              this.unselect(active);
+            } else {
+              this.select(prev, true);
+            }
           } else {
-            this.select(topics[pos - 1], e.shiftKey);
+            this.select(prev, false);
           }
         }
       }
+    }
+  }
+
+  onfocusout(e) {
+    // Clear selection if focus leaves the topic list.
+    if (this.contains(e.target) && !this.contains(e.relatedTarget)) {
+      console.log("clear selection");
+      this.clear_selection();
     }
   }
 
@@ -967,6 +1022,20 @@ class TopicList extends Component {
     if (this.selection.has(topic)) {
       this.selection.delete(topic);
       this.card(topic).unselect();
+    }
+  }
+
+  async delete_selected() {
+    let selected = [...this.selection];
+    let n = selected.length;
+    if (n == 0) return;
+    let result = await material.StdDialog.confirm(
+      "Delete topic",
+      n == 1 ? "Delete topic?" : `Delete ${n} topics?`,
+      "Delete");
+    console.log("result", result);
+    if (result) {
+      this.match("#editor").delete_topics(selected);
     }
   }
 
@@ -1035,6 +1104,7 @@ class TopicCard extends Component {
       this.bind("#discard", "click", e => this.ondiscard(e));
     }
 
+    this.bind("#websearch", "click", e => this.onwebsearch(e));
     if (settings.imagesearch) {
       this.bind("#imgsearch", "click", e => this.onimgsearch(e));
     } else {
@@ -1082,8 +1152,7 @@ class TopicCard extends Component {
 
   select() {
     this.classList.add("selected");
-    console.log("focus", this.state.id);
-    this.focus();
+    if (!this.contains(document.activeElement)) this.focus();
   }
 
   unselect() {
@@ -1182,6 +1251,15 @@ class TopicCard extends Component {
     }
   }
 
+  onwebsearch(e) {
+    let topic = this.state;
+    let name = topic.get(n_name);
+    if (name) {
+      let url = "https://www.google.com/search?q=" + encodeURIComponent(name);
+      window.open(url, "_blank");
+    }
+  }
+
   onclick(e) {
     let topic = this.state;
     let list = this.match("topic-list");
@@ -1195,11 +1273,7 @@ class TopicCard extends Component {
         list.select(topic, true);
       }
     } else {
-      if (this.selected()) {
-        list.clear_selection();
-      } else {
-        list.select(topic, false);
-      }
+      list.select(topic, false);
     }
   }
 
@@ -1217,10 +1291,8 @@ class TopicCard extends Component {
         </md-toolbox>
         <md-toolbox id="topic-actions">
           <md-icon-button id="edit" icon="edit"></md-icon-button>
-          <md-icon-button
-            id="imgsearch"
-            icon="image_search">
-          </md-icon-button>
+          <md-icon-button id="websearch" icon="search"></md-icon-button>
+          <md-icon-button id="imgsearch" icon="image_search"></md-icon-button>
           <md-icon-button id="moveup" icon="move-up"></md-icon-button>
           <md-icon-button id="movedown" icon="move-down"></md-icon-button>
           <md-icon-button id="delete" icon="delete"></md-icon-button>

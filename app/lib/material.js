@@ -128,14 +128,16 @@ export class MdModal extends Component {
   open(state) {
     document.body.appendChild(this);
     this.tabIndex = -1;
+    this.prevfocus = document.activeElement;
     this.focus();
     if (this.onopen) this.onopen();
-    this.update(state);
+    return this.update(state);
   }
 
   close(e) {
     if (this.onclose) this.onclose(e);
     document.body.removeChild(this);
+    if (this.prevfocus) this.prevfocus.focus();
   }
 
   static stylesheet() {
