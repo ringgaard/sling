@@ -632,7 +632,6 @@ export class MdCardToolbar extends Component {
         display: flex;
         flex-direction: row;
         align-items: top;
-        background-color: #FFFFFF;
         color: #000000;
         font-size: 24px;
         margin-bottom: 10px;

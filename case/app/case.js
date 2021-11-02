@@ -57,6 +57,7 @@ class CaseEditor extends Component {
   }
 
   onnavigate(e) {
+    console.log("navigate", e);
     let ref = e.detail;
     let item = store.find(ref);
     if (item && this.topics.includes(item)) {
@@ -922,14 +923,13 @@ class SharingDialog extends material.MdDialog {
 Component.register(SharingDialog);
 
 class TopicList extends Component {
-  constructor(state) {
-    super(state);
-    this.selection = new Set();
-  }
-
   onconnected() {
     this.bind(null, "keydown", e => this.onkeydown(e));
     this.bind(null, "focusout", e => this.onfocusout(e));
+
+    this.bind(null, "cut", e => this.oncut(e));
+    this.bind(null, "copy", e => this.oncopy(e));
+    this.bind(null, "paste", e => this.onpaste(e));
   }
 
   async onupdate() {
@@ -946,9 +946,8 @@ class TopicList extends Component {
       await labels.retrieve();
     }
 
-    // Clear selection.
-    this.selection.clear();
     this.scrollTop = 0;
+    if (topics.length > 0) this.select(topics[0]);
   }
 
   onkeydown(e) {
@@ -959,36 +958,26 @@ class TopicList extends Component {
       if (pos != -1) {
         if (e.key == "Enter") {
           e.preventDefault();
-          if (this.selection.size == 1) {
-            this.card(active).onedit(e);
-          }
+          this.card(active).onedit(e);
         } else if (e.key == "Delete") {
           this.delete_selected();
         } else if (e.key == "ArrowDown" && pos < topics.length - 1) {
+          e.preventDefault();
           let next = topics[pos + 1];
           if (e.ctrlKey) {
             this.card(active).onmovedown(e);
           } else if (e.shiftKey) {
-            if (this.selection.has(next)) {
-              this.select(next, true);
-              this.unselect(active);
-            } else {
-              this.select(next, true);
-            }
+            this.select(next, true);
           } else {
             this.select(next, false);
           }
         } else if (e.key == "ArrowUp" && pos > 0) {
+          e.preventDefault();
           let prev = topics[pos - 1];
           if (e.ctrlKey) {
             this.card(active).onmoveup(e);
           } else if (e.shiftKey) {
-            if (this.selection.has(prev)) {
-              this.select(prev, true);
-              this.unselect(active);
-            } else {
-              this.select(prev, true);
-            }
+            this.select(prev, true);
           } else {
             this.select(prev, false);
           }
@@ -1004,31 +993,77 @@ class TopicList extends Component {
     if (!this.contains(e.target)) return;
 
     console.log("clear selection", e.target, e.relatedTarget);
-    this.clear_selection();
+    window.getSelection().collapse(null, 0);
+    let c = this.firstChild;
+    while (c) {
+      c.classList.remove("selected");
+      c = c.nextSibling;
+    }
   }
 
-  clear_selection() {
-    for (let topic of this.selection) {
-      this.card(topic).unselect();
+  oncut(e) {
+    e.preventDefault();
+    console.log("oncut", e);
+    this.copy_to_clipboard(e, true);
+  }
+
+  oncopy(e) {
+    e.preventDefault();
+    console.log("oncopy", e);
+    this.copy_to_clipboard(e, false);
+  }
+
+  onpaste(e) {
+    e.preventDefault();
+    console.log("onpaste", e);
+  }
+
+  copy_to_clipboard(e, cut) {
+    for (let topic of this.selection()) {
+      console.log("add", topic.id, "to clipboard");
     }
-    this.selection.clear();
   }
 
   select(topic, extend) {
-    if (!extend) this.clear_selection();
-    this.selection.add(topic);
-    this.card(topic).select();
-  }
-
-  unselect(topic) {
-    if (this.selection.has(topic)) {
-      this.selection.delete(topic);
-      this.card(topic).unselect();
+    let card = this.card(topic);
+    if (card) {
+      if (extend) {
+        window.getSelection().extend(card, 0);
+      } else {
+        window.getSelection().collapse(card, 0);
+      }
+      card.focus();
     }
   }
 
+  selection() {
+    let selected = new Array();
+    let {anchor, focus} = TopicCard.selection();
+    if (anchor && focus) {
+      // Get list of selected topics.
+      let c = this.firstChild;
+      let selecting = false;
+      while (c) {
+        if (c == anchor || c == focus) {
+          selected.push(c.state);
+          if (anchor == focus) break;
+          if (selecting) break;
+          selecting = true;
+        } else if (selecting) {
+          selected.push(c.state);
+        }
+        c = c.nextSibling;
+      }
+    } else if (document.activeElement instanceof TopicCard) {
+      // Add focus topic.
+      selected.push(document.activeElement);
+    }
+
+    return selected;
+  }
+
   async delete_selected() {
-    let selected = [...this.selection];
+    let selected = this.selection();
     let n = selected.length;
     if (n == 0) return;
     let result = await material.StdDialog.confirm(
@@ -1044,12 +1079,9 @@ class TopicList extends Component {
   navigate_to(topic) {
     let card = this.card(topic);
     if (card) {
-      if (topic == this.state[0]) {
-        this.scrollTop = 0;
-      } else {
-        card.scrollIntoView({behavior: "smooth"});
-      }
-      this.select(topic)
+      card.scrollIntoView({behavior: "smooth"});
+      card.focus();
+      window.getSelection().collapse(card, 0);
     }
   }
 
@@ -1088,10 +1120,58 @@ class TopicList extends Component {
 
 Component.register(TopicList);
 
+document.onselectionchange = () => {
+  // Check if selection is a range of topics.
+  let selection = document.getSelection();
+  let anchor = selection.anchorNode;
+  let focus = selection.focusNode;
+  if (!focus || !anchor) return;
+  if (!(anchor instanceof TopicCard)) return;
+  if (!(focus instanceof TopicCard)) return;
+  let list = anchor.parentNode;
+  if (focus.parentNode != list) return;
+
+  //console.log("selection changed:", list, anchor, focus);
+
+  // Mark topics in selection.
+  let c = list.firstChild;
+  let marking = false;
+  while (c) {
+    if (c == anchor || c == focus) {
+      if (anchor == focus) {
+        c.classList.remove("selected");
+      } else {
+        c.classList.add("selected");
+        marking = !marking && anchor != focus;
+      }
+    } else if (marking) {
+      c.classList.add("selected");
+    } else {
+      c.classList.remove("selected");
+    }
+    c = c.nextSibling;
+  }
+}
+
 class TopicCard extends Component {
   constructor(state) {
     super(state);
     this.tabIndex = -1;
+  }
+
+  static selection() {
+    let selection = window.getSelection();
+    let anchor = selection.anchorNode;
+    while (anchor) {
+      if (anchor instanceof TopicCard) break;
+      anchor = anchor.parentNode;
+    }
+    let focus = selection.focusNode;
+    while (focus) {
+      if (focus instanceof TopicCard) break;
+      focus = focus.parentNode;
+    }
+    return {anchor, focus};
   }
 
   onconnected() {
@@ -1113,7 +1193,7 @@ class TopicCard extends Component {
       this.find("#imgsearch").update(false);
     }
 
-    this.bind(null, "click", e => this.onclick(e));
+    this.bind("md-card-toolbar", "click", e => this.onclick(e));
     this.bind(null, "keydown", e => this.onkeydown(e));
 
     this.update_mode(false);
@@ -1146,20 +1226,6 @@ class TopicCard extends Component {
     let name = this.state.get(n_name);
     if (!name) name = "(no name)";
     this.find("#name").update(name.toString());
-  }
-
-  selected() {
-    return this.classList.contains("selected");
-  }
-
-  select() {
-    this.classList.add("selected");
-    if (!this.contains(document.activeElement)) this.focus();
-  }
-
-  unselect() {
-    this.classList.remove("selected");
-    this.blur();
   }
 
   onedit(e) {
@@ -1263,19 +1329,14 @@ class TopicCard extends Component {
   }
 
   onclick(e) {
-    let topic = this.state;
-    let list = this.match("topic-list");
-    if (e.shiftKey) {
-      e.preventDefault();
-      document.getSelection().removeAllRanges();
-
-      if (this.selected()) {
-        list.unselect(topic);
+    let {anchor, focus} = TopicCard.selection();
+    if (anchor && focus) {
+      let selection = window.getSelection();
+      if (anchor == focus) {
+        selection.collapse(anchor, 0);
       } else {
-        list.select(topic, true);
+        selection.setBaseAndExtent(anchor, 1, focus, focus.childElementCount);
       }
-    } else {
-      list.select(topic, false);
     }
   }
 
@@ -1317,8 +1378,11 @@ class TopicCard extends Component {
         margin: 5px 5px 15px 5px;
         outline: none;
       }
+      $:focus {
+        border: 1px solid #1a73e8;
+      }
       $.selected {
-        border: 1px solid black;
+        background-color: #e7f0fd;
       }
       $ md-card-toolbar {
         position: relative;
@@ -1333,6 +1397,34 @@ class TopicCard extends Component {
       }
       $ #edit-actions {
         display: flex;
+      }
+
+      $.selected div::selection {
+        background-color: inherit;
+      }
+      $.selected a::selection {
+        background-color: inherit;
+      }
+      $.selected img::selection {
+        background-color: inherit;
+      }
+      $.selected kb-link::selection {
+        background-color: inherit;
+      }
+      $.selected kb-ref::selection {
+        background-color: inherit;
+      }
+      $.selected md-text::selection {
+        background-color: inherit;
+      }
+      $.selected md-text::selection {
+        background-color: inherit;
+      }
+      $.selected md-icon::selection {
+        background-color: inherit;
+      }
+      $.selected md-toolbox {
+        box-shadow: inherit;
       }
     `;
   }
@@ -1412,7 +1504,7 @@ class ItemEditor extends Component {
         <property-search-box id="prop-search"></property-search-box>
         <topic-search-box id="topic-search"></topic-search-box>
       </div>
-      <textarea>${Component.escape(content)}</textarea>
+      <textarea spellcheck="false">${Component.escape(content)}</textarea>
     `
   }
 
