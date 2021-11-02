@@ -927,9 +927,9 @@ class TopicList extends Component {
     this.bind(null, "keydown", e => this.onkeydown(e));
     this.bind(null, "focusout", e => this.onfocusout(e));
 
-    this.bind(null, "cut", e => this.oncut(e));
-    this.bind(null, "copy", e => this.oncopy(e));
-    this.bind(null, "paste", e => this.onpaste(e));
+    //this.bind(null, "cut", e => this.oncut(e));
+    //this.bind(null, "copy", e => this.oncopy(e));
+    //this.bind(null, "paste", e => this.onpaste(e));
   }
 
   async onupdate() {
