@@ -140,14 +140,16 @@ export class Store {
     if (data instanceof Response) {
       return data.arrayBuffer().then(data => this.parse(data));
     }
+    if (data instanceof Blob) {
+      return data.arrayBuffer().then(data => this.parse(data));
+    }
 
     if (hasBinaryMarker(data)) {
       let decoder = new Decoder(this, data);
       return decoder.readAll();
     } else {
       let reader = new Reader(this, data);
-      let obj = reader.parse();
-      if (!reader.done()) throw "Unexpected end of input";
+      let obj = reader.parseAll();
       return obj;
     }
   }
@@ -858,6 +860,7 @@ export class Reader {
   // Initialize reader.
   constructor(store, data) {
     this.store = store ? store : new Store();
+    if (data instanceof ArrayBuffer) data = strdecoder.decode(data);
     this.input = data.toString();
     this.size = this.input.length;
     this.pos = 0;
@@ -1042,6 +1045,13 @@ export class Reader {
     }
   }
 
+  // Parse all input and return last object.
+  parseAll() {
+    let obj = this.parse();
+    while (!this.done()) obj = this.parse();
+    return obj;
+  }
+
   // Parse next object.
   parse() {
     switch (this.token) {
@@ -1182,6 +1192,9 @@ export class Reader {
       if (this.token == 44) this.next();
     }
 
+    // Skip close bracket.
+    this.next();
+
     return array;
   }
 }
@@ -1294,9 +1307,9 @@ export class Printer {
       }
     }
 
+    this.level--;
     if (this.indent) {
       // Restore indentation.
-      this.level--;
       this.write("\n");
       for (let l = 0; l < this.level; ++l) this.write(this.indent);
     }

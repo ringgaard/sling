@@ -3,7 +3,7 @@
 
 import {Component} from "/common/lib/component.js";
 import * as material from "/common/lib/material.js";
-import {Frame, QString, Encoder} from "/common/lib/frame.js";
+import {Store, Frame, QString, Encoder, Printer} from "/common/lib/frame.js";
 import {store, settings} from "./global.js";
 import {get_schema} from "./schema.js";
 import {LabelCollector} from "./item.js"
@@ -27,9 +27,56 @@ const n_sling_case_no = store.lookup("PCASE");
 const n_target = store.lookup("target");
 const n_item_type = store.lookup("/w/item");
 
-//-----------------------------------------------------------------------------
-// Case Editor
-//-----------------------------------------------------------------------------
+const binary_clipboard = false;
+
+function write_to_clipboard(topics) {
+  if (binary_clipboard) {
+    // Encode selected topics.
+    let encoder = new Encoder(store);
+    for (let topic of topics) {
+      encoder.encode(topic);
+    }
+    let clip = store.frame();
+    clip.add(n_topics, topics);
+    encoder.encode(clip);
+
+    // Add selected topics to clipboard.
+    var blob = new Blob([encoder.output()], {type: "text/plain"});
+    let item = new ClipboardItem({"text/plain": blob});
+    return navigator.clipboard.write([item]);
+  } else {
+    // Convert selected topics to text.
+    let printer = new Printer(store);
+    for (let topic of topics) {
+      printer.print(topic);
+    }
+    let clip = store.frame();
+    clip.add(n_topics, topics);
+    printer.print(clip);
+
+    // Add selected topics to clipboard.
+    var blob = new Blob([printer.output], {type: "text/plain"});
+    let item = new ClipboardItem({"text/plain": blob});
+    return navigator.clipboard.write([item]);
+  }
+}
+
+async function read_from_clipboard() {
+  let data = await navigator.clipboard.read();
+  for (let i = 0; i < data.length; i++) {
+    if (data[i].types.includes("text/plain")) {
+      let blob = await data[i].getType("text/plain");
+      try {
+        let store = new Store();
+        let obj = await store.parse(blob);
+        return obj;
+      } catch (error) {
+        //console.log("ignore sling parse error", error);
+      }
+    }
+  }
+  return null;
+}
 
 class CaseEditor extends Component {
   onconnected() {
@@ -41,6 +88,10 @@ class CaseEditor extends Component {
     this.bind("#save", "click", e => this.onsave(e));
     this.bind("#share", "click", e => this.onshare(e));
     this.bind("#newfolder", "click", e => this.onnewfolder(e));
+
+    this.bind(null, "cut", e => this.oncut(e));
+    this.bind(null, "copy", e => this.oncopy(e));
+    this.bind(null, "paste", e => this.onpaste(e));
 
     this.bind(null, "navigate", e => this.onnavigate(e));
 
@@ -78,7 +129,7 @@ class CaseEditor extends Component {
 
   onenter(e) {
     let name = e.detail;
-    this.add_topic(null, name);
+    this.add_new_topic(null, name);
   }
 
   onitem(e) {
@@ -86,7 +137,7 @@ class CaseEditor extends Component {
     if (item.topic) {
       this.navigate_to(item.topic);
     } else {
-      this.add_topic(item.ref, item.name);
+      this.add_new_topic(item.ref, item.name);
     }
   }
 
@@ -373,15 +424,16 @@ class CaseEditor extends Component {
     }
   }
 
-  async update_folders() {
-    await this.find("folder-list").update({
-      folders: this.folders,
-      current: this.folder,
-      readonly: this.readonly
-    });
+  add_topic(topic) {
+    if (this.readonly) return;
+
+    // Add topic to current folder.
+    if (!this.topics.includes(topic)) this.topics.push(topic);
+    if (!this.folder.includes(topic)) this.folder.push(topic);
+    this.mark_dirty();
   }
 
-  async add_topic(itemid, name) {
+  async add_new_topic(itemid, name) {
     if (this.readonly) return;
 
     // Create new topic.
@@ -389,11 +441,7 @@ class CaseEditor extends Component {
     let topic = store.frame(`t/${this.caseid()}/${topicid}`);
     if (itemid) topic.add(n_is, store.lookup(itemid));
     if (name) topic.add(n_name, name);
-    this.mark_dirty();
-
-    // Add topic to current folder.
-    this.topics.push(topic);
-    this.folder.push(topic);
+    this.add_topic(topic);
 
     // Update topic list.
     await this.update_topics();
@@ -464,6 +512,61 @@ class CaseEditor extends Component {
     // Update topic list.
     await this.update_topics();
     await this.navigate_to(topic);
+  }
+
+  oncut(e) {
+    // Get selected topics.
+    if (this.readonly) return;
+    let list = this.find("topic-list");
+    let selected = list.selection();
+    if (selected.length == 0) return;
+
+    // Copy selected topics to clipboard.
+    write_to_clipboard(selected);
+
+    // Delete selected topics.
+    this.delete_topics(selected);
+  }
+
+  oncopy(e) {
+    // Get selected topics.
+    let list = this.find("topic-list");
+    let selected = list.selection();
+    if (selected.length == 0) return;
+
+    // Copy selected topics to clipboard.
+    write_to_clipboard(selected);
+  }
+
+  async onpaste(e) {
+    // Read topics from clipboard.
+    if (this.readonly) return;
+    let clip = await read_from_clipboard();
+
+    // Add topics to current folder.
+    if (clip instanceof Frame) {
+      let first = null;
+      let topics = clip.get("topics");
+      if (topics) {
+        for (let t of topics) {
+          let topic = store.lookup(t.id);
+          this.add_topic(topic);
+          if (!first) first = topic;
+        }
+
+        // Update topic list.
+        await this.update_topics();
+        await this.navigate_to(first);
+      }
+    }
+  }
+
+  async update_folders() {
+    await this.find("folder-list").update({
+      folders: this.folders,
+      current: this.folder,
+      readonly: this.readonly
+    });
   }
 
   async update_topics() {
@@ -924,12 +1027,9 @@ Component.register(SharingDialog);
 
 class TopicList extends Component {
   onconnected() {
+    this.tabIndex = 0;
     this.bind(null, "keydown", e => this.onkeydown(e));
     this.bind(null, "focusout", e => this.onfocusout(e));
-
-    //this.bind(null, "cut", e => this.oncut(e));
-    //this.bind(null, "copy", e => this.oncopy(e));
-    //this.bind(null, "paste", e => this.onpaste(e));
   }
 
   async onupdate() {
@@ -992,7 +1092,7 @@ class TopicList extends Component {
     if (this.contains(e.relatedTarget)) return;
     if (!this.contains(e.target)) return;
 
-    console.log("clear selection", e.target, e.relatedTarget);
+    //console.log("clear selection", e.target, e.relatedTarget);
     window.getSelection().collapse(null, 0);
     let c = this.firstChild;
     while (c) {
@@ -1001,45 +1101,26 @@ class TopicList extends Component {
     }
   }
 
-  oncut(e) {
-    e.preventDefault();
-    console.log("oncut", e);
-    this.copy_to_clipboard(e, true);
-  }
-
-  oncopy(e) {
-    e.preventDefault();
-    console.log("oncopy", e);
-    this.copy_to_clipboard(e, false);
-  }
-
-  onpaste(e) {
-    e.preventDefault();
-    console.log("onpaste", e);
-  }
-
-  copy_to_clipboard(e, cut) {
-    for (let topic of this.selection()) {
-      console.log("add", topic.id, "to clipboard");
-    }
-  }
-
   select(topic, extend) {
     let card = this.card(topic);
     if (card) {
+      let selection = window.getSelection();
       if (extend) {
-        window.getSelection().extend(card, 0);
+        selection.extend(card, 0);
       } else {
-        window.getSelection().collapse(card, 0);
+        selection.collapse(card, 0);
       }
+      TopicCard.align_selection();
       card.focus();
     }
   }
 
   selection() {
     let selected = new Array();
-    let {anchor, focus} = TopicCard.selection();
-    if (anchor && focus) {
+    let selection = window.getSelection();
+    let anchor = selection.anchorNode;
+    let focus = selection.focusNode;
+    if (anchor instanceof TopicCard && focus instanceof TopicCard) {
       // Get list of selected topics.
       let c = this.firstChild;
       let selecting = false;
@@ -1054,23 +1135,19 @@ class TopicList extends Component {
         }
         c = c.nextSibling;
       }
-    } else if (document.activeElement instanceof TopicCard) {
-      // Add focus topic.
-      selected.push(document.activeElement);
     }
 
     return selected;
   }
 
   async delete_selected() {
-    let selected = this.selection();
+    let selected = TopicList.selection();
     let n = selected.length;
     if (n == 0) return;
     let result = await material.StdDialog.confirm(
       "Delete topic",
       n == 1 ? "Delete topic?" : `Delete ${n} topics?`,
       "Delete");
-    console.log("result", result);
     if (result) {
       this.match("#editor").delete_topics(selected);
     }
@@ -1162,16 +1239,31 @@ class TopicCard extends Component {
   static selection() {
     let selection = window.getSelection();
     let anchor = selection.anchorNode;
+    let focus = selection.focusNode;
+    let single = (anchor == focus);
     while (anchor) {
       if (anchor instanceof TopicCard) break;
       anchor = anchor.parentNode;
     }
-    let focus = selection.focusNode;
     while (focus) {
       if (focus instanceof TopicCard) break;
       focus = focus.parentNode;
     }
+    if (!single && anchor == focus) anchor = null;
+    if (focus && focus.editing) focus = null;
     return {anchor, focus};
+  }
+
+  static align_selection() {
+    let {anchor, focus} = TopicCard.selection();
+    if (anchor && focus) {
+      let selection = window.getSelection();
+      if (anchor == focus) {
+        selection.collapse(anchor, 0);
+      } else {
+        selection.setBaseAndExtent(anchor, 1, focus, focus.childElementCount);
+      }
+    }
   }
 
   onconnected() {
@@ -1193,7 +1285,7 @@ class TopicCard extends Component {
       this.find("#imgsearch").update(false);
     }
 
-    this.bind("md-card-toolbar", "click", e => this.onclick(e));
+    this.bind(null, "click", e => this.onclick(e));
     this.bind(null, "keydown", e => this.onkeydown(e));
 
     this.update_mode(false);
@@ -1329,15 +1421,7 @@ class TopicCard extends Component {
   }
 
   onclick(e) {
-    let {anchor, focus} = TopicCard.selection();
-    if (anchor && focus) {
-      let selection = window.getSelection();
-      if (anchor == focus) {
-        selection.collapse(anchor, 0);
-      } else {
-        selection.setBaseAndExtent(anchor, 1, focus, focus.childElementCount);
-      }
-    }
+    TopicCard.align_selection();
   }
 
   prerender() {
@@ -1417,7 +1501,7 @@ class TopicCard extends Component {
       $.selected md-text::selection {
         background-color: inherit;
       }
-      $.selected md-text::selection {
+      $.selected md-image::selection {
         background-color: inherit;
       }
       $.selected md-icon::selection {
