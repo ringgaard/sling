@@ -479,10 +479,8 @@ class CaseEditor extends Component {
     // Update topic list and navigate to next topic.
     await this.update_topics();
     if (next) {
-      console.log("go to", next);
       await this.navigate_to(next);
     } else if (this.folder.length > 0) {
-      console.log("go to last", this.folder.at(-1));
       await this.navigate_to(this.folder.at(-1));
     }
   }
@@ -1037,7 +1035,6 @@ Component.register(SharingDialog);
 
 class TopicList extends Component {
   onconnected() {
-    this.tabIndex = 0;
     this.bind(null, "keydown", e => this.onkeydown(e));
     this.bind(null, "focusout", e => this.onfocusout(e));
   }
@@ -1342,6 +1339,7 @@ class TopicCard extends Component {
     this.update(topic);
     this.update_mode(false);
     this.match("#editor").mark_dirty();
+    window.getSelection().collapse(this, 0);
     this.focus();
   }
 
@@ -1357,6 +1355,7 @@ class TopicCard extends Component {
     if (discard) {
       this.update(this.state);
       this.update_mode(false);
+      window.getSelection().collapse(this, 0);
       this.focus();
     } else {
       this.find("item-editor").focus();
