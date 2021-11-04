@@ -61,7 +61,7 @@ def collect_xrefs():
 # Map and reconcile items.
 def reconcile_items():
   wf.mapreduce(
-    input=wf.bundle(fg_items, fg_properties, fanin),
+    input=wf.bundle(fg_items, fg_properties, datasets.schema_defs(), fanin),
     output=items,
     mapper="item-reconciler",
     reducer="item-merger",
@@ -76,8 +76,7 @@ def reconcile_items():
 
 # Build knowledge base.
 def build_kb():
-  parts = wf.collect(items, datasets.schema_defs())
-  wf.write(parts, fg_kb, params={"snapshot": True})
+  wf.write(wf.read(items), fg_kb, params={"snapshot": True})
 
 # Extract aliases.
 def extract_aliases(language):
