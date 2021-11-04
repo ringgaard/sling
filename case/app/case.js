@@ -520,6 +520,7 @@ class CaseEditor extends Component {
 
     // Update topic list.
     await this.update_topics();
+    await this.navigate_to(topic);
   }
 
   oncut(e) {
@@ -1153,6 +1154,7 @@ class TopicList extends Component {
 
   active() {
     let e = window.getSelection().focusNode;
+    if (!e) e = document.activeElement;
     if (e instanceof TopicCard) return e.state;
     return null;
   }
