@@ -62,16 +62,23 @@ function write_to_clipboard(topics) {
 }
 
 async function read_from_clipboard() {
-  let data = await navigator.clipboard.read();
-  for (let i = 0; i < data.length; i++) {
-    if (data[i].types.includes("text/plain")) {
-      let blob = await data[i].getType("text/plain");
-      try {
-        let store = new Store();
-        let obj = await store.parse(blob);
-        return obj;
-      } catch (error) {
-        //console.log("ignore sling parse error", error);
+  let clipboard = await navigator.clipboard.read();
+  for (let i = 0; i < clipboard.length; i++) {
+    if (clipboard[i].types.includes("text/plain")) {
+      // Get data from clipboard.
+      let blob = await clipboard[i].getType("text/plain");
+      let data = await blob.arrayBuffer();
+
+      // Try to parse data SLING frames if it starts with \0 or '{'.
+      let bytes = new Uint8Array(data);
+      if (bytes[0] == 0 || bytes[0] == 123) {
+        try {
+          let store = new Store();
+          let obj = await store.parse(data);
+          return obj;
+        } catch (error) {
+          console.log("ignore sling parse error", error);
+        }
       }
     }
   }
@@ -331,14 +338,12 @@ class CaseEditor extends Component {
     return undefined;
   }
 
-  folders_for_topic(topic) {
-    let folders = new Array();
+  refcount(topic) {
+    let refs = 0;
     for (let f of this.folders) {
-      if (f.includes(topic)) {
-        folders.push(f);
-      }
+      if (f.includes(topic)) refs += 1;
     }
-    return folders;
+    return refs;
   }
 
   async show_folder(folder) {
@@ -448,36 +453,42 @@ class CaseEditor extends Component {
     this.navigate_to(topic);
   }
 
-  delete_topic(topic) {
-    if (this.readonly) return;
+  async delete_topics(topics) {
+    if (this.readonly || topics.length == 0) return;
 
-    // Do not delete main topic.
-    if (topic == this.casefile.get(n_main)) return;
+    // Focus should move to first topic after selection.
+    let next = null;
+    let last = this.folder.indexOf(topics.at(-1));
+    if (last + 1 < this.folder.length) next = this.folder[last + 1];
 
-    // Delete topic from case and current folder.
-    this.topics.splice(this.topics.indexOf(topic), 1);
-    this.folder.splice(this.folder.indexOf(topic), 1);
-    this.mark_dirty();
-
-    // Update topic list.
-    this.update_topics();
-  }
-
-  delete_topics(topics) {
-    if (this.readonly) return;
-
+    // Delete topics from folder (and case).
     for (let topic of topics) {
       // Do not delete main topic.
       if (topic == this.casefile.get(n_main)) return;
 
-      // Delete topic from case and current folder.
-      this.topics.splice(this.topics.indexOf(topic), 1);
+      // Delete topic from current folder.
       this.folder.splice(this.folder.indexOf(topic), 1);
+
+      // Delete topic from case if this was the last reference.
+      if (this.refcount(topic) == 0) {
+        this.topics.splice(this.topics.indexOf(topic), 1);
+      }
     }
     this.mark_dirty();
 
-    // Update topic list.
-    this.update_topics();
+    // Update topic list and navigate to next topic.
+    await this.update_topics();
+    if (next) {
+      console.log("go to", next);
+      await this.navigate_to(next);
+    } else if (this.folder.length > 0) {
+      console.log("go to last", this.folder.at(-1));
+      await this.navigate_to(this.folder.at(-1));
+    }
+  }
+
+  delete_topic(topic) {
+    this.delete_topics([topic]);
   }
 
   async move_topic_up(topic) {
@@ -511,7 +522,6 @@ class CaseEditor extends Component {
 
     // Update topic list.
     await this.update_topics();
-    await this.navigate_to(topic);
   }
 
   oncut(e) {
@@ -1092,7 +1102,6 @@ class TopicList extends Component {
     if (this.contains(e.relatedTarget)) return;
     if (!this.contains(e.target)) return;
 
-    //console.log("clear selection", e.target, e.relatedTarget);
     window.getSelection().collapse(null, 0);
     let c = this.firstChild;
     while (c) {
@@ -1115,33 +1124,8 @@ class TopicList extends Component {
     }
   }
 
-  selection() {
-    let selected = new Array();
-    let selection = window.getSelection();
-    let anchor = selection.anchorNode;
-    let focus = selection.focusNode;
-    if (anchor instanceof TopicCard && focus instanceof TopicCard) {
-      // Get list of selected topics.
-      let c = this.firstChild;
-      let selecting = false;
-      while (c) {
-        if (c == anchor || c == focus) {
-          selected.push(c.state);
-          if (anchor == focus) break;
-          if (selecting) break;
-          selecting = true;
-        } else if (selecting) {
-          selected.push(c.state);
-        }
-        c = c.nextSibling;
-      }
-    }
-
-    return selected;
-  }
-
   async delete_selected() {
-    let selected = TopicList.selection();
+    let selected = this.selection();
     let n = selected.length;
     if (n == 0) return;
     let result = await material.StdDialog.confirm(
@@ -1171,9 +1155,21 @@ class TopicList extends Component {
   }
 
   active() {
-    let e = document.activeElement;
+    let e = window.getSelection().focusNode;
     if (e instanceof TopicCard) return e.state;
     return null;
+  }
+
+  selection() {
+    let selected = new Array();
+    for (let node of  this.querySelectorAll("topic-card.selected")) {
+      selected.push(node.state);
+    }
+    if (selected.length == 0) {
+      let active = this.active();
+      if (active) selected.push(active);
+    }
+    return selected;
   }
 
   render() {
@@ -1197,6 +1193,7 @@ class TopicList extends Component {
 
 Component.register(TopicList);
 
+// Mark selected topics when selection changes.
 document.onselectionchange = () => {
   // Check if selection is a range of topics.
   let selection = document.getSelection();
@@ -1205,12 +1202,12 @@ document.onselectionchange = () => {
   if (!focus || !anchor) return;
   if (!(anchor instanceof TopicCard)) return;
   if (!(focus instanceof TopicCard)) return;
-  let list = anchor.parentNode;
-  if (focus.parentNode != list) return;
+  if (focus.parentNode != anchor.parentNode) return;
 
   //console.log("selection changed:", list, anchor, focus);
 
   // Mark topics in selection.
+  let list = anchor.parentNode;
   let c = list.firstChild;
   let marking = false;
   while (c) {
