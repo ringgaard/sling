@@ -26,6 +26,8 @@ const n_shared = store.lookup("shared");
 const n_sling_case_no = store.lookup("PCASE");
 const n_target = store.lookup("target");
 const n_item_type = store.lookup("/w/item");
+const n_case_file = store.lookup("Q108673968");
+const n_instance_of = store.lookup("P31");
 
 const binary_clipboard = false;
 
@@ -115,7 +117,6 @@ class CaseEditor extends Component {
   }
 
   onnavigate(e) {
-    console.log("navigate", e);
     let ref = e.detail;
     let item = store.find(ref);
     if (item && this.topics.includes(item)) {
@@ -142,7 +143,13 @@ class CaseEditor extends Component {
   onitem(e) {
     let item = e.detail;
     if (item.topic) {
-      this.navigate_to(item.topic);
+      if (item.casefile) {
+        this.add_topic_link(item.topic);
+      } else {
+        this.navigate_to(item.topic);
+      }
+    } else if (item.caserec) {
+      this.add_case_link(item.caserec);
     } else {
       this.add_new_topic(item.ref, item.name);
     }
@@ -213,10 +220,11 @@ class CaseEditor extends Component {
     }
   }
 
-  onupdate() {
+  async onupdate() {
     if (!this.state) return;
     this.mark_clean();
 
+    // Initialize case editor for new case.
     this.casefile = this.state;
     this.main = this.casefile.get(n_main);
     this.topics = this.casefile.get(n_topics);
@@ -224,6 +232,22 @@ class CaseEditor extends Component {
     this.folder = this.casefile.get(n_folders).value(0);
     this.readonly = this.casefile.get(n_link);
 
+    // Read linked cases.
+    this.links = [];
+    for (let topic of this.topics) {
+      if (topic != this.main && topic.get(n_instance_of) == n_case_file) {
+        let linkid = topic.get(n_is).id;
+        let caseid = parseInt(linkid.substring(2));
+        let casefile = await this.match("#app").read_case(caseid);
+        if (casefile) {
+          this.links.push(casefile);
+        } else {
+          console.log("Unable to retrieve linked case", linkid);
+        }
+      }
+    }
+
+    // Enable/disable action buttons.
     for (let e of ["#save", "#share", "#newfolder"]) {
       this.find(e).update(!this.readonly);
     }
@@ -294,11 +318,11 @@ class CaseEditor extends Component {
     }
   }
 
-  search(query, full) {
+  search(query, full, topics) {
     query = query.toLowerCase();
     let results = [];
     let partial = [];
-    for (let topic of this.topics) {
+    for (let topic of (topics || this.topics)) {
       let match = false;
       let submatch = false;
       if (topic.id == query) {
@@ -453,6 +477,40 @@ class CaseEditor extends Component {
     this.navigate_to(topic);
   }
 
+  async add_case_link(caserec) {
+    // Create new topic with reference to external case.
+    let topicid = this.next_topic();
+    let topic = store.frame(`t/${this.caseid()}/${topicid}`);
+    topic.add(n_is, store.lookup(`c/${caserec.id}`));
+    topic.add(n_instance_of, n_case_file);
+    if (caserec.name) topic.add(n_name, caserec.name);
+    this.add_topic(topic);
+
+    // Read case and add linked case.
+    let casefile = await this.match("#app").read_case(caserec.id);
+    if (casefile) {
+      this.links.push(casefile);
+    }
+
+    // Update topic list.
+    await this.update_topics();
+    this.navigate_to(topic);
+  }
+
+  async add_topic_link(topic) {
+    // Create new topic with reference topic in external case.
+    let topicid = this.next_topic();
+    let link = store.frame(`t/${this.caseid()}/${topicid}`);
+    link.add(n_is, topic);
+    let name = topic.get(n_name);
+    if (name) link.add(n_name, name);
+    this.add_topic(link);
+
+    // Update topic list.
+    await this.update_topics();
+    this.navigate_to(link);
+  }
+
   async delete_topics(topics) {
     if (this.readonly || topics.length == 0) return;
 
@@ -538,6 +596,12 @@ class CaseEditor extends Component {
   }
 
   oncopy(e) {
+    // Allow copying of selected text.
+    let s = window.getSelection();
+    let anchor_text = s.anchorNode && s.anchorNode.nodeType == Node.TEXT_NODE;
+    let focus_text = s.focusNode && s.focusNode.nodeType == Node.TEXT_NODE;
+    if (anchor_text && focus_text) return;
+
     // Get selected topics.
     let list = this.find("topic-list");
     let selected = list.selection();
@@ -691,6 +755,7 @@ class TopicSearchBox extends Component {
     let detail = e.detail
     let target = e.target;
     let query = detail.trim();
+    let editor = this.match("#editor");
 
     // Do full match if query ends with period.
     let full = false;
@@ -699,9 +764,10 @@ class TopicSearchBox extends Component {
       query = query.slice(0, -1);
     }
 
-    // Get local results.
+    // Search case file.
     let items = [];
-    for (let result of this.match("#editor").search(query, full)) {
+    let seen = new Set();
+    for (let result of editor.search(query, full)) {
       let name = result.get(n_name);
       items.push(new material.MdSearchResult({
         ref: result.id,
@@ -710,9 +776,43 @@ class TopicSearchBox extends Component {
         description: result.get(n_description),
         topic: result,
       }));
+      for (let ref of result.all(n_is)) seen.add(ref.id);
     }
 
-    // Get global results.
+    // Search linked case files.
+    for (let link of editor.links) {
+      let topics = link.get(n_topics);
+      if (topics) {
+        for (let result of editor.search(query, full, topics)) {
+          if (seen.has(result.id)) continue;
+          let name = result.get(n_name);
+          items.push(new material.MdSearchResult({
+            ref: result.id,
+            name: name,
+            title: name + " 🔗",
+            description: result.get(n_description),
+            topic: result,
+            casefile: link,
+          }));
+          for (let ref of result.all(n_is)) seen.add(ref.id);
+        }
+      }
+    }
+
+    // Search local case database.
+    for (let result of this.match("#app").search(query, full)) {
+      let caseid = "c/" + result.id;
+      items.push(new material.MdSearchResult({
+        ref: caseid,
+        name: result.name,
+        title: result.name + " 🗄️",
+        description: result.description,
+        caserec: result,
+      }));
+      seen.add(caseid);
+    }
+
+    // Search knowledge base.
     try {
       let params = "fmt=cjson";
       if (full) params += "&fullmatch=1";
@@ -720,6 +820,7 @@ class TopicSearchBox extends Component {
       let response = await fetch(`${settings.kbservice}/kb/query?${params}`);
       let data = await response.json();
       for (let item of data.matches) {
+        if (seen.has(item.ref)) continue;
         items.push(new material.MdSearchResult({
           ref: item.ref,
           name: item.text,
@@ -1096,9 +1197,10 @@ class TopicList extends Component {
 
   onfocusout(e) {
     // Clear selection if focus leaves the topic list.
-    if (!e.relatedTarget) return;
-    if (this.contains(e.relatedTarget)) return;
-    if (!this.contains(e.target)) return;
+    if (e.target && e.relatedTarget ) {
+      if (this.contains(e.relatedTarget)) return;
+      if (!this.contains(e.target)) return;
+    }
 
     window.getSelection().collapse(null, 0);
     let c = this.firstChild;
@@ -1153,8 +1255,7 @@ class TopicList extends Component {
   }
 
   active() {
-    let e = window.getSelection().focusNode;
-    if (!e) e = document.activeElement;
+    let e = document.activeElement;
     if (e instanceof TopicCard) return e.state;
     return null;
   }
@@ -1202,8 +1303,6 @@ document.onselectionchange = () => {
   if (!(anchor instanceof TopicCard)) return;
   if (!(focus instanceof TopicCard)) return;
   if (focus.parentNode != anchor.parentNode) return;
-
-  //console.log("selection changed:", list, anchor, focus);
 
   // Mark topics in selection.
   let list = anchor.parentNode;
@@ -1282,14 +1381,15 @@ class TopicCard extends Component {
     }
 
     this.bind(null, "click", e => this.onclick(e));
+    this.bind(null, "mousedown", e => this.ondown(e));
     this.bind(null, "keydown", e => this.onkeydown(e));
 
     this.update_mode(false);
-    this.update_name();
+    this.update_title();
   }
 
   onupdated() {
-    this.update_name();
+    this.update_title();
   }
 
   update_mode(editing) {
@@ -1310,8 +1410,21 @@ class TopicCard extends Component {
     this.find("#edit-actions").update(editing && !this.readonly);
   }
 
-  update_name() {
-    let name = this.state.get(n_name);
+  update_title() {
+    // Update topic type.
+    let topic = this.state;
+    let icon = "subject";
+    if (topic.get(n_instance_of) == n_case_file) {
+      if (topic.get(n_is)) {
+        icon = "link";
+      } else {
+        icon = "folder_special";
+      }
+    }
+    this.find("#icon").update(icon);
+
+    // Update topic name.
+    let name = topic.get(n_name);
     if (!name) name = "(no name)";
     this.find("#name").update(name.toString());
   }
@@ -1418,7 +1531,18 @@ class TopicCard extends Component {
     }
   }
 
+  ondown(e) {
+    this.ofsx = e.offsetX;
+    this.ofsy = e.offsetY;
+  }
+
   onclick(e) {
+    // Ignore if selecting text.
+    let dx = this.ofsx - e.offsetX;
+    let dy = this.ofsy - e.offsetY;
+    if (Math.abs(dx) + Math.abs(dy) > 10) return;
+
+    // Align selection to topics.
     TopicCard.align_selection();
   }
 
@@ -1428,6 +1552,7 @@ class TopicCard extends Component {
 
     return `
       <md-card-toolbar>
+        <md-icon id="icon"></md-icon>
         <md-text id="name"></md-text>
         <md-spacer></md-spacer>
         <md-toolbox id="edit-actions">
@@ -1459,6 +1584,15 @@ class TopicCard extends Component {
         padding: 10px;
         margin: 5px 5px 15px 5px;
         outline: none;
+      }
+      $ md-card-toolbar {
+        align-items: center;
+      }
+      $ #icon {
+        color: #000000;
+      }
+      $ #name {
+        padding-left: 5px;
       }
       $:focus {
         border: 1px solid #1a73e8;

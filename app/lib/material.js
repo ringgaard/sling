@@ -867,7 +867,9 @@ export class MdIcon extends Component {
 
   render() {
     let icon = custom_icons[this.props.icon]
-    return icon ? icon : this.props.icon;
+    if (!icon) icon = this.props.icon;
+    if (!icon && typeof this.state === "string") icon = this.state;
+    return icon;
   }
 
   static custom(name, code) {
@@ -890,6 +892,7 @@ export class MdIcon extends Component {
         direction: ltr;
         -webkit-font-feature-settings: 'liga';
         -webkit-font-smoothing: antialiased;
+        user-select: none;
       }
       $.outlined {
         font-family: 'Material Icons Outlined';

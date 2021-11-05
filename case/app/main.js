@@ -48,6 +48,11 @@ class CaseApp extends OneOf {
       // Open case specified in url.
       let caseid = parseInt(m[1]);
       this.open_case(caseid);
+
+      // Read case list in background.
+      casedb.readdir().then(caselist => {
+        this.caselist = caselist;
+      });
     } else {
       // Show case list.
       this.show_manager();
@@ -61,6 +66,29 @@ class CaseApp extends OneOf {
     } else {
       this.find("#editor").close();
     }
+  }
+
+  async read_case(caseid) {
+    // Try to read case from local database.
+    let casefile = await casedb.read(caseid);
+    if (!casefile) {
+      // Try to get case from server.
+      let response = await fetch(`/case/fetch?id=${caseid}`);
+      if (!response.ok) return null;
+      casefile = await store.parse(response);
+      casefile.add(n_link, true);
+
+      // Add linked case to directory.
+      let rec = casedb.writemeta(casefile);
+
+      // Update case list.
+      if (this.caselist) {
+        this.caselist = this.caselist.filter(r => r.id != caseid);
+        this.caselist.push(rec);
+        this.refresh_manager();
+      }
+    }
+    return casefile;
   }
 
   async add_case(name, description, topicid) {
@@ -123,26 +151,10 @@ class CaseApp extends OneOf {
 
   async open_case(caseid) {
     // Try to read case from local database.
-    let casefile = await casedb.read(caseid);
+    let casefile = await this.read_case(caseid);
     if (!casefile) {
-      // Try to get case from server.
-      let response = await fetch(`/case/fetch?id=${caseid}`);
-      if (!response.ok) {
-        StdDialog.error(`Case #${caseid} not found`);
-        return;
-      }
-      casefile = await store.parse(response);
-      casefile.add(n_link, true);
-
-      // Add linked case to directory.
-      let rec = casedb.writemeta(casefile);
-
-      // Update case list.
-      if (this.caselist) {
-        this.caselist = this.caselist.filter(r => r.id != caseid);
-        this.caselist.push(rec);
-        this.refresh_manager();
-      }
+      StdDialog.error(`Case #${caseid} not found`);
+      return;
     }
 
     // Upgrade legacy cases.
@@ -195,6 +207,30 @@ class CaseApp extends OneOf {
   refresh_manager() {
     this.caselist.sort((a, b) => a.modified > b.modified ? -1 : 1);
     this.update("#manager", this.caselist);
+  }
+
+  search(query, full) {
+    query = query.toLowerCase();
+    let results = [];
+    let partial = [];
+    if (this.caselist) {
+      for (let caserec of this.caselist) {
+        let match = false;
+        let submatch = false;
+        if (caserec.id == query) {
+            results.push(caserec);
+        } else {
+          let normalized = caserec.name.toLowerCase();
+          if (normalized == query) {
+            results.push(caserec);
+          } else if (!full && normalized.startsWith(query)) {
+            partial.push(caserec);
+          }
+        }
+      }
+    }
+    results.push(...partial);
+    return results;
   }
 }
 
