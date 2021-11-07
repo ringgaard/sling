@@ -192,6 +192,12 @@ export class Component extends HTMLElement {
     elem.addEventListener(event, handler);
   }
 
+  // Dispatch custom event.
+  dispatch(type, detail, bubbles) {
+    let event = new CustomEvent(type, {detail, bubbles});
+    this.dispatchEvent(event);
+  }
+
   static escape(s) {
     if (s == undefined) return "";
     return s.toString().replace(/["&'<>`/]/g, c => htmlmap[c]);

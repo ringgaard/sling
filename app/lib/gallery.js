@@ -91,6 +91,8 @@ export class PhotoGallery extends MdModal {
       this.onnext(e);
     } else if (e.keyCode == 27) {
       this.close(e);
+    } else if (e.keyCode == 88) {
+      this.flipnsfw(e);
     }
     this.focus();
   }
@@ -122,6 +124,13 @@ export class PhotoGallery extends MdModal {
     let url = this.photos[this.current].url;
     window.open(url, "_blank", "noopener,noreferrer");
     e.stopPropagation();
+  }
+
+  flipnsfw(e) {
+    let photo = this.photos[this.current];
+    photo.nsfw = !photo.nsfw;
+    this.dispatch(photo.nsfw ? "nsfw" : "sfw", photo.url);
+    this.find(".nsfw").update(photo.nsfw ? "NSFW" : null);
   }
 
   onprev(e) {

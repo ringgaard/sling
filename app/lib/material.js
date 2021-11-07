@@ -484,7 +484,7 @@ export class MdMenuItem extends Component {
   onclick(e) {
     this.match("md-menu").close();
     e.stopPropagation();
-    this.dispatchEvent(new CustomEvent("select"));
+    this.dispatch("select");
   }
 
   static stylesheet() {
@@ -1315,7 +1315,7 @@ export class MdSearch extends Component {
           this.select(list.active, e.ctrlKey);
         } else {
           list.expand(false);
-          this.dispatchEvent(new CustomEvent("enter", {detail: this.query()}));
+          this.dispatch("enter", this.query());
         }
       }
     }
@@ -1328,7 +1328,7 @@ export class MdSearch extends Component {
       this.populate(null, null);
     } else {
       this.find("input").style.cursor = "wait";
-      this.dispatchEvent(new CustomEvent("query", {detail: query}));
+      this.dispatch("query", query);
     }
   }
 
@@ -1355,7 +1355,7 @@ export class MdSearch extends Component {
     if (!keep) list.expand(false);
     if (item != null) {
       this.find("input").blur();
-      this.dispatchEvent(new CustomEvent("item", {detail: item.state}));
+      this.dispatch("item", item.state);
     }
   }
 

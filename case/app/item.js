@@ -4,12 +4,7 @@
 import {Component} from "/common/lib/component.js";
 import {Frame, QString} from "/common/lib/frame.js";
 import {store, settings} from "./global.js";
-
-import {
-  PhotoGallery,
-  imageurl,
-  censor,
-  use_mediadb} from "/common/lib/gallery.js";
+import {PhotoGallery, censor, use_mediadb} from "/common/lib/gallery.js";
 
 use_mediadb(false);
 
@@ -205,8 +200,7 @@ class KbLink extends Component {
   }
 
   onclick(e) {
-    let args = {bubbles: true, detail: this.props.ref};
-    this.dispatchEvent(new CustomEvent("navigate", args));
+    this.dispatch("navigate", this.props.ref, true);
   }
 
   static stylesheet() {
@@ -230,8 +224,7 @@ class KbRef extends Component {
   }
 
   onclick(e) {
-    let args = {bubbles: true, detail: this.state};
-    this.dispatchEvent(new CustomEvent("navigate", args));
+    this.dispatch("navigate", this.state, true);
   }
 
   render() {
@@ -631,7 +624,7 @@ class PicturePanel extends Component {
         caption += ` [${index + 1}/${images.length}]`;
       }
 
-      this.find(".photo").update(imageurl(image.url, true));
+      this.find(".photo").update(image.url);
       this.find(".caption").update(caption);
     } else {
       this.find(".photo").update(null);
@@ -646,6 +639,8 @@ class PicturePanel extends Component {
   onopen(e) {
     e.stopPropagation();
     let modal = new PhotoGallery();
+    modal.bind(null, "nsfw", e => this.dispatch(e.type, e.detail, true));
+    modal.bind(null, "sfw", e => this.dispatch(e.type, e.detail, true));
     modal.open(this.state);
   }
 

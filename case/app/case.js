@@ -28,6 +28,9 @@ const n_target = store.lookup("target");
 const n_item_type = store.lookup("/w/item");
 const n_case_file = store.lookup("Q108673968");
 const n_instance_of = store.lookup("P31");
+const n_media = store.lookup("media");
+const n_has_quality = store.lookup("P1552");
+const n_not_safe_for_work = store.lookup("Q2716583");
 
 const binary_clipboard = false;
 
@@ -117,6 +120,7 @@ class CaseEditor extends Component {
   }
 
   onnavigate(e) {
+    e.stopPropagation();
     let ref = e.detail;
     let item = store.find(ref);
     if (item && this.topics.includes(item)) {
@@ -137,7 +141,7 @@ class CaseEditor extends Component {
 
   onenter(e) {
     let name = e.detail;
-    this.add_new_topic(null, name);
+    this.add_new_topic(null, name.trim());
   }
 
   onitem(e) {
@@ -1384,6 +1388,9 @@ class TopicCard extends Component {
     this.bind(null, "mousedown", e => this.ondown(e));
     this.bind(null, "keydown", e => this.onkeydown(e));
 
+    this.bind(null, "nsfw", e => this.onnsfw(e, true));
+    this.bind(null, "sfw", e => this.onnsfw(e, false));
+
     this.update_mode(false);
     this.update_title();
   }
@@ -1429,9 +1436,46 @@ class TopicCard extends Component {
     this.find("#name").update(name.toString());
   }
 
+  mark_dirty() {
+    this.match("#editor").mark_dirty();
+  }
+
   onedit(e) {
     e.stopPropagation();
     this.update_mode(true);
+  }
+
+  onnsfw(e, nsfw) {
+    e.stopPropagation();
+    if (this.editing) return;
+
+    let url = e.detail;
+    let topic = this.state;
+    for (let n = 0; n < topic.length; ++n) {
+      if (topic.name(n) != n_media) continue;
+      let v = topic.value(n);
+      if (v instanceof Frame) {
+        if (v.get(n_is) == url) {
+          if (nsfw) {
+            v.set(n_has_quality, n_not_safe_for_work);
+          } else {
+            v.remove(n_has_quality);
+          }
+          if (v.length == 1) {
+            topic.set_value(n, v.get(n_is));
+          }
+          this.mark_dirty();
+        }
+      } else if (v == url) {
+        if (nsfw) {
+          let qualified = store.frame();
+          qualified.add(n_is, v);
+          qualified.add(n_has_quality, n_not_safe_for_work);
+          topic.set_value(n, qualified);
+          this.mark_dirty();
+        }
+      }
+    }
   }
 
   async onsave(e) {
@@ -1453,7 +1497,7 @@ class TopicCard extends Component {
 
     this.update(topic);
     this.update_mode(false);
-    this.match("#editor").mark_dirty();
+    this.mark_dirty();
     window.getSelection().collapse(this, 0);
     this.focus();
   }
@@ -1716,11 +1760,11 @@ class ItemEditor extends Component {
     let topic = this.state;
     let content = topic ? topic.text(true) : "";
     return `
+      <textarea spellcheck="false">${Component.escape(content)}</textarea>
       <div id="search-box">
         <property-search-box id="prop-search"></property-search-box>
         <topic-search-box id="topic-search"></topic-search-box>
       </div>
-      <textarea spellcheck="false">${Component.escape(content)}</textarea>
     `
   }
 
@@ -1731,11 +1775,11 @@ class ItemEditor extends Component {
       }
       $ property-search-box {
         border: 1px solid #d0d0d0;
-        margin: 10px 5px 5px 0px;
+        margin: 5px 5px 5px 0px;
       }
       $ topic-search-box {
         border: 1px solid #d0d0d0;
-        margin: 10px 0px 5px 5px;
+        margin: 5px 0px 5px 5px;
       }
       $ textarea {
         font-size: 12px;
@@ -1745,6 +1789,7 @@ class ItemEditor extends Component {
         height: auto;
         overflow-y: hidden;
         border: 1px solid #d0d0d0;
+        margin-top: 5px;
       }
     `;
   }
