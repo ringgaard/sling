@@ -6,6 +6,7 @@ import * as material from "/common/lib/material.js";
 import {Store, Frame, QString, Encoder, Printer} from "/common/lib/frame.js";
 import {store, settings} from "./global.js";
 import {get_schema} from "./schema.js";
+import {Context, process_url} from "./plugins.js";
 import {LabelCollector} from "./item.js"
 
 const n_id = store.id;
@@ -620,12 +621,13 @@ class CaseEditor extends Component {
     if (this.readonly) return;
     let clip = await read_from_clipboard();
 
-    // Add topics to current folder.
+    // Add topics to current folder if clipboard contains frames.
     if (clip instanceof Frame) {
       let first = null;
       let topics = clip.get("topics");
       if (topics) {
         for (let t of topics) {
+          console.log("paste topic", t.id);
           let topic = store.lookup(t.id);
           this.add_topic(topic);
           if (!first) first = topic;
@@ -634,6 +636,23 @@ class CaseEditor extends Component {
         // Update topic list.
         await this.update_topics();
         await this.navigate_to(first);
+      }
+      return;
+    }
+
+    // Let the plug-ins process the clipboard content.
+    clip = await navigator.clipboard.readText();
+    if (!clip) return;
+    let list = this.find("topic-list");
+    let topic = list.active();
+    let context = new Context(topic, this.casefile, this);
+    let result = await process_url(clip, context);
+    if (result) {
+      if (topic) {
+        this.mark_dirty();
+        list.card(topic).refresh();
+      } else {
+        await this.update_topics();
       }
     }
   }
@@ -1387,6 +1406,7 @@ class TopicCard extends Component {
     this.bind(null, "click", e => this.onclick(e));
     this.bind(null, "mousedown", e => this.ondown(e));
     this.bind(null, "keydown", e => this.onkeydown(e));
+    this.bind(null, "focus", e => this.onfocus(e));
 
     this.bind(null, "nsfw", e => this.onnsfw(e, true));
     this.bind(null, "sfw", e => this.onnsfw(e, false));
@@ -1438,6 +1458,13 @@ class TopicCard extends Component {
 
   mark_dirty() {
     this.match("#editor").mark_dirty();
+  }
+
+  refresh() {
+    if (!this.editing) {
+      this.update_title();
+      this.find("item-panel").update(this.state);
+    }
   }
 
   onedit(e) {
@@ -1588,6 +1615,13 @@ class TopicCard extends Component {
 
     // Align selection to topics.
     TopicCard.align_selection();
+  }
+
+  onfocus(e) {
+    let selection = window.getSelection();
+    if (!selection.achorNode && !selection.focusNode) {
+      selection.collapse(this, 0);
+    }
   }
 
   prerender() {

@@ -24,6 +24,8 @@ import sling.util
 import sling.flags as flags
 import sling.log as log
 
+import services
+
 flags.define("--port",
              help="HTTP port",
              default=8080,
@@ -67,6 +69,7 @@ app.redirect("/", "/c")
 # Add static files.
 app.static("/common", "app", internal=True)
 app.static("/case/app", "case/app")
+app.static("/case/plugin", "case/plugin")
 
 # Commons store.
 commons = sling.Store()
@@ -169,6 +172,17 @@ def share_case(request):
 
     # Log case delete with IP address.
     log.info("Unshare case #%d version %d for client %s" % (caseid, ts, client))
+
+@app.route("/case/service")
+def service_request(request):
+  # Get service name.
+  service = request.path
+  if service.startswith("/"): service = service[1:]
+  if "/" in service: service = service[:service.find("/")]
+
+  # Let service process request.
+  log.info(service, "request", request.path)
+  return services.process(service, request)
 
 # Run HTTP server.
 log.info("HTTP server listening on port", flags.arg.port)

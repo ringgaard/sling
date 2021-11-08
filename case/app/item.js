@@ -730,6 +730,7 @@ class TopicExpander extends Component {
         cursor: pointer;
         font-size: 13px;
         color: #808080;
+        user-select: none;
       }
     `;
   }
@@ -782,7 +783,6 @@ class ItemPanel extends Component {
   }
 
   onconnected() {
-    this.bind(null, "click", e => this.onclick(e));
     if (this.state) this.onupdated();
   }
 
@@ -843,10 +843,6 @@ class ItemPanel extends Component {
     } else {
       this.find("#hruler").style.display = "";
     }
-  }
-
-  onclick(e) {
-    e.stopPropagation();
   }
 
   render() {

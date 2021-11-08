@@ -138,6 +138,7 @@ class Profile:
     self.excluded = None
     self.isnew = False
     self.skipdups = True
+    self.captionless = flags.arg.captionless
     if itemid is None:
       data = None
     else:
@@ -264,7 +265,7 @@ class Profile:
     # Add media to profile.
     slots = [(n_is, url)]
     if flags.arg.fixedcaption: caption = flags.arg.fixedcaption
-    if caption and not flags.arg.captionless: slots.append((n_legend, caption))
+    if caption and not self.captionless: slots.append((n_legend, caption))
     if source: slots.append((n_stated_in, store[source]))
     if nsfw: slots.append((n_has_quality, n_nsfw))
     if len(slots) == 1:
@@ -402,7 +403,7 @@ class Profile:
 
       title = reply["title"]
       if title is None: title = caption
-      if flags.arg.captionless: title = None
+      if self.captionless: title = None
       nsfw = isnsfw or reply["over_18"]
 
       count = 0
@@ -450,7 +451,7 @@ class Profile:
         title = caption
       elif caption is not None and caption.startswith(title):
         title = caption
-      if flags.arg.captionless: title = None
+      if self.captionless: title = None
 
       if title != None and flags.arg.numbering:
         title = "%s (%d/%d)" % (title, serial, len(items))
