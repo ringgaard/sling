@@ -620,9 +620,6 @@ class CaseEditor extends Component {
   }
 
   async onpaste(e) {
-    e.preventDefault();
-    e.stopPropagation();
-
     // Read topics from clipboard.
     if (this.readonly) return;
     let clip = await read_from_clipboard();
@@ -649,6 +646,9 @@ class CaseEditor extends Component {
           list.card(last).focus();
         }
       }
+
+      e.preventDefault();
+      e.stopPropagation();
       return;
     }
 
@@ -666,6 +666,9 @@ class CaseEditor extends Component {
       } else {
         await this.update_topics();
       }
+
+      e.preventDefault();
+      e.stopPropagation();
     }
   }
 
