@@ -165,7 +165,7 @@ class PhotoDialog extends MdDialog {
         row-gap: 16px;
       }
       #id {
-        width: 200px;
+        width: 400px;
       }
       #name {
         width: 400px;

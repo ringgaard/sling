@@ -121,6 +121,7 @@ class CaseEditor extends Component {
   }
 
   onnavigate(e) {
+    e.preventDefault();
     e.stopPropagation();
     let ref = e.detail;
     let item = store.find(ref);
@@ -592,6 +593,7 @@ class CaseEditor extends Component {
     let list = this.find("topic-list");
     let selected = list.selection();
     if (selected.length == 0) return;
+    console.log(`cut ${selected.length} topics to clipboard`);
 
     // Copy selected topics to clipboard.
     write_to_clipboard(selected);
@@ -611,12 +613,16 @@ class CaseEditor extends Component {
     let list = this.find("topic-list");
     let selected = list.selection();
     if (selected.length == 0) return;
+    console.log(`copy ${selected.length} topics to clipboard`);
 
     // Copy selected topics to clipboard.
     write_to_clipboard(selected);
   }
 
   async onpaste(e) {
+    e.preventDefault();
+    e.stopPropagation();
+
     // Read topics from clipboard.
     if (this.readonly) return;
     let clip = await read_from_clipboard();
@@ -624,6 +630,7 @@ class CaseEditor extends Component {
     // Add topics to current folder if clipboard contains frames.
     if (clip instanceof Frame) {
       let first = null;
+      let last = null;
       let topics = clip.get("topics");
       if (topics) {
         for (let t of topics) {
@@ -631,11 +638,16 @@ class CaseEditor extends Component {
           let topic = store.lookup(t.id);
           this.add_topic(topic);
           if (!first) first = topic;
+          last = topic;
         }
 
         // Update topic list.
         await this.update_topics();
-        await this.navigate_to(first);
+        if (first && last) {
+          let list = this.find("topic-list");
+          list.select_range(first, last);
+          list.card(last).focus();
+        }
       }
       return;
     }
@@ -791,14 +803,16 @@ class TopicSearchBox extends Component {
     let items = [];
     let seen = new Set();
     for (let result of editor.search(query, full)) {
+      if (seen.has(result.id)) continue;
       let name = result.get(n_name);
       items.push(new material.MdSearchResult({
         ref: result.id,
         name: name,
-        title: name + " ⭐",
+        title: name + (result == editor.main ? " 🗄️" : " ⭐"),
         description: result.get(n_description),
         topic: result,
       }));
+      seen.add(result.id);
       for (let ref of result.all(n_is)) seen.add(ref.id);
     }
 
@@ -825,6 +839,7 @@ class TopicSearchBox extends Component {
     // Search local case database.
     for (let result of this.match("#app").search(query, full)) {
       let caseid = "c/" + result.id;
+      if (seen.has(caseid)) continue;
       items.push(new material.MdSearchResult({
         ref: caseid,
         name: result.name,
@@ -1247,6 +1262,17 @@ class TopicList extends Component {
     }
   }
 
+  select_range(anchor, focus) {
+    let a = this.card(anchor);
+    let f = this.card(focus);
+    let selection = window.getSelection();
+    if (a == f) {
+      selection.collapse(a, 0);
+    } else {
+      selection.setBaseAndExtent(a, 1, f, f.childElementCount);
+    }
+  }
+
   async delete_selected() {
     let selected = this.selection();
     let n = selected.length;
@@ -1311,6 +1337,15 @@ class TopicList extends Component {
       h.push(e);
     }
     return h;
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        display: block;
+        padding-bottom: 200px;
+      }
+    `;
   }
 }
 

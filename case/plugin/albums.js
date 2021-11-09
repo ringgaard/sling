@@ -16,12 +16,29 @@ export default class AlbumPlugin {
     if (!topic) return false;
     console.log(`Add album ${url} to topic ${context.topic.id}`);
 
+    // Get URLs for album from album service.
     let r = await fetch(`/case/service/albums?url=${encodeURIComponent(url)}`);
     let profile = await store.parse(r);
-    for (let [name, value] of profile) {
-      topic.add(name, value);
+
+    // Get existing photos to remove duplicates.
+    let photos = new Set();
+    for (let media of topic.all(n_media)) photos.add(store.resolve(media));
+
+    // Add media for album.
+    let num_added = 0;
+    for (let media of profile.all(n_media)) {
+      let url = store.resolve(media);
+      if (photos.has(url)) {
+        console.log("skip exising image", url);
+        continue;
+      }
+      photos.add(url);
+      topic.add(n_media, media);
+      num_added++;
     }
-    return true;
+
+    console.log(`${num_added} images added`);
+    return num_added > 0;
   }
 };
 

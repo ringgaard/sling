@@ -61,6 +61,8 @@ loc "python/dataset"
 loc "python/org"
 
 loc "case"
+loc "case/service"
+loc "case/plugin"
 
 loc "sling/pyapi"
 loc "sling/web"

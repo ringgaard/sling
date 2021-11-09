@@ -9,13 +9,19 @@ const n_media = store.lookup("media");
 
 export default class ImagePlugin {
   process(url, context) {
-    if (context.topic) {
-      console.log(`add image ${url} to topic ${context.topic.id}`);
-      context.topic.add(n_media, url);
-      return true;
-    } else {
-      return false;
+    if (!context.topic) return false;
+
+    // Check for duplicate.
+    for (let media of context.topic.all(n_media)) {
+      if (store.resolve(media) == url) {
+        console.log("skip duplicate", url);
+        return false;
+      }
     }
+
+    console.log(`add image ${url} to topic ${context.topic.id}`);
+    context.topic.add(n_media, url);
+    return true;
   }
 };
 

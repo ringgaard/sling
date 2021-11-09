@@ -471,6 +471,9 @@ class Profile:
     url = url.replace("/www.imgur.com/", "/imgur.com/")
     url = url.replace("/m.imgur.com/", "/imgur.com/")
 
+    m = re.match("(https://imgur\.com/.+)\.jpeg", url)
+    if m != None: url = m.group(1) + ".jpg"
+
     url = url.replace("/www.reddit.com/", "/reddit.com/")
     url = url.replace("/old.reddit.com/", "/reddit.com/")
 
