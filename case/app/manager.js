@@ -320,6 +320,7 @@ class CaseList extends material.MdCard {
    h.push(`
      <thead><tr>
        <th>Case #</th>
+       <th></th>
        <th>Name</th>
        <th>Description</th>
        <th>Created</th>
@@ -346,12 +347,8 @@ class CaseList extends material.MdCard {
       h.push(`
         <tr case="${rec.id}" link="${rec.link}">
           <td>${rec.id}</td>
-          <td>
-            <div>
-              <span>${Component.escape(rec.name)}</span>
-              ${icon}
-            </div>
-          </td>
+          <td>${icon}</td>
+          <td>${Component.escape(rec.name)}</td>
           <td>${Component.escape(rec.description)}</td>
           <td>${date2str(rec.created)}</td>
           <td>${date2str(rec.modified)}</td>
@@ -400,21 +397,24 @@ class CaseList extends material.MdCard {
         cursor: pointer;
       }
 
-      $ td:nth-child(1) { /* case# */
+      /* case# */
+      $ td:nth-child(1) {
         text-align: right;
       }
 
-      /* name */
-      $ td:nth-child(2) div {
-        display: flex;
-        align-items: center;
-      }
+      /* icon */
       $ td:nth-child(2) md-icon {
         padding-left: 6px;
       }
 
+      /* name */
+      $ td:nth-child(3) div {
+        display: flex;
+        align-items: center;
+      }
+
       /* description */
-      $ td:nth-child(3) {
+      $ td:nth-child(4) {
         width: 100%;
         white-space: normal;
       }
@@ -422,7 +422,6 @@ class CaseList extends material.MdCard {
       $ md-icon-button {
         color: #808080;
       }
-
     `;
   }
 }
