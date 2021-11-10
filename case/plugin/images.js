@@ -8,7 +8,7 @@ import {store, settings} from "/case/app/global.js";
 const n_media = store.lookup("media");
 
 export default class ImagePlugin {
-  process(url, context) {
+  process(action, url, context) {
     if (!context.topic) return false;
 
     // Check for duplicate.

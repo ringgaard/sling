@@ -4,10 +4,10 @@
 import {Component} from "/common/lib/component.js";
 import {MdDialog, StdDialog, MdSearchResult} from "/common/lib/material.js";
 import {Store, Frame, Encoder, Printer} from "/common/lib/frame.js";
-import {store, settings} from "./global.js";
-import {Context, process_url} from "./plugins.js";
 
-import "./folder.js";
+import {store, settings} from "./global.js";
+import * as plugins from "./plugins.js";
+import {NewFolderDialog} from "./folder.js";
 import "./topic.js";
 
 const n_is = store.is;
@@ -142,7 +142,9 @@ class CaseEditor extends Component {
 
   onitem(e) {
     let item = e.detail;
-    if (item.topic) {
+    if (item.onitem) {
+      item.onitem(item);
+    } else if (item.topic) {
       if (item.casefile) {
         this.add_topic_link(item.topic);
       } else {
@@ -650,8 +652,8 @@ class CaseEditor extends Component {
     if (!clip) return;
     let list = this.find("topic-list");
     let topic = list.active();
-    let context = new Context(topic, this.casefile, this);
-    let result = await process_url(clip, context);
+    let context = new plugins.Context(topic, this.casefile, this);
+    let result = await plugins.process(plugins.PASTE, clip, context);
     if (result) {
       if (topic) {
         this.mark_dirty();
@@ -845,6 +847,11 @@ class TopicSearchBox extends Component {
       }));
       seen.add(caseid);
     }
+
+    // Search plug-ins.
+    let context = new plugins.Context(null, editor.casefile, editor);
+    let result = await plugins.process(plugins.SEARCH, query, context);
+    if (result) items.push(new MdSearchResult(result));
 
     // Search knowledge base.
     try {

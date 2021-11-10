@@ -11,7 +11,7 @@ const n_has_quality = store.lookup("P1552");
 const n_not_safe_for_work = store.lookup("Q2716583");
 
 export default class AlbumPlugin {
-  async process(url, context) {
+  async process(action, url, context) {
     let topic = context.topic;
     if (!topic) return false;
     console.log(`Add album ${url} to topic ${context.topic.id}`);

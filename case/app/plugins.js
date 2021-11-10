@@ -3,13 +3,31 @@
 
 // SLING case plug-ins.
 
+// Actions.
+export const SEARCH    = 0;
+export const SEARCHURL = 1;
+export const PASTE     = 2;
+export const PASTEURL  = 3;
+
+// Case plug-ins.
 var plugins = [
+
+// Twitter profiles.
+{
+  name: "twitter",
+  module: "twitter.js",
+  actions: [SEARCHURL],
+  patterns: [
+    /^https:\/\/(mobile\.)?twitter.com\//,
+  ],
+},
 
 // Photo albums from Reddit and Imgur.
 {
   name: "albums",
   module: "albums.js",
-  urls: [
+  actions: [PASTEURL],
+  patterns: [
     /^https?:\/\/(i\.|www\|m\.)?imgur.com\//,
     /^https?:\/\/(www\.|old\.)?reddit\.com\//,
     /^https?:\/\/i\.redd\.it\//,
@@ -22,7 +40,8 @@ var plugins = [
 {
   name: "images",
   module: "images.js",
-  urls: [
+  actions: [PASTEURL],
+  patterns: [
     /^https?:\/\/.*\.(jpg|jpeg|gif|png)(\?.+)?$/,
   ],
 },
@@ -45,18 +64,25 @@ export class Context {
   }
 };
 
-export async function process_url(url, context) {
-  // Skip if url is invalid.
-  let u = parse_url(url);
-  if (!u) return false;
+export async function process(action, query, context) {
+  // Check for URL query.
+  let url = parse_url(query);
+  if (url) {
+    if (action == SEARCH) action = SEARCHURL;
+    if (action == PASTE) action = PASTEURL;
+  } else if (action == SEARCHURL || action == PASTEURL) {
+    return false;
+  }
 
   // Try to find plug-in with a matching pattern.
   let plugin = null;
   for (let p of plugins) {
-    for (let pattern of p.urls) {
-      if (url.match(pattern)) {
-        plugin = p;
-        break;
+    if (p.actions.includes(action)) {
+      for (let pattern of p.patterns) {
+        if (query.match(pattern)) {
+          plugin = p;
+          break;
+        }
       }
     }
     if (plugin) break;
@@ -71,8 +97,8 @@ export async function process_url(url, context) {
     plugin.instance = new component();
   }
 
-  // Let plugin process the url.
-  console.log(`Run plugin ${plugin.name} for ${url}`);
-  return plugin.instance.process(url, context);
+  // Let plugin process the query.
+  console.log(`Run plugin ${plugin.name} for '${query}'`);
+  return plugin.instance.process(action, query, context);
 }
 

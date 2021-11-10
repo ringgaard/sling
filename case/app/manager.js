@@ -341,13 +341,13 @@ class CaseList extends material.MdCard {
       }
       if (rec.share) {
         if (rec.shared && rec.shared < rec.modified) {
-          icon += " *";
+          icon += "*";
         }
       }
       h.push(`
         <tr case="${rec.id}" link="${rec.link}">
           <td>${rec.id}</td>
-          <td>${icon}</td>
+          <td><div>${icon}</div></td>
           <td>${Component.escape(rec.name)}</td>
           <td>${Component.escape(rec.description)}</td>
           <td>${date2str(rec.created)}</td>
@@ -403,12 +403,7 @@ class CaseList extends material.MdCard {
       }
 
       /* icon */
-      $ td:nth-child(2) md-icon {
-        padding-left: 6px;
-      }
-
-      /* name */
-      $ td:nth-child(3) div {
+      $ td:nth-child(2) div {
         display: flex;
         align-items: center;
       }

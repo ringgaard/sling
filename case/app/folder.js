@@ -127,7 +127,7 @@ class CaseFolder extends Component {
 
 Component.register(CaseFolder);
 
-class NewFolderDialog extends MdDialog {
+export class NewFolderDialog extends MdDialog {
   submit() {
     this.close(this.find("#name").value.trim());
   }

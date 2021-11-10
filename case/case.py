@@ -47,6 +47,9 @@ flags.define("--casedb",
              default="case",
              metavar="DB")
 
+
+# Load services before parsing flags to allow services to define flags.
+services.load()
 flags.parse()
 
 # Convert ISO 8601 time to unix epoch.
@@ -183,6 +186,9 @@ def service_request(request):
   # Let service process request.
   log.info(service, "request", request.path)
   return services.process(service, request)
+
+# Initialize services.
+services.init()
 
 # Run HTTP server.
 log.info("HTTP server listening on port", flags.arg.port)

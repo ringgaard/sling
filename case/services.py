@@ -17,13 +17,26 @@
 import importlib
 
 class Service:
-  def __init__(self, package, function):
-    module = importlib.import_module("." + package, "service")
-    self.handler = getattr(module, function)
+  def __init__(self, package, handler):
+    self.package = package
+    self.handler = handler
+
+  def load(self):
+    self.module = importlib.import_module("." + self.package, "service")
+
+  def init(self):
+    self.instance = getattr(self.module, self.handler)()
 
 services = {
-  "albums": Service("albums", "process_albums"),
+  "albums": Service("albums", "AlbumService"),
+  "twitter": Service("twitter", "TwitterService"),
 }
+
+def load():
+  for service in services.values(): service.load()
+
+def init():
+  for service in services.values(): service.init()
 
 def process(name, request):
   # Find service.
@@ -31,5 +44,5 @@ def process(name, request):
   if service is None: return 404;
 
   # Let service process the request.
-  return service.handler(request)
+  return service.instance.handle(request)
 

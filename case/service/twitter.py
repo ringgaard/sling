@@ -12,22 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""SLING photo album service"""
+"""SLING Twitter profile service"""
 
-import sling
-import sling.media.photo as photolib
+import json
+import tweepy
 
-class AlbumService:
+class TwitterService:
+  def __init__(self):
+    # Read twitter credentials.
+    with open("local/keys/twitter.json", "r") as f:
+      apikeys = json.load(f)
+
+    # Connect to twitter.
+    auth = tweepy.OAuthHandler(apikeys["consumer_key"],
+                               apikeys["consumer_secret"])
+    auth.set_access_token(apikeys["access_key"], apikeys["access_secret"])
+    self.api = tweepy.API(auth)
+
   def handle(self, request):
     params = request.params()
-    urls = params["url"]
-    print("process albums:", urls)
-
-    # Get photos from url(s).
-    profile = photolib.Profile(None)
-    if params.get("captions") is None: profile.captionless = True
-    for url in urls: profile.add_media(url, None, False)
-
-    # Return extracted photos.
-    return profile.frame
+    user = params["user"][0]
+    print("fetch twitter profile for", user)
+    return self.api.get_user(user)._json
 
