@@ -455,23 +455,31 @@ class CaseEditor extends Component {
   }
 
   add_topic(topic) {
-    if (this.readonly) return;
-
     // Add topic to current folder.
+    if (this.readonly) return;
     if (!this.topics.includes(topic)) this.topics.push(topic);
     if (!this.folder.includes(topic)) this.folder.push(topic);
     this.mark_dirty();
   }
 
-  async add_new_topic(itemid, name) {
+  new_topic() {
+    // Create frame for new topic.
     if (this.readonly) return;
-
-    // Create new topic.
     let topicid = this.next_topic();
     let topic = store.frame(`t/${this.caseid()}/${topicid}`);
+
+    // Add topic to current folder.
+    this.add_topic(topic);
+
+    return topic;
+  }
+
+  async add_new_topic(itemid, name) {
+    // Create new topic.
+    if (this.readonly) return;
+    let topic = this.new_topic();
     if (itemid) topic.add(n_is, store.lookup(itemid));
     if (name) topic.add(n_name, name);
-    this.add_topic(topic);
 
     // Update topic list.
     await this.update_topics();
@@ -480,12 +488,10 @@ class CaseEditor extends Component {
 
   async add_case_link(caserec) {
     // Create new topic with reference to external case.
-    let topicid = this.next_topic();
-    let topic = store.frame(`t/${this.caseid()}/${topicid}`);
+    let topic = this.new_topic();
     topic.add(n_is, store.lookup(`c/${caserec.id}`));
     topic.add(n_instance_of, n_case_file);
     if (caserec.name) topic.add(n_name, caserec.name);
-    this.add_topic(topic);
 
     // Read case and add linked case.
     let casefile = await this.match("#app").read_case(caserec.id);
@@ -500,12 +506,9 @@ class CaseEditor extends Component {
 
   async add_topic_link(topic) {
     // Create new topic with reference topic in external case.
-    let topicid = this.next_topic();
-    let link = store.frame(`t/${this.caseid()}/${topicid}`);
-    link.add(n_is, topic);
+    let link = this.new_topic();
     let name = topic.get(n_name);
     if (name) link.add(n_name, name);
-    this.add_topic(link);
 
     // Update topic list.
     await this.update_topics();
@@ -711,7 +714,7 @@ class CaseEditor extends Component {
           <md-drawer>
             <div id="home">
               <md-icon-button icon="home"></md-icon-button>
-              SLING Cases Home
+              SLING Case Home
             </div>
             <div id="folders-top">
               Folders

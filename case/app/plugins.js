@@ -62,6 +62,10 @@ export class Context {
     this.casefile = casefile;
     this.editor = editor;
   }
+
+  new_topic() {
+    return editor.new_topic();
+  }
 };
 
 export async function process(action, query, context) {

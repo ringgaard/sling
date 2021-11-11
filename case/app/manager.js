@@ -38,7 +38,7 @@ class CaseManager extends Component {
       <md-column-layout>
         <md-toolbar>
           <md-toolbar-logo></md-toolbar-logo>
-          <div>Cases</div>
+          <div>Case</div>
           <case-search-box id="search"></case-search-box>
           <md-spacer></md-spacer>
           <md-icon-button id="settings" icon="settings"></md-icon-button>

@@ -191,7 +191,7 @@ class CaseApp extends OneOf {
 
   show_manager() {
     history.pushState("*", "", "/c/");
-    window.document.title = `SLING Cases`;
+    window.document.title = `SLING Case`;
 
     if (this.caselist) {
       this.refresh_manager();
