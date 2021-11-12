@@ -17,7 +17,7 @@ export default class AlbumPlugin {
     console.log(`Add album ${url} to topic ${context.topic.id}`);
 
     // Get URLs for album from album service.
-    let r = await fetch(`/case/service/albums?url=${encodeURIComponent(url)}`);
+    let r = await fetch(context.service("albums", {url}));
     let profile = await store.parse(r);
 
     // Get existing photos to remove duplicates.

@@ -3,6 +3,8 @@
 
 // SLING case plug-ins.
 
+import {settings} from "./global.js";
+
 // Actions.
 export const SEARCH    = 0;
 export const SEARCHURL = 1;
@@ -42,7 +44,7 @@ var plugins = [
   module: "images.js",
   actions: [PASTEURL],
   patterns: [
-    /^https?:\/\/.*\.(jpg|jpeg|gif|png)(\?.+)?$/,
+    /^https?:\/\/.*\.(jpg|jpeg|gif|png)([\/\?].+)?$/,
   ],
 },
 
@@ -65,6 +67,23 @@ export class Context {
 
   new_topic() {
     return editor.new_topic();
+  }
+
+  service(name, params) {
+    let url = `/case/service/${name}`;
+    if (params) {
+      let qs = new URLSearchParams(params);
+      url += "?" + qs.toString();
+    }
+    return url;
+  }
+
+  kblookup(query, params) {
+    let qs = new URLSearchParams(params);
+    qs.append("q", query);
+    qs.append("fmt", "cjson");
+    let url = `${settings.kbservice}/kb/query?${qs}`;
+    return fetch(url);
   }
 };
 

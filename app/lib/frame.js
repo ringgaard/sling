@@ -187,11 +187,15 @@ export class Frame {
     return v;
   }
 
-  // Check if frame has slot with name.
-  has(name) {
+  // Check if frame has slot with name (and value).
+  has(name, value) {
     if (typeof name === 'string') name = this.store.lookup(name);
+    if (!this.slots) return false;
     for (let n = 0; n < this.slots.length; n += 2) {
-      if (this.slots[n] === name) return true;
+      if (this.slots[n] === name) {
+        if (value === undefined) return true;
+        if (this.store.resolve(this.slots[n + 1]) == value) return true;
+      }
     }
     return false;
   }
