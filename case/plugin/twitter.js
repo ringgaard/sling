@@ -3,7 +3,8 @@
 
 // SLING case plug-in for adding topic from Twitter profile.
 
-import {store, settings} from "/case/app/global.js";
+import {store} from "/case/app/global.js";
+import {SocialTopic, strip_emojis} from "/case/app/social.js";
 
 const n_is = store.lookup("is");
 const n_name = store.lookup("name");
@@ -14,7 +15,6 @@ const n_media = store.lookup("media");
 const n_twitter = store.lookup("P2002");
 const n_start_time = store.lookup("P580");
 const n_twitter_id = store.lookup("P6552");
-const n_homepage = store.lookup("P856");
 const n_gender = store.lookup("P21");
 const n_female = store.lookup("Q6581072");
 const n_male = store.lookup("Q6581097");
@@ -22,107 +22,12 @@ const n_instance_of = store.lookup("P31");
 const n_human = store.lookup("Q5");
 const n_instagram = store.lookup("P2003");
 
-let xrefs = [
-  {
-    pattern: /^https?:\/\/[Ii]nstagram\.com\/([^\/\?]+)/,
-    property: store.lookup("P2003"),
-  },
-  {
-    pattern: /^https?:\/\/www\.instagram\.com\/([^\/\?]+)/,
-    property: store.lookup("P2003"),
-  },
-  {
-    pattern: /^https?:\/\/facebook\.com\/([^\/\?]+)/,
-    property: store.lookup("P2013"),
-  },
-  {
-    pattern: /^https?:\/\/www\.facebook\.com\/([^\/\?]+)/,
-    property: store.lookup("P2013"),
-  },
-  {
-    pattern: /^https?:\/\/open\.spotify\.com\/artist\/([^\/\?]+)/,
-    property: store.lookup("P1902"),
-  },
-  {
-    pattern: /^https?:\/\/vk\.com\/([^\/\?]+)/,
-    property: store.lookup("P3185"),
-  },
-  {
-    pattern: /^https?:\/\/twitch\.tv\/([^\/\?]+)/,
-    property: store.lookup("P5797"),
-  },
-  {
-    pattern: /^https?:\/\/www\.twitch\.tv\/([^\/\?]+)/,
-    property: store.lookup("P5797"),
-  },
-  {
-    pattern: /^https?:\/\/[Oo]nlyfans\.com\/([^\/\?]+)/,
-    property: store.lookup("P8604"),
-  },
-  {
-    pattern: /^https?:\/\/www\.onlyfans\.com\/([^\/\?]+)/,
-    property: store.lookup("P8604"),
-  },
-  {
-    pattern: /^https?:\/\/discord\.gg\/([^\/\?]+)/,
-    property: store.lookup("P9101"),
-  },
-  {
-    pattern: /^https?:\/\/linkedin\.com\/in\/([^\/\?]+)/,
-    property: store.lookup("P6634"),
-  },
-  {
-    pattern: /^https?:\/\/\w+\.linkedin\.com\/in\/([^\/\?]+)/,
-    property: store.lookup("P6634"),
-  },
-  {
-    pattern: /^https?:\/\/linkedin\.com\/company\/([^\/\?]+)/,
-    property: store.lookup("P4264"),
-  },
-  {
-    pattern: /^https?:\/\/\w+\.linkedin\.com\/company\/([^\/\?]+)/,
-    property: store.lookup("P4264"),
-  },
-  {
-    pattern: /^https?:\/\/t\.me\/([^\/\?]+)/,
-    property: store.lookup("P3789"),
-  },
-  {
-    pattern: /^https?:\/\/vimeo\.com\/([^\/\?]+)/,
-    property: store.lookup("P4015"),
-  },
-  {
-    pattern: /^https?:\/\/www\.patreon\.com\/([^\/\?]+)/,
-    property: store.lookup("P4175"),
-  },
-  {
-    pattern: /^https?:\/\/youtube\.com\/channel\/([^\/\?]+)/,
-    property: store.lookup("P2397"),
-  },
-  {
-    pattern: /^https?:\/\/www\.youtube\.com\/channel\/([^\/\?]+)/,
-    property: store.lookup("P2397"),
-  },
-  {
-    pattern: /^https?:\/\/imdb\.com\/name\/([^\/\?]+)/,
-    property: store.lookup("P345"),
-  },
-  {
-    pattern: /^https?:\/\/m\.imdb\.com\/name\/([^\/\?]+)/,
-    property: store.lookup("P345"),
-  },
-];
-
 function str2date(s) {
   let d = new Date(s);
   let year = d.getFullYear();
   let month = d.getMonth() + 1;
   let day = d.getDate();
   return year * 10000 + month * 100 + day;
-}
-
-function strip_emojis(s) {
-  return s.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, "").trim();
 }
 
 function strip_links(s) {
@@ -213,6 +118,7 @@ export default class TwitterPlugin {
     topic.add(n_twitter, t);
 
     // Add cross references.
+    let social = new SocialTopic(topic);
     for (let part of ["url", "description"]) {
       if (part in profile.entities) {
         for (let link of profile.entities[part].urls) {
@@ -220,27 +126,7 @@ export default class TwitterPlugin {
           if (!url) url = link.url;
           if (!url) continue;
           console.log("link", url);
-
-          // Try to match url to xref property.
-          let prop = null;
-          let identifier = null;
-          for (let xref of xrefs) {
-            let m = url.match(xref.pattern);
-            if (m) {
-              prop = xref.property;
-              identifier = m[1];
-              break;
-            }
-          }
-          if (prop) {
-            if (!topic.has(prop, identifier)) {
-              topic.add(prop, identifier);
-            }
-          } else {
-            if (!topic.has(n_homepage, url)) {
-              topic.add(n_homepage, url);
-            }
-          }
+          social.add_link(url);
         }
       }
     }

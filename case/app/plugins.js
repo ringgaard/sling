@@ -24,6 +24,16 @@ var plugins = [
   ],
 },
 
+// Linktree profiles.
+{
+  name: "linktree",
+  module: "linktree.js",
+  actions: [SEARCHURL],
+  patterns: [
+    /^https:\/\/linktr.ee\//,
+  ],
+},
+
 // Photo albums from Reddit and Imgur.
 {
   name: "albums",
@@ -35,6 +45,7 @@ var plugins = [
     /^https?:\/\/i\.redd\.it\//,
     /^https?:\/\/i\.redditmedia\.com\//,
     /^https?:\/\/preview\.redd\.it\//,
+    /^https?:\/\/asset\.dr\.dk\//,
   ],
 },
 
@@ -76,6 +87,10 @@ export class Context {
       url += "?" + qs.toString();
     }
     return url;
+  }
+
+  proxy(url) {
+    return `/case/proxy?url=${encodeURIComponent(url)}`;
   }
 
   kblookup(query, params) {

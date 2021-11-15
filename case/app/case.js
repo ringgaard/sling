@@ -8,6 +8,7 @@ import {Store, Frame, Encoder, Printer} from "/common/lib/frame.js";
 import {store, settings} from "./global.js";
 import * as plugins from "./plugins.js";
 import {NewFolderDialog} from "./folder.js";
+import {paste_image} from "./drive.js";
 import "./topic.js";
 
 const n_is = store.is;
@@ -24,6 +25,7 @@ const n_share = store.lookup("share");
 const n_link = store.lookup("link");
 const n_modified = store.lookup("modified");
 const n_shared = store.lookup("shared");
+const n_media = store.lookup("media");
 const n_case_file = store.lookup("Q108673968");
 const n_instance_of = store.lookup("P31");
 
@@ -651,22 +653,38 @@ class CaseEditor extends Component {
     }
 
     // Let the plug-ins process the clipboard content.
-    clip = await navigator.clipboard.readText();
-    if (!clip) return;
     let list = this.find("topic-list");
     let topic = list.active();
-    let context = new plugins.Context(topic, this.casefile, this);
-    let result = await plugins.process(plugins.PASTE, clip, context);
-    if (result) {
-      if (topic) {
-        this.mark_dirty();
-        list.card(topic).refresh();
-      } else {
-        await this.update_topics();
-      }
+    clip = await navigator.clipboard.readText();
+    if (clip) {
+      let context = new plugins.Context(topic, this.casefile, this);
+      let result = await plugins.process(plugins.PASTE, clip, context);
+      if (result) {
+        if (topic) {
+          this.mark_dirty();
+          list.card(topic).refresh();
+        } else {
+          await this.update_topics();
+        }
 
-      e.preventDefault();
-      e.stopPropagation();
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+    }
+
+    // Try to paste image.
+    if (topic) {
+      let imgurl = await paste_image();
+      if (imgurl) {
+        topic.add(n_media, imgurl);
+        this.mark_dirty();
+
+        list.card(topic).refresh();
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
     }
   }
 

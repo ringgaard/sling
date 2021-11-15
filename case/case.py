@@ -16,7 +16,9 @@
 
 import requests
 import datetime
+import socket
 import time
+import urllib.parse
 
 import sling
 import sling.net
@@ -186,6 +188,42 @@ def service_request(request):
   # Let service process request.
   log.info(service, "request", request.path)
   return services.process(service, request)
+
+non_proxy_headers = set([
+  "connection",
+  "content-length",
+  "content-encoding",
+  "content-security-policy",
+])
+
+@app.route("/case/proxy")
+def service_request(request):
+  # Get URL.
+  url = request.params()["url"][0]
+  ua = request["User-Agent"]
+
+  # Check that request is not for local network.
+  addr = urllib.parse.urlsplit(url)
+  ipaddr = socket.gethostbyname(addr.hostname)
+  if ipaddr.startswith("10."): return 403;
+  if ipaddr.startswith("192.168."): return 403;
+  if ipaddr.startswith("127."): return 403;
+
+  # Forward request.
+  log.info("Proxy request for", url)
+  r = requests.get(url, headers={"User-Agent": ua})
+
+  # Relay back response.
+  response = sling.net.HTTPResponse()
+  response.status = r.status_code
+  response.body = r.content
+  response.headers = []
+  for key, value in r.headers.items():
+    if key.lower() in non_proxy_headers: continue
+    response.headers.append((key, value))
+  log.info("Return", len(response.body), "bytes")
+
+  return response
 
 # Initialize services.
 services.init()

@@ -554,7 +554,7 @@ class Profile:
       url = "https://i.redd.it/" + imagename
 
     # DR image scaler.
-    m = re.match("https://asset.dr.dk/ImageScaler/\?(.+)", url)
+    m = re.match("https://asset.dr.dk/[Ii]mage[Ss]caler/\?(.+)", url)
     if m != None:
       q = urllib.parse.parse_qs(m.group(1))
       url = "https://%s/%s" % (q["server"][0], q["file"][0])

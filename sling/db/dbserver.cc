@@ -418,6 +418,8 @@ void DBService::Put(HTTPRequest *request, HTTPResponse *response) {
         response->SendError(400, nullptr, "Invalid timestamp");
         return;
       }
+    } else {
+      record.version = time(0);
     }
   } else {
     record.version = request->Get("Version", 0L);
