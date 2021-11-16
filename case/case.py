@@ -194,6 +194,7 @@ non_proxy_headers = set([
   "content-length",
   "content-encoding",
   "content-security-policy",
+  "transfer-encoding",
 ])
 
 @app.route("/case/proxy")

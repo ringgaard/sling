@@ -879,6 +879,7 @@ class ItemPanel extends Component {
       $ #identifier {
         font-size: 13px;
         color: #808080;
+        padding-left: 5px;
       }
 
       $ #names {

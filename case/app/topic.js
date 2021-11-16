@@ -549,6 +549,7 @@ class TopicCard extends Component {
       }
       $ #name {
         padding-left: 5px;
+        padding-right: 5px;
       }
       $:focus {
         border: 1px solid #1a73e8;

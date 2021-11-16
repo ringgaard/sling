@@ -34,6 +34,16 @@ var plugins = [
   ],
 },
 
+// Babepedia profiles.
+{
+  name: "babepedia",
+  module: "babepedia.js",
+  actions: [SEARCHURL],
+  patterns: [
+    /^https:\/\/www\.babepedia\.com\/babe\//,
+  ],
+},
+
 // Photo albums from Reddit and Imgur.
 {
   name: "albums",

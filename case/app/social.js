@@ -13,7 +13,7 @@ let xrefs = [
     property: store.lookup("P968"),
   },
   {
-    pattern: /^https?:\/\/[Tt]witter\.com\/([A-Za-z_]+)(\?.*)?$/,
+    pattern: /^https?:\/\/[Tt]witter\.com\/([A-Za-z0-9_]+)(\?.*)?$/,
     property: store.lookup("P2002"),
   },
   {
@@ -26,6 +26,10 @@ let xrefs = [
   },
   {
     pattern: /^https?:\/\/[[Ff]acebook\.com\/([^\/\?]+)/,
+    property: store.lookup("P2013"),
+  },
+  {
+    pattern: /^https?:\/\/www\.facebook\.com\/pg\/([^\/\?]+)/,
     property: store.lookup("P2013"),
   },
   {
@@ -121,12 +125,24 @@ let xrefs = [
     property: store.lookup("P7085"),
   },
   {
+    pattern: /^https?:\/\/www\.tiktok\.com\/@([^\/\?]+)/,
+    property: store.lookup("P7085"),
+  },
+  {
     pattern: /^https?:\/\/cameo\.com\/([^\/\?]+)/,
     property: store.lookup("P6908"),
   },
   {
     pattern: /^https?:\/\/www\.cameo\.com\/([^\/\?]+)/,
     property: store.lookup("P6908"),
+  },
+  {
+    pattern: /^https?:\/\/(?:www\.)?([^\s\/]+)\.tumblr\.com/,
+    property: store.lookup("P3943"),
+  },
+  {
+    pattern: /^https?:\/\/(?:www\.)?myspace\.com\/([^\/\?]+)/,
+    property: store.lookup("P3265"),
   },
 ];
 
@@ -142,7 +158,7 @@ export class SocialTopic {
       let m = url.match(xref.pattern);
       if (m) {
         prop = xref.property;
-        identifier = m[1];
+        identifier = decodeURIComponent(m[1]);
         break;
       }
     }
