@@ -44,6 +44,16 @@ var plugins = [
   ],
 },
 
+// Images from forum posts.
+{
+  name: "forum",
+  module: "forum.js",
+  actions: [PASTEURL],
+  patterns: [
+    /^https?:\/\/[A-Za-z0-9\-\_\.]+\/showpost.php\?/,
+  ],
+},
+
 // Photo albums from Reddit and Imgur.
 {
   name: "albums",

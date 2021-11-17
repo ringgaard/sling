@@ -657,8 +657,10 @@ class CaseEditor extends Component {
     let topic = list.active();
     clip = await navigator.clipboard.readText();
     if (clip) {
+      this.style.cursor = "wait";
       let context = new plugins.Context(topic, this.casefile, this);
       let result = await plugins.process(plugins.PASTE, clip, context);
+      this.style.cursor = "";
       if (result) {
         if (topic) {
           this.mark_dirty();

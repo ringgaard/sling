@@ -133,7 +133,7 @@ class CaseApp extends OneOf {
     console.log("newcase", casefile.text());
 
     // Switch to case editor with new case.
-    window.document.title = `Case #${caseid}: ${name}`;
+    window.document.title = `#${caseid}: ${name}`;
     this.update("case-editor", casefile);
     this.find("case-editor").mark_dirty();
     history.pushState(caseid, "", "/c/" + caseid);
@@ -172,7 +172,7 @@ class CaseApp extends OneOf {
     // Switch to case editor with new case.
     let main = casefile.get(n_main);
     let name = main.get(n_name);
-    window.document.title = `Case #${caseid}: ${name}`;
+    window.document.title = `#${caseid}: ${name}`;
     this.update("case-editor", casefile);
     history.pushState(caseid, "", "/c/" + caseid);
     return casefile;

@@ -5,10 +5,7 @@
 
 import {store, settings} from "/case/app/global.js";
 
-const n_is = store.lookup("is");
 const n_media = store.lookup("media");
-const n_has_quality = store.lookup("P1552");
-const n_not_safe_for_work = store.lookup("Q2716583");
 
 export default class AlbumPlugin {
   async process(action, url, context) {

@@ -197,22 +197,32 @@ non_proxy_headers = set([
   "transfer-encoding",
 ])
 
+checked_hostnames = set()
+
 @app.route("/case/proxy")
 def service_request(request):
   # Get URL.
   url = request.params()["url"][0]
-  ua = request["User-Agent"]
 
   # Check that request is not for local network.
   addr = urllib.parse.urlsplit(url)
-  ipaddr = socket.gethostbyname(addr.hostname)
-  if ipaddr.startswith("10."): return 403;
-  if ipaddr.startswith("192.168."): return 403;
-  if ipaddr.startswith("127."): return 403;
+  if addr.hostname not in checked_hostnames:
+    ipaddr = socket.gethostbyname(addr.hostname)
+    if ipaddr.startswith("10."): return 403
+    if ipaddr.startswith("192.168."): return 403
+    if ipaddr.startswith("127."): return 403
+    checked_hostnames.add(addr.hostname)
+
+  # Set up request headers.
+  headers = {}
+  ua = request["XUser-Agent"]
+  if ua: headers["User-Agent"] = ua
+  cookies = request["XSet-Cookie"]
+  if cookies: headers["Set-Cookie"] = cookies
 
   # Forward request.
   log.info("Proxy request for", url)
-  r = requests.get(url, headers={"User-Agent": ua})
+  r = requests.get(url, headers=headers)
 
   # Relay back response.
   response = sling.net.HTTPResponse()
@@ -221,6 +231,7 @@ def service_request(request):
   response.headers = []
   for key, value in r.headers.items():
     if key.lower() in non_proxy_headers: continue
+    if key == "Set-Cookie": key = "XSet-Cookie"
     response.headers.append((key, value))
   log.info("Return", len(response.body), "bytes")
 
