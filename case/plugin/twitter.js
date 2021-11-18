@@ -35,34 +35,48 @@ function strip_links(s) {
 }
 
 export default class TwitterPlugin {
-  process(action, query, context) {
+  async process(action, query, context) {
     let url = new URL(query);
     let username = url.pathname.substring(1);
     if (!username) return;
 
-    console.log("twitter search for", username);
-    return {
-      ref: username,
-      name: username,
-      description: "Twitter user",
-      context: context,
-      onitem: item => this.select(item),
-    };
+    if (action == 1) { // SEARCHURL
+      console.log("twitter search for", username);
+      return {
+        ref: username,
+        name: username,
+        description: "Twitter user",
+        context: context,
+        onitem: item => this.select(item),
+      };
+    } else if (action == 3) { // PASTEURL
+      await this.populate(context, context.topic, username);
+      return true;
+    }
   }
 
   async select(item) {
-    // Retrieve profile from twitter service.
-    let r = await fetch(item.context.service("twitter", {user: item.ref}));
-    let profile = await r.json();
-    console.log("twitter profile", profile);
-
     // Create new topic.
     let topic = item.context.new_topic();
     if (!topic) return;
 
+    // Fetch profile from twitter and populate topic.
+    await this.populate(item.context, topic, item.ref);
+
+    // Update topic list.
+    await item.context.editor.update_topics();
+    await item.context.editor.navigate_to(topic);
+  }
+
+  async populate(context, topic, user) {
+    // Retrieve profile from twitter service.
+    let r = await fetch(context.service("twitter", {user}));
+    let profile = await r.json();
+    console.log("twitter profile", profile);
+
     // Check if user is already in knowledge base.
     let username = profile.screen_name;
-    r = await item.context.kblookup(`P2002/${username}`, {fullmatch: 1});
+    r = await context.kblookup(`P2002/${username}`, {fullmatch: 1});
     let data = await r.json();
     if (data.matches.length == 1) {
       topic.add(n_is, store.lookup(data.matches[0].ref));
@@ -91,7 +105,7 @@ export default class TwitterPlugin {
     let location = strip_emojis(profile.location);
     if (profile.location) {
       // Try to resolve location.
-      r = await item.context.kblookup(location, {fullmatch: 1});
+      r = await context.kblookup(location, {fullmatch: 1});
       let data = await r.json();
       if (data.matches.length > 0) {
         let id = data.matches[0].ref;
@@ -111,11 +125,13 @@ export default class TwitterPlugin {
     }
 
     // Add twitter ID.
-    let t = topic.store.frame();
-    t.add(n_is, username);
-    t.add(n_start_time, str2date(profile.created_at));
-    //t.add(n_twitter_id, profile.id_str);
-    topic.add(n_twitter, t);
+    if (!topic.has(n_twitter, username)) {
+      let t = topic.store.frame();
+      t.add(n_is, username);
+      t.add(n_start_time, str2date(profile.created_at));
+      //t.add(n_twitter_id, profile.id_str);
+      topic.add(n_twitter, t);
+    }
 
     // Add cross references.
     let social = new SocialTopic(topic);
@@ -147,10 +163,6 @@ export default class TwitterPlugin {
       let url = photo.split("_normal").join("");
       topic.add(n_media, url);
     }
-
-    // Update topic list.
-    await item.context.editor.update_topics();
-    await item.context.editor.navigate_to(topic);
   }
 };
 

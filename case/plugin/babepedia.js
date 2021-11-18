@@ -203,6 +203,9 @@ export default class BabepediaPlugin {
       }
     }
 
+    // Add reference to babepedia.
+    topic.add(n_described_by_url, url);
+
     // Add profile photo.
     let profimg = doc.getElementById("profimg");
     if (profimg) {
@@ -215,9 +218,6 @@ export default class BabepediaPlugin {
         }
       }
     }
-
-    // Add reference to babepedia.
-    topic.add(n_described_by_url, url);
 
     // Update topic list.
     await item.context.editor.update_topics();

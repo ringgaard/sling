@@ -30,6 +30,7 @@ class Service:
 services = {
   "albums": Service("albums", "AlbumService"),
   "twitter": Service("twitter", "TwitterService"),
+  "wikidata": Service("wikidata", "WikidataService"),
 }
 
 def load():

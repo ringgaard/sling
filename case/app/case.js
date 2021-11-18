@@ -509,6 +509,7 @@ class CaseEditor extends Component {
   async add_topic_link(topic) {
     // Create new topic with reference topic in external case.
     let link = this.new_topic();
+    link.add(n_is, topic);
     let name = topic.get(n_name);
     if (name) link.add(n_name, name);
 
@@ -620,6 +621,10 @@ class CaseEditor extends Component {
   }
 
   async onpaste(e) {
+    // Allow pasting of text into text input.
+    let focus = document.activeElement;
+    if (focus && focus.type == "search") return;
+
     // Read topics from clipboard.
     if (this.readonly) return;
     let clip = await read_from_clipboard();

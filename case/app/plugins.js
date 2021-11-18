@@ -14,13 +14,23 @@ export const PASTEURL  = 3;
 // Case plug-ins.
 var plugins = [
 
+// Wikidata item.
+{
+  name: "wikidata",
+  module: "wikidata.js",
+  actions: [SEARCHURL],
+  patterns: [
+    /^https:\/\/(www\.)?wikidata\.org\/wiki\//,
+  ],
+},
+
 // Twitter profiles.
 {
   name: "twitter",
   module: "twitter.js",
-  actions: [SEARCHURL],
+  actions: [PASTEURL, SEARCHURL],
   patterns: [
-    /^https:\/\/(mobile\.)?twitter.com\//,
+    /^https:\/\/(mobile\.)?twitter\.com\//,
   ],
 },
 
@@ -28,7 +38,7 @@ var plugins = [
 {
   name: "linktree",
   module: "linktree.js",
-  actions: [SEARCHURL],
+  actions: [PASTEURL, SEARCHURL],
   patterns: [
     /^https:\/\/linktr.ee\//,
   ],
