@@ -233,6 +233,13 @@ export class Frame {
     this.slots.push(value);
   }
 
+  // Add slot if it is not already in frame. Return true if new slot was added.
+  put(name, value) {
+    if (this.has(name, value)) return false;
+    this.add(name, value);
+    return true;
+  }
+
   // Set (or add) slot value.
   set(name, value) {
     if (this.slots) {

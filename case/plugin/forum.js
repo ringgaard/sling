@@ -60,7 +60,6 @@ const images_services = [
     let r = await fetch(context.proxy(url + "?full=1"));
     let html = await r.text();
     let doc = new DOMParser().parseFromString(html, "text/html");
-    console.log(doc);
     let meta = doc.querySelector('meta[property="og:image"]');
     return meta && meta.content ? meta.content : null;
   },
@@ -74,6 +73,18 @@ const images_services = [
     let html = await r.text();
     let doc = new DOMParser().parseFromString(html, "text/html");
     let img = doc.querySelector("img.main-image");
+    return img && img.src ? img.src : null;
+  },
+  nsfw: true,
+},
+
+{
+  pattern: /https?:\/\/postimg\.(cc|org)\/image\//,
+  fetch: async (url, context) => {
+    let r = await fetch(context.proxy(url));
+    let html = await r.text();
+    let doc = new DOMParser().parseFromString(html, "text/html");
+    let img = doc.querySelector("#main-image");
     return img && img.src ? img.src : null;
   },
   nsfw: true,
@@ -96,11 +107,14 @@ export default class AlbumPlugin {
 
     // Find all image links.
     let num_images = 0;
+    let seen = new Set();
     for (let link of doc.getElementsByTagName("a")) {
       // Get image link.
       if (!link.querySelector("img")) continue;
       let href = link.getAttribute("href");
       if (!href) continue;
+      if (seen.has(href)) continue;
+      seen.add(href);
 
       // Find service for fetching image.
       let service = null;

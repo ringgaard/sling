@@ -179,6 +179,10 @@ class CaseEditor extends Component {
       let ts = new Date().toJSON();
       this.casefile.set(n_modified, ts);
 
+      // Delete drafts.
+      this.purge_drafts();
+
+      // Save case to local database.
       this.match("#app").save_case(this.casefile);
       this.mark_clean();
     }
@@ -205,6 +209,7 @@ class CaseEditor extends Component {
       }
 
       // Save case before sharing.
+      this.purge_drafts();
       this.match("#app").save_case(this.casefile);
       this.mark_clean();
 
@@ -233,6 +238,7 @@ class CaseEditor extends Component {
     this.topics = this.casefile.get(n_topics);
     this.folders = this.casefile.get(n_folders);
     this.folder = this.casefile.get(n_folders).value(0);
+    this.drafts = [];
     this.readonly = this.casefile.get(n_link);
 
     // Read linked cases.
@@ -367,10 +373,32 @@ class CaseEditor extends Component {
 
   refcount(topic) {
     let refs = 0;
-    for (let f of this.folders) {
-      if (f.includes(topic)) refs += 1;
+    let f = this.folders;
+    for (let i = 0; i < f.length; ++i) {
+      if (f.value(i).includes(topic)) refs += 1;
     }
     return refs;
+  }
+
+  redirect(source, target) {
+    let topics = this.topics;
+    if (this.drafts.length > 0) topics = topics.concat(this.drafts);
+    for (let topic of topics) {
+      for (let n = 0; n < topic.length; ++n) {
+        let v = topic.value(n);
+        if (source == v) {
+          topic.set_value(n, target);
+        } else if (v instanceof Frame) {
+          if (v.isanonymous() && v.has(n_is)) {
+            for (let m = 0; m < v.length; ++m) {
+              if (source == v.value(m)) {
+                v.set_value(m, target);
+              }
+            }
+          }
+        }
+      }
+    }
   }
 
   async show_folder(folder) {
@@ -507,7 +535,7 @@ class CaseEditor extends Component {
   }
 
   async add_topic_link(topic) {
-    // Create new topic with reference topic in external case.
+    // Create new topic with reference to topic in external case.
     let link = this.new_topic();
     link.add(n_is, topic);
     let name = topic.get(n_name);
@@ -515,7 +543,7 @@ class CaseEditor extends Component {
 
     // Update topic list.
     await this.update_topics();
-    this.navigate_to(link);
+    await this.navigate_to(link);
   }
 
   async delete_topics(topics) {
@@ -526,20 +554,47 @@ class CaseEditor extends Component {
     let last = this.folder.indexOf(topics.at(-1));
     if (last + 1 < this.folder.length) next = this.folder[last + 1];
 
-    // Delete topics from folder (and case).
+    // Delete topics from folder.
+    let drafts_before = this.drafts.length > 0;
     for (let topic of topics) {
       // Do not delete main topic.
       if (topic == this.casefile.get(n_main)) return;
 
       // Delete topic from current folder.
-      this.folder.splice(this.folder.indexOf(topic), 1);
+      let pos = this.folder.indexOf(topic);
+      if (pos != -1) {
+        this.folder.splice(pos, 1);
+      } else {
+        console.log("topic not in current folder", topic.id);
+      }
 
-      // Delete topic from case if this was the last reference.
+      // Delete topic from case.
+      console.log("refcount", topic.id, this.refcount(topic));
       if (this.refcount(topic) == 0) {
-        this.topics.splice(this.topics.indexOf(topic), 1);
+        if (this.folder == this.drafts) {
+          // Delete draft topic from case and redirect all references to it.
+          console.log("delete topic", topic.id);
+          let target = topic.get(n_is);
+          if (!target) target = topic.get(n_name);
+          if (!target) target = topic.id;
+          this.redirect(topic, target);
+        } else {
+          // Move topic to drafts.
+          let pos = this.topics.indexOf(topic);
+          if (pos != -1) {
+            this.topics.splice(pos, 1);
+          } else {
+            console.log("topic not found", topic.id);
+          }
+          this.drafts.push(topic);
+        }
       }
     }
     this.mark_dirty();
+
+    // Update folder list if drafts was added.
+    let drafts_after = this.drafts.length > 0;
+    if (drafts_before != drafts_after) await this.update_folders();
 
     // Update topic list and navigate to next topic.
     await this.update_topics();
@@ -552,6 +607,27 @@ class CaseEditor extends Component {
 
   delete_topic(topic) {
     this.delete_topics([topic]);
+  }
+
+  async purge_drafts() {
+    if (this.drafts.length > 0) {
+      // Remove all references to draft topics.
+      for (let topic of this.drafts) {
+        let target = topic.get(n_is);
+        if (!target) target = topic.get(n_name);
+        if (!target) target = topic.id;
+        this.redirect(topic, target);
+      }
+
+      // Remove drafts.
+      this.drafts.length = 0;
+
+      // Update folders.
+      if (this.folder == this.drafts) {
+        await this.navigate_to(this.main);
+      }
+      await this.update_folders();
+    }
   }
 
   async move_topic_up(topic) {
@@ -591,6 +667,7 @@ class CaseEditor extends Component {
   oncut(e) {
     // Get selected topics.
     if (this.readonly) return;
+    if (this.folder == this.drafts) return this.oncopy(e);
     let list = this.find("topic-list");
     let selected = list.selection();
     if (selected.length == 0) return;
@@ -625,6 +702,9 @@ class CaseEditor extends Component {
     let focus = document.activeElement;
     if (focus && focus.type == "search") return;
 
+    // Paste not allowed in drafts folder.
+    if (this.folder == this.drafts) return;
+
     // Read topics from clipboard.
     if (this.readonly) return;
     let clip = await read_from_clipboard();
@@ -635,15 +715,25 @@ class CaseEditor extends Component {
       let last = null;
       let topics = clip.get("topics");
       if (topics) {
+        let drafts_before = this.drafts.length > 0;
         for (let t of topics) {
           console.log("paste topic", t.id);
           let topic = store.lookup(t.id);
           this.add_topic(topic);
           if (!first) first = topic;
           last = topic;
+
+          // Remove topic from drafts.
+          let draft_pos = this.drafts.indexOf(topic);
+          if (draft_pos != -1) {
+            console.log("undelete", topic.id);
+            this.drafts.splice(draft_pos, 1);
+          }
         }
 
         // Update topic list.
+        let drafts_after = this.drafts.length > 0;
+        if (drafts_before != drafts_after) await this.update_folders();
         await this.update_topics();
         if (first && last) {
           let list = this.find("topic-list");
@@ -669,7 +759,7 @@ class CaseEditor extends Component {
       if (result) {
         if (topic) {
           this.mark_dirty();
-          list.card(topic).refresh();
+          await list.card(topic).refresh();
         } else {
           await this.update_topics();
         }
@@ -699,6 +789,7 @@ class CaseEditor extends Component {
     await this.find("folder-list").update({
       folders: this.folders,
       current: this.folder,
+      drafts: this.drafts,
       readonly: this.readonly
     });
   }

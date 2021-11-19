@@ -63,8 +63,8 @@ export default class LinkTreePlugin {
     // Add name and description.
     let name = account.pageTitle;
     if (!name) name = account.username;
-    if (name) topic.add(n_name, name);
-    if (account.description) topic.add(n_description, account.description);
+    if (name) topic.put(n_name, name);
+    if (account.description) topic.put(n_description, account.description);
 
     // Add links.
     let social = new SocialTopic(topic);

@@ -117,16 +117,7 @@ class TopicList extends Component {
   }
 
   async delete_selected() {
-    let selected = this.selection();
-    let n = selected.length;
-    if (n == 0) return;
-    let result = await StdDialog.confirm(
-      "Delete topic",
-      n == 1 ? "Delete topic?" : `Delete ${n} topics?`,
-      "Delete");
-    if (result) {
-      this.match("#editor").delete_topics(selected);
-    }
+    this.match("#editor").delete_topics(this.selection());
   }
 
   navigate_to(topic) {
@@ -338,10 +329,15 @@ class TopicCard extends Component {
     this.match("#editor").mark_dirty();
   }
 
-  refresh() {
+  async refresh() {
     if (!this.editing) {
+      let topic = this.state;
+      let labels = new LabelCollector(store)
+      labels.add(topic);
+      await labels.retrieve();
+
       this.update_title();
-      this.find("item-panel").update(this.state);
+      this.find("item-panel").update(topic);
     }
   }
 
@@ -429,13 +425,7 @@ class TopicCard extends Component {
   async ondelete(e) {
     e.stopPropagation();
     let topic = this.state;
-    let result = await StdDialog.confirm(
-      "Delete topic",
-      `Delete topic '${topic.get(n_name)}'?`,
-      "Delete");
-    if (result) {
-      this.match("#editor").delete_topic(topic);
-    }
+    this.match("#editor").delete_topic(topic);
   }
 
   onmoveup(e) {

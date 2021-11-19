@@ -79,14 +79,14 @@ export default class TwitterPlugin {
     r = await context.kblookup(`P2002/${username}`, {fullmatch: 1});
     let data = await r.json();
     if (data.matches.length == 1) {
-      topic.add(n_is, store.lookup(data.matches[0].ref));
+      topic.put(n_is, store.lookup(data.matches[0].ref));
     }
 
     // Add twitter profile name and description to topic.
-    topic.add(n_name, strip_emojis(profile.name));
+    topic.put(n_name, strip_emojis(profile.name));
     if (profile.description) {
       let description = strip_links(strip_emojis(profile.description));
-      topic.add(n_description, description);
+      topic.put(n_description, description);
 
       // Get gender from pronouns.
       let gender = null;
@@ -96,8 +96,8 @@ export default class TwitterPlugin {
         gender = n_male;
       }
       if (gender) {
-        topic.add(n_instance_of, n_human);
-        topic.add(n_gender, gender);
+        topic.put(n_instance_of, n_human);
+        topic.put(n_gender, gender);
       }
     }
 
@@ -112,15 +112,15 @@ export default class TwitterPlugin {
         let name = data.matches[0].text;
         let item = store.lookup(id);
         if (location.toLowerCase() == name.toLowerCase()) {
-          topic.add(n_location, item);
+          topic.put(n_location, item);
         } else {
           let q = store.frame();
           q.add(n_is, item);
           q.add(n_named_as, location);
-          topic.add(n_location, q);
+          topic.put(n_location, q);
         }
       } else {
-        topic.add(n_location, location);
+        topic.put(n_location, location);
       }
     }
 
@@ -153,7 +153,7 @@ export default class TwitterPlugin {
       let m = d.match(/ (instagram|ig|insta):? +@?([A-Za-z0-9_\.]+)/i);
       if (m) {
         let igname = m[2];
-        topic.add(n_instagram, igname);
+        topic.put(n_instagram, igname);
       }
     }
 
@@ -161,7 +161,7 @@ export default class TwitterPlugin {
     let photo = profile.profile_image_url_https;
     if (photo && !profile.default_profile_image) {
       let url = photo.split("_normal").join("");
-      topic.add(n_media, url);
+      topic.put(n_media, url);
     }
   }
 };

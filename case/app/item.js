@@ -200,6 +200,7 @@ class KbLink extends Component {
   }
 
   onclick(e) {
+    e.preventDefault();
     this.dispatch("navigate", this.props.ref, true);
   }
 
@@ -224,6 +225,7 @@ class KbRef extends Component {
   }
 
   onclick(e) {
+    e.preventDefault();
     this.dispatch("navigate", this.state, true);
   }
 

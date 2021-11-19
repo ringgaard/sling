@@ -14,6 +14,7 @@ const n_human = store.lookup("Q5");
 const n_gender = store.lookup("P21");
 const n_date_of_birth = store.lookup("P569");
 const n_place_of_birth = store.lookup("P19");
+const n_date_of_death = store.lookup("P570");
 const n_country_of_citizenship = store.lookup("P27");
 const n_occupation = store.lookup("P106");
 const n_height = store.lookup("P2048");
@@ -68,51 +69,65 @@ async function lookup(context, name) {
 }
 
 export default class BabepediaPlugin {
-  process(action, query, context) {
+  async process(action, query, context) {
     let url = new URL(query);
     let m = url.pathname.match(/^\/babe\/([A-Za-z0-9\._\-]+)/);
     if (!m) return;
     let username = m[1];
     if (!username) return;
 
-    console.log("babepedia search for", username);
-    return {
-      ref: username,
-      name: username.replace(/_/g, " "),
-      description: "Babepedia model",
-      context: context,
-      onitem: item => this.select(item),
-    };
+    if (action == 1) { // SEARCHURL
+      console.log("babepedia search for", username);
+      return {
+        ref: username,
+        name: username.replace(/_/g, " "),
+        description: "Babepedia model",
+        context: context,
+        onitem: item => this.select(item),
+      };
+    } else if (action == 3) { // PASTEURL
+      await this.populate(context, context.topic, username);
+      return true;
+    }
   }
 
   async select(item) {
+    // Create new topic.
+    let topic = item.context.new_topic();
+    if (!topic) return;
+
+    // Fetch profile from babepedia and populate topic.
+    await this.populate(item.context, topic, item.ref);
+
+    // Update topic list.
+    await item.context.editor.update_topics();
+    await item.context.editor.navigate_to(topic);
+  }
+
+  async populate(context, topic, model) {
     // Retrieve babepedia profile for user.
-    let model = item.ref;
     let url = `https://www.babepedia.com/babe/${model}`;
-    let r = await fetch(item.context.proxy(url));
+    let r = await fetch(context.proxy(url));
     let html = await r.text();
 
     // Parse HTML.
     let doc = new DOMParser().parseFromString(html, "text/html");
 
-    // Create new topic.
-    let topic = item.context.new_topic();
-    if (!topic) return;
-
     // Get name and aliases.
     let babename = doc.getElementById("babename");
-    let name = item.name;
-    if (babename) name = babename.innerText
-    if (name) topic.add(n_name, name);
+    if (babename) {
+      let name = babename.innerText;
+      topic.put(n_name, name);
+    }
     let aka = doc.getElementById("aka");
     if (aka) {
       let names = aka.innerText.substring(4).split(/\s*\/\s*/);
       for (let name of names) {
-        topic.add(n_alias, name);
+        topic.put(n_alias, name);
       }
     }
-    topic.add(n_instance_of, n_human);
-    topic.add(n_gender, n_female);
+    topic.put(n_instance_of, n_human);
+    topic.put(n_gender, n_female);
 
     // Get biographical information.
     let biolist = doc.getElementById("biolist");
@@ -124,17 +139,21 @@ export default class BabepediaPlugin {
       if (field == "Born") {
         let m = value.match(/\w+ (\d+)\w+ of (\w+) (\d+)/);
         let date = new Date(m[1] + " " + m[2] + " " + m[3]);
-        topic.add(n_date_of_birth, date2sling(date));
+        topic.put(n_date_of_birth, date2sling(date));
+      } else if (field == "Died") {
+        let m = value.match(/\w+ (\d+)\w+ of (\w+) (\d+)/);
+        let date = new Date(m[1] + " " + m[2] + " " + m[3]);
+        topic.put(n_date_of_death, date2sling(date));
       } else if (field == "Birthplace") {
         let location = value.split(/, /);
         let country = location.pop();
-        location = await lookup(item.context, location.join(", "));
-        country = await lookup(item.context, country);
+        location = await lookup(context, location.join(", "));
+        country = await lookup(context, country);
         if (location) {
-          topic.add(n_place_of_birth, location);
-          topic.add(n_country_of_citizenship, country);
+          topic.put(n_place_of_birth, location);
+          topic.put(n_country_of_citizenship, country);
         } else if (country) {
-          topic.add(n_place_of_birth, country);
+          topic.put(n_place_of_birth, country);
         }
       } else if (field == "Profession") {
         for (let profession of value.split(/, /)) {
@@ -145,10 +164,10 @@ export default class BabepediaPlugin {
           if (occ in occupations) {
             occ = occupations[occ];
           } else {
-            occ = await lookup(item.context, occ);
+            occ = await lookup(context, occ);
           }
           if (occ && !topic.has(n_occupation, occ)) {
-            topic.add(n_occupation, occ);
+            topic.put(n_occupation, occ);
           }
         }
       } else if (field == "Height") {
@@ -157,7 +176,7 @@ export default class BabepediaPlugin {
           let v = store.frame();
           v.add(n_amount, parseInt(m[1]));
           v.add(n_unit, n_cm);
-          topic.add(n_height, v);
+          topic.put(n_height, v);
         }
       } else if (field == "Weight") {
         let m = value.match(/\(or (\d+) kg\)/);
@@ -165,26 +184,26 @@ export default class BabepediaPlugin {
           let v = store.frame();
           v.add(n_amount, parseInt(m[1]));
           v.add(n_unit, n_kg);
-          topic.add(n_weight, v);
+          topic.put(n_weight, v);
         }
       } else if (field == "Hair color") {
         let color = value.toLowerCase();
         if (color in hair_colors) color = hair_colors[color];
         if (color) {
-          topic.add(n_hair_color, color);
+          topic.put(n_hair_color, color);
         }
       } else if (field == "Eye color") {
         let color = value.toLowerCase();
         if (color in eye_colors) color = eye_colors[color];
         if (color) {
-          topic.add(n_eye_color, color);
+          topic.put(n_eye_color, color);
         }
       } else if (field == "Years active") {
         let m = value.match(/(\d+) - (\d+|present)/);
         if (m) {
-          topic.add(n_work_peroid_start, parseInt(m[1]));
+          topic.put(n_work_peroid_start, parseInt(m[1]));
           if (m[2] != "present") {
-            topic.add(n_work_peroid_end, parseInt(m[2]));
+            topic.put(n_work_peroid_end, parseInt(m[2]));
           }
         }
       } else {
@@ -204,7 +223,7 @@ export default class BabepediaPlugin {
     }
 
     // Add reference to babepedia.
-    topic.add(n_described_by_url, url);
+    topic.put(n_described_by_url, url);
 
     // Add profile photo.
     let profimg = doc.getElementById("profimg");
@@ -214,14 +233,10 @@ export default class BabepediaPlugin {
         let href = a.getAttribute("href");
         if (!href.startsWith("javascript")) {
           let image = "https://babepedia.com" + a.getAttribute("href");
-          topic.add(n_media, image);
+          topic.put(n_media, image);
         }
       }
     }
-
-    // Update topic list.
-    await item.context.editor.update_topics();
-    await item.context.editor.navigate_to(topic);
   }
 };
 

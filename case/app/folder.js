@@ -9,11 +9,15 @@ class FolderList extends Component {
     if (!this.state) return;
     let folders = this.state.folders;
     let current = this.state.current;
+    let drafts = this.state.drafts;
     let readonly = this.state.readonly
     let h = [];
     for (let [name, folder] of folders) {
       let marked = folder == current;
       h.push(new CaseFolder({name, folder, readonly, marked}));
+    }
+    if (drafts.length > 0) {
+      h.push(new DraftsFolder({folder: drafts, marked: drafts == current}));
     }
     return h;
   }
@@ -126,6 +130,39 @@ class CaseFolder extends Component {
 }
 
 Component.register(CaseFolder);
+
+class DraftsFolder extends Component {
+  onconnected() {
+    this.bind(null, "click", e => this.onclick(e));
+    this.bind("#clear", "select", e => this.onclear(e));
+  }
+
+  onclick(e) {
+    this.match("#editor").show_folder(this.state.folder);
+  }
+
+  onclear(e) {
+    this.match("#editor").delete_topics([...this.state.folder]);
+  }
+
+  render() {
+    return `
+      <md-icon icon="folder_delete"></md-icon>
+      <div ${this.state.marked ? 'class="current"' : ''}>Drafts</div>
+      <md-spacer></md-spacer>
+      <md-menu>
+        <md-menu-item id="clear">
+         <md-icon icon="delete_forever"></md-icon>Clear</md-menu-item>
+      </md-menu>
+    `;
+  }
+
+  static stylesheet() {
+    return CaseFolder.stylesheet();
+  }
+}
+
+Component.register(DraftsFolder);
 
 export class NewFolderDialog extends MdDialog {
   submit() {

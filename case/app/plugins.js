@@ -48,7 +48,7 @@ var plugins = [
 {
   name: "babepedia",
   module: "babepedia.js",
-  actions: [SEARCHURL],
+  actions: [PASTEURL, SEARCHURL],
   patterns: [
     /^https:\/\/www\.babepedia\.com\/babe\//,
   ],

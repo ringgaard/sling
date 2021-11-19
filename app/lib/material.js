@@ -16,14 +16,14 @@ stylesheet(`
   font-family: 'Material Icons';
   font-style: normal;
   font-weight: 400;
-  src: url(https://fonts.gstatic.com/s/materialicons/v102/flUhRq6tzZclQEJ-Vdg-IuiaDsNc.woff2) format('woff2');
+  src: url(https://fonts.gstatic.com/s/materialicons/v115/flUhRq6tzZclQEJ-Vdg-IuiaDsNc.woff2) format('woff2');
 }
 
 @font-face {
   font-family: 'Material Icons Outlined';
   font-style: normal;
   font-weight: 400;
-  src: url(https://fonts.gstatic.com/s/materialiconsoutlined/v79/gok-H7zzDkdnRel8-DQ6KAXJ69wP1tGnf4ZGhUce.woff2) format('woff2');
+  src: url(https://fonts.gstatic.com/s/materialiconsoutlined/v90/gok-H7zzDkdnRel8-DQ6KAXJ69wP1tGnf4ZGhUce.woff2) format('woff2');
 }
 
 html {
@@ -707,6 +707,10 @@ export class MdIconButton extends Component {
   constructor(state) {
     super(state);
     if (this.state == undefined) this.state = true;
+  }
+
+  onconnected() {
+    this.bind(null, "mousedown", e => e.preventDefault());
   }
 
   visible() {
