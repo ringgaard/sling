@@ -54,6 +54,16 @@ var plugins = [
   ],
 },
 
+// Se & Hør profiles from hjemmestrik.dk.
+{
+  name: "hjemmestrik",
+  module: "hjemmestrik.js",
+  actions: [PASTEURL, SEARCHURL],
+  patterns: [
+    /^https:\/\/hjemmestrik.dk\/pige\//,
+  ],
+},
+
 // Images from forum posts.
 {
   name: "forum",
