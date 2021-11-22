@@ -241,9 +241,11 @@ export default class HjemmestrikPlugin {
       let alder = props["Alder"].match(/(\d+) år/);
       let age = parseInt(alder[1]);
       let born = year - age;
-      let sign = zodiac[props["Stjernetegn"].toLowerCase()];
-      if (sign) {
-        if (sign.compare(date.getMonth() + 1, date.getdate) < 0) born -= 1;
+      if (props["Stjernetegn"]) {
+        let sign = zodiac[props["Stjernetegn"].toLowerCase()];
+        if (sign) {
+          if (sign.compare(date.getMonth() + 1, date.getdate) < 0) born -= 1;
+        }
       }
       topic.put(n_date_of_birth, born);
     }

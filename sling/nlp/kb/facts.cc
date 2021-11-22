@@ -341,9 +341,11 @@ void Facts::ExtractClosure(Handle item, Handle relation) {
   closure.push_back(item);
   int current = 0;
   while (current < closure.size()) {
-    Frame f(store_, closure[current++]);
-    AddFact(f.handle());
-    if (catalog_->IsBaseItem(f.handle())) continue;
+    Handle h = closure[current++];
+    if (!store_->IsFrame(h)) continue;
+    if (catalog_->IsBaseItem(h)) continue;
+    AddFact(h);
+    Frame f(store_, h);
     for (const Slot &s : f) {
       if (s.name != relation) continue;
 

@@ -440,13 +440,13 @@ class TopicCard extends Component {
 
   onkeydown(e) {
     if (e.key === "s" && e.ctrlKey && this.editing) {
+      e.stopPropagation();
+      e.preventDefault();
       this.onsave(e);
-      e.stopPropagation();
-      e.preventDefault();
     } else if (e.key === "Escape" && this.editing) {
-      this.ondiscard(e);
       e.stopPropagation();
       e.preventDefault();
+      this.ondiscard(e);
     }
   }
 

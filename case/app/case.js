@@ -708,6 +708,8 @@ class CaseEditor extends Component {
     // Read topics from clipboard.
     if (this.readonly) return;
     let clip = await read_from_clipboard();
+    e.preventDefault();
+    e.stopPropagation();
 
     // Add topics to current folder if clipboard contains frames.
     if (clip instanceof Frame) {
@@ -742,8 +744,6 @@ class CaseEditor extends Component {
         }
       }
 
-      e.preventDefault();
-      e.stopPropagation();
       return;
     }
 
@@ -764,8 +764,6 @@ class CaseEditor extends Component {
           await this.update_topics();
         }
 
-        e.preventDefault();
-        e.stopPropagation();
         return;
       }
     }
@@ -778,8 +776,6 @@ class CaseEditor extends Component {
         this.mark_dirty();
 
         list.card(topic).refresh();
-        e.preventDefault();
-        e.stopPropagation();
         return;
       }
     }
