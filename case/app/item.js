@@ -762,6 +762,7 @@ class TopicBar extends Component {
         display: flex;
         justify-content: space-evenly;
         flex-direction: row;
+        flex-wrap: wrap;
       }
     `;
   }

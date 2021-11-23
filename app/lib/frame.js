@@ -135,6 +135,33 @@ export class Store {
     }
   }
 
+  // Import object from other store into this store. Returns new object.
+  transfer(obj) {
+    if (obj instanceof Frame) {
+      if (obj.store != this) {
+        if (obj.isanonymous()) {
+          let size = obj.slots.length;
+          let frame = new Frame(this);
+          frame.slots = new Array(size);
+          for (let i = 0; i < size; ++i) {
+            frame.slots[i] = this.transfer(obj.slots[i]);
+          }
+          obj = frame;
+        } else {
+          obj = this.lookup(obj.id);
+        }
+      }
+    } else if (obj instanceof Array) {
+      let size = obj.length;
+      let array = new Array(size);
+      for (let i = 0; i < size; ++i) {
+        array[i] = this.transfer(obj[i]);
+      }
+      obj = array;
+    }
+    return obj;
+  }
+
   // Parse input data and return first object.
   parse(data) {
     if (data instanceof Response) {

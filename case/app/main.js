@@ -217,7 +217,7 @@ class CaseApp extends OneOf {
       for (let caserec of this.caselist) {
         let match = false;
         let submatch = false;
-        if (caserec.id == query) {
+        if (query == caserec.id || query == `c/${caserec.id}`) {
             results.push(caserec);
         } else {
           let normalized = caserec.name.toLowerCase();

@@ -82,11 +82,12 @@ export default class BabepediaPlugin {
         ref: username,
         name: username.replace(/_/g, " "),
         description: "Babepedia model",
+        url: url,
         context: context,
         onitem: item => this.select(item),
       };
     } else if (action == 3) { // PASTEURL
-      await this.populate(context, context.topic, username);
+      await this.populate(context, context.topic, url);
       return true;
     }
   }
@@ -97,16 +98,15 @@ export default class BabepediaPlugin {
     if (!topic) return;
 
     // Fetch profile from babepedia and populate topic.
-    await this.populate(item.context, topic, item.ref);
+    await this.populate(item.context, topic, item.url);
 
     // Update topic list.
     await item.context.editor.update_topics();
     await item.context.editor.navigate_to(topic);
   }
 
-  async populate(context, topic, model) {
+  async populate(context, topic, url) {
     // Retrieve babepedia profile for user.
-    let url = `https://www.babepedia.com/babe/${model}`;
     let r = await fetch(context.proxy(url));
     let html = await r.text();
 

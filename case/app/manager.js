@@ -314,10 +314,10 @@ class CaseList extends material.MdCard {
   }
 
   render() {
-   if (!this.state) return null;
-   let h = [];
-   h.push("<table>");
-   h.push(`
+    if (!this.state) return null;
+    let h = [];
+    h.push("<table>");
+    h.push(`
      <thead><tr>
        <th>Case #</th>
        <th></th>
@@ -327,7 +327,7 @@ class CaseList extends material.MdCard {
        <th>Modified</th>
        <th></th>
      </tr></thead>
-   `);
+    `);
     h.push("<tbody>");
     for (let rec of this.state) {
       if (rec.nsfw && !settings.nsfw) continue;

@@ -94,6 +94,7 @@ class CaseEditor extends Component {
 
     this.bind("#menu", "click", e => this.onmenu(e));
     this.bind("#home", "click", e => this.close());
+    this.bind("#merge", "click", e => this.onmerge(e));
     this.bind("#save", "click", e => this.onsave(e));
     this.bind("#share", "click", e => this.onshare(e));
     this.bind("#newfolder", "click", e => this.onnewfolder(e));
@@ -121,7 +122,7 @@ class CaseEditor extends Component {
     e.stopPropagation();
     let ref = e.detail;
     let item = store.find(ref);
-    if (item && this.topics.includes(item)) {
+    if (item && (this.topics.includes(item) || this.drafts.includes(item))) {
       this.navigate_to(item);
     } else {
       window.open(`${settings.kbservice}/kb/${ref}`, "_blank");
@@ -132,6 +133,8 @@ class CaseEditor extends Component {
     if (e.ctrlKey && e.key === 's') {
       e.preventDefault();
       this.onsave(e);
+    } else if (e.ctrlKey && e.key === 'm') {
+      this.onmerge(e);
     } else if (e.key === "Escape") {
       this.find("#search").clear();
     }
@@ -257,7 +260,7 @@ class CaseEditor extends Component {
     }
 
     // Enable/disable action buttons.
-    for (let e of ["#save", "#share", "#newfolder"]) {
+    for (let e of ["#save", "#share", "#merge", "#newfolder"]) {
       this.find(e).update(!this.readonly);
     }
   }
@@ -569,7 +572,6 @@ class CaseEditor extends Component {
       }
 
       // Delete topic from case.
-      console.log("refcount", topic.id, this.refcount(topic));
       if (this.refcount(topic) == 0) {
         if (this.folder == this.drafts) {
           // Delete draft topic from case and redirect all references to it.
@@ -606,7 +608,7 @@ class CaseEditor extends Component {
   }
 
   delete_topic(topic) {
-    this.delete_topics([topic]);
+    return this.delete_topics([topic]);
   }
 
   async purge_drafts() {
@@ -691,6 +693,7 @@ class CaseEditor extends Component {
     let list = this.find("topic-list");
     let selected = list.selection();
     if (selected.length == 0) return;
+    e.stopPropagation();
     console.log(`copy ${selected.length} topics to clipboard`);
 
     // Copy selected topics to clipboard.
@@ -701,15 +704,15 @@ class CaseEditor extends Component {
     // Allow pasting of text into text input.
     let focus = document.activeElement;
     if (focus && focus.type == "search") return;
+    e.preventDefault();
+    e.stopPropagation();
 
     // Paste not allowed in drafts folder.
     if (this.folder == this.drafts) return;
 
-    // Read topics from clipboard.
+    // Read topics from clipboard into a new store.
     if (this.readonly) return;
     let clip = await read_from_clipboard();
-    e.preventDefault();
-    e.stopPropagation();
 
     // Add topics to current folder if clipboard contains frames.
     if (clip instanceof Frame) {
@@ -718,19 +721,51 @@ class CaseEditor extends Component {
       let topics = clip.get("topics");
       if (topics) {
         let drafts_before = this.drafts.length > 0;
+        let import_mapping = new Map();
         for (let t of topics) {
-          console.log("paste topic", t.id);
-          let topic = store.lookup(t.id);
-          this.add_topic(topic);
+
+          // Determine if pasted topic is from this case.
+          let topic = store.find(t.id);
+          let external = true;
+          if (topic) {
+            let in_topics = this.topics.includes(topic);
+            if (in_topics) {
+              // Add link to topic in current folder.
+              console.log("paste topic link", t.id);
+              this.add_topic(topic);
+              external = false;
+            } else {
+              let draft_pos = this.drafts.indexOf(topic);
+              if (draft_pos != -1) {
+                // Move topic from drafts to current folder.
+                console.log("undelete", topic.id);
+                this.add_topic(topic);
+                this.drafts.splice(draft_pos, 1);
+                external = false;
+              }
+            }
+          }
+
+          // Copy topic if it is external.
+          if (external) {
+            topic = this.new_topic();
+            import_mapping.set(t.id, topic);
+            console.log("paste external topic", t.id, topic.id);
+            for (let [name, value] of t) {
+              if (name != t.store.id) {
+                topic.add(store.transfer(name), store.transfer(value));
+              }
+            }
+          }
+
           if (!first) first = topic;
           last = topic;
+        }
 
-          // Remove topic from drafts.
-          let draft_pos = this.drafts.indexOf(topic);
-          if (draft_pos != -1) {
-            console.log("undelete", topic.id);
-            this.drafts.splice(draft_pos, 1);
-          }
+        // Redirect imported topic ids.
+        for (let [id, topic] of import_mapping.entries()) {
+          let proxy = store.find(id);
+          if (proxy) this.redirect(proxy, topic);
         }
 
         // Update topic list.
@@ -781,6 +816,45 @@ class CaseEditor extends Component {
     }
   }
 
+  async onmerge(e) {
+    // Get selected topics.
+    if (this.readonly) return;
+    let list = this.find("topic-list");
+    let selected = list.selection();
+    if (selected.length < 2) return;
+
+    // Merge the rest of the topics into the first topic.
+    let target = null;
+    for (let topic of selected) {
+      if (!target) {
+        target = topic;
+      } else {
+        // Add properties from topic to target.
+        for (let [name, value] of topic) {
+          if (name != store.id) {
+            target.put(name, value);
+          }
+        }
+
+        // Redirect reference to topic to target.
+        this.redirect(topic, target);
+
+        // Delete topic from folder and.
+        await this.delete_topic(topic);
+      }
+    }
+
+    // Update target topic.
+    this.mark_dirty();
+    let card = list.card(target);
+    if (card) {
+      card.update(target);
+      card.refresh(target);
+      await this.update_topics();
+      await this.navigate_to(target);
+    }
+  }
+
   async update_folders() {
     await this.find("folder-list").update({
       folders: this.folders,
@@ -797,11 +871,18 @@ class CaseEditor extends Component {
   async navigate_to(topic) {
     if (!this.folder.includes(topic)) {
       // Switch to folder with topic.
-      for (let [name, folder] of this.folders) {
-        if (folder.includes(topic)) {
-          await this.show_folder(folder);
+      let folder = null;
+      for (let [n, f] of this.folders) {
+        if (f.includes(topic)) {
+          folder = f;
           break;
         }
+      }
+      if (!folder && this.drafts.includes(topic)) {
+        folder = this.drafts;
+      }
+      if (folder)  {
+        await this.show_folder(folder);
       }
     }
 
@@ -818,6 +899,7 @@ class CaseEditor extends Component {
           <div id="title">Case #<md-text id="caseid"></md-text></div>
           <topic-search-box id="search"></topic-search-box>
           <md-spacer></md-spacer>
+          <md-icon-button id="merge" icon="merge"></md-icon-button>
           <md-icon-button id="save" icon="save"></md-icon-button>
           <md-icon-button id="share" icon="share"></md-icon-button>
         </md-toolbar>

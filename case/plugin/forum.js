@@ -115,6 +115,7 @@ export default class AlbumPlugin {
       if (!href) continue;
       if (seen.has(href)) continue;
       seen.add(href);
+      console.log("href", href);
 
       // Find service for fetching image.
       let service = null;
