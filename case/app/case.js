@@ -88,7 +88,7 @@ async function read_from_clipboard() {
 }
 
 class CaseEditor extends Component {
-  onconnected() {
+  oninit() {
     this.bind("md-search", "item", e => this.onitem(e));
     this.bind("md-search", "enter", e => this.onenter(e));
 
@@ -266,10 +266,12 @@ class CaseEditor extends Component {
   }
 
   async onupdated() {
-    this.find("#caseid").update(this.caseid().toString());
-    this.find("md-drawer").update(true);
-    await this.update_folders();
-    await this.update_topics();
+    if (this.state) {
+      this.find("#caseid").update(this.caseid().toString());
+      this.find("md-drawer").update(true);
+      await this.update_folders();
+      await this.update_topics();
+    }
   }
 
   caseid() {

@@ -82,12 +82,12 @@ export default class BabepediaPlugin {
         ref: username,
         name: username.replace(/_/g, " "),
         description: "Babepedia model",
-        url: url,
+        url: url.href,
         context: context,
         onitem: item => this.select(item),
       };
     } else if (action == 3) { // PASTEURL
-      await this.populate(context, context.topic, url);
+      await this.populate(context, context.topic, url.href);
       return true;
     }
   }

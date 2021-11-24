@@ -146,22 +146,26 @@ let xrefs = [
   },
 ];
 
+export function match_link(url) {
+  for (let xref of xrefs) {
+    let m = url.match(xref.pattern);
+    if (m) {
+      let prop = xref.property;
+      let identifier = decodeURIComponent(m[1]);
+      return [prop, identifier];
+    }
+  }
+  return [null, null];
+}
+
 export class SocialTopic {
   constructor(topic) {
     this.topic = topic;
   }
 
   add_link(url, title) {
-    let prop = null;
-    let identifier = null;
-    for (let xref of xrefs) {
-      let m = url.match(xref.pattern);
-      if (m) {
-        prop = xref.property;
-        identifier = decodeURIComponent(m[1]);
-        break;
-      }
-    }
+    let [prop, identifier] = match_link(url);
+
     if (prop) {
       if (!this.topic.has(prop, identifier)) {
         this.topic.add(prop, identifier);

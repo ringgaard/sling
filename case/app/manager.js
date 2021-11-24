@@ -272,9 +272,9 @@ Component.register(CaseSearchBox);
 //-----------------------------------------------------------------------------
 
 class CaseList extends material.MdCard {
-  onupdated() {
-    this.bind("table", "click", e => this.onclick(e));
-    this.bind("table", "mousedown", e => this.ondown(e));
+  oninit() {
+    this.bind(null, "click", e => this.onclick(e));
+    this.bind(null, "mousedown", e => this.ondown(e));
   }
 
   ondown(e) {

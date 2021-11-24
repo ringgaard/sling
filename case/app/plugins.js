@@ -99,6 +99,16 @@ var plugins = [
   ],
 },
 
+// Web articles.
+{
+  name: "article",
+  module: "article.js",
+  actions: [SEARCHURL],
+  patterns: [
+    /^https?:\/\//,
+  ],
+},
+
 ];
 
 function parse_url(url) {

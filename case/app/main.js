@@ -34,8 +34,12 @@ const n_case = store.lookup("PCASE");
 // Case App
 //-----------------------------------------------------------------------------
 
-class CaseApp extends OneOf {
+class CaseApp extends Component {
   async onconnected() {
+    // Get case manager and editor.
+    this.manager = this.find("case-manager");
+    this.editor = this.find("case-editor");
+
     // Handle navigation events.
     window.onpopstate = e => this.onpopstate(e);
 
@@ -64,7 +68,7 @@ class CaseApp extends OneOf {
     if (caseid && caseid != "*") {
       this.open_case(caseid);
     } else {
-      this.find("#editor").close();
+      this.editor.close();
     }
   }
 
@@ -133,10 +137,9 @@ class CaseApp extends OneOf {
     console.log("newcase", casefile.text());
 
     // Switch to case editor with new case.
-    window.document.title = `#${caseid} ${name}`;
-    this.update("case-editor", casefile);
-    this.find("case-editor").mark_dirty();
-    history.pushState(caseid, "", "/c/" + caseid);
+    await this.show_case(casefile);
+    this.editor.mark_dirty();
+
     return casefile;
   }
 
@@ -170,11 +173,8 @@ class CaseApp extends OneOf {
     }
 
     // Switch to case editor with new case.
-    let main = casefile.get(n_main);
-    let name = main.get(n_name);
-    window.document.title = `#${caseid} ${name}`;
-    this.update("case-editor", casefile);
-    history.pushState(caseid, "", "/c/" + caseid);
+    await this.show_case(casefile);
+
     return casefile;
   }
 
@@ -189,24 +189,41 @@ class CaseApp extends OneOf {
     }
   }
 
-  show_manager() {
+  async show_case(casefile) {
+    let caseid = casefile.get(n_caseid);
+    let main = casefile.get(n_main);
+    let name = main.get(n_name);
+
+    history.pushState(caseid, "", "/c/" + caseid);
+    window.document.title = `#${caseid} ${name}`;
+
+    this.manager.style.display = "none";
+    this.editor.style.display = "";
+
+    await this.manager.update(null);
+    await this.editor.update(casefile);
+  }
+
+  async show_manager() {
     history.pushState("*", "", "/c/");
     window.document.title = "SLING Case";
 
+    this.editor.style.display = "none";
+    this.manager.style.display = "";
+
+    await this.editor.update(null);
     if (this.caselist) {
-      this.refresh_manager();
+      await this.refresh_manager();
     } else {
       // Read case directory.
-      casedb.readdir().then(caselist => {
-        this.caselist = caselist;
-        this.refresh_manager();
-      });
+      this.caselist = await casedb.readdir();
+      await this.refresh_manager();
     }
   }
 
-  refresh_manager() {
+  async refresh_manager() {
     this.caselist.sort((a, b) => a.modified > b.modified ? -1 : 1);
-    this.update("#manager", this.caselist);
+    await this.manager.update(this.caselist);
   }
 
   search(query, full) {

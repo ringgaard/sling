@@ -28,9 +28,17 @@ export class Component extends HTMLElement {
   constructor(state) {
     super();
     this.state = state;
+    this.initialized = false;
     this.props = {};
     this.elements = [...this.children];
     this.nodes = [...this.childNodes];
+  }
+
+  // Initialize component.
+  initialize() {
+    if (this.initialized) return undefined;
+    this.initialized = true;
+    return this.oninit && this.oninit();
   }
 
   // Connect web component to DOM.
@@ -59,11 +67,25 @@ export class Component extends HTMLElement {
     if (p instanceof Promise) {
       return p.then(() => {
         if (!this.hide()) this.generate(true);
-        return this.onconnected && this.onconnected();
+        let p = this.initialize();
+        if (p instanceof Promise) {
+          return p.then(() => {
+            return this.onconnected && this.onconnected();
+          });
+        } else {
+          return this.onconnected && this.onconnected();
+        }
       });
     } else {
       if (!this.hide()) this.generate(true);
-      return this.onconnected && this.onconnected();
+      let p = this.initialize();
+      if (p instanceof Promise) {
+        return p.then(() => {
+          return this.onconnected && this.onconnected();
+        });
+      } else {
+        return this.onconnected && this.onconnected();
+      }
     }
   }
 

@@ -223,36 +223,6 @@ class TopicCard extends Component {
     this.tabIndex = -1;
   }
 
-  static selection() {
-    let selection = window.getSelection();
-    let anchor = selection.anchorNode;
-    let focus = selection.focusNode;
-    let single = (anchor == focus);
-    while (anchor) {
-      if (anchor instanceof TopicCard) break;
-      anchor = anchor.parentNode;
-    }
-    while (focus) {
-      if (focus instanceof TopicCard) break;
-      focus = focus.parentNode;
-    }
-    if (!single && anchor == focus) anchor = null;
-    if (focus && focus.editing) focus = null;
-    return {anchor, focus};
-  }
-
-  static align_selection() {
-    let {anchor, focus} = TopicCard.selection();
-    if (anchor && focus) {
-      let selection = window.getSelection();
-      if (anchor == focus) {
-        selection.collapse(anchor, 0);
-      } else {
-        selection.setBaseAndExtent(anchor, 1, focus, focus.childElementCount);
-      }
-    }
-  }
-
   onconnected() {
     let editor = this.match("#editor");
     this.readonly = editor && editor.readonly;
@@ -489,6 +459,36 @@ class TopicCard extends Component {
     let selection = window.getSelection();
     if (!selection.achorNode && !selection.focusNode) {
       selection.collapse(this, 0);
+    }
+  }
+
+  static selection() {
+    let selection = window.getSelection();
+    let anchor = selection.anchorNode;
+    let focus = selection.focusNode;
+    let single = (anchor == focus);
+    while (anchor) {
+      if (anchor instanceof TopicCard) break;
+      anchor = anchor.parentNode;
+    }
+    while (focus) {
+      if (focus instanceof TopicCard) break;
+      focus = focus.parentNode;
+    }
+    if (!single && anchor == focus) anchor = null;
+    if (focus && focus.editing) focus = null;
+    return {anchor, focus};
+  }
+
+  static align_selection() {
+    let {anchor, focus} = TopicCard.selection();
+    if (anchor && focus) {
+      let selection = window.getSelection();
+      if (anchor == focus) {
+        selection.collapse(anchor, 0);
+      } else {
+        selection.setBaseAndExtent(anchor, 1, focus, focus.childElementCount);
+      }
     }
   }
 
