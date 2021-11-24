@@ -9,15 +9,15 @@ class FolderList extends Component {
     if (!this.state) return;
     let folders = this.state.folders;
     let current = this.state.current;
-    let drafts = this.state.drafts;
+    let scraps = this.state.scraps;
     let readonly = this.state.readonly
     let h = [];
     for (let [name, folder] of folders) {
       let marked = folder == current;
       h.push(new CaseFolder({name, folder, readonly, marked}));
     }
-    if (drafts.length > 0) {
-      h.push(new DraftsFolder({folder: drafts, marked: drafts == current}));
+    if (scraps.length > 0) {
+      h.push(new ScrapsFolder({folder: scraps, marked: scraps == current}));
     }
     return h;
   }
@@ -131,7 +131,7 @@ class CaseFolder extends Component {
 
 Component.register(CaseFolder);
 
-class DraftsFolder extends Component {
+class ScrapsFolder extends Component {
   onconnected() {
     this.bind(null, "click", e => this.onclick(e));
     this.bind("#clear", "select", e => this.onclear(e));
@@ -148,7 +148,7 @@ class DraftsFolder extends Component {
   render() {
     return `
       <md-icon icon="folder_delete"></md-icon>
-      <div ${this.state.marked ? 'class="current"' : ''}>Drafts</div>
+      <div ${this.state.marked ? 'class="current"' : ''}>Scraps</div>
       <md-spacer></md-spacer>
       <md-menu>
         <md-menu-item id="clear">
@@ -162,7 +162,7 @@ class DraftsFolder extends Component {
   }
 }
 
-Component.register(DraftsFolder);
+Component.register(ScrapsFolder);
 
 export class NewFolderDialog extends MdDialog {
   submit() {
