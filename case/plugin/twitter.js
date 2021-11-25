@@ -76,11 +76,8 @@ export default class TwitterPlugin {
 
     // Check if user is already in knowledge base.
     let username = profile.screen_name;
-    r = await context.kblookup(`P2002/${username}`, {fullmatch: 1});
-    let data = await r.json();
-    if (data.matches.length == 1) {
-      topic.put(n_is, store.lookup(data.matches[0].ref));
-    }
+    let item = await context.idlookup(n_twitter, username);
+    if (item) topic.put(n_is, item);
 
     // Add twitter profile name and description to topic.
     topic.put(n_name, strip_emojis(profile.name));
@@ -134,7 +131,7 @@ export default class TwitterPlugin {
     }
 
     // Add cross references.
-    let social = new SocialTopic(topic);
+    let social = new SocialTopic(topic, context);
     for (let part of ["url", "description"]) {
       if (part in profile.entities) {
         for (let link of profile.entities[part].urls) {
@@ -142,7 +139,7 @@ export default class TwitterPlugin {
           if (!url) url = link.url;
           if (!url) continue;
           console.log("link", url);
-          social.add_link(url);
+          await social.add_link(url);
         }
       }
     }
@@ -154,6 +151,8 @@ export default class TwitterPlugin {
       if (m) {
         let igname = m[2];
         topic.put(n_instagram, igname);
+        let item = await context.idlookup(n_instagram, igname);
+        if (item) topic.put(n_is, item);
       }
     }
 

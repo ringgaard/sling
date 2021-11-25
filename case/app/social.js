@@ -13,27 +13,23 @@ let xrefs = [
     property: store.lookup("P968"),
   },
   {
-    pattern: /^https?:\/\/[Tt]witter\.com\/([A-Za-z0-9_]+)(\?.*)?$/,
+    pattern: /^https?:\/\/(?:www\.)?twitter\.com\/([A-Za-z0-9_]+)(\?.*)?$/i,
     property: store.lookup("P2002"),
   },
   {
-    pattern: /^https?:\/\/[Ii]nstagram\.com\/([^\/\?]+)/,
+    pattern: /^https?:\/\/(?:www\.)?instagram\.com\/([^\/\?]+)/i,
     property: store.lookup("P2003"),
   },
   {
-    pattern: /^https?:\/\/www\.instagram\.com\/([^\/\?]+)/,
-    property: store.lookup("P2003"),
-  },
-  {
-    pattern: /^https?:\/\/[[Ff]acebook\.com\/([^\/\?]+)/,
+    pattern: /^https?:\/\/www\.facebook\.com\/pg\/([^\?]+)/i,
     property: store.lookup("P2013"),
   },
   {
-    pattern: /^https?:\/\/www\.facebook\.com\/pg\/([^\/\?]+)/,
+    pattern: /^https?:\/\/www\.facebook\.com\/people\/([^\?]+)/i,
     property: store.lookup("P2013"),
   },
   {
-    pattern: /^https?:\/\/www\.facebook\.com\/([^\/\?]+)/,
+    pattern: /^https?:\/\/(?:www\.)?facebook\.com\/([^\?]+)/i,
     property: store.lookup("P2013"),
   },
   {
@@ -45,15 +41,11 @@ let xrefs = [
     property: store.lookup("P3185"),
   },
   {
-    pattern: /^https?:\/\/[Tt]witch\.tv\/([^\/\?]+)/,
+    pattern: /^https?:\/\/(?:www\.)?twitch\.tv\/([^\/\?]+)/i,
     property: store.lookup("P5797"),
   },
   {
-    pattern: /^https?:\/\/www\.twitch\.tv\/([^\/\?]+)/,
-    property: store.lookup("P5797"),
-  },
-  {
-    pattern: /^https?:\/\/[Oo]nlyfans\.com\/([^\/\?]+)/,
+    pattern: /^https?:\/\/onlyfans\.com\/([^\/\?]+)/i,
     property: store.lookup("P8604"),
   },
   {
@@ -89,11 +81,7 @@ let xrefs = [
     property: store.lookup("P4015"),
   },
   {
-    pattern: /^https?:\/\/youtube\.com\/channel\/([^\/\?]+)/,
-    property: store.lookup("P2397"),
-  },
-  {
-    pattern: /^https?:\/\/www\.youtube\.com\/channel\/([^\/\?]+)/,
+    pattern: /^https?:\/\/(?:www\.)?youtube\.com\/channel\/([^\/\?]+)/i,
     property: store.lookup("P2397"),
   },
   {
@@ -105,35 +93,23 @@ let xrefs = [
     property: store.lookup("P1651"),
   },
   {
-    pattern: /^https?:\/\/imdb\.com\/name\/([^\/\?]+)/,
+    pattern: /^https?:\/\/(?:www\.)?imdb\.com\/name\/([^\/\?]+)/i,
     property: store.lookup("P345"),
   },
   {
-    pattern: /^https?:\/\/m\.imdb\.com\/name\/([^\/\?]+)/,
+    pattern: /^https?:\/\/m\.imdb\.com\/name\/([^\/\?]+)/i,
     property: store.lookup("P345"),
   },
   {
-    pattern: /^https?:\/\/[Pp]atreon\.com\/([^\/\?]+)/,
+    pattern: /^https?:\/\/(?:www\.)?patreon\.com\/([^\/\?]+)/i,
     property: store.lookup("P4175"),
   },
   {
-    pattern: /^https?:\/\/www\.patreon\.com\/([^\/\?]+)/,
-    property: store.lookup("P4175"),
-  },
-  {
-    pattern: /^https?:\/\/tiktok\.com\/@([^\/\?]+)/,
+    pattern: /^https?:\/\/(?:www\.)?tiktok\.com\/@([^\/\?]+)/i,
     property: store.lookup("P7085"),
   },
   {
-    pattern: /^https?:\/\/www\.tiktok\.com\/@([^\/\?]+)/,
-    property: store.lookup("P7085"),
-  },
-  {
-    pattern: /^https?:\/\/cameo\.com\/([^\/\?]+)/,
-    property: store.lookup("P6908"),
-  },
-  {
-    pattern: /^https?:\/\/www\.cameo\.com\/([^\/\?]+)/,
+    pattern: /^https?:\/\/(?:www\.)?cameo\.com\/([^\/\?]+)/i,
     property: store.lookup("P6908"),
   },
   {
@@ -143,6 +119,18 @@ let xrefs = [
   {
     pattern: /^https?:\/\/(?:www\.)?myspace\.com\/([^\/\?]+)/,
     property: store.lookup("P3265"),
+  },
+  {
+    pattern: /^https?:\/\/(?:www\.)?reddit\.com\/r\/([^\/\?]+)\/$/,
+    property: store.lookup("P3984"),
+  },
+  {
+    pattern: /^https?:\/\/(?:www\.)?snapchat\.com\/add\/([^\/\?]+)\/?$/,
+    property: store.lookup("P2984"),
+  },
+  {
+    pattern: /^(https?:\/\/(?:www\.)?bellazon\.com\/main\/topic\/.+)/i,
+    property: store.lookup("P973"),
   },
 ];
 
@@ -158,17 +146,31 @@ export function match_link(url) {
   return [null, null];
 }
 
+export function xref_patterns() {
+  let patterns = [];
+  for (let xref of xrefs) {
+    patterns.push(xref.pattern);
+  }
+  return patterns;
+}
+
 export class SocialTopic {
-  constructor(topic) {
+  constructor(topic, context) {
     this.topic = topic;
+    this.context = context;
   }
 
-  add_link(url, title) {
+  async add_link(url, title) {
     let [prop, identifier] = match_link(url);
 
     if (prop) {
       if (!this.topic.has(prop, identifier)) {
         this.topic.add(prop, identifier);
+
+        if (this.context) {
+          let item = await this.context.idlookup(prop, identifier);
+          if (item) this.topic.put(n_is, item);
+        }
         return true;
       }
     } else {

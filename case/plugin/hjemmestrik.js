@@ -4,7 +4,6 @@
 // SLING case plug-in for adding topic from hjemmestrik.dk.
 
 import {store} from "/case/app/global.js";
-import {SocialTopic, strip_emojis} from "/case/app/social.js";
 
 const n_is = store.lookup("is");
 const n_name = store.lookup("name");

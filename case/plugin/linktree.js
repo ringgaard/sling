@@ -67,13 +67,13 @@ export default class LinkTreePlugin {
     if (account.description) topic.put(n_description, account.description);
 
     // Add links.
-    let social = new SocialTopic(topic);
+    let social = new SocialTopic(topic, context);
     for (let link of account.socialLinks) {
-      social.add_link(link.url);
+      await social.add_link(link.url);
     }
     for (let link of account.links) {
       if (link.url) {
-        social.add_link(link.url, strip_emojis(link.title));
+        await social.add_link(link.url, strip_emojis(link.title));
       }
     }
 

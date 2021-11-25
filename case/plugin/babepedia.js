@@ -214,11 +214,11 @@ export default class BabepediaPlugin {
     // Add social links.
     let socialicons = doc.getElementById("socialicons");
     if (socialicons) {
-      let social = new SocialTopic(topic);
+      let social = new SocialTopic(topic, context);
       for (let i = 0; i < socialicons.children.length; i++) {
         let a = socialicons.children[i];
         let url = a.getAttribute("href");
-        social.add_link(url);
+        await social.add_link(url);
       }
     }
 

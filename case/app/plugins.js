@@ -3,7 +3,8 @@
 
 // SLING case plug-ins.
 
-import {settings} from "./global.js";
+import {store, settings} from "./global.js";
+import {xref_patterns} from "./social.js";
 
 // Actions.
 export const SEARCH    = 0;
@@ -21,6 +22,17 @@ var plugins = [
   actions: [SEARCHURL],
   patterns: [
     /^https:\/\/(www\.)?wikidata\.org\/wiki\//,
+  ],
+},
+
+
+// Wikipedia page.
+{
+  name: "wikipedia",
+  module: "wikipedia.js",
+  actions: [PASTEURL, SEARCHURL],
+  patterns: [
+    /^https:\/\/\w+\.wikipedia\.org\/wiki\//,
   ],
 },
 
@@ -64,6 +76,16 @@ var plugins = [
   ],
 },
 
+// Social media profiles from r/BeautifulFemales.
+{
+  name: "beautyfem",
+  module: "beautyfem.js",
+  actions: [PASTEURL, SEARCHURL],
+  patterns: [
+    /^https:\/\/www\.reddit\.com\/r\/BeautifulFemales\/comments\//,
+  ],
+},
+
 // Images from forum posts.
 {
   name: "forum",
@@ -72,6 +94,14 @@ var plugins = [
   patterns: [
     /^https?:\/\/[A-Za-z0-9\-\_\.]+\/showpost.php\?/,
   ],
+},
+
+// Cross-reference links.
+{
+  name: "xref",
+  module: "xrefs.js",
+  actions: [PASTEURL],
+  patterns: xref_patterns(),
 },
 
 // Photo albums from Reddit and Imgur.
@@ -149,6 +179,15 @@ export class Context {
     qs.append("fmt", "cjson");
     let url = `${settings.kbservice}/kb/query?${qs}`;
     return fetch(url);
+  }
+
+  async idlookup(prop, identifier) {
+    let query = prop.id + "/" + identifier;
+    let response = await this.kblookup(query, {fullmatch: 1});
+    let result = await response.json();
+    if (result.matches.length == 1) {
+      return store.lookup(result.matches[0].ref);
+    }
   }
 };
 
