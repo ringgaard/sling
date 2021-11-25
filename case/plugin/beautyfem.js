@@ -79,7 +79,7 @@ export default class BeautifulFemalesPlugin {
     let pos = title.indexOf('[');
     if (pos == -1) pos = title.indexOf('(');
     if (pos != -1) title = title.substring(0, pos);
-    topic.put(n_name, title);
+    topic.put(n_name, title.trim());
 
     // All topics are females.
     topic.put(n_instance_of, n_human);
