@@ -62,8 +62,14 @@ class Date {
   // Return an integer or string handle representing date.
   Handle AsHandle(Store *store) const;
 
-  // Three-way comparison of dates.
+  // Comparison of dates.
   int Compare(const Date &other) const;
+
+  // Compute difference in years between this date and another date.
+  int Difference(const Date &other) const;
+
+  // Return todays date.
+  static Date Today();
 
   // Convert date to string format. The date format depends on the precision:
   // DAY:        [+|-]YYYY-MM-DD

@@ -179,6 +179,9 @@ void KnowledgeService::Load(Store *kb, const string &name_table) {
     // Property data type.
     p.datatype = property.GetHandle(n_target_);
 
+    // Mark origin data types.
+    p.origin = (property.handle() == n_date_of_birth_);
+
     // Collect xref properties.
     if (p.datatype == n_xref_type_) {
       Text name = kb->GetString(p.name)->str();
@@ -502,8 +505,14 @@ void KnowledgeService::HandleGetItem(HTTPRequest *request,
   // Pre-load offline proxies.
   Preload(item, ws.store());
 
-  // Fetch properties.
+  // Compute start and end for age computations.
   Item info(ws.store());
+  Object birth(ws.store(), item.Resolve(n_date_of_birth_));
+  if (!birth.IsNil()) info.start.Init(birth);
+  Object death(ws.store(), item.Resolve(n_date_of_death_));
+  if (!death.IsNil()) info.end.Init(death);
+
+  // Fetch properties.
   FetchProperties(item, &info);
   b.Add(n_properties_, Array(ws.store(), info.properties));
   b.Add(n_xrefs_, Array(ws.store(), info.xrefs));
@@ -670,6 +679,17 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
         // Add time value.
         Object time(store, value);
         v.Add(n_text_, calendar_.DateAsString(time));
+        if (info->start.precision != Date::NONE) {
+          if (property->origin) {
+            if (info->end.precision == Date::NONE) {
+              int age = info->start.Difference(Date::Today());
+              v.Add(n_age_, age);
+            }
+          } else {
+            int years = info->start.Difference(Date(time));
+            v.Add(n_age_, years);
+          }
+        }
       } else if (property->datatype == n_lexeme_type_) {
         if (store->IsFrame(value)) {
           // Add reference to other item.
@@ -695,6 +715,8 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
       // Get qualifiers.
       if (qualified) {
         Item qualifiers(store);
+        qualifiers.start = info->start;
+        qualifiers.end = info->end;
         FetchProperties(Frame(store, h), &qualifiers);
         for (Handle xref : qualifiers.xrefs) {
           // Treat xrefs as properties for qualifiers.

@@ -258,6 +258,24 @@ int Date::Compare(const Date &other) const {
   }
 }
 
+int Date::Difference(const Date &other) const {
+  int years = other.year - year;
+  if (other.month == month) {
+    if (other.day < day) {
+      years -= 1;
+    }
+  } else if (other.month < month) {
+    years -= 1;
+  }
+  return years;
+}
+
+Date Date::Today() {
+  time_t t = time(0);
+  struct tm *tm = localtime(&t);
+  return Date(tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, DAY);
+}
+
 void Calendar::Init(Store *store) {
   // Get symbols.
   store_ = store;

@@ -33,6 +33,10 @@ let xrefs = [
     property: store.lookup("P2013"),
   },
   {
+    pattern: /^https?:\/\/m\.facebook\.com\/([^\?]+)/i,
+    property: store.lookup("P2013"),
+  },
+  {
     pattern: /^https?:\/\/open\.spotify\.com\/artist\/([^\/\?]+)/,
     property: store.lookup("P1902"),
   },
@@ -113,7 +117,7 @@ let xrefs = [
     property: store.lookup("P6908"),
   },
   {
-    pattern: /^https?:\/\/(?:www\.)?([^\s\/]+)\.tumblr\.com/,
+    pattern: /^https?:\/\/([^\s\/]+)\.tumblr\.com\/?/i,
     property: store.lookup("P3943"),
   },
   {

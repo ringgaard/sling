@@ -274,6 +274,11 @@ class KbPropertyTable extends Component {
       } else if (val.url) {
         out.push('</a>');
       }
+      if (val.age) {
+        out.push(' (');
+        out.push(val.age);
+        out.push(' yo)');
+      }
       if (val.lang) {
         out.push(' <span class="prop-lang">[');
         out.push(Component.escape(val.lang));

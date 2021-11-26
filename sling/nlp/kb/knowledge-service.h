@@ -49,6 +49,8 @@ class KnowledgeService {
     Handles xrefs;
     Handles categories;
     Handles gallery;
+    Date start;
+    Date end;
   };
 
   ~KnowledgeService() {
@@ -129,6 +131,7 @@ class KnowledgeService {
     Handle datatype;
     string url;
     bool image;
+    bool origin;
     int order = kint32max;
   };
 
@@ -206,6 +209,7 @@ class KnowledgeService {
   Name n_matches_{names_, "matches"};
   Name n_lang_{names_, "lang"};
   Name n_nsfw_{names_, "nsfw"};
+  Name n_age_{names_, "age"};
 
   Name n_xref_type_{names_, "/w/xref"};
   Name n_item_type_{names_, "/w/item"};
@@ -237,6 +241,8 @@ class KnowledgeService {
   Name n_latin_script_{names_, "Q8229"};
   Name n_language_{names_, "P2439"};
   Name n_name_language_{names_, "P407"};
+  Name n_date_of_birth_{names_, "P569"};
+  Name n_date_of_death_{names_, "P570"};
 
   Name n_start_time_{names_, "P580"};
   Name n_end_time_{names_, "P582"};

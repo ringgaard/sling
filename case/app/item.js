@@ -34,6 +34,8 @@ const n_amount = store.lookup("/w/amount");
 const n_unit = store.lookup("/w/unit");
 const n_lat = store.lookup("/w/lat");
 const n_lng = store.lookup("/w/lng");
+const n_date_of_birth = store.lookup("P569");
+const n_date_of_death = store.lookup("P570");
 const n_formatter_url = store.lookup("P1630");
 const n_media_legend = store.lookup("P2096");
 const n_has_quality = store.lookup("P1552");
@@ -109,6 +111,36 @@ class Time {
         this.year = Math.floor(t * 1000 + 1);
         this.precision = MILLENNIUM;
       }
+    } else if (typeof(t) === "string") {
+      let m = t.match(/^(\+|\-)(\d{4})(\d{2})?(\d{2})?$/);
+      if (m) {
+        this.year = parseInt(m[2]) * (m[1] == "-" ? -1 : 1);
+        this.precision = YEAR;
+        if (m[3]) {
+          this.month = parseInt(m[3]);
+          this.precision = MONTH;
+        }
+        if (m[4]) {
+          this.day = parseInt(m[4]);
+          this.precision = DAY;
+        }
+      }
+    } else if (t instanceof Date) {
+      this.year = t.getFullYear();
+      this.month = t.getMonth() + 1;
+      this.day = t.getDate();
+      this.precision = DAY;
+    }
+
+    if (!this.precision) {
+      let d = new Date(t);
+      console.log("now", d, t);
+      if (isFinite(d)) {
+        this.year = d.getFullYear();
+        this.month = d.getMonth() + 1;
+        this.day = d.getDate();
+        this.precision = DAY;
+      }
     }
   }
 
@@ -147,6 +179,18 @@ class Time {
       default:
         return "???";
     }
+  }
+
+  age(time) {
+    let years = time.year - this.year;
+    if (time.month == this.month) {
+      if (time.day < this.day) {
+        years -= 1;
+      }
+    } else if (time.month < this.month) {
+      years -= 1;
+    }
+    return years;
   }
 }
 
@@ -264,6 +308,11 @@ class PropertyPanel extends Component {
     let store = item.store;
     let h = [];
 
+    let birth = store.resolve(item.get(n_date_of_birth));
+    let born = birth ? new Time(birth) : null;
+    let death = store.resolve(item.get(n_date_of_death));
+    let died = death ? new Time(death) : null;
+
     function render_name(prop) {
       let name = prop.get(n_name);
       if (!name) name = prop.id;
@@ -292,9 +341,20 @@ class PropertyPanel extends Component {
       }
     }
 
-    function render_time(val) {
+    function render_time(val, prop) {
       let t = new Time(val);
       h.push(t.text());
+      if (born) {
+        if (prop == n_date_of_birth) {
+          if (!died) {
+            let age = born.age(new Time(new Date()));
+            h.push(` (${age} yo)`);
+          }
+        } else {
+          let years = born.age(t);
+          h.push(` (${years} yo)`);
+        }
+      }
     }
 
     function render_link(val) {
@@ -397,7 +457,7 @@ class PropertyPanel extends Component {
           render_xref(val, prop);
           break;
         case n_time_type:
-          render_time(val);
+          render_time(val, prop);
           break;
         case n_quantity_type:
           render_quantity(val);
@@ -894,6 +954,9 @@ class ItemPanel extends Component {
 
       $ #description {
         font-size: 16px;
+        padding-left: 5px;
+        padding-right: 5px;
+        display: block;
       }
 
       $ #vruler {
