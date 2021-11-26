@@ -362,7 +362,11 @@ Handle WikidataConverter::ConvertQuantity(const Frame &value) {
       int pos = unitstr.rfind('/');
       if (pos != -1) {
         unitstr.remove_prefix(pos + 1);
-        unit = store->Lookup(unitstr);
+        if (unitstr.empty()) {
+          unit = Handle::nil();
+        } else {
+          unit = store->Lookup(unitstr);
+        }
       } else {
         LOG(WARNING) << "Unknown unit: " << unitstr;
       }
