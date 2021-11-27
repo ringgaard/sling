@@ -21,8 +21,61 @@ const n_language = store.lookup("P407");
 const page_types = {
   "Article": store.lookup("Q5707594"),
   "article": store.lookup("Q5707594"),
+  "Text.Article": store.lookup("Q5707594"),
   "ReportageNewsArticle": store.lookup("Q124922"),
 };
+
+const date_patterns = [
+  { pattern: /^(\d{4})-(\d{2})-(\d{2})T/, fields: "YMD"},
+  { pattern: /^\w+ (\w+) (\d+) \d+:\d+:\d+ \w+ (\d+)/, fields: "mDY"},
+  { pattern: /^(\w+)\. (\d+), (\d+)/, fields: "mDY"},
+];
+
+const months = {
+  "Jan": 1,
+  "Feb": 2,
+  "Mar": 3,
+  "Apr": 4,
+  "May": 5,
+  "Jun": 6,
+  "Jul": 7,
+  "Aug": 8,
+  "Sep": 9,
+  "Oct": 10,
+  "Nov": 11,
+  "Dec": 12,
+};
+
+function parse_date(str) {
+  for (let p of date_patterns) {
+    let match = str.match(p.pattern);
+    if (match) {
+      var y, m, d;
+      for (var i = 0; i < p.fields.length; i++) {
+        let value = match[i + 1];
+        switch (p.fields.charAt(i)) {
+          case 'Y':
+            y = parseInt(value);
+            break;
+          case 'M':
+            m = parseInt(value);
+            break;
+          case 'm':
+            m = months[value];
+            break;
+          case 'D':
+            d = parseInt(value);
+            break;
+        }
+      }
+      let date = new Date(y, m - 1, d);
+      console.log("match", str, date, match);
+      if (!isNaN(d)) return date;
+    }
+  }
+  let date = new Date(str);
+  if (!isNaN(d)) return date;
+}
 
 function date2sling(d) {
   return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
@@ -30,16 +83,19 @@ function date2sling(d) {
 
 function get_meta(doc, property) {
   let e = doc.querySelector(`meta[property="${property}"]`);
-  if (e) return e.getAttribute("content");
-  e = doc.querySelector(`meta[name="${property}"]`);
-  if (e) return e.getAttribute("content");
-  e = doc.querySelector(`meta[itemprop="${property}"]`);
+  if (!e) e = doc.querySelector(`meta[name="${property}"]`);
+  if (!e) e = doc.querySelector(`meta[itemprop="${property}"]`);
   if (e) return e.getAttribute("content");
 }
 
 function escape_entities(str) {
   var doc = new DOMParser().parseFromString(str, "text/html");
   return doc.documentElement.textContent;
+}
+
+function until(str, delim) {
+  let pos = str.indexOf(delim);
+  return pos == -1 ? str : str.substring(0, pos);
 }
 
 export default class ArticlePlugin {
@@ -136,50 +192,87 @@ export default class ArticlePlugin {
     for (let ldjson of ldjsons) {
       try {
         let ld = JSON.parse(ldjson.innerText);
-        console.log(ld);
+        console.log(typeof(ld), ld);
 
-        if (!article.type && ld["@type"]) {
-          article.type = ld["@type"];
-        }
-        if (!article.type && ld.pageType) {
-          article.type = ld.pageType;
-        }
-        if (!article.title && ld.headline) {
-          article.title = ld.headline;
-        }
-        if (!article.publisher && ld.publisher) {
-          article.publisher = ld.publisher.name;
-        }
-        if (!article.published && ld.datePublished) {
-          article.published = ld.datePublished;
-        }
-        if (ld.author) {
-          let author = ld.author;
-          if (typeof author === 'string') {
-            if (!article.author_name) {
-              article.author_name = author;
-            }
-          } else {
-            if (!article.author_type && author.type) {
-              article.author_type = author.type;
-            }
-            if (!article.author_name && author.name) {
-              article.author_name = author.name;
-            }
-            if (!article.author_name && author.byline) {
-              article.author_name = author.byline;
+        let parts = [ld];
+        if (Array.isArray(ld)) {
+          parts = ld;
+        } else if (ld["@graph"]) {
+          parts = ld["@graph"];
+        };
+
+        for (let p of parts) {
+          if (!article.type && p.pageType) {
+            article.type = p.pageType;
+          }
+          if (!article.title && p.headline) {
+            article.title = p.headline;
+          }
+          if (!article.summary && p.description) {
+            article.summary = p.description;
+          }
+          if (!article.publisher && p.publisher) {
+            article.publisher = p.publisher.name;
+          }
+          if (!article.published && p.datePublished) {
+            article.published = p.datePublished;
+          }
+          if (p.author) {
+            let authors = [p.author];
+            if (Array.isArray(p.author)) {
+              authors = p.author;
+            };
+            for (let author of authors) {
+              if (typeof author === 'string') {
+                if (!article.author_name) {
+                  article.author_name = author;
+                }
+              } else {
+                if (!article.author_type && author.type) {
+                  article.author_type = author.type;
+                }
+                if (!article.author_name && author.name) {
+                  article.author_name = author.name;
+                }
+                if (!article.author_name && author.byline) {
+                  article.author_name = author.byline;
+                }
+              }
             }
           }
-        }
-        if (!article.url && ld.url) {
-          article.url = ld.url;
-        }
-        if (!article.image && ld.image) {
-          article.image = ld.image.url;
+          if (!article.url && p.url) {
+            article.url = p.url;
+          }
+          if (!article.image && p.image) {
+            article.image = p.image.url;
+          }
         }
       } catch (error) {
         console.log("error in ld-json", error);
       }
+    }
+
+    // Get Dublin Core meta information.
+    if (!article.type) {
+      article.type = get_meta(head, "dc.type");
+    }
+    if (!article.title) {
+      article.title = get_meta(head, "dc.title");
+    }
+    if (!article.summary) {
+      article.summary = get_meta(head, "dc.description");
+    }
+    if (!article.publisher) {
+      article.publisher = get_meta(head, "dc.publisher");
+    }
+    if (!article.published) {
+      article.published = get_meta(head, "dc.date");
+    }
+    if (!article.summary) {
+      article.summary = get_meta(head, "dcterms.abstract");
+    }
+    if (!article.published) {
+      article.published = get_meta(head, "dcterms.created");
     }
 
     // Get Google+ meta information.
@@ -192,6 +285,9 @@ export default class ArticlePlugin {
     }
 
     // Get generic meta information.
+    if (!article.type) {
+      article.type = get_meta(head, "pagetype");
+    }
     if (!article.title) {
       article.title = get_meta(head, "title");
     }
@@ -230,13 +326,21 @@ export default class ArticlePlugin {
       if (lang) article.language = lang;
     }
 
+    // Trim title and summary.
+    if (article.title) {
+      article.title = until(article.title, '|');
+    }
+    if (article.summary) {
+      article.summary = until(escape_entities(article.summary), '|');
+    }
+
     // Add article information to topic.
     console.log(article);
     if (article.title) {
       topic.put(n_name, article.title);
     }
     if (article.summary) {
-      topic.put(n_description, escape_entities(article.summary));
+      topic.put(n_description, article.summary);
     }
 
     if (article.type) {
@@ -255,27 +359,34 @@ export default class ArticlePlugin {
       let url = new URL(article.url);
       let r = await fetch(context.service("newssite", {site: url.hostname}));
       let site = await r.json();
-      console.log("site", site);
       if (site.siteid) {
         topic.put(n_publisher, store.lookup(site.siteid));
       }
     }
-    if (!topic.has(n_publisher)) {
-      if (article.publisher) {
-        let [prop, identifier] = match_link(article.publisher);
-        if (prop) {
-          let item = await context.idlookup(prop, identifier);
-          if (item) topic.put(n_publisher, item);
-        }
+    if (!topic.has(n_publisher) && article.site) {
+      let r = await fetch(context.service("newssite", {site: article.site}));
+      let site = await r.json();
+      if (site.siteid) {
+        topic.put(n_publisher, store.lookup(site.siteid));
       }
+    }
+    if (!topic.has(n_publisher) && article.publisher) {
+      let [prop, identifier] = match_link(article.publisher);
+      if (prop) {
+        let item = await context.idlookup(prop, identifier);
+        if (item) topic.put(n_publisher, item);
+      }
+    }
+    if (!topic.has(n_publisher) && article.publisher) {
+      topic.put(n_publisher, article.publisher);
     }
 
     if (article.published) {
-      let date = new Date(article.published);
-      if (isNaN(date)) {
-        topic.put(n_publication_date, article.published);
-      } else {
+      let date = parse_date(article.published);
+      if (date) {
         topic.put(n_publication_date, date2sling(date));
+      } else {
+        topic.put(n_publication_date, article.published);
       }
     }
 
@@ -288,11 +399,9 @@ export default class ArticlePlugin {
     }
 
     if (article.language) {
-      let sep = article.language.indexOf('-');
-      if (sep == -1) sep = article.language.indexOf('_');
-      if (sep != -1) article.language = article.language.substring(0, sep);
+      let lang = until(until(article.language, '-'), '_').toLowerCase();
       // TODO: use wiki item instead of language frame.
-      topic.put(n_language, store.lookup("/lang/" + article.language));
+      topic.put(n_language, store.lookup("/lang/" + lang));
     }
 
     if (article.url) {

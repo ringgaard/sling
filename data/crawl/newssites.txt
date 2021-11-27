@@ -296,7 +296,7 @@ cityandstateny.com,Q15059312,City & State,@CityAndStateNY
 civilbeat.org,Q22908947,Honolulu Civil Beat,@CivilBeat
 cjnews.com,Q2935792,Canadian Jewish News,@TheCJN
 cjr.org,Q5149747,Columbia Journalism Review,@CJR
-clarionledger.com,Q56236765,Clarion-Ledger,@clarionledger
+clarionledger.com,Q7723273,Clarion-Ledger,@clarionledger
 clarkstown.dailyvoice.com,Q7728736,The Daily Voice
 clermontsun.com,Q55668423,Clermont Sun,@ClermontSun
 cleveland19.com,Q7953839,WOIO,@cleveland19news
