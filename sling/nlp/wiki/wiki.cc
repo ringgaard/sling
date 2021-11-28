@@ -151,7 +151,7 @@ bool WikimediaTypes::IsDisambiguation(Handle type) const {
 }
 
 bool WikimediaTypes::IsList(Handle type) const {
-  return type == n_list_;
+  return type == n_list_ || type == n_list_of_characters_;
 }
 
 bool WikimediaTypes::IsTemplate(Handle type) const {

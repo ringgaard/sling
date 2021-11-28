@@ -16,6 +16,7 @@ const n_full_work = store.lookup("P953");
 const n_media = store.lookup("media");
 const n_web_page = store.lookup("Q36774");
 const n_author_name_string = store.lookup("P2093");
+const n_creator = store.lookup("P170");
 const n_language = store.lookup("P407");
 
 const page_types = {
@@ -26,9 +27,10 @@ const page_types = {
 };
 
 const date_patterns = [
-  { pattern: /^(\d{4})-(\d{2})-(\d{2})T/, fields: "YMD"},
+  { pattern: /^(\d{4})-(\d{2})-(\d{2})[T ]/, fields: "YMD"},
   { pattern: /^\w+ (\w+) (\d+) \d+:\d+:\d+ \w+ (\d+)/, fields: "mDY"},
   { pattern: /^(\w+)\. (\d+), (\d+)/, fields: "mDY"},
+  { pattern: /^(\d{4})(\d{2})(\d{2})[T ]/, fields: "YMD"},
 ];
 
 const months = {
@@ -69,7 +71,6 @@ function parse_date(str) {
         }
       }
       let date = new Date(y, m - 1, d);
-      console.log("match", str, date, match);
       if (!isNaN(d)) return date;
     }
   }
@@ -130,11 +131,13 @@ export default class ArticlePlugin {
 
   async populate(context, topic, url) {
     // Retrieve article.
-    let r = await fetch(context.proxy(url), {headers: {
-      "XUser-Agent": navigator.userAgent,
-    }});
+    let r = await fetch(context.service("article", {url}));
+    if (!r.ok) {
+      r = await fetch(context.proxy(url), {headers: {
+        "XUser-Agent": navigator.userAgent,
+      }});
+    }
     let html = await r.text();
-
 
     // Parse HTML.
     let doc = new DOMParser().parseFromString(html, "text/html");
@@ -202,6 +205,11 @@ export default class ArticlePlugin {
         };
 
         for (let p of parts) {
+          let type = p["@type"];
+          if (type == "WebSite") continue;
+          if (type == "Organization") continue;
+          if (type == "BreadcrumbList") continue;
+
           if (!article.type && p.pageType) {
             article.type = p.pageType;
           }
@@ -216,6 +224,9 @@ export default class ArticlePlugin {
           }
           if (!article.published && p.datePublished) {
             article.published = p.datePublished;
+          }
+          if (!article.published && p.dateCreated) {
+            article.published = p.dateCreated;
           }
           if (p.author) {
             let authors = [p.author];
@@ -236,6 +247,17 @@ export default class ArticlePlugin {
                 }
                 if (!article.author_name && author.byline) {
                   article.author_name = author.byline;
+                }
+              }
+            }
+          }
+          if (p.creator) {
+            let creators = [p.creator];
+            if (Array.isArray(p.creator)) creators = p.creator;
+            for (let creator of creators) {
+              if (typeof creator === 'string') {
+                if (!article.creator) {
+                  article.creator = creator;
                 }
               }
             }
@@ -274,6 +296,27 @@ export default class ArticlePlugin {
     if (!article.published) {
       article.published = get_meta(head, "dcterms.created");
     }
+    if (!article.published) {
+      article.published = get_meta(head, "DC.date.issued");
+    }
+
+    // Get Sailthru meta information.
+    if (!article.title) {
+      article.title = get_meta(head, "sailthru.title");
+    }
+    if (!article.summary) {
+      article.summary = get_meta(head, "sailthru.description");
+    }
+    if (!article.image) {
+      article.image = get_meta(head, "sailthru.image.full");
+    }
+    if (!article.author_name) {
+      article.author_name = get_meta(head, "sailthru.author");
+    }
+
+    if (!article.published) {
+      article.published = get_meta(head, "sailthru.date");
+    }
 
     // Get Google+ meta information.
     if (!article.publisher) {
@@ -297,6 +340,9 @@ export default class ArticlePlugin {
     if (!article.author_name) {
       article.author_name = get_meta(head, "author");
     }
+    if (!article.published) {
+      article.published = get_meta(head, "date");
+    }
     if (!article.image) {
       article.image = get_meta(head, "image");
     }
@@ -319,10 +365,22 @@ export default class ArticlePlugin {
       article.url = url;
     }
 
+    // Get byline from body.
+    if (!article.author_name) {
+      let author = doc.querySelector('div.author');
+      if (author) {
+        article.byline = author.innerText;
+      }
+    }
+
     // Get language from HTML declaration.
     if (!article.language) {
       let lang = doc.documentElement.lang;
       if (!lang) lang = doc.body.lang;
+      if (!lang) {
+        let e = head.querySelector('meta[http-equiv="Content-Language"]');
+        if (e && e.content) lang = e.content;
+      }
       if (lang) article.language = lang;
     }
 
@@ -332,6 +390,12 @@ export default class ArticlePlugin {
     }
     if (article.summary) {
       article.summary = until(escape_entities(article.summary), '|');
+    }
+    if (article.author_name) {
+      article.author_name = escape_entities(article.author_name);
+    }
+    if (article.byline) {
+      article.byline = escape_entities(article.byline);
     }
 
     // Add article information to topic.
@@ -396,6 +460,12 @@ export default class ArticlePlugin {
 
     if (article.author_name) {
       topic.put(n_author_name_string, article.author_name);
+    } else if (article.byline) {
+      topic.put(n_author_name_string, article.byline);
+    }
+
+    if (article.creator) {
+      topic.put(n_creator, article.creator);
     }
 
     if (article.language) {
@@ -405,7 +475,7 @@ export default class ArticlePlugin {
     }
 
     if (article.url) {
-      topic.put(n_full_work, article.url);
+      topic.put(n_full_work, decodeURI(article.url));
     }
 
     if (article.image) {

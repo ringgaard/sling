@@ -94,13 +94,9 @@ export async function get_schema() {
   if (kbschema) return kbschema;
 
   // Fetch schema from server and decode it.
-  console.log("fetch schema");
-  let start = performance.now();
   let response = await fetch(settings.kbservice + "/schema/");
   if (kbschema) return kbschema;
   kbschema = await store.parse(response);
-  let end = performance.now();
-  console.log("schema done", (end - start), store.frames.size);
 
   // Mark all properties as stubs.
   for (let type of kbschema.get("properties")) {

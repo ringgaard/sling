@@ -29,6 +29,7 @@ class Service:
 
 services = {
   "albums": Service("albums", "AlbumService"),
+  "article": Service("article", "ArticleService"),
   "newssite": Service("newssite", "NewsSiteService"),
   "twitter": Service("twitter", "TwitterService"),
   "wikidata": Service("wikidata", "WikidataService"),
