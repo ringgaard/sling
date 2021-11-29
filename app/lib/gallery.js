@@ -7,9 +7,10 @@ import {Component} from "./component.js";
 import {MdModal} from "./material.js";
 
 var mediadb = true;
+var thumbsvc = true;
 
-export function use_mediadb(v) {
-  mediadb = v;
+export function use_thumb_service(v) {
+  thumbsvc = v;
 }
 
 const photo_sources = {
@@ -31,7 +32,11 @@ export function imageurl(url, thumb) {
   if (mediadb) {
     let escaped = encodeURIComponent(url);
     escaped = escaped.replace(/%3A/g, ":").replace(/%2F/g, "/");
-    return (thumb && !url.endsWith(".svg") ? "/thumb/" : "/media/") + escaped;
+    if (thumb && thumbsvc && !url.endsWith(".svg")) {
+      return "https://ringgaard.com/thumb/" + escaped;
+    } else {
+      return "https://ringgaard.com/media/" + escaped;
+    }
   } else {
     return url;
   }

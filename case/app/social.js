@@ -136,6 +136,10 @@ let xrefs = [
     pattern: /^(https?:\/\/(?:www\.)?bellazon\.com\/main\/topic\/.+)/i,
     property: store.lookup("P973"),
   },
+  {
+    pattern: /^(https?:\/\/(?:www\.)?playboyplus\.com\/profile\/(.+))/i,
+    property: store.lookup("P5346"),
+  },
 ];
 
 export function match_link(url) {

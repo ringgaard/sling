@@ -90,6 +90,12 @@ const images_services = [
   nsfw: true,
 },
 
+{
+  pattern: /https?\:\/\/[A-Za-z0-9\.\-]+\/(uploads|galleries)\//,
+  fetch: (url, context) => url,
+  nsfw: true,
+},
+
 ];
 
 export default class AlbumPlugin {
@@ -105,14 +111,26 @@ export default class AlbumPlugin {
     // Parse HTML.
     let doc = new DOMParser().parseFromString(html, "text/html");
 
+    // Get base url.
+    let base = new URL(url).origin;
+    console.log("base", base);
+
+    // Find image container.
+    let container = doc.querySelector("div.gallery");
+    if (!container) {
+      container = doc.querySelector("div.actual-gallery-container");
+    }
+    if (!container) container = doc;
+
     // Find all image links.
     let num_images = 0;
     let seen = new Set();
-    for (let link of doc.getElementsByTagName("a")) {
+    for (let link of container.getElementsByTagName("a")) {
       // Get image link.
       if (!link.querySelector("img")) continue;
       let href = link.getAttribute("href");
       if (!href) continue;
+      if (href.startsWith("/")) href = base + href;
       if (seen.has(href)) continue;
       seen.add(href);
       console.log("href", href);

@@ -4,9 +4,10 @@
 import {Component} from "/common/lib/component.js";
 import {Frame, QString} from "/common/lib/frame.js";
 import {store, settings} from "./global.js";
-import {PhotoGallery, censor, use_mediadb} from "/common/lib/gallery.js";
+import {PhotoGallery, censor, imageurl, use_thumb_service}
+  from "/common/lib/gallery.js";
 
-use_mediadb(false);
+use_thumb_service(false);
 
 const n_id = store.id;
 const n_is = store.is;
@@ -688,7 +689,7 @@ class PicturePanel extends Component {
         caption += ` [${index + 1}/${images.length}]`;
       }
 
-      this.find(".photo").update(image.url);
+      this.find(".photo").update(imageurl(image.url));
       this.find(".caption").update(caption);
     } else {
       this.find(".photo").update(null);
