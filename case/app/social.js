@@ -137,7 +137,7 @@ let xrefs = [
     property: store.lookup("P973"),
   },
   {
-    pattern: /^(https?:\/\/(?:www\.)?playboyplus\.com\/profile\/(.+))/i,
+    pattern: /^https?:\/\/(?:www\.)?playboyplus\.com\/profile\/(.+)/,
     property: store.lookup("P5346"),
   },
 ];
