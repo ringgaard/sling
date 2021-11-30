@@ -145,10 +145,11 @@ class CaseEditor extends Component {
     this.add_new_topic(null, name.trim());
   }
 
-  onitem(e) {
+  async onitem(e) {
     let item = e.detail;
     if (item.onitem) {
-      item.onitem(item);
+      await item.onitem(item);
+      if (item.context) await item.context.refresh();
     } else if (item.topic) {
       if (item.casefile) {
         this.add_topic_link(item.topic);
@@ -797,13 +798,7 @@ class CaseEditor extends Component {
       let result = await plugins.process(plugins.PASTE, clip, context);
       this.style.cursor = "";
       if (result) {
-        if (topic) {
-          this.mark_dirty();
-          await list.card(topic).refresh();
-        } else {
-          await this.update_topics();
-        }
-
+        await context.refresh();
         return;
       }
     }
@@ -814,8 +809,7 @@ class CaseEditor extends Component {
       if (imgurl) {
         topic.add(n_media, imgurl);
         this.mark_dirty();
-
-        list.card(topic).refresh();
+        await this.update_topic(topic);
         return;
       }
     }
@@ -868,6 +862,12 @@ class CaseEditor extends Component {
 
   async update_topics() {
     await this.find("topic-list").update(this.folder);
+  }
+
+  async update_topic(topic) {
+    let list = this.find("topic-list");
+    let card = list.card(topic);
+    if (card) card.refresh();
   }
 
   async navigate_to(topic) {
@@ -1050,7 +1050,9 @@ class TopicSearchBox extends Component {
     // Search plug-ins.
     let context = new plugins.Context(null, editor.casefile, editor);
     let result = await plugins.process(plugins.SEARCH, query, context);
-    if (result) items.push(new MdSearchResult(result));
+    if (result) {
+      items.push(new MdSearchResult(result));
+    }
 
     // Search knowledge base.
     try {

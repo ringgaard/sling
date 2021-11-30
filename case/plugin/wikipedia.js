@@ -4,6 +4,7 @@
 // SLING case plug-in for adding topic from Wikipedia.
 
 import {store} from "/case/app/global.js";
+import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 
 const n_name = store.lookup("name");
 const n_is = store.lookup("is");
@@ -14,7 +15,7 @@ export default class WikipeidaPlugin {
     let lang = url.hostname.substr(0, url.hostname.indexOf('.'));
     let name = decodeURIComponent(url.pathname.substr(6).replace(/_/g, ' '));
 
-    if (action == 1) { // SEARCHURL
+    if (action == SEARCHURL) {
       return {
         ref: url,
         name: name,
@@ -23,7 +24,7 @@ export default class WikipeidaPlugin {
         context: context,
         onitem: item => this.select(item),
       };
-    } else if (action == 3) { // PASTEURL
+    } else if (action == PASTEURL) {
       await this.populate(context, context.topic, name, lang);
       return true;
     }
@@ -36,10 +37,6 @@ export default class WikipeidaPlugin {
 
     // Add Wikipedia information to topic.
     await this.populate(item.context, topic, item.name, item.lang);
-
-    // Update topic list.
-    await item.context.editor.update_topics();
-    await item.context.editor.navigate_to(topic);
   }
 
   async populate(context, topic, name, lang) {
@@ -59,6 +56,8 @@ export default class WikipeidaPlugin {
       topic.put(n_name, title);
       topic.put(n_is, store.lookup(qid));
     }
+
+    context.updated(topic);
   }
 };
 

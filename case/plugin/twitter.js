@@ -5,6 +5,7 @@
 
 import {store} from "/case/app/global.js";
 import {SocialTopic, strip_emojis} from "/case/app/social.js";
+import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 
 const n_is = store.lookup("is");
 const n_name = store.lookup("name");
@@ -40,7 +41,7 @@ export default class TwitterPlugin {
     let username = url.pathname.substring(1);
     if (!username) return;
 
-    if (action == 1) { // SEARCHURL
+    if (action == SEARCHURL) {
       console.log("twitter search for", username);
       return {
         ref: username,
@@ -49,7 +50,7 @@ export default class TwitterPlugin {
         context: context,
         onitem: item => this.select(item),
       };
-    } else if (action == 3) { // PASTEURL
+    } else if (action == PASTEURL) {
       await this.populate(context, context.topic, username);
       return true;
     }
@@ -62,10 +63,6 @@ export default class TwitterPlugin {
 
     // Fetch profile from twitter and populate topic.
     await this.populate(item.context, topic, item.ref);
-
-    // Update topic list.
-    await item.context.editor.update_topics();
-    await item.context.editor.navigate_to(topic);
   }
 
   async populate(context, topic, user) {
@@ -162,6 +159,8 @@ export default class TwitterPlugin {
       let url = photo.split("_normal").join("");
       topic.put(n_media, url);
     }
+
+    context.updated(topic);
   }
 };
 

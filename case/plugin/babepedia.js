@@ -5,6 +5,7 @@
 
 import {store} from "/case/app/global.js";
 import {SocialTopic, strip_emojis} from "/case/app/social.js";
+import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 
 const n_name = store.lookup("name");
 const n_alias = store.lookup("alias");
@@ -76,7 +77,7 @@ export default class BabepediaPlugin {
     let username = m[1];
     if (!username) return;
 
-    if (action == 1) { // SEARCHURL
+    if (action == SEARCHURL) {
       console.log("babepedia search for", username);
       return {
         ref: username,
@@ -86,7 +87,7 @@ export default class BabepediaPlugin {
         context: context,
         onitem: item => this.select(item),
       };
-    } else if (action == 3) { // PASTEURL
+    } else if (action == PASTEURL) {
       await this.populate(context, context.topic, url.href);
       return true;
     }
@@ -99,10 +100,6 @@ export default class BabepediaPlugin {
 
     // Fetch profile from babepedia and populate topic.
     await this.populate(item.context, topic, item.url);
-
-    // Update topic list.
-    await item.context.editor.update_topics();
-    await item.context.editor.navigate_to(topic);
   }
 
   async populate(context, topic, url) {
@@ -237,6 +234,8 @@ export default class BabepediaPlugin {
         }
       }
     }
+
+    context.updated(topic);
   }
 };
 

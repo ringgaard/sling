@@ -6,7 +6,8 @@ import {StdDialog, MdIcon} from "/common/lib/material.js";
 import {Frame} from "/common/lib/frame.js";
 import {store, settings} from "./global.js";
 import {get_schema} from "./schema.js";
-import {LabelCollector} from "./item.js";
+import {LabelCollector} from "./value.js";
+import "./item.js"
 
 const n_is = store.is;
 const n_name = store.lookup("name");
@@ -223,7 +224,7 @@ class TopicCard extends Component {
     this.tabIndex = -1;
   }
 
-  onconnected() {
+  oninit() {
     let editor = this.match("#editor");
     this.readonly = editor && editor.readonly;
     if (!this.readonly) {
@@ -624,12 +625,40 @@ class ItemEditor extends Component {
     this.dirty = true;
   }
 
-  onitem(e, isprop) {
-    e.target.clear();
+  async onitem(e, isprop) {
     let item = e.detail;
-    let text = item.ref;
-    if (isprop) text += ": "
-    this.insert(text);
+    var value;
+    if (item.onitem) {
+      // Run plug-in and use new topic as value.
+      await item.onitem(item);
+      if (item.context && item.context.added) {
+        item.context.select = false;
+        await item.context.refresh();
+        value = item.context.added;
+      }
+    } else if (item.topic) {
+      if (item.casefile) {
+        // Create new topic with reference to topic in external case.
+        let editor = this.match("#editor");
+        let link = this.new_topic();
+        link.add(n_is, topic);
+        let name = topic.get(n_name);
+        if (name) link.add(n_name, name);
+        await editor.update_list();
+        value = link;
+      } else {
+        value = item.topic
+      }
+    } else {
+      value = store.lookup(item.ref);
+    }
+
+    e.target.clear();
+    if (value) {
+      let text = value.isanonymous() ? value.text() : value.id;
+      if (isprop) text += ": "
+      this.insert(text);
+    }
 
     if (isprop) {
       this.find("#topic-search input").focus();

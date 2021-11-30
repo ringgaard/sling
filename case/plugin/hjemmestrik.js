@@ -4,6 +4,7 @@
 // SLING case plug-in for adding topic from hjemmestrik.dk.
 
 import {store} from "/case/app/global.js";
+import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 
 const n_is = store.lookup("is");
 const n_name = store.lookup("name");
@@ -147,7 +148,7 @@ export default class HjemmestrikPlugin {
     let model = decodeURIComponent(m[1]);
     if (!model) return;
 
-    if (action == 1) { // SEARCHURL
+    if (action == SEARCHURL) {
       return {
         ref: url,
         name: model,
@@ -155,7 +156,7 @@ export default class HjemmestrikPlugin {
         context: context,
         onitem: item => this.select(item),
       };
-    } else if (action == 3) { // PASTEURL
+    } else if (action == PASTEURL) {
       await this.populate(context, context.topic, url);
       return true;
     }
@@ -168,10 +169,6 @@ export default class HjemmestrikPlugin {
 
     // Fetch profile from hjemmestrik and populate topic.
     await this.populate(item.context, topic, item.ref);
-
-    // Update topic list.
-    await item.context.editor.update_topics();
-    await item.context.editor.navigate_to(topic);
   }
 
   async populate(context, topic, url) {
@@ -358,6 +355,8 @@ export default class HjemmestrikPlugin {
         topic.put(n_media, media);
       }
     }
+
+    context.updated(topic);
   }
 };
 

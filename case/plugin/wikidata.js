@@ -33,11 +33,8 @@ export default class WikidataPlugin {
     for (let [name, value] of data) {
       topic.add(name, value)
     }
-    console.log("wikidata", topic.text());
 
-    // Update topic list.
-    await item.context.editor.update_topics();
-    await item.context.editor.navigate_to(topic);
+    item.context.updated(topic);
   }
 };
 

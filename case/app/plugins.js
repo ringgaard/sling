@@ -86,6 +86,22 @@ var plugins = [
   ],
 },
 
+// Photo albums from Reddit and Imgur.
+{
+  name: "albums",
+  module: "albums.js",
+  actions: [PASTEURL],
+  patterns: [
+    /^https?:\/\/(i\.|www\|m\.)?imgur.com\//,
+    /^https?:\/\/(www\.|old\.)?reddit\.com\/gallery\//,
+    /^https?:\/\/(www\.|old\.)?reddit\.com\/\w+\/\w+\/comments\//,
+    /^https?:\/\/i\.redd\.it\//,
+    /^https?:\/\/i\.redditmedia\.com\//,
+    /^https?:\/\/preview\.redd\.it\//,
+    /^https?:\/\/asset\.dr\.dk\//,
+  ],
+},
+
 // Images from forum posts.
 {
   name: "forum",
@@ -101,23 +117,8 @@ var plugins = [
 {
   name: "xref",
   module: "xrefs.js",
-  actions: [PASTEURL],
+  actions: [PASTEURL, SEARCHURL],
   patterns: xref_patterns(),
-},
-
-// Photo albums from Reddit and Imgur.
-{
-  name: "albums",
-  module: "albums.js",
-  actions: [PASTEURL],
-  patterns: [
-    /^https?:\/\/(i\.|www\|m\.)?imgur.com\//,
-    /^https?:\/\/(www\.|old\.)?reddit\.com\//,
-    /^https?:\/\/i\.redd\.it\//,
-    /^https?:\/\/i\.redditmedia\.com\//,
-    /^https?:\/\/preview\.redd\.it\//,
-    /^https?:\/\/asset\.dr\.dk\//,
-  ],
 },
 
 // JPG, GIF and PNG images.
@@ -155,10 +156,37 @@ export class Context {
     this.topic = topic;
     this.casefile = casefile;
     this.editor = editor;
+    this.select = true;
+    this.added = null;
+    this.updates = null;
   }
 
   new_topic() {
-    return editor.new_topic();
+    let topic = editor.new_topic();
+    if (!topic) return null;
+    this.added = topic;
+    return topic;
+  }
+
+  updated(topic) {
+    if (topic == this.added) return;
+    if (!this.updates) this.updates = new Array();
+    if (!this.updates.includes(topic)) this.updates.push(topic);
+    this.editor.mark_dirty();
+  }
+
+  async refresh() {
+    console.log("refresh", this);
+    if (this.added) {
+      await this.editor.update_topics();
+      if (this.select) {
+        await this.editor.navigate_to(this.added);
+      }
+    } else if (this.updates) {
+      for (let topic of this.updates) {
+        this.editor.update_topic(topic);
+      }
+    }
   }
 
   service(name, params) {

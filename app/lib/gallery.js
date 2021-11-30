@@ -6,11 +6,11 @@
 import {Component} from "./component.js";
 import {MdModal} from "./material.js";
 
-var mediadb = true;
-var thumbsvc = true;
-
-export function use_thumb_service(v) {
-  thumbsvc = v;
+export var mediadb = {
+  enabled: true,
+  thumb: true,
+  mediasvc: "/media/",
+  thumbsvc: "/thumb/",
 }
 
 const photo_sources = {
@@ -29,13 +29,13 @@ function mod(m, n) {
 }
 
 export function imageurl(url, thumb) {
-  if (mediadb) {
+  if (mediadb.enabled) {
     let escaped = encodeURIComponent(url);
     escaped = escaped.replace(/%3A/g, ":").replace(/%2F/g, "/");
-    if (thumb && thumbsvc && !url.endsWith(".svg")) {
-      return "https://ringgaard.com/thumb/" + escaped;
+    if (thumb && mediadb.thumb && !url.endsWith(".svg")) {
+      return mediadb.thumbsvc + escaped;
     } else {
-      return "https://ringgaard.com/media/" + escaped;
+      return mediadb.mediasvc + escaped;
     }
   } else {
     return url;

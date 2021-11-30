@@ -21,6 +21,7 @@ export default class ImagePlugin {
 
     console.log(`add image ${url} to topic ${context.topic.id}`);
     context.topic.add(n_media, url);
+    context.updated(context.topic);
     return true;
   }
 };

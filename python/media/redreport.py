@@ -77,12 +77,12 @@ app.js("/redreport/app.js",
 """
 import {Component} from "/common/lib/component.js";
 import {MdCard, MdDialog} from "/common/lib/material.js";
-import {PhotoGallery, imageurl, use_mediadb} from "/common/lib/gallery.js";
+import {PhotoGallery, imageurl, mediadb} from "/common/lib/gallery.js";
 import {reddit_thumbnail} from "/common/lib/reddit.js";
 
 var sfw = false;
 var hits = false;
-use_mediadb(false);
+mediadb.enabled = false;
 
 function current_date() {
   return new Date().toISOString().split('T')[0];

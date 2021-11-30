@@ -5,6 +5,7 @@
 
 import {store} from "/case/app/global.js";
 import {match_link} from "/case/app/social.js";
+import {SEARCHURL} from "/case/app/plugins.js";
 
 const n_name = store.lookup("name");
 const n_description = store.lookup("description");
@@ -105,7 +106,7 @@ export default class ArticlePlugin {
     let domain = url.hostname;
     if (domain.startsWith("www.")) domain = domain.substr(4);
 
-    if (action == 1) { // SEARCHURL
+    if (action == SEARCHURL) {
       return {
         ref: url,
         name: domain + url.pathname,
@@ -123,10 +124,6 @@ export default class ArticlePlugin {
 
     // Fetch profile from twitter and populate topic.
     await this.populate(item.context, topic, item.ref);
-
-    // Update topic list.
-    await item.context.editor.update_topics();
-    await item.context.editor.navigate_to(topic);
   }
 
   async populate(context, topic, url) {

@@ -35,6 +35,7 @@ export default class AlbumPlugin {
     }
 
     console.log(`${num_added} images added`);
+    context.updated(topic);
     return num_added > 0;
   }
 };

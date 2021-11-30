@@ -176,6 +176,7 @@ export default class AlbumPlugin {
       }
     }
 
+    context.updated(topic);
     return num_images > 0;
   }
 };

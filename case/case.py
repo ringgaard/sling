@@ -237,6 +237,12 @@ def service_request(request):
 
   return response
 
+@app.route("/media")
+def media_request(request):
+  # Dummy media service that always redirects to the original url.
+  print("media", request.path);
+  return sling.net.HTTPRedirect(request.path[1:])
+
 # Initialize services.
 services.init()
 

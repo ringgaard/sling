@@ -5,6 +5,7 @@
 
 import {store} from "/case/app/global.js";
 import {SocialTopic, strip_emojis} from "/case/app/social.js";
+import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 
 const n_name = store.lookup("name");
 const n_description = store.lookup("description");
@@ -18,7 +19,7 @@ export default class LinkTreePlugin {
     let username = m[1];
     if (!username) return;
 
-    if (action == 1) { // SEARCHURL
+    if (action == SEARCHURL) {
       console.log("linktree search for", username);
       return {
         ref: username,
@@ -27,7 +28,7 @@ export default class LinkTreePlugin {
         context: context,
         onitem: item => this.select(item),
       };
-    } else if (action == 3) { // PASTEURL
+    } else if (action == PASTEURL) {
       await this.populate(context, context.topic, username);
       return true;
     }
@@ -40,10 +41,6 @@ export default class LinkTreePlugin {
 
     // Fetch profile from linktree and populate topic.
     await this.populate(item.context, topic, item.ref);
-
-    // Update topic list.
-    await item.context.editor.update_topics();
-    await item.context.editor.navigate_to(topic);
   }
 
   async populate(context, topic, username) {
@@ -81,6 +78,8 @@ export default class LinkTreePlugin {
     if (account.profilePictureUrl) {
       topic.add(n_media, account.profilePictureUrl);
     }
+
+    context.updated(topic);
   }
 };
 

@@ -125,8 +125,12 @@ let xrefs = [
     property: store.lookup("P3265"),
   },
   {
-    pattern: /^https?:\/\/(?:www\.)?reddit\.com\/r\/([^\/\?]+)\/$/,
+    pattern: /^https?:\/\/(?:www\.)?reddit\.com\/r\/([^\/\?]+)\/?$/,
     property: store.lookup("P3984"),
+  },
+  {
+    pattern: /^https?:\/\/(?:www\.)?reddit\.com\/user\/([^\/\?]+)\/?$/,
+    property: store.lookup("P4265"),
   },
   {
     pattern: /^https?:\/\/(?:www\.)?snapchat\.com\/add\/([^\/\?]+)\/?$/,
@@ -139,6 +143,10 @@ let xrefs = [
   {
     pattern: /^https?:\/\/(?:www\.)?playboyplus\.com\/profile\/(.+)/,
     property: store.lookup("P5346"),
+  },
+  {
+    pattern: /^https?:\/\/(?:www\.)?models\.com\/models\/(.+)/,
+    property: store.lookup("P2471"),
   },
 ];
 
