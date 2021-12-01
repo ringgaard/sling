@@ -231,30 +231,48 @@ export async function process(action, query, context) {
   }
 
   // Try to find plug-in with a matching pattern.
-  let plugin = null;
-  for (let p of plugins) {
-    if (p.actions.includes(action)) {
-      for (let pattern of p.patterns) {
+  let result = null;
+  for (let plugin of plugins) {
+    let match = false;
+    if (plugin.actions.includes(action)) {
+      for (let pattern of plugin.patterns) {
         if (query.match(pattern)) {
-          plugin = p;
+          match = true;
           break;
         }
       }
     }
-    if (plugin) break;
-  }
-  if (!plugin) return false;
+    if (!match) continue;
 
-  // Load module if not already done.
-  if (!plugin.instance) {
-    let module_url = `/case/plugin/${plugin.module}`;
-    console.log(`Load plugin ${plugin.name} from ${module_url}`);
-    const { default: component } = await import(module_url);
-    plugin.instance = new component();
+    // Load module if not already done.
+    if (!plugin.instance) {
+      let module_url = `/case/plugin/${plugin.module}`;
+      console.log(`Load plugin ${plugin.name} from ${module_url}`);
+      const { default: component } = await import(module_url);
+      plugin.instance = new component();
+    }
+
+    // Let plugin process the query.
+    console.log(`Run plugin ${plugin.name} for '${query}'`);
+    let r = await plugin.instance.process(action, query, context);
+    if (!r) continue;
+    if (action == SEARCH || action == SEARCHURL) {
+      if (!result) result = new Array();
+      result.push(r);
+    } else {
+      return r;
+    }
   }
 
-  // Let plugin process the query.
-  console.log(`Run plugin ${plugin.name} for '${query}'`);
-  return plugin.instance.process(action, query, context);
+  return result;
+}
+
+export async function search_plugins(context, query, full, results) {
+  let result = await process(SEARCH, query, context);
+  if (result instanceof Array) {
+    for (let r of result) results.push(r);
+  } else if (result) {
+    results.push(result);
+  }
 }
 

@@ -8,6 +8,7 @@ import {store, settings} from "./global.js";
 import {get_schema} from "./schema.js";
 import {LabelCollector} from "./value.js";
 import "./item.js"
+import "./omnibox.js"
 
 const n_is = store.is;
 const n_name = store.lookup("name");
@@ -250,6 +251,8 @@ class TopicCard extends Component {
 
     this.bind(null, "nsfw", e => this.onnsfw(e, true));
     this.bind(null, "sfw", e => this.onnsfw(e, false));
+    this.bind(null, "delimage", e => this.ondelimage(e));
+    this.bind(null, "picedit", e => this.refresh());
 
     this.update_mode(false);
     this.update_title();
@@ -350,6 +353,21 @@ class TopicCard extends Component {
     }
   }
 
+  ondelimage(e) {
+    if (this.editing) return;
+    let url = e.detail;
+    let topic = this.state;
+    for (let n = 0; n < topic.length; ++n) {
+      if (topic.name(n) != n_media) continue;
+      let v = store.resolve(topic.value(n));
+      if (v == url) {
+        topic.remove(n);
+        this.mark_dirty();
+        break;
+      }
+    }
+  }
+
   async onsave(e) {
     e.stopPropagation();
     let edit = this.find("item-editor");
@@ -418,6 +436,10 @@ class TopicCard extends Component {
       e.stopPropagation();
       e.preventDefault();
       this.ondiscard(e);
+    } else if (e.key === "4" && e.ctrlKey) {
+      e.stopPropagation();
+      e.preventDefault();
+      this.onimgcheck(e);
     }
   }
 
@@ -429,6 +451,24 @@ class TopicCard extends Component {
       let url = `${settings.kbservice}/photosearch?q="${query}"`;
       if (settings.nsfw) url += "&nsfw=1";
       window.open(url, "_blank");
+    }
+  }
+
+  async onimgcheck(e) {
+    let topic = this.state;
+    let missing = new Array();
+    for (let i = 0; i < topic.length; ++i) {
+      if (topic.name(i) != n_media) continue;
+      let url = store.resolve(topic.value(i));
+      let r = await fetch(`/case/proxy?url=${encodeURIComponent(url)}`);
+      if (!r.ok) missing.push(i);
+    }
+    if (missing.length > 0) {
+      console.log(missing.length, "images missing", missing);
+      for (let index of missing.reverse()) {
+        topic.remove(index);
+      }
+      await this.refresh();
     }
   }
 
@@ -601,15 +641,20 @@ class ItemEditor extends Component {
     return this.state;
   }
 
+  oninit() {
+    this.bind("#property md-search", "item", e => this.onitem(e, true));
+    this.bind("#value md-search", "item", e => this.onitem(e, false));
+    this.bind("#property md-search", "enter", e => this.onenter(e, true));
+    this.bind("#value md-search", "enter", e => this.onenter(e, false));
+    this.bind("textarea", "input", e => this.adjust());
+
+    let omnibox = this.find("#value");
+    let editor = this.match("#editor");
+    omnibox.add((query, full, results) => editor.search(query, full, results));
+  }
+
   onupdated() {
     if (!this.state) return;
-    this.bind("md-search", "enter", e => this.onenter(e));
-
-    this.bind("#prop-search md-search", "item", e => this.onitem(e, true));
-    this.bind("#topic-search md-search", "item", e => this.onitem(e, false));
-    this.bind("#prop-search md-search", "enter", e => this.onenter(e, true));
-    this.bind("#topic-search md-search", "enter", e => this.onenter(e, false));
-    this.bind("textarea", "input", e => this.adjust());
     this.adjust();
     this.find("textarea").focus();
     this.dirty = false;
@@ -661,7 +706,7 @@ class ItemEditor extends Component {
     }
 
     if (isprop) {
-      this.find("#topic-search input").focus();
+      this.find("#value input").focus();
     } else {
       this.find("textarea").focus();
     }
@@ -675,7 +720,7 @@ class ItemEditor extends Component {
     this.insert(text);
 
     if (isprop) {
-      this.find("#topic-search input").focus();
+      this.find("#value input").focus();
     } else {
       this.find("textarea").focus();
     }
@@ -694,10 +739,10 @@ class ItemEditor extends Component {
     return `
       <textarea spellcheck="false">${Component.escape(content)}</textarea>
       <div id="search-box">
-        <property-search-box id="prop-search"></property-search-box>
-        <topic-search-box id="topic-search"></topic-search-box>
+        <property-search-box id="property"></property-search-box>
+        <omni-box id="value"></omni-box>
       </div>
-    `
+    `;
   }
 
   static stylesheet() {
@@ -705,11 +750,11 @@ class ItemEditor extends Component {
       $ #search-box {
         display: flex;
       }
-      $ property-search-box {
+      $ #property {
         border: 1px solid #d0d0d0;
         margin: 5px 5px 5px 0px;
       }
-      $ topic-search-box {
+      $ #value {
         border: 1px solid #d0d0d0;
         margin: 5px 0px 5px 5px;
       }

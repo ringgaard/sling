@@ -66,7 +66,23 @@ export class Component extends HTMLElement {
     let p = this.onconnect && this.onconnect();
     if (p instanceof Promise) {
       return p.then(() => {
-        if (!this.hide()) this.generate(true);
+        if (!this.hide()) {
+          this.generate(true);
+          let p = this.initialize();
+          if (p instanceof Promise) {
+            return p.then(() => {
+              return this.onconnected && this.onconnected();
+            });
+          } else {
+            return this.onconnected && this.onconnected();
+          }
+        } else {
+          return this.onconnected && this.onconnected();
+        }
+      });
+    } else {
+      if (!this.hide()) {
+        this.generate(true);
         let p = this.initialize();
         if (p instanceof Promise) {
           return p.then(() => {
@@ -75,14 +91,6 @@ export class Component extends HTMLElement {
         } else {
           return this.onconnected && this.onconnected();
         }
-      });
-    } else {
-      if (!this.hide()) this.generate(true);
-      let p = this.initialize();
-      if (p instanceof Promise) {
-        return p.then(() => {
-          return this.onconnected && this.onconnected();
-        });
       } else {
         return this.onconnected && this.onconnected();
       }
@@ -96,12 +104,34 @@ export class Component extends HTMLElement {
     let p = this.onupdate && this.onupdate();
     if (p instanceof Promise) {
       return p.then(() => {
-        if (!this.hide()) this.generate(false);
-        return this.onupdated && this.onupdated();
+        if (!this.hide()) {
+          this.generate(false);
+          let p = this.initialize();
+          if (p instanceof Promise) {
+            return p.then(() => {
+              return this.onupdated && this.onupdated();
+            });
+          } else {
+            return this.onupdated && this.onupdated();
+          }
+        } else {
+          return this.onupdated && this.onupdated();
+        }
       });
     } else {
-      if (!this.hide()) this.generate(false);
-      return this.onupdated && this.onupdated();
+      if (!this.hide()) {
+        this.generate(false);
+        let p = this.initialize();
+        if (p instanceof Promise) {
+          return p.then(() => {
+            return this.onupdated && this.onupdated();
+          });
+        } else {
+          return this.onupdated && this.onupdated();
+        }
+      } else {
+        return this.onupdated && this.onupdated();
+      }
     }
   }
 

@@ -23,8 +23,10 @@ function normalized(str) {
 class PropertyIndex {
   constructor(schema) {
     // Collect all property names and aliases.
+    this.ids = new Map();
     this.names = new Array();
     for (let property of schema.get(n_properties)) {
+      this.ids[property.id] = property;
       for (let name of property.all(n_name)) {
         this.names.push({name: normalized(name), property});
       }
@@ -45,6 +47,11 @@ class PropertyIndex {
     // Normalize query.
     let normalized_query = normalized(query);
 
+    // Add matching property id.
+    let matches = new Set();
+    let prop = this.ids[query];
+    if (prop) matches.add(prop);
+
     // Find first name that is greater than or equal to the prefix.
     let lo = 0;
     let hi = this.names.length - 1;
@@ -59,7 +66,6 @@ class PropertyIndex {
     }
 
     // Find all names matching the prefix. Stop if we hit the limit.
-    let matches = new Set();
     let index = lo;
     while (index < this.names.length) {
       // Check if we have reached the limit.

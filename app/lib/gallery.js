@@ -60,6 +60,7 @@ export class PhotoGallery extends MdModal {
   constructor() {
     super();
     this.first = true;
+    this.edited = false;
   }
 
   onconnected() {
@@ -98,6 +99,8 @@ export class PhotoGallery extends MdModal {
       this.close(e);
     } else if (e.keyCode == 88) {
       this.flipnsfw(e);
+    } else if (e.keyCode == 68) {
+      this.delimg(e);
     }
     this.focus();
   }
@@ -136,6 +139,15 @@ export class PhotoGallery extends MdModal {
     photo.nsfw = !photo.nsfw;
     this.dispatch(photo.nsfw ? "nsfw" : "sfw", photo.url);
     this.find(".nsfw").update(photo.nsfw ? "NSFW" : null);
+    this.edited = true;
+  }
+
+  delimg(e) {
+    let photo = this.photos[this.current];
+    this.dispatch("delimage", photo.url);
+    this.photos.splice(this.current, 1);
+    this.move(0);
+    this.edited = true;
   }
 
   onprev(e) {
@@ -152,6 +164,7 @@ export class PhotoGallery extends MdModal {
 
   onclose(e) {
     e.stopPropagation();
+    if (this.edited) this.dispatch("picedit");
   }
 
   stepsize(e) {
@@ -174,6 +187,8 @@ export class PhotoGallery extends MdModal {
     if (size > 0) {
       this.preload(this.current, n);
       this.display(this.current);
+    } else {
+      this.close();
     }
   }
 

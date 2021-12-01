@@ -275,9 +275,9 @@ class KbPropertyTable extends Component {
         out.push('</a>');
       }
       if (val.age) {
-        out.push(' (');
+        out.push(' <span class="prop-age">(');
         out.push(val.age);
-        out.push(' yo)');
+        out.push(' yo)</span>');
       }
       if (val.lang) {
         out.push(' <span class="prop-lang">[');
@@ -376,6 +376,10 @@ class KbPropertyTable extends Component {
       $ .prop-lang {
         color: #808080;
         font-size: 13px;
+      }
+
+      $ .prop-age {
+        color: #808080;
       }
 
       $ .prop-value a {

@@ -2,7 +2,7 @@
 // Licensed under the Apache License, Version 2
 
 import {Component} from "/common/lib/component.js";
-import {MdDialog, StdDialog, MdSearchResult} from "/common/lib/material.js";
+import {MdDialog, StdDialog} from "/common/lib/material.js";
 import {Store, Frame, Encoder, Printer} from "/common/lib/frame.js";
 
 import {store, settings} from "./global.js";
@@ -10,6 +10,7 @@ import * as plugins from "./plugins.js";
 import {NewFolderDialog} from "./folder.js";
 import {paste_image} from "./drive.js";
 import "./topic.js";
+import "./omnibox.js";
 
 const n_is = store.is;
 const n_name = store.lookup("name");
@@ -87,10 +88,46 @@ async function read_from_clipboard() {
   return null;
 }
 
+function search_topics(query, full, topics) {
+  query = query.toLowerCase();
+  let results = [];
+  let partial = [];
+  for (let topic of topics) {
+    let match = false;
+    let submatch = false;
+    if (topic.id == query) {
+      match = true;
+    } else {
+      let names = [];
+      names.push(...topic.all(n_name));
+      names.push(...topic.all(n_alias));
+      for (let name of names) {
+        let normalized = name.toString().toLowerCase();
+        if (full) {
+          match = normalized == query;
+        } else {
+          match = normalized.startsWith(query);
+          if (!match && normalized.includes(query)) {
+            submatch = true;
+          }
+        }
+        if (match) break;
+      }
+    }
+    if (match) {
+      results.push(topic);
+    } else if (submatch) {
+      partial.push(topic);
+    }
+  }
+  results.push(...partial);
+  return results;
+}
+
 class CaseEditor extends Component {
   oninit() {
-    this.bind("md-search", "item", e => this.onitem(e));
-    this.bind("md-search", "enter", e => this.onenter(e));
+    this.bind("omni-box md-search", "item", e => this.onitem(e));
+    this.bind("omni-box md-search", "enter", e => this.onenter(e));
 
     this.bind("#menu", "click", e => this.onmenu(e));
     this.bind("#home", "click", e => this.close());
@@ -107,6 +144,9 @@ class CaseEditor extends Component {
 
     document.addEventListener("keydown", e => this.onkeydown(e));
     window.addEventListener("beforeunload", e => this.onbeforeunload(e));
+
+    let omnibox = this.find("omni-box");
+    omnibox.add((query, full, results) => this.search(query, full, results));
   }
 
   onbeforeunload(e) {
@@ -137,6 +177,72 @@ class CaseEditor extends Component {
       this.onmerge(e);
     } else if (e.key === "Escape") {
       this.find("#search").clear();
+    }
+  }
+
+  async search(query, full, results) {
+    // Search topcis in case file.
+    for (let result of search_topics(query, full, this.topics)) {
+      let name = result.get(n_name);
+      results.push({
+        ref: result.id,
+        name: name,
+        title: name + (result == this.main ? " 🗄️" : " ⭐"),
+        description: result.get(n_description),
+        topic: result,
+      });
+    }
+
+    // Search topics in linked case files.
+    for (let link of this.links) {
+      let topics = link.get(n_topics);
+      if (topics) {
+        for (let result of search_topics(query, full, topics)) {
+          let name = result.get(n_name);
+          results.push({
+            ref: result.id,
+            name: name,
+            title: name + " 🔗",
+            description: result.get(n_description),
+            topic: result,
+            casefile: link,
+          });
+        }
+      }
+    }
+
+    // Search local case database.
+    for (let result of this.match("#app").search(query, full)) {
+      let caseid = "c/" + result.id;
+      results.push({
+        ref: caseid,
+        name: result.name,
+        title: result.name + " 🗄️",
+        description: result.description,
+        caserec: result,
+      });
+    }
+
+    // Search plug-ins.
+    let context = new plugins.Context(null, this.casefile, this);
+    await plugins.search_plugins(context, query, full, results);
+
+    // Search knowledge base.
+    try {
+      let params = "fmt=cjson";
+      if (full) params += "&fullmatch=1";
+      params += `&q=${encodeURIComponent(query)}`;
+      let response = await fetch(`${settings.kbservice}/kb/query?${params}`);
+      let data = await response.json();
+      for (let item of data.matches) {
+        results.push({
+          ref: item.ref,
+          name: item.text,
+          description: item.description,
+        });
+      }
+    } catch (error) {
+      console.log("Query error", query, error.message, error.stack);
     }
   }
 
@@ -331,42 +437,6 @@ class CaseEditor extends Component {
     } else {
       app.show_manager();
     }
-  }
-
-  search(query, full, topics) {
-    query = query.toLowerCase();
-    let results = [];
-    let partial = [];
-    for (let topic of (topics || this.topics)) {
-      let match = false;
-      let submatch = false;
-      if (topic.id == query) {
-        match = true;
-      } else {
-        let names = [];
-        names.push(...topic.all(n_name));
-        names.push(...topic.all(n_alias));
-        for (let name of names) {
-          let normalized = name.toString().toLowerCase();
-          if (full) {
-            match = normalized == query;
-          } else {
-            match = normalized.startsWith(query);
-            if (!match && normalized.includes(query)) {
-              submatch = true;
-            }
-          }
-          if (match) break;
-        }
-      }
-      if (match) {
-        results.push(topic);
-      } else if (submatch) {
-        partial.push(topic);
-      }
-    }
-    results.push(...partial);
-    return results;
   }
 
   folderno(folder) {
@@ -899,7 +969,7 @@ class CaseEditor extends Component {
           <md-icon-button id="menu" icon="menu"></md-icon-button>
           <md-toolbar-logo></md-toolbar-logo>
           <div id="title">Case #<md-text id="caseid"></md-text></div>
-          <topic-search-box id="search"></topic-search-box>
+          <omni-box id="search"></omni-box>
           <md-spacer></md-spacer>
           <md-icon-button id="merge" icon="merge"></md-icon-button>
           <md-icon-button id="save" icon="save"></md-icon-button>
@@ -1051,7 +1121,11 @@ class TopicSearchBox extends Component {
     let context = new plugins.Context(null, editor.casefile, editor);
     let result = await plugins.process(plugins.SEARCH, query, context);
     if (result) {
-      items.push(new MdSearchResult(result));
+      if (result instanceof Array) {
+        for (let r of result) items.push(new MdSearchResult(r));
+      } else {
+        items.push(new MdSearchResult(result));
+      }
     }
 
     // Search knowledge base.

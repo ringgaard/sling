@@ -148,6 +148,18 @@ let xrefs = [
     pattern: /^https?:\/\/(?:www\.)?models\.com\/models\/(.+)/,
     property: store.lookup("P2471"),
   },
+  {
+    pattern: /^https?:\/\/scholar\.google\.com\/citations\/?\?user=(\w+)/,
+    property: store.lookup("P1960"),
+  },
+  {
+    pattern: /^https?:\/\/(?:www\.)?researchgate\.net\/profile\/(.+)/,
+    property: store.lookup("P2038"),
+  },
+  {
+    pattern: /^https?:\/\/academic\.microsoft\.com\/author\/(\d+)/,
+    property: store.lookup("P6366"),
+  },
 ];
 
 export function match_link(url) {

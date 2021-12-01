@@ -152,11 +152,11 @@ class PropertyPanel extends Component {
         if (prop == n_date_of_birth) {
           if (!died) {
             let age = born.age(new Time(new Date()));
-            h.push(` (${age} yo)`);
+            h.push(` <span class="prop-age">(${age} yo)</span>`);
           }
         } else {
           let years = born.age(t);
-          h.push(` (${years} yo)`);
+          h.push(` <span class="prop-age">(${years} yo)</span>`);
         }
       }
     }
@@ -189,6 +189,8 @@ class PropertyPanel extends Component {
           render_value(lang);
           h.push(']</span>');
         }
+      } else if (val instanceof Frame) {
+        render_link(val);
       } else {
         h.push(Component.escape(val));
       }
@@ -384,6 +386,10 @@ class PropertyPanel extends Component {
         font-size: 13px;
       }
 
+      $ .prop-age {
+        color: #808080;
+      }
+
       $ .prop-value a {
         color: #0b0080;
         text-decoration: none;
@@ -473,6 +479,7 @@ class PicturePanel extends Component {
   }
 
   onupdated() {
+    console.log("pic updated");
     let images = this.state;
     if (images && images.length > 0) {
       let index = 0;
@@ -507,8 +514,9 @@ class PicturePanel extends Component {
   onopen(e) {
     e.stopPropagation();
     let modal = new PhotoGallery();
-    modal.bind(null, "nsfw", e => this.dispatch(e.type, e.detail, true));
-    modal.bind(null, "sfw", e => this.dispatch(e.type, e.detail, true));
+    for (let event of ["nsfw", "sfw", "delimage", "picedit"]) {
+      modal.bind(null, event, e => this.dispatch(e.type, e.detail, true));
+    }
     modal.open(this.state);
   }
 
