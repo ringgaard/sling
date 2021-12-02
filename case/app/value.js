@@ -97,7 +97,6 @@ export class Time {
 
     if (!this.precision) {
       let d = new Date(t);
-      console.log("now", d, t);
       if (isFinite(d)) {
         this.year = d.getFullYear();
         this.month = d.getMonth() + 1;

@@ -67,7 +67,7 @@ export class Component extends HTMLElement {
     if (p instanceof Promise) {
       return p.then(() => {
         if (!this.hide()) {
-          this.generate(true);
+          this.generate();
           let p = this.initialize();
           if (p instanceof Promise) {
             return p.then(() => {
@@ -82,7 +82,7 @@ export class Component extends HTMLElement {
       });
     } else {
       if (!this.hide()) {
-        this.generate(true);
+        this.generate();
         let p = this.initialize();
         if (p instanceof Promise) {
           return p.then(() => {
@@ -105,7 +105,7 @@ export class Component extends HTMLElement {
     if (p instanceof Promise) {
       return p.then(() => {
         if (!this.hide()) {
-          this.generate(false);
+          this.generate();
           let p = this.initialize();
           if (p instanceof Promise) {
             return p.then(() => {
@@ -120,7 +120,7 @@ export class Component extends HTMLElement {
       });
     } else {
       if (!this.hide()) {
-        this.generate(false);
+        this.generate();
         let p = this.initialize();
         if (p instanceof Promise) {
           return p.then(() => {
@@ -150,8 +150,8 @@ export class Component extends HTMLElement {
   }
 
   // Generate component content.
-  generate(pre) {
-    if (pre && this.prerender) {
+  generate() {
+    if (!this.initialized && this.prerender) {
       this.mount(this.prerender());
     } else if (this.render) {
       this.mount(this.render());

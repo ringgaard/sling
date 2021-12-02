@@ -91,6 +91,19 @@ const images_services = [
 },
 
 {
+  pattern: /https?:\/\/ibb\.co\//,
+  fetch: async (url, context) => {
+    let r = await fetch(context.proxy(url));
+    let html = await r.text();
+    let doc = new DOMParser().parseFromString(html, "text/html");
+    let container = doc.getElementById("image-viewer-container");
+    let img = container.querySelector("img");
+    return img && img.src ? img.src : null;
+  },
+  nsfw: true,
+},
+
+{
   pattern: /https?\:\/\/[A-Za-z0-9\.\-]+\/(uploads|galleries)\//,
   fetch: (url, context) => url,
   nsfw: true,

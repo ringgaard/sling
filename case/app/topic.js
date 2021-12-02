@@ -654,9 +654,12 @@ class ItemEditor extends Component {
   }
 
   onupdated() {
-    if (!this.state) return;
+    let topic = this.state;
+    if (!topic) return;
     this.adjust();
-    this.find("textarea").focus();
+    let textarea = this.find("textarea");
+    textarea.value = topic.text(true);
+    textarea.focus();
     this.dirty = false;
   }
 
@@ -733,7 +736,7 @@ class ItemEditor extends Component {
     textarea.setRangeText(text, start, end, "end");
   }
 
-  render() {
+  prerender() {
     let topic = this.state;
     let content = topic ? topic.text(true) : "";
     return `

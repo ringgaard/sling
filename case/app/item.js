@@ -479,7 +479,6 @@ class PicturePanel extends Component {
   }
 
   onupdated() {
-    console.log("pic updated");
     let images = this.state;
     if (images && images.length > 0) {
       let index = 0;
