@@ -295,7 +295,7 @@ class TopicCard extends Component {
 
     // Update topic name.
     let name = topic.get(n_name);
-    if (!name) name = "(no name)";
+    if (!name) name = topic.id;
     this.find("#name").update(name.toString());
   }
 
@@ -656,10 +656,11 @@ class ItemEditor extends Component {
   onupdated() {
     let topic = this.state;
     if (!topic) return;
-    this.adjust();
     let textarea = this.find("textarea");
     textarea.value = topic.text(true);
     textarea.focus();
+    textarea.setSelectionRange(0, 0);
+    this.adjust();
     this.dirty = false;
   }
 

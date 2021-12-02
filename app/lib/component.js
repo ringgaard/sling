@@ -41,6 +41,7 @@ export class Component extends HTMLElement {
     return this.oninit && this.oninit();
   }
 
+/*
   // Connect web component to DOM.
   connectedCallback() {
     // Add attributes to properties.
@@ -133,6 +134,48 @@ export class Component extends HTMLElement {
         return this.onupdated && this.onupdated();
       }
     }
+  }
+*/
+
+  // Connect web component to DOM.
+  async connectedCallback() {
+    // Add attributes to properties.
+    for (const attr of this.attributes) {
+      let name = attr.name.replace(/-/g, "_");
+      let value = attr.value;
+
+      if (value == "null") {
+        value = null;
+      } else if (value == "true") {
+        value = true;
+      } else if (value == "false") {
+        value = false;
+      } else {
+        let n = parseFloat(value);
+        if (!isNaN(n) && isFinite(n)) value = n;
+      }
+
+      this.props[name] = value;
+    }
+
+    // Render component.
+    if (this.onconnect) await this.onconnect();
+    if (!this.hide()) {
+      this.generate();
+      await this.initialize();
+    }
+    if (this.onconnected) await this.onconnected();
+  }
+
+  // Update component state.
+  async update(state) {
+    this.state = state;
+    if (this.onupdate) await this.onupdate();
+    if (!this.hide()) {
+      this.generate();
+      await this.initialize();
+    }
+    if (this.onupdated) await this.onupdated();
   }
 
   // Hide component if it is not visible.

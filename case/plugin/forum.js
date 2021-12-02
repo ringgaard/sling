@@ -43,7 +43,7 @@ const images_services = [
 },
 
 {
-  pattern: /https?:\/\/pimpandhost\.com\/image\//,
+  pattern: /https?:\/\/(www\.)?pimpandhost\.com\/image\//,
   fetch: async (url, context) => {
     let r = await fetch(context.proxy(url));
     let html = await r.text();
