@@ -19,7 +19,7 @@ const images_services = [
 },
 
 {
-  pattern: /http:\/\/img\d+\.imagevenue\.com\/img\.php\?/,
+  pattern: /https?:\/\/\w+\.imagevenue\.com\//,
   fetch: async (url, context) => {
     let r = await fetch(context.proxy(url));
     let html = await r.text();
@@ -126,7 +126,6 @@ export default class AlbumPlugin {
 
     // Get base url.
     let base = new URL(url).origin;
-    console.log("base", base);
 
     // Find image container.
     let container = doc.querySelector("div.gallery");
@@ -146,7 +145,6 @@ export default class AlbumPlugin {
       if (href.startsWith("/")) href = base + href;
       if (seen.has(href)) continue;
       seen.add(href);
-      console.log("href", href);
 
       // Find service for fetching image.
       let service = null;

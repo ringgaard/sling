@@ -21,19 +21,19 @@ let xrefs = [
     property: store.lookup("P2003"),
   },
   {
-    pattern: /^https?:\/\/www\.facebook\.com\/pg\/([^\?]+)/i,
+    pattern: /^https?:\/\/www\.facebook\.com\/pg\/([^\?\/]+)/i,
     property: store.lookup("P2013"),
   },
   {
-    pattern: /^https?:\/\/www\.facebook\.com\/people\/([^\?]+)/i,
+    pattern: /^https?:\/\/www\.facebook\.com\/people\/([^\?\/]+)/i,
     property: store.lookup("P2013"),
   },
   {
-    pattern: /^https?:\/\/(?:www\.)?facebook\.com\/([^\?]+)/i,
+    pattern: /^https?:\/\/(?:www\.)?facebook\.com\/([^\?\/]+)/i,
     property: store.lookup("P2013"),
   },
   {
-    pattern: /^https?:\/\/m\.facebook\.com\/([^\?]+)/i,
+    pattern: /^https?:\/\/m\.facebook\.com\/([^\?\/]+)/i,
     property: store.lookup("P2013"),
   },
   {

@@ -4,7 +4,7 @@
 import {Component} from "/common/lib/component.js";
 import {Frame, QString} from "/common/lib/frame.js";
 import {store, settings} from "./global.js";
-import {Time, LabelCollector, geocoords} from "./value.js";
+import {Time, LabelCollector, latlong} from "./value.js";
 import {PhotoGallery, censor, imageurl, mediadb} from "/common/lib/gallery.js";
 
 mediadb.thumb = false;
@@ -226,9 +226,7 @@ class PropertyPanel extends Component {
       h.push('<a href="');
       h.push(url);
       h.push('" target="_blank" rel="noreferrer">');
-      h.push(geocoords(lat, true));
-      h.push(", ");
-      h.push(geocoords(lng, false));
+      h.push(latlong(lat, lng));
       h.push('</a>');
     }
 

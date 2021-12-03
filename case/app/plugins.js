@@ -176,7 +176,6 @@ export class Context {
   }
 
   async refresh() {
-    console.log("refresh", this);
     if (this.added) {
       await this.editor.update_topics();
       if (this.select) {

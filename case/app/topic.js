@@ -3,10 +3,10 @@
 
 import {Component} from "/common/lib/component.js";
 import {StdDialog, MdIcon} from "/common/lib/material.js";
-import {Frame} from "/common/lib/frame.js";
+import {Frame, QString, Printer} from "/common/lib/frame.js";
 import {store, settings} from "./global.js";
 import {get_schema} from "./schema.js";
-import {LabelCollector} from "./value.js";
+import {LabelCollector, value_parser} from "./value.js";
 import "./item.js"
 import "./omnibox.js"
 
@@ -650,6 +650,7 @@ class ItemEditor extends Component {
 
     let omnibox = this.find("#value");
     let editor = this.match("#editor");
+    omnibox.add((query, full, results) => value_parser(query, results));
     omnibox.add((query, full, results) => editor.search(query, full, results));
   }
 
@@ -657,7 +658,8 @@ class ItemEditor extends Component {
     let topic = this.state;
     if (!topic) return;
     let textarea = this.find("textarea");
-    textarea.value = topic.text(true);
+
+    textarea.value = topic.text(true, true);
     textarea.focus();
     textarea.setSelectionRange(0, 0);
     this.adjust();
@@ -698,15 +700,23 @@ class ItemEditor extends Component {
       } else {
         value = item.topic
       }
-    } else {
-      value = store.lookup(item.ref);
+    } else if (item.value) {
+      if (item.value instanceof Frame) {
+        value = item.value.id || item.value.text(false, true);
+      } else {
+        let printer = new Printer(store);
+        printer.refs = null;
+        printer.print(item.value);
+        value = printer.output;
+      }
+    } else if (item.ref) {
+      value = item.ref;
     }
 
     e.target.clear();
     if (value) {
-      let text = value.isanonymous() ? value.text() : value.id;
-      if (isprop) text += ": "
-      this.insert(text);
+      if (isprop) value += ": "
+      this.insert(value);
     }
 
     if (isprop) {

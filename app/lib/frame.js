@@ -341,9 +341,10 @@ export class Frame {
   }
 
   // Convert frame to human-readable representation.
-  text(pretty) {
+  text(pretty, anon) {
     let printer = new Printer(this.store);
     if (pretty) printer.indent = "  ";
+    if (anon) printer.refs = null;
     printer.print(this);
     return printer.output;
   }
@@ -1267,7 +1268,9 @@ export class Printer {
       this.write(JSON.stringify(obj.text));
       if (obj.qual) {
         this.write("@");
+        this.level++;
         this.print(obj.qual);
+        this.level--;
       }
     } else {
       // Number expected.
@@ -1284,7 +1287,7 @@ export class Printer {
     }
 
     // If frame has already been printed, only print a reference.
-    let ref = this.refs.get(frame);
+    let ref = this.refs && this.refs.get(frame);
     if (ref) {
       if (typeof ref === 'string') {
         // Public reference.
@@ -1302,16 +1305,18 @@ export class Printer {
     this.level++;
 
     // Add frame to set of printed references.
-    if (frame.state == ANONYMOUS) {
-      // Assign next local id for anonymous frame.
-      let id = this.nextidx++;
-      this.write("=#");
-      this.write(id.toString());
-      this.write(" ");
-      this.refs.set(frame, id);
-    } else {
-      // Update reference table with frame id.
-      this.refs.set(frame, frame.id);
+    if (this.refs) {
+      if (frame.state == ANONYMOUS) {
+        // Assign next local id for anonymous frame.
+        let id = this.nextidx++;
+        this.write("=#");
+        this.write(id.toString());
+        this.write(" ");
+        this.refs.set(frame, id);
+      } else {
+        // Update reference table with frame id.
+        this.refs.set(frame, frame.id);
+      }
     }
 
     // Print slots.
@@ -1331,7 +1336,7 @@ export class Printer {
       if (name == this.store.id) {
         this.write("=");
         this.printSymbol(value);
-        this.refs.set(frame, value);
+        if (this.refs) this.refs.set(frame, value);
       } else if (name === this.store.isa) {
         this.write(":");
         this.print(value);
