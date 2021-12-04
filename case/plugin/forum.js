@@ -67,7 +67,7 @@ const images_services = [
 },
 
 {
-  pattern: /https?:\/\/www\.imagebam\.com\/image\//,
+  pattern: /https?:\/\/www\.imagebam\.com\/(image|view)\//,
   fetch: async (url, context) => {
     let r = await fetch(context.proxy(url + "?full=1"));
     let html = await r.text();
@@ -104,6 +104,51 @@ const images_services = [
 },
 
 {
+  pattern: /https?:\/\/lemmecheck\.tube\//,
+  fetch: async (url, context) => {
+    let r = await fetch(context.proxy(url));
+    let html = await r.text();
+    let doc = new DOMParser().parseFromString(html, "text/html");
+    let container = doc.querySelector("div.gallery-block");
+    let img = container.querySelector("img");
+    if (!img) return null;
+    return new URL(img.getAttribute("src"), url).href;
+  },
+  nsfw: true,
+},
+
+{
+  pattern: /https?:\/\/\w+rater\.com\//,
+  fetch: async (url, context) => {
+    let r = await fetch(context.proxy(url));
+    let html = await r.text();
+    let doc = new DOMParser().parseFromString(html, "text/html");
+    let ogimage = doc.querySelector('meta[property="og:image"]');
+    if (ogimage) {
+      let imgurl = ogimage.getAttribute("content");
+      let q = imgurl.indexOf("?");
+      if (q != -1) imgurl = imgurl.substring(0, q);
+      return imgurl;
+    }
+  },
+  nsfw: true,
+},
+
+{
+  pattern: /https?:\/\/www\.galleries\./,
+  fetch: async (url, context) => {
+    let r = await fetch(context.proxy(url));
+    let html = await r.text();
+    let doc = new DOMParser().parseFromString(html, "text/html");
+    let container = doc.querySelector("a");
+    let img = container.querySelector("img");
+    if (!img) return null;
+    return new URL(img.getAttribute("src"), url).href;
+  },
+  nsfw: true,
+},
+
+{
   pattern: /https?\:\/\/[A-Za-z0-9\.\-]+\/(uploads|galleries)\//,
   fetch: (url, context) => url,
   nsfw: true,
@@ -124,28 +169,48 @@ export default class AlbumPlugin {
     // Parse HTML.
     let doc = new DOMParser().parseFromString(html, "text/html");
 
-    // Get base url.
-    let base = new URL(url).origin;
-
     // Find image container.
     let container = doc.querySelector("div.gallery");
     if (!container) {
       container = doc.querySelector("div.actual-gallery-container");
     }
+    if (!container) {
+      container = doc.querySelector("div.gallery-block");
+    }
+    if (!container) {
+      container = doc.querySelector("div.mainGalleryDiv");
+    }
     if (!container) container = doc;
 
-    // Find all image links.
-    let num_images = 0;
-    let seen = new Set();
-    for (let link of container.getElementsByTagName("a")) {
-      // Get image link.
-      if (!link.querySelector("img")) continue;
-      let href = link.getAttribute("href");
-      if (!href) continue;
-      if (href.startsWith("/")) href = base + href;
-      if (seen.has(href)) continue;
-      seen.add(href);
+    // Find links to images.
+    let hrefs = new Array();
+    let gallery = container.querySelectorAll("div.galleryPics");
+    if (gallery.length > 0) {
+      for (let photo of gallery.values()) {
+        let link = photo.querySelector("a");
+        if (link) {
+          let href = link.getAttribute("href");
+          if (!href) continue;
+          href = new URL(href, url).href;
+          if (hrefs.includes(href)) continue;
+          hrefs.push(href);
+        }
+      }
+    } else {
+      for (let link of container.getElementsByTagName("a")) {
+        // Get image link.
+        if (!link.querySelector("img")) continue;
+        let href = link.getAttribute("href");
+        if (!href) continue;
+        href = new URL(href, url).href;
+        if (hrefs.includes(href)) continue;
+        hrefs.push(href);
+      }
+    }
 
+    // Retrieve images.
+    let num_images = 0;
+    for (let href of hrefs) {
       // Find service for fetching image.
       let service = null;
       for (let s of images_services) {

@@ -109,7 +109,7 @@ var plugins = [
   actions: [PASTEURL],
   patterns: [
     /^https?:\/\/[A-Za-z0-9\-\_\.]+\/showpost.php\?/,
-    /^https?:\/\/[A-Za-z0-9\-\_\.]+\/(galleries|gallery)\//,
+    /^https?:\/\/[A-Za-z0-9\-\_\.]+\/(galleries|gallery|albums)\//,
   ],
 },
 

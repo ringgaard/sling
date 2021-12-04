@@ -453,7 +453,7 @@ export function value_parser(value, results) {
   }
 
   // Parse and convert implerial units.
-  m = value.match(/^(\d+)'(\d+)"$/);
+  m = value.match(/^(\d+)'\s*(\d+)"$/);
   if (m) {
     let feet = parseInt(m[1]);
     let inches = parseInt(m[2]);

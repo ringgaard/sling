@@ -698,7 +698,7 @@ class ItemEditor extends Component {
         await editor.update_list();
         value = link;
       } else {
-        value = item.topic
+        value = item.topic.id
       }
     } else if (item.value) {
       if (item.value instanceof Frame) {
