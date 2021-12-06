@@ -104,6 +104,18 @@ const images_services = [
 },
 
 {
+  pattern: /https?:\/\/www\.turboimagehost\.com\//,
+  fetch: async (url, context) => {
+    let r = await fetch(context.proxy(url));
+    let html = await r.text();
+    let doc = new DOMParser().parseFromString(html, "text/html");
+    let img = doc.querySelector("img.uImage");
+    return img && img.src ? img.src : null;
+  },
+  nsfw: true,
+},
+
+{
   pattern: /https?:\/\/lemmecheck\.tube\//,
   fetch: async (url, context) => {
     let r = await fetch(context.proxy(url));

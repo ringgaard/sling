@@ -8,6 +8,7 @@ import {store, settings} from "./global.js";
 import {get_schema} from "./schema.js";
 import {LabelCollector, value_parser} from "./value.js";
 import "./item.js"
+import "./fact.js"
 import "./omnibox.js"
 
 const n_is = store.is;
@@ -48,10 +49,7 @@ class TopicList extends Component {
       let topics = this.state;
       let pos = topics.indexOf(active);
       if (pos != -1) {
-        if (e.key == "Enter") {
-          e.preventDefault();
-          this.card(active).onedit(e);
-        } else if (e.key == "Delete") {
+        if (e.key == "Delete") {
           this.delete_selected();
         } else if (e.key == "ArrowDown" && pos < topics.length - 1) {
           e.preventDefault();
@@ -262,16 +260,24 @@ class TopicCard extends Component {
     this.update_title();
   }
 
-  update_mode(editing) {
+  update_mode(editing, raw) {
     this.editing = editing;
+    this.editraw = raw;
 
     let content = this.match("md-content");
     let scrollpos = content ? content.scrollTop : undefined;
     if (editing) {
-      this.find("item-editor").update(this.state);
+      if (this.editraw) {
+        this.find("item-editor").update(this.state);
+        this.find("fact-editor").update();
+      } else {
+        this.find("item-editor").update();
+        this.find("fact-editor").update(this.state);
+      }
       this.find("item-panel").update();
     } else {
       this.find("item-panel").update(this.state);
+      this.find("fact-editor").update();
       this.find("item-editor").update();
     }
     if (scrollpos) content.scrollTop = scrollpos;
@@ -317,7 +323,7 @@ class TopicCard extends Component {
 
   onedit(e) {
     e.stopPropagation();
-    this.update_mode(true);
+    this.update_mode(true, !e.ctrlKey);
   }
 
   onnsfw(e, nsfw) {
@@ -428,7 +434,10 @@ class TopicCard extends Component {
   }
 
   onkeydown(e) {
-    if (e.key === "s" && e.ctrlKey && this.editing) {
+    if (e.key == "Enter" && !this.editing) {
+      e.preventDefault();
+      this.onedit(e);
+    } else if (e.key === "s" && e.ctrlKey && this.editing) {
       e.stopPropagation();
       e.preventDefault();
       this.onsave(e);
@@ -436,10 +445,6 @@ class TopicCard extends Component {
       e.stopPropagation();
       e.preventDefault();
       this.ondiscard(e);
-    } else if (e.key === "4" && e.ctrlKey) {
-      e.stopPropagation();
-      e.preventDefault();
-      this.onimgcheck(e);
     }
   }
 
@@ -451,24 +456,6 @@ class TopicCard extends Component {
       let url = `${settings.kbservice}/photosearch?q="${query}"`;
       if (settings.nsfw) url += "&nsfw=1";
       window.open(url, "_blank");
-    }
-  }
-
-  async onimgcheck(e) {
-    let topic = this.state;
-    let missing = new Array();
-    for (let i = 0; i < topic.length; ++i) {
-      if (topic.name(i) != n_media) continue;
-      let url = store.resolve(topic.value(i));
-      let r = await fetch(`/case/proxy?url=${encodeURIComponent(url)}`);
-      if (!r.ok) missing.push(i);
-    }
-    if (missing.length > 0) {
-      console.log(missing.length, "images missing", missing);
-      for (let index of missing.reverse()) {
-        topic.remove(index);
-      }
-      await this.refresh();
     }
   }
 
@@ -556,6 +543,7 @@ class TopicCard extends Component {
         </md-toolbox>
       </md-card-toolbar>
       <item-panel></item-panel>
+      <fact-editor></fact-editor>
       <item-editor><item-editor>
     `;
   }

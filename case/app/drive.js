@@ -27,7 +27,7 @@ function serial() {
 
 // Write file to drive and return url.
 export async function write_to_drive(filename, content) {
-  let url = `https://drive.ringgaard.com/i/${filename}`;
+  let url = `https://drive.ringgaard.com/${filename}`;
   console.log("write file to drive", url, content.length);
   let r = await fetch(url, {method: "PUT", body: content});
   if (!r.ok) return null;
@@ -53,6 +53,6 @@ export async function paste_image() {
   let fn = encode(serial()) + ".png";
 
   // Write image to drive.
-  return write_to_drive(fn, image);
+  return write_to_drive("i/" + fn, image);
 }
 

@@ -102,6 +102,16 @@ var plugins = [
   ],
 },
 
+// Video transcoding.
+{
+  name: "transcode",
+  module: "transcode.js",
+  actions: [PASTEURL],
+  patterns: [
+    /^https?:\/\/.+\.(avi|wmv)(\/file)?$/,
+  ],
+},
+
 // Images from forum posts.
 {
   name: "forum",
@@ -121,13 +131,13 @@ var plugins = [
   patterns: xref_patterns(),
 },
 
-// JPG, GIF and PNG images.
+// Media files.
 {
   name: "images",
   module: "images.js",
   actions: [PASTEURL],
   patterns: [
-    /^https?:\/\/.*\.(jpg|jpeg|gif|png)([\/\?].+)?$/,
+    /^https?:\/\/.*\.(jpg|jpeg|gif|png|mp4|webm)([\/\?].+)?$/,
   ],
 },
 

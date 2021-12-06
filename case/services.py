@@ -31,6 +31,7 @@ services = {
   "albums": Service("albums", "AlbumService"),
   "article": Service("article", "ArticleService"),
   "newssite": Service("newssite", "NewsSiteService"),
+  "transcode": Service("transcode", "TranscodeService"),
   "twitter": Service("twitter", "TwitterService"),
   "wikidata": Service("wikidata", "WikidataService"),
 }
