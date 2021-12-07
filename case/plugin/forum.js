@@ -214,7 +214,12 @@ export default class AlbumPlugin {
         if (!link.querySelector("img")) continue;
         let href = link.getAttribute("href");
         if (!href) continue;
-        href = new URL(href, url).href;
+        try {
+          href = new URL(href, url).href;
+        } catch (error) {
+          console.log("Unable to parse URL", href);
+          continue;
+        }
         if (hrefs.includes(href)) continue;
         hrefs.push(href);
       }

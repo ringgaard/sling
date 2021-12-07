@@ -85,7 +85,7 @@ const month_names = [
 
 const month_mapping = {
   "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
-  "jul": 1, "aug": 2, "sep": 3, "oct": 4, "nov": 5, "dec": 6,
+  "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
 
   "maj": 5, "okt": 10,
 };
