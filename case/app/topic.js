@@ -479,6 +479,11 @@ class TopicCard extends Component {
     let dy = this.ofsy - e.offsetY;
     if (Math.abs(dx) + Math.abs(dy) > 10) return;
 
+    // Select single topic on non-shift click.
+    if (!e.shiftKey) {
+      window.getSelection().collapse(this, 0);
+    }
+
     // Align selection to topics.
     TopicCard.align_selection();
   }

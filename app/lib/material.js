@@ -1097,10 +1097,10 @@ class MdTextField extends Component {
   get value() {
     return this.state;
   }
+
   set value(v) {
     this.update(v);
   }
-
 
   onconnected() {
     this.bind(null, "focusin", e => this.onfocus(e));

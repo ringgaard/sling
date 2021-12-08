@@ -7,11 +7,44 @@ import {Component} from "/common/lib/component.js";
 import {MdSearchResult} from "/common/lib/material.js";
 import {store, settings} from "./global.js";
 
+const n_is = store.is;
 const n_name = store.lookup("name");
 const n_alias = store.lookup("alias");
 const n_description = store.lookup("description");
+const n_instance_of = store.lookup("P31");
+
 const n_properties = store.lookup("properties");
 const n_fanin = store.lookup("/w/item/fanin");
+
+const max_fainin = Number.MAX_VALUE;
+
+n_is.add(n_name, "is");
+n_is.add(n_description, "same as");
+n_is.add(n_fanin, max_fainin);
+
+n_name.add(n_name, "name");
+n_name.add(n_description, "item name");
+n_name.add(n_fanin, max_fainin);
+
+n_description.add(n_name, "description");
+n_description.add(n_description, "item description");
+n_description.add(n_fanin, max_fainin);
+
+n_instance_of.add(n_name, "instance of");
+n_instance_of.add(n_description, "item type");
+n_instance_of.add(n_fanin, max_fainin);
+
+n_alias.add(n_name, "alias");
+n_alias.add(n_description, "item alias");
+n_alias.add(n_fanin, max_fainin);
+
+const property_shortcuts = {
+  "is": n_is,
+  "name": n_name,
+  "description": n_description,
+  "alias": n_alias,
+  "type": n_instance_of,
+};
 
 var kbschema;
 var kbpropidx;
@@ -47,8 +80,16 @@ class PropertyIndex {
     // Normalize query.
     let normalized_query = normalized(query);
 
-    // Add matching property id.
+    // Add property shortcut matches.
     let matches = new Set();
+    let query_len = normalized_query.length;
+    for (let [name, value] of Object.entries(property_shortcuts)) {
+      if (name.substring(0, query_len) == normalized_query) {
+        matches.add(value);
+      }
+    }
+
+    // Add matching property id.
     let prop = this.ids[query];
     if (prop) matches.add(prop);
 
@@ -154,7 +195,7 @@ class PropertySearchBox extends Component {
       <form>
         <md-search
           placeholder="Search for property..."
-          min-length=2
+          min-length=1
           autoselect=1>
         </md-search>
       </form>

@@ -16,11 +16,13 @@ function date2str(date) {
 class CaseManager extends Component {
   onconnected() {
     this.bind("#settings", "click", e => this.onsettings(e));
+    this.find("md-search input").focus();
   }
 
   onupdate() {
     if (!this.state) return;
     this.find("case-list").update(this.state);
+    this.find("md-search input").focus();
   }
 
   onsettings(e) {

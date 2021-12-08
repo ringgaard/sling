@@ -6,6 +6,7 @@ import {store, settings} from "./global.js";
 
 const n_isa = store.isa;
 const n_name = store.lookup("name");
+const n_target = store.lookup("target");
 const n_amount = store.lookup("/w/amount");
 const n_unit = store.lookup("/w/unit");
 const n_cm = store.lookup("Q174728");
@@ -14,15 +15,27 @@ const n_geo = store.lookup("/w/geo");
 const n_lat = store.lookup("/w/lat");
 const n_lng = store.lookup("/w/lng");
 
-function lookup(mapping) {
+const n_item_type = store.lookup("/w/item");
+const n_string_type = store.lookup("/w/string");
+const n_xref_type = store.lookup("/w/xref");
+const n_time_type = store.lookup("/w/time");
+const n_url_type = store.lookup("/w/url");
+const n_media_type = store.lookup("/w/media");
+const n_quantity_type = store.lookup("/w/quantity");
+const n_geo_type = store.lookup("/w/geo");
+
+function indexmaps(mapping) {
   let m = new Map();
-  for (let [key, value] of Object.entries(mapping)) {
-    m[key] = store.lookup(value);
+  let n = new Map();
+  for (let [name, value] of Object.entries(mapping)) {
+    let v = store.lookup(value);
+    m.set(name, v);
+    n.set(v, name);
   }
-  return m;
+  return [m, n];
 }
 
-const units = lookup({
+const [units, unitname] = indexmaps({
   "m": "Q11573",
   "mm": "Q174789",
   "mm3": "Q3675550",
@@ -438,7 +451,7 @@ export function value_parser(value, results) {
   m = value.match(/^(\-?\d+\.?\d+) (\w+)$/);
   if (m) {
     let amount = parseFloat(m[1]);
-    let unit = units[m[2]];
+    let unit = units.get(m[2]);
 
     if (!isNaN(amount) && unit) {
       let v = store.frame();
@@ -497,7 +510,7 @@ export function value_parser(value, results) {
   }
 
   // Parse geo-locaion.
-  m = value.match(/^(\d+\.\d+),(\d+\.\d+)$/);
+  m = value.match(/^([+\-]?\d+\.\d+)\s*,\s*([+\-]?\d+\.\d+)$/);
   if (m) {
     let lat = parseFloat(m[1]);
     let lng = parseFloat(m[2]);
@@ -512,6 +525,71 @@ export function value_parser(value, results) {
         description: "geo-location",
       });
     }
+  }
+}
+
+export function value_text(val, prop) {
+  let dt = prop instanceof Frame ? prop.get(n_target) : n_item_type;
+
+  if (val instanceof Frame) {
+    if (val.isanonymous()) {
+      if (val.has(n_amount)) {
+        // Quantity.
+        let amount = val.get(n_amount);
+        let unit = val.get(n_unit);
+
+        if (typeof amount === 'number') {
+          amount = Math.round(amount * 1000) / 1000;
+        }
+
+        if (unit) {
+          let unit_name = unitname.get(unit);
+          if (!unit_name) unit.get(n_name);
+          if (!unit_name) unit = unit.id;
+          return [amount + " " + unit_name, true];
+        } else {
+          return [amount, true];
+        }
+      } else if (val.has(n_lat) && val.has(n_lng)) {
+        // Geo coordinate.
+        let lat = val.get(n_lat);
+        let lng = val.get(n_lng);
+        return [lat + "," + lng, true];
+      } else {
+        // Fallback.
+        return [val.text(false, true), true];
+      }
+    } else {
+      // Link.
+      let name = val.get(n_name);
+      if (!name) name = val.id;
+      return [name, true];
+    }
+  } else if (val instanceof QString) {
+    if (val.qual) {
+      // Qualified string.
+      let lang = val.qual.get(n_name);
+      if (!lang) lang = val.qual.id;
+      if (lang.startsWith("/lang/")) lang = lang.substring(6, lang.length);
+      return [val.text + "@" + lang, true];
+    } else {
+      return [val.text, false];
+    }
+  } else if (typeof val === 'number') {
+    if (dt == n_time_type) {
+      // Time.
+      let t = new Time(val);
+      return [t.text(), true];
+    } else {
+      // Number.
+      return [val.toString(), true];
+    }
+  } else if (typeof val === 'string') {
+    // Text.
+    return [val, false];
+  } else {
+    // Fallback.
+    return [val, true];
   }
 }
 

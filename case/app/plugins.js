@@ -108,7 +108,7 @@ var plugins = [
   module: "transcode.js",
   actions: [PASTEURL],
   patterns: [
-    /^https?:\/\/.+\.(avi|wmv)(\/file)?$/,
+    /^https?:\/\/.+\.(avi|wmv|mp4)(\/file)?$/,
   ],
 },
 
