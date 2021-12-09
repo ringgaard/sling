@@ -378,6 +378,7 @@ class CaseEditor extends Component {
       this.find("md-drawer").update(true);
       await this.update_folders();
       await this.update_topics();
+      await this.navigate_to(this.main);
     }
   }
 

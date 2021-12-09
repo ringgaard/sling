@@ -376,6 +376,7 @@ class TopicCard extends Component {
 
   async onsave(e) {
     e.stopPropagation();
+    if (!this.editraw) return;
     let edit = this.find("item-editor");
     let content = edit.value();
     var topic;
@@ -400,7 +401,7 @@ class TopicCard extends Component {
 
   async ondiscard(e) {
     let discard = true;
-    if (this.find("item-editor").dirty) {
+    if (this.editraw && this.find("item-editor").dirty) {
       let topic = this.state;
       discard = await StdDialog.confirm(
         "Discard changes",
@@ -640,6 +641,7 @@ class ItemEditor extends Component {
     this.bind("#property md-search", "enter", e => this.onenter(e, true));
     this.bind("#value md-search", "enter", e => this.onenter(e, false));
     this.bind("textarea", "input", e => this.adjust());
+    this.bind(null, "click", e => this.onclick(e));
 
     let omnibox = this.find("#value");
     let editor = this.match("#editor");
@@ -738,6 +740,11 @@ class ItemEditor extends Component {
     let start = textarea.selectionStart;
     let end = textarea.selectionEnd;
     textarea.setRangeText(text, start, end, "end");
+  }
+
+  onclick(e) {
+    // Prevent topic selection.
+    e.stopPropagation();
   }
 
   prerender() {
