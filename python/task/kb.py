@@ -167,7 +167,7 @@ class KnowledgeBaseWorkflow:
 
       # Collect frames into knowledge base store.
       return self.wf.write(pruned_items, self.data.knowledge_base(),
-                           params={"snapshot": True})
+                           params={"string_buckets": 32 * 1024 * 1024})
 
   def load_items(self):
     """Task for loading items into database."""

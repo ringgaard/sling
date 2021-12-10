@@ -27,11 +27,14 @@ namespace task {
 // Decode all input messages as frames and save them into a frame store.
 class FrameStoreWriter : public Processor {
  public:
-  FrameStoreWriter() { options_.symbol_rebinding = true; }
+  FrameStoreWriter() {
+    options_.symbol_rebinding = true;
+  }
   ~FrameStoreWriter() { delete store_; }
 
   void Start(Task *task) override {
     // Create store.
+    task->Fetch("string_buckets", &options_.string_buckets);
     store_ = new Store(&options_);
 
     // Suppressing garbage collection can make store updates faster at the

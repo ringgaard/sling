@@ -28,6 +28,7 @@ class FactEditor extends Component {
 
     this.bind(null, "keydown", e => this.onkeydown(e));
     this.bind(null, "click", e => this.onclick(e));
+    this.bind(null, "copy", e => this.oncopy(e));
     this.bind(null, "paste", e => this.onpaste(e));
   }
 
@@ -147,11 +148,22 @@ class FactEditor extends Component {
     this.focus();
   }
 
+  oncopy(e) {
+    let s = this.selection();
+    console.log(s.selection);
+  }
+
   onpaste(e) {
-    console.log("paste", e);
+    // Get HTML from clipboard.
     let html = e.clipboardData.getData('text/html');
-    let doc = new DOMParser().parseFromString(html, "text/html");
-    console.log("doc", doc);
+    let clip = document.createElement("div");
+    clip.innerHTML = html;
+
+    let styled = clip.querySelectorAll("[style]");
+    for (let i = 0; i < styled.length; ++i) {
+      styled[i].removeAttribute("style");
+    }
+    console.log("clip", clip);
   }
 
   selection() {
@@ -212,6 +224,7 @@ class FactEditor extends Component {
         h.push(new FactStatement({property: prop, value: value}));
       }
     }
+    h.push(new FactStatement());
     return h;
   }
 
@@ -235,20 +248,23 @@ Component.register(FactEditor);
 class FactStatement extends Component {
   constructor(state) {
     super(state);
-    this.qualified = this.state.qualified;
+    if (state) {
+      this.qualified = state.qualified;
+    }
   }
 
   get qualified() {
-    return this.state.qualified;
+    return this.state && this.state.qualified;
   }
 
   set qualified(v) {
-    this.state.qualified = v;
+    if (this.state) this.state.qualified = v;
     this.className = v ? "qualified" : "";
   }
 
   render() {
     let statement = this.state;
+    if (!statement) return "";
     return [
       new FactProperty({property: n_item_type, value: statement.property}),
       new FactValue({property: statement.property, value: statement.value}),
@@ -260,6 +276,7 @@ class FactStatement extends Component {
       $ {
         display: flex;
         padding-top: 4px;
+        min-height: 1em;
       }
       $.qualified {
         font-size: 13px;
@@ -275,7 +292,7 @@ class FactField extends Component {
   render() {
     if (!this.state) return;
     let val = this.state.value;
-    let prop = this.state.type;
+    let prop = this.state.property;
     let [text, encoded] = value_text(val, prop);
     if (encoded) {
       let value = val.id;
@@ -342,7 +359,12 @@ Component.register(FactValue);
 
 function closest_fact(n) {
   while (n) {
-    if (n instanceof FactField) return n;
+    if (n instanceof FactField) {
+      return {field: n, statement: n.parentElement};
+    }
+    if (n instanceof FactStatement) {
+      return {statement: n};
+    }
     n = n.parentNode;
   }
 }
@@ -356,20 +378,16 @@ document.addEventListener("selectionchange", () => {
   let focus = closest_fact(selection.focusNode);
   if (!focus) return;
   let anchor = closest_fact(selection.anchorNode);
-  if (!anchor) return
+  if (!anchor) return;
 
   // Ignore selection within fact field.
-  if (focus == anchor) return;
-
-  // Compute range of facts to select.
-  let focus_stmt = focus.parentElement;
-  let anchor_stmt = anchor.parentElement;
+  if (focus.field == anchor.field) return;
 
   // Determine selection direction.
   let forward = false;
-  let e = anchor_stmt;
+  let e = anchor.statement == focus.statement ? anchor.field : anchor.statement;
   while (e) {
-    if (e == focus_stmt) {
+    if (e == focus.statement || e == focus.field) {
       forward = true;
       break;
     }
@@ -377,14 +395,13 @@ document.addEventListener("selectionchange", () => {
   }
 
   // Expand selection to cover full fact statements.
-  let endofs = 0;
-  if (forward && (focus instanceof FactValue)) {
-    if (focus_stmt.nextSibling) {
-      focus_stmt = focus_stmt.nextSibling;
-    } else {
-      endofs = focus_stmt.childElementCount;
-    }
+  if (forward && (focus.field instanceof FactValue)) {
+    focus.statement = focus.statement.nextSibling;
   }
-  selection.setBaseAndExtent(anchor_stmt, 0, focus_stmt, endofs);
+  if (!forward && (anchor.field instanceof FactValue)) {
+    anchor.statement = anchor.statement.nextSibling;
+  }
+
+  selection.setBaseAndExtent(anchor.statement, 0, focus.statement, 0);
 });
 

@@ -166,6 +166,22 @@ const images_services = [
   nsfw: true,
 },
 
+{
+  pattern: /https?\:\/\/.+\.jpe?g$/,
+  fetch: (url, context) => url,
+  nsfw: true,
+},
+
+];
+
+let gallery_containers = [
+  "div.gallery",
+  "div.actual-gallery-container",
+  "div.gallery-block",
+  "div.mainGalleryDiv",
+  "div.galleryGrid",
+  "div.player-right",
+  "div.gallery-wrapper",
 ];
 
 export default class AlbumPlugin {
@@ -181,18 +197,14 @@ export default class AlbumPlugin {
     // Parse HTML.
     let doc = new DOMParser().parseFromString(html, "text/html");
 
-    // Find image container.
-    let container = doc.querySelector("div.gallery");
-    if (!container) {
-      container = doc.querySelector("div.actual-gallery-container");
-    }
-    if (!container) {
-      container = doc.querySelector("div.gallery-block");
-    }
-    if (!container) {
-      container = doc.querySelector("div.mainGalleryDiv");
+    // Find image gallery container.
+    var container;
+    for (let selector of gallery_containers) {
+      container = doc.querySelector(selector);
+      if (container) break;
     }
     if (!container) container = doc;
+    console.log(container);
 
     // Find links to images.
     let hrefs = new Array();
@@ -222,6 +234,20 @@ export default class AlbumPlugin {
         }
         if (hrefs.includes(href)) continue;
         hrefs.push(href);
+      }
+    }
+
+    let slides = container.querySelectorAll("div.slide");
+    if (slides.length > 0) {
+      for (let photo of slides.values()) {
+        let img = photo.querySelector("img");
+        if (img) {
+          let href = img.getAttribute("data-src");
+          if (!href) continue;
+          href = new URL(href, url).href;
+          if (hrefs.includes(href)) continue;
+          hrefs.push(href);
+        }
       }
     }
 
