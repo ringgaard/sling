@@ -467,10 +467,11 @@ export function value_parser(value, results) {
 
   // Parse and convert implerial units.
   m = value.match(/^(\d+)'\s*(\d+)"$/);
+  if (!m) m = value.match(/^(\d+)\s*ft\s*(\d+)\s*in$/);
   if (m) {
     let feet = parseInt(m[1]);
     let inches = parseInt(m[2]);
-    let cm = Math.floor(feet * 30.48 + inches * 2.54)
+    let cm = Math.round(feet * 30.48 + inches * 2.54)
     let v = store.frame();
     v.add(n_amount, cm);
     v.add(n_unit, n_cm);
@@ -483,7 +484,7 @@ export function value_parser(value, results) {
   m = value.match(/^(\d+)\s*lbs?$/);
   if (m) {
     let pounds = parseInt(m[1]);
-    let kg = Math.floor(pounds * 0.45359237);
+    let kg = Math.round(pounds * 0.45359237);
     let v = store.frame();
     v.add(n_amount, kg);
     v.add(n_unit, n_kg);
