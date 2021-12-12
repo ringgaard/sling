@@ -24,6 +24,7 @@ class ItemFaninMapper : public task::FrameProcessor {
  public:
   void Startup(task::Task *task) override {
     accumulator_.Init(output(), task->Get("buckets", 1 << 20));
+    task->Fetch("only_wikipedia", &only_wikipedia_);
     system_properties_.add(Handle::id());
     system_properties_.add(Handle::is());
     system_properties_.add(Handle::isa());
@@ -33,6 +34,9 @@ class ItemFaninMapper : public task::FrameProcessor {
   }
 
   void Process(Slice key, const Frame &frame) override {
+    // Skip non-wikipedia items in wikipedia-only mode.
+    if (only_wikipedia_ && !frame.Has(n_wikipedia_)) return;
+
     // Accumulate fact properties and value counts for the item.
     Store *store = frame.store();
     for (const Slot &slot : frame) {
@@ -72,8 +76,14 @@ class ItemFaninMapper : public task::FrameProcessor {
   // Accumulator for fanin counts.
   task::Accumulator accumulator_;
 
+  // Whether to only items in Wikipedia for computing fanin.
+  bool only_wikipedia_ = true;
+
   // Special properties where fanin is not computed.
   HandleSet system_properties_;
+
+  // Symbols.
+  Name n_wikipedia_{names_, "/w/item/wikipedia"};
 };
 
 REGISTER_TASK_PROCESSOR("item-fanin-mapper", ItemFaninMapper);
