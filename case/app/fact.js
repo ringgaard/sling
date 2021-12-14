@@ -13,7 +13,9 @@ const n_id = store.id;
 const n_is = store.is;
 const n_name = store.lookup("name");
 const n_media = store.lookup("media");
+const n_target = store.lookup("target");
 const n_item_type = store.lookup("/w/item");
+const n_quantity_type = store.lookup("/w/quantity");
 
 function qualified(v) {
   if (v instanceof Frame) {
@@ -45,6 +47,13 @@ class FactEditor extends Component {
 
   onfocusout(e) {
     //console.log("focusout", this.value, e);
+  }
+
+  onselection(focus, anchor) {
+    if (this.focused && this.focused != focus.field) {
+      this.focused.collapse();
+      this.focused = null;
+    }
   }
 
   oninput(e) {
@@ -130,11 +139,16 @@ class FactEditor extends Component {
 
   onbackspace(e) {
     let s = this.selection();
-    if (s && s.field && s.position == 0) {
-      if (s.property) {
-        s.statement.qualified = false;
-      }
+    if (!s) return;
+    console.log("bs", s);
+    if (s.position == 0) {
+      if (s.field == s.property) s.statement.qualified = false;
+      if (s.selection.isCollapsed) e.preventDefault();
+    }
+    if (s.position == 1) {
       e.preventDefault();
+      s.field.input.innerHTML = "";
+      if (s.field instanceof FactField) s.field.onchanged(e);
     }
   }
 
@@ -378,7 +392,8 @@ class FactInput extends Component {
   static stylesheet() {
     return `
       $ {
-        display: block; /* prevent deletion */
+        display: inline-block; /* prevent deletion */
+        min-height: 1.25em;
       }
     `;
   }
@@ -393,12 +408,15 @@ class FactField extends Component {
   }
 
   async onchanged(e) {
-    this.removeAttribute("value");
-    this.removeAttribute("text");
-    this.className = "";
+    let text = this.text();
+    if (text != this.getAttribute("text")) {
+      this.removeAttribute("value");
+      this.removeAttribute("text");
+      this.className = "";
 
-    let results = await search(this.text(), this.backends());
-    this.list.update({items: results});
+      let results = await search(this.text(), this.backends());
+      this.list.update({items: results});
+    }
   }
 
   onenter(e) {
@@ -416,7 +434,8 @@ class FactField extends Component {
   }
 
   searching() {
-    return !!this.list.state;
+    let items = this.list.state && this.list.state.items;
+    return items && items.length > 0;
   }
 
   text() {
@@ -428,7 +447,12 @@ class FactField extends Component {
       let value = this.getAttribute("value");
       return store.parse(value);
     } else {
-      return this.text();
+      let text = this.text();
+      if (this.state.property.get(n_target) == n_quantity_type) {
+        let number = parseFloat(text);
+        if (!isNaN(number)) return number;
+      }
+      return text;
     }
   }
 
@@ -533,7 +557,7 @@ class FactProperty extends FactField {
   static stylesheet() {
     return `
       $ {
-        display: block; /*flex;*/
+        display: block;
         font-weight: 500;
         margin-right: 4px;
         white-space: nowrap;
@@ -570,7 +594,7 @@ class FactValue extends FactField {
   static stylesheet() {
     return `
       $ {
-        display: block; /*flex;*/
+        display: block;
       }
       $.encoded {
         color: #0b0080;
@@ -602,14 +626,18 @@ function closest_fact(n) {
 document.addEventListener("selectionchange", () => {
   // Get current selection.
   let selection = document.getSelection();
-  if (selection.isCollapsed) return;
 
   let focus = closest_fact(selection.focusNode);
   if (!focus) return;
   let anchor = closest_fact(selection.anchorNode);
   if (!anchor) return;
 
-  // Ignore selection within fact field.
+  // Notify fact editor about selection change.
+  let editor = focus.statement.closest("fact-editor");
+  if (editor) editor.onselection(focus, anchor);
+
+  // Ignore (collapsed) selection within fact field.
+  if (selection.isCollapsed) return;
   if (focus.field == anchor.field) return;
 
   // Determine selection direction.

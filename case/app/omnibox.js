@@ -16,21 +16,23 @@ export async function search(query, backends) {
     query = query.slice(0, -1);
   }
 
-  // Collect search results from backends.
-  let items = new Array();
-  for (let backend of backends) {
-    await backend(query, full, items);
-  }
-
-  // Convert items to search results filtering out duplicates.
   let results = new Array();
-  let seen = new Set();
-  for (let item of items) {
-    if (item.ref && seen.has(item.ref)) continue;
-    if (item.topic) {
-      for (let ref of item.topic.all(n_is)) seen.add(ref.id);
+  if (query.length > 0) {
+    // Collect search results from backends.
+    let items = new Array();
+    for (let backend of backends) {
+      await backend(query, full, items);
     }
-    results.push(new MdSearchResult(item));
+
+    // Convert items to search results filtering out duplicates.
+    let seen = new Set();
+    for (let item of items) {
+      if (item.ref && seen.has(item.ref)) continue;
+      if (item.topic) {
+        for (let ref of item.topic.all(n_is)) seen.add(ref.id);
+      }
+      results.push(new MdSearchResult(item));
+    }
   }
 
   return results;
