@@ -376,16 +376,26 @@ class TopicCard extends Component {
 
   async onsave(e) {
     e.stopPropagation();
-    if (!this.editraw) return;
-    let edit = this.find("item-editor");
-    let content = edit.value();
     var topic;
-    try {
-      topic = store.parse(content);
-    } catch (error) {
-      console.log("parse error", content);
-      StdDialog.error(`Error parsing topic: ${error}`);
-      return;
+    if (this.editraw) {
+      let edit = this.find("item-editor");
+      let content = edit.value();
+      try {
+        topic = store.parse(content);
+      } catch (error) {
+        console.log("parse error", content);
+        StdDialog.error(`Error parsing topic: ${error}`);
+        return;
+      }
+    } else {
+      topic = this.state;
+      let edit = this.find("fact-editor");
+      let slots = edit.slots();
+      if (!slots) {
+        StdDialog.error("Illformed topic");
+        return;
+      }
+      topic.slots = slots;
     }
 
     let labels = new LabelCollector(store)

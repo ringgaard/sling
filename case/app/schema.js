@@ -166,6 +166,19 @@ export async function get_property_index() {
   return kbpropidx;
 }
 
+export async function psearch(query, full, results) {
+  let props = await get_property_index();
+  let matches = props.match(query, 30, !full);
+  for (let match of matches) {
+    results.push({
+      ref: match.id,
+      name: match.get(n_name),
+      description: match.get(n_description),
+      property: match,
+    });
+  }
+}
+
 class PropertySearchBox extends Component {
   onconnected() {
     this.bind("md-search", "query", e => this.onquery(e));
@@ -175,17 +188,12 @@ class PropertySearchBox extends Component {
     let target = e.target;
     let detail = e.detail
     let query = detail.trim();
-    let props = await get_property_index();
+    let results = new Array();
+    await psearch(query, false, results);
 
-    let matches = props.match(query);
     let items = [];
-    for (let match of matches) {
-      items.push(new MdSearchResult({
-        ref: match.id,
-        name: match.get(n_name),
-        description: match.get(n_description),
-        property: match,
-      }));
+    for (let result of results) {
+      items.push(new MdSearchResult(result));
     }
     target.populate(detail, items);
   }

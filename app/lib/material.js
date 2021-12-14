@@ -1465,6 +1465,7 @@ export class MdSearchList extends Component {
 
   onupdated() {
     this.active = null;
+    this.scrollTop = 0;
   }
 
   render() {

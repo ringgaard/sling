@@ -173,10 +173,12 @@ def share_case(request):
     log.info("Share case #%d version %d for client %s" % (caseid, ts, client))
   else:
     # Delete case from database.
-    casedb.delete(str(caseid))
-
-    # Log case delete with IP address.
-    log.info("Unshare case #%d version %d for client %s" % (caseid, ts, client))
+    key = str(caseid)
+    if key in casedb:
+      casedb.delete(key)
+      # Log case delete with IP address.
+      log.info("Unshare case #%d version %d for client %s" %
+               (caseid, ts, client))
 
 @app.route("/case/service")
 def service_request(request):
@@ -240,7 +242,6 @@ def service_request(request):
 @app.route("/media")
 def media_request(request):
   # Dummy media service that always redirects to the original url.
-  print("media", request.path);
   return sling.net.HTTPRedirect(urllib.parse.unquote(request.path[1:]))
 
 # Initialize services.

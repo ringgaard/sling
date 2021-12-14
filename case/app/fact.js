@@ -2,9 +2,12 @@
 // Licensed under the Apache License, Version 2
 
 import {Component} from "/common/lib/component.js";
-import {Frame} from "/common/lib/frame.js";
+import {MdSearchList} from "/common/lib/material.js";
+import {Frame, Printer} from "/common/lib/frame.js";
 import {store, settings} from "./global.js";
-import {value_text} from "./value.js";
+import {value_text, value_parser} from "./value.js";
+import {search} from "./omnibox.js";
+import {psearch} from "./schema.js";
 
 const n_id = store.id;
 const n_is = store.is;
@@ -30,17 +33,38 @@ class FactEditor extends Component {
     this.bind(null, "click", e => this.onclick(e));
     this.bind(null, "copy", e => this.oncopy(e));
     this.bind(null, "paste", e => this.onpaste(e));
+
+    this.bind(null, "input", e => this.oninput(e));
+    this.bind(null, "focusin", e => this.onfocusin(e));
+    this.bind(null, "focusout", e => this.onfocusout(e));
+  }
+
+  onfocusin(e) {
+    //console.log("focusin", this.value, e);
+  }
+
+  onfocusout(e) {
+    //console.log("focusout", this.value, e);
+  }
+
+  oninput(e) {
+    let s = this.selection();
+    if (!s) return;
+    if (s.field instanceof FactField) {
+      if (this.focused && this.focused != s.field) this.focused.collapse();
+      s.field.onchanged(e);
+      this.focused = s.field;
+    }
   }
 
   onmove(e, down) {
     let s = this.selection();
-    if (!s || s.position != 0) return;
+    if (!s) return;
+
     let next = down ? s.statement.nextSibling : s.statement.previousSibling;
     if (!next) return;
 
-    let focus = next.firstChild;
-    if (!focus) return;
-    if (s.field == s.value) focus = focus.nextSibling;
+    let focus = next.firstChild || next;
     if (!focus) return;
 
     let anchor = e.shiftKey ? s.anchor : focus;
@@ -91,7 +115,6 @@ class FactEditor extends Component {
     let end = s.value;
     if (!end) return;
 
-    console.log("s", s);
     let anchor = e.shiftKey ? s.anchor : end;
     let anchorofs = e.shiftKey ? s.anchorofs : 1;
     s.selection.setBaseAndExtent(anchor, anchorofs, end, 1);
@@ -107,9 +130,10 @@ class FactEditor extends Component {
 
   onbackspace(e) {
     let s = this.selection();
-    console.log("s", s);
-    if (s && s.field == s.property && s.position == 0) {
-      s.statement.qualified = false;
+    if (s && s.field && s.position == 0) {
+      if (s.property) {
+        s.statement.qualified = false;
+      }
       e.preventDefault();
     }
   }
@@ -119,11 +143,27 @@ class FactEditor extends Component {
     console.log("del", s);
   }
 
+  searching() {
+    return this.focused &&
+           (this.focused instanceof FactField) &&
+           this.focused.searching();
+  }
+
   onkeydown(e) {
     if (e.key === "ArrowUp") {
-      this.onmove(e, false);
+      if (this.searching()) {
+        this.focused.prev();
+        e.preventDefault();
+      } else {
+        this.onmove(e, false);
+      }
     } else if (e.key === "ArrowDown") {
-      this.onmove(e, true);
+      if (this.searching()) {
+        this.focused.next();
+        e.preventDefault();
+      } else {
+        this.onmove(e, true);
+      }
     } else if (e.key === "Tab") {
       this.ontab(e);
     } else if (e.key === "Home") {
@@ -134,6 +174,15 @@ class FactEditor extends Component {
       this.onbackspace(e);
     } else if (e.key === "Delete") {
       this.ondelete(e);
+    } else if (e.key === "Enter") {
+      if (this.searching()) {
+        this.focused.onenter(e);
+      }
+    } else if (e.key === "Escape") {
+      if (this.searching()) {
+        this.focused.collapse();
+        e.stopPropagation();
+      }
     } else if (e.key == " ") {
       this.onspace(e);
     }
@@ -173,13 +222,13 @@ class FactEditor extends Component {
     let field = s.focusNode;
     if (!field) return;
     if (field.nodeType == Node.TEXT_NODE) field = field.parentElement;
+    if (field instanceof FactInput) field = field.parentElement;
 
     let base = s.anchorNode;
-    if (base && base.nodeType == Node.TEXT_NODE) {
-      base = field.parentElement;
-    }
+    if (base && base.nodeType == Node.TEXT_NODE) base = field.parentElement;
+    if (base && (base instanceof FactInput)) base = base.parentElement;
 
-    let statement = field.parentElement;
+    let statement = field.closest("fact-statement");
     if (!statement) return;
 
     let property = statement.firstChild;
@@ -192,6 +241,43 @@ class FactEditor extends Component {
       anchor: s.anchorNode,
       anchorofs: s.anchorOffset,
     };
+  }
+
+  slots() {
+    let topic = this.state;
+    let s = new Array();
+    for (let id of topic.all(n_id)) {
+      s.push(n_id);
+      s.push(id);
+    }
+    for(let e = this.firstChild; e; e = e.nextSibling) {
+      if (e instanceof FactStatement) {
+        let prop = e.firstChild;
+        let value = e.lastChild;
+        if (!prop || !value) continue;
+        let p = prop.value();
+        let v = value.value();
+        if (e.qualified) {
+          if (s.length == 0) return;
+          let prev = s[s.length - 1];
+          if (!qualified(prev)) {
+            let q = store.frame();
+            q.add(n_is, prev);
+            s[s.length - 1] = q;
+            prev = q;
+          }
+          prev.add(p, v);
+        } else {
+          s.push(p);
+          s.push(v);
+        }
+      }
+    }
+    for (let id of topic.all(n_media)) {
+      s.push(n_media);
+      s.push(id);
+    }
+    return s;
   }
 
   render() {
@@ -276,7 +362,7 @@ class FactStatement extends Component {
       $ {
         display: flex;
         padding-top: 4px;
-        min-height: 1em;
+        min-height: 1.25em;
       }
       $.qualified {
         font-size: 13px;
@@ -288,7 +374,125 @@ class FactStatement extends Component {
 
 Component.register(FactStatement);
 
+class FactInput extends Component {
+  static stylesheet() {
+    return `
+      $ {
+        display: block; /* prevent deletion */
+      }
+    `;
+  }
+}
+
+Component.register(FactInput);
+
 class FactField extends Component {
+  onconnected() {
+    this.input = this.find("fact-input");
+    this.list = this.find("md-search-list");
+  }
+
+  async onchanged(e) {
+    this.removeAttribute("value");
+    this.removeAttribute("text");
+    this.className = "";
+
+    let results = await search(this.text(), this.backends());
+    this.list.update({items: results});
+  }
+
+  onenter(e) {
+    e.preventDefault();
+    let item = this.list.active.state;
+    this.select(item);
+  }
+
+  next() {
+    this.list.next();
+  }
+
+  prev() {
+    this.list.prev();
+  }
+
+  searching() {
+    return !!this.list.state;
+  }
+
+  text() {
+    return this.input.innerText.trim();
+  }
+
+  value() {
+    if (this.hasAttribute("value")) {
+      let value = this.getAttribute("value");
+      return store.parse(value);
+    } else {
+      return this.text();
+    }
+  }
+
+  async select(item) {
+    var value, text;
+    let encoded = true;
+    if (item.onitem) {
+      // Run plug-in and use new topic as value.
+      await item.onitem(item);
+      if (item.context && item.context.added) {
+        item.context.select = false;
+        await item.context.refresh();
+        value = item.context.added;
+      }
+    } else if (item.topic) {
+      if (item.casefile) {
+        // Create new topic with reference to topic in external case.
+        let editor = this.match("#editor");
+        let link = this.new_topic();
+        link.add(n_is, topic);
+        let name = topic.get(n_name);
+        if (name) link.add(n_name, name);
+        await editor.update_list();
+        value = link;
+        text = name;
+      } else {
+        value = item.topic.id
+        text = item.topic.get(n_name);
+      }
+    } else if (item.value) {
+      if (item.value instanceof Frame) {
+        value = item.value.id || item.value.text(false, true);
+        [text, encoded] = value_text(item.value, this.state.property);
+      } else {
+        let printer = new Printer(store);
+        printer.refs = null;
+        printer.print(item.value);
+        value = printer.output;
+        [text, encoded] = value_text(item.value, this.state.property);
+      }
+    } else if (item.ref) {
+      value = item.ref;
+      text = item.name;
+    }
+
+    this.collapse();
+    this.setAttribute("value", value);
+    this.setAttribute("text", this.text());
+    this.className = encoded ? "encoded" : "";
+    this.input.innerHTML = Component.escape(text);
+
+    // Move cursor to end of field.
+    let range = document.createRange();
+    range.selectNodeContents(this.input);
+    range.collapse(false);
+    let selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
+  collapse() {
+    this.list.update();
+  }
+
   render() {
     if (!this.state) return;
     let val = this.state.value;
@@ -312,22 +516,29 @@ class FactField extends Component {
       this.className = "";
     }
 
-    return Component.escape(text);
+    return `
+      <fact-input>${Component.escape(text)}</fact-input>
+      <md-search-list></md-search-list>
+    `;
   }
 }
 
 Component.register(FactField);
 
 class FactProperty extends FactField {
+  backends() {
+    return [psearch];
+  }
+
   static stylesheet() {
     return `
       $ {
-        display: flex;
+        display: block; /*flex;*/
         font-weight: 500;
         margin-right: 4px;
         white-space: nowrap;
       }
-      $::after {
+      $ fact-input::after {
         content: ":";
       }
       $.encoded {
@@ -336,6 +547,11 @@ class FactProperty extends FactField {
       .qualified $ {
         font-weight: normal;
       }
+      $ md-search-list {
+        color: black;
+        font-size: 15px;
+        width: 400px;
+      }
     `;
   }
 }
@@ -343,13 +559,26 @@ class FactProperty extends FactField {
 Component.register(FactProperty);
 
 class FactValue extends FactField {
+  backends() {
+    let editor = this.match("#editor");
+    return [
+      (query, full, results) => value_parser(query, results),
+      (query, full, results) => editor.search(query, full, results),
+    ];
+  }
+
   static stylesheet() {
     return `
       $ {
-        display: flex;
+        display: block; /*flex;*/
       }
       $.encoded {
         color: #0b0080;
+      }
+      $ md-search-list {
+        color: black;
+        font-size: 15px;
+        width: 400px;
       }
     `;
   }

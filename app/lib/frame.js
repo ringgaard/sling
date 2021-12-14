@@ -1003,7 +1003,7 @@ export class Reader {
 
   // Parse number literal.
   parseNumber() {
-    let start = this.pos;
+    let start = this.pos - 1;
     let integer = true;
 
     // Parse sign.
@@ -1027,27 +1027,31 @@ export class Reader {
       while (this.ch >= 48 && this.ch <= 57) this.read();
     }
 
-    let str = this.input.slice(start - 1, this.pos - 1);
+    let end = this.ch == -1 ? this.pos : this.pos - 1;
+    let str = this.input.slice(start, end);
     this.value = integer ? parseInt(str) : parseFloat(str);
     this.token = -6;
   }
 
   // Parse symbol index.
   parseIndex() {
-    let start = this.pos;
+    let start = this.pos - 1;
     while (this.ch >= 48 && this.ch <= 57) this.read();
-    this.value = parseInt(this.input.slice(start - 1, this.pos - 1));
+    let end = this.ch == -1 ? this.pos : this.pos - 1;
+    this.value = parseInt(this.input.slice(start, end));
     this.token = -7;
   }
 
   // Parse symbol or keyword.
   parseName() {
-    let start = this.pos;
+    let start = this.pos - 1;
+    let end = this.pos;
     let done = false;
     while (!done) {
       switch (this.ch) {
         case -1:
           done = true;
+          end = this.pos;
           break;
 
         case 95:  // '_'
@@ -1055,6 +1059,7 @@ export class Reader {
         case 45:  // '-'
         case 46:  // '.'
         case 33:  // '!'
+          end = this.pos;
           this.read();
           break;
 
@@ -1069,13 +1074,14 @@ export class Reader {
               (this.ch >= 65 && this.ch <= 90) ||   // A-Z
               (this.ch >= 97 && this.ch <= 122) ||  // a-z
               this.ch >= 128) {                     // unicode
+            end = this.pos;
             this.read();
           } else {
             done = true;
           }
       }
     }
-    this.value = this.input.slice(start - 1, this.pos - 1);
+    this.value = this.input.slice(start, end);
     let kw = keywords.get(this.value);
     if (kw) {
       this.token = kw;
