@@ -52,6 +52,7 @@ const occupations = {
   "playboy model": store.lookup("Q728711"),
   "actress": store.lookup("Q33999"),
   "milf porn star": store.lookup("Q488111"),
+  "tiktok star": store.lookup("Q94791573"),
 }
 
 function date2sling(d) {
@@ -144,6 +145,9 @@ export default class BabepediaPlugin {
       } else if (field == "Birthplace") {
         let location = value.split(/, /);
         let country = location.pop();
+        if (country == "Republic of") {
+          country = "Republic of " + location.pop();
+        }
         location = await lookup(context, location.join(", "));
         country = await lookup(context, country);
         if (location) {

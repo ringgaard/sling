@@ -25,6 +25,15 @@ function qualified(v) {
   }
 }
 
+function range(a, b) {
+  let e = a.parentNode.firstChild;
+  while (e) {
+    if (e == a) return [a, b];
+    if (e == b) return [b, a];
+    e = e.nextSibling;
+  }
+}
+
 class FactEditor extends Component {
   oninit() {
     this.setAttribute("contenteditable", true);
@@ -37,6 +46,7 @@ class FactEditor extends Component {
     this.bind(null, "paste", e => this.onpaste(e));
 
     this.bind(null, "input", e => this.oninput(e));
+    this.bind(null, "beforeinput", e => this.onbeforeinput(e));
     this.bind(null, "focusin", e => this.onfocusin(e));
     this.bind(null, "focusout", e => this.onfocusout(e));
   }
@@ -56,6 +66,25 @@ class FactEditor extends Component {
     }
   }
 
+  onbeforeinput(e) {
+    let selection = document.getSelection();
+    let focus = selection.focusNode;
+    if (!focus) return;
+    if (focus instanceof FactStatement) {
+      if (focus.childElementCount == 0) {
+        // Add property and value to current placeholder.
+        focus.appendChild(new FactProperty({property: "", value: ""}));
+        focus.appendChild(new FactValue({property: "", value: ""}));
+
+        // Make statement qualified on space.
+        if (e.data == " ") focus.qualified = true;
+
+        // Add new placeholder.
+        focus.parentElement.appendChild(new FactStatement());
+      }
+    }
+  }
+
   oninput(e) {
     let s = this.selection();
     if (!s) return;
@@ -63,6 +92,20 @@ class FactEditor extends Component {
       if (this.focused && this.focused != s.field) this.focused.collapse();
       s.field.onchanged(e);
       this.focused = s.field;
+    }
+  }
+
+  onenter(e) {
+    e.preventDefault();
+    let s = this.selection();
+    if (!s) return;
+    if (s.selection.isCollapsed) {
+      let stmt = new FactStatement({property: "", value: ""});
+      if (s.statement.qualified) stmt.qualified = true;
+      let point = s.statement;
+      if (s.field == s.value) point = point.nextSibling;
+      this.insertBefore(stmt, point);
+      s.selection.collapse(stmt, 0);
     }
   }
 
@@ -137,24 +180,35 @@ class FactEditor extends Component {
     }
   }
 
+  delete_selection(s) {
+    let [start, end] = range(s.base, s.statement);
+    let c = start;
+    while (c && c != end) {
+      let next = c.nextSibling;
+      c.remove();
+      c = next;
+    }
+  }
+
   onbackspace(e) {
     let s = this.selection();
     if (!s) return;
-    console.log("bs", s);
     if (s.position == 0) {
       if (s.field == s.property) s.statement.qualified = false;
       if (s.selection.isCollapsed) e.preventDefault();
     }
-    if (s.position == 1) {
+    if (s.field != s.base) {
       e.preventDefault();
-      s.field.input.innerHTML = "";
-      if (s.field instanceof FactField) s.field.onchanged(e);
+      this.delete_selection(s);
     }
   }
 
   ondelete(e) {
     let s = this.selection();
-    console.log("del", s);
+    if (s.field != s.base) {
+      e.preventDefault();
+      this.delete_selection(s);
+    }
   }
 
   searching() {
@@ -191,6 +245,8 @@ class FactEditor extends Component {
     } else if (e.key === "Enter") {
       if (this.searching()) {
         this.focused.onenter(e);
+      } else {
+        this.onenter(e);
       }
     } else if (e.key === "Escape") {
       if (this.searching()) {
@@ -239,7 +295,7 @@ class FactEditor extends Component {
     if (field instanceof FactInput) field = field.parentElement;
 
     let base = s.anchorNode;
-    if (base && base.nodeType == Node.TEXT_NODE) base = field.parentElement;
+    if (base && base.nodeType == Node.TEXT_NODE) base = base.parentElement;
     if (base && (base instanceof FactInput)) base = base.parentElement;
 
     let statement = field.closest("fact-statement");
@@ -392,7 +448,7 @@ class FactInput extends Component {
   static stylesheet() {
     return `
       $ {
-        display: inline-block; /* prevent deletion */
+        display: block; /* prevent deletion */
         min-height: 1.25em;
       }
     `;
@@ -408,12 +464,20 @@ class FactField extends Component {
   }
 
   async onchanged(e) {
+    // Trim content.
+    if (this.input.childElementCount != 0) {
+      this.input.innerHTML = Component.escape(this.text());
+    }
+
+    // Check if content has changed.
     let text = this.text();
     if (text != this.getAttribute("text")) {
+      // Clear annotation.
       this.removeAttribute("value");
       this.removeAttribute("text");
       this.className = "";
 
+      // Search for matches.
       let results = await search(this.text(), this.backends());
       this.list.update({items: results});
     }
@@ -421,8 +485,8 @@ class FactField extends Component {
 
   onenter(e) {
     e.preventDefault();
-    let item = this.list.active.state;
-    this.select(item);
+    let item = this.list.active && this.list.active.state;
+    if (item) this.select(item);
   }
 
   next() {
@@ -498,16 +562,29 @@ class FactField extends Component {
       text = item.name;
     }
 
+    // Set field value.
     this.collapse();
     this.setAttribute("value", value);
     this.setAttribute("text", this.text());
     this.className = encoded ? "encoded" : "";
     this.input.innerHTML = Component.escape(text);
 
-    // Move cursor to end of field.
     let range = document.createRange();
-    range.selectNodeContents(this.input);
-    range.collapse(false);
+    if (this.nextSibling) {
+      // Move to next field.
+      let next = this.nextSibling;
+      range.selectNodeContents(next.input);
+      range.collapse(true);
+
+      // Set property for value.
+      if (item.ref) {
+        next.state.property = store.lookup(item.ref);
+      }
+    } else {
+      // Move cursor to end of field.
+      range.selectNodeContents(this.input);
+      range.collapse(false);
+    }
     let selection = window.getSelection();
     selection.removeAllRanges();
     selection.addRange(range);
