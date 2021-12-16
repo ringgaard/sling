@@ -1301,6 +1301,7 @@ export class MdSearch extends Component {
   onconnected() {
     this.bind("input", "input", e => this.oninput(e));
     this.bind("input", "keydown", e => this.onkeydown(e));
+    this.bind("md-search-list", "select", e => this.onselect(e));
     this.bind(null, "focusin", e => this.onfocus(e));
     this.bind(null, "focusout", e => this.onunfocus(e));
   }
@@ -1344,14 +1345,8 @@ export class MdSearch extends Component {
     this.find("md-search-list").expand(false);
   }
 
-  populate(query, items) {
-    // Ignore stale updates where the query does match the current value of the
-    // search input box.
-    if (query != null && query != this.query()) return;
-    let list = this.find("md-search-list");
-    list.update({items: items});
-    list.scrollTop = 0;
-    this.find("input").style.cursor = "";
+  onselect(e) {
+    this.select(e.detail.item, e.detail.keep);
   }
 
   select(item, keep) {
@@ -1361,6 +1356,16 @@ export class MdSearch extends Component {
       this.find("input").blur();
       this.dispatch("item", item.state);
     }
+  }
+
+  populate(query, items) {
+    // Ignore stale updates where the query does match the current value of the
+    // search input box.
+    if (query != null && query != this.query()) return;
+    let list = this.find("md-search-list");
+    list.update({items: items});
+    list.scrollTop = 0;
+    this.find("input").style.cursor = "";
   }
 
   query() {
@@ -1419,8 +1424,21 @@ Component.register(MdSearch);
 export class MdSearchList extends Component {
   constructor() {
     super();
-    this.bind(null, "mousedown", this.onmousedown);
+    this.bind(null, "mousedown", e => this.onmousedown(e));
+    this.bind(null, "mousemove", e => this.onmousemove(e));
+    this.bind(null, "click", e => this.onclick(e));
     this.active = null;
+  }
+
+  onclick(e) {
+    let item = MdSearchList.item(e.target);
+    let keep = e.ctrlkey;
+    this.dispatch("select", {item, keep})
+  }
+
+  onmousemove(e) {
+    let item = MdSearchList.item(e.target);
+    this.activate(item);
   }
 
   onmousedown(e) {
@@ -1478,6 +1496,13 @@ export class MdSearchList extends Component {
     }
   }
 
+  static item(target) {
+    while (target && !(target instanceof MdSearchItem)) {
+      target = target.parentNode;
+    }
+    return target;
+  }
+
   static stylesheet() {
     return `
       $ {
@@ -1499,19 +1524,6 @@ export class MdSearchList extends Component {
 Component.register(MdSearchList);
 
 export class MdSearchItem extends Component {
-  onconnected() {
-    this.bind(null, "mousemove", this.onmousemove);
-    this.bind(null, "click", e => this.onclick(e));
-  }
-
-  onclick(e) {
-    this.match("md-search").select(this, e.ctrlKey);
-  }
-
-  onmousemove(e) {
-    this.match("md-search-list").activate(this);
-  }
-
   highlight(on) {
     this.style.background = on ? "#f0f0f0" : "#ffffff";
   }

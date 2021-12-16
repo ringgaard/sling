@@ -42,7 +42,7 @@ class FactEditor extends Component {
 
     this.bind(null, "keydown", e => this.onkeydown(e));
     this.bind(null, "click", e => this.onclick(e));
-    this.bind(null, "copy", e => this.oncopy(e));
+    this.bind(null, "cut", e => this.oncut(e));
     this.bind(null, "paste", e => this.onpaste(e));
 
     this.bind(null, "input", e => this.oninput(e));
@@ -52,11 +52,23 @@ class FactEditor extends Component {
   }
 
   onfocusin(e) {
-    //console.log("focusin", this.value, e);
+    if (this.cursor) {
+      // Restore current selection.
+      let  selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(this.cursor);
+      this.cursor = null;
+    }
   }
 
   onfocusout(e) {
-    //console.log("focusout", this.value, e);
+    // Save current selection.
+    let selection = document.getSelection();
+    if (selection.rangeCount == 0 || this.style.display == "none") {
+      this.cursor = null;
+    } else {
+      this.cursor = selection.getRangeAt(0);
+    }
   }
 
   onselection(focus, anchor) {
@@ -105,7 +117,7 @@ class FactEditor extends Component {
       let point = s.statement;
       if (s.field == s.value) point = point.nextSibling;
       this.insertBefore(stmt, point);
-      s.selection.collapse(stmt, 0);
+      s.selection.collapse(stmt.firstChild, 0);
     }
   }
 
@@ -174,6 +186,7 @@ class FactEditor extends Component {
 
   onspace(e) {
     let s = this.selection();
+    console.log("onspace", s);
     if (s && s.field == s.property && s.position == 0) {
       s.statement.qualified = true;
       e.preventDefault();
@@ -232,6 +245,10 @@ class FactEditor extends Component {
       } else {
         this.onmove(e, true);
       }
+    } else if (e.key === "ArrowRight") {
+      if (this.searching()) {
+        this.focused.onright(e);
+      }
     } else if (e.key === "Tab") {
       this.ontab(e);
     } else if (e.key === "Home") {
@@ -267,9 +284,13 @@ class FactEditor extends Component {
     this.focus();
   }
 
-  oncopy(e) {
+  oncut(e) {
     let s = this.selection();
-    console.log(s.selection);
+    if (s.field != s.base) {
+      e.preventDefault();
+      document.execCommand("copy");
+      this.delete_selection(s);
+    }
   }
 
   onpaste(e) {
@@ -278,11 +299,37 @@ class FactEditor extends Component {
     let clip = document.createElement("div");
     clip.innerHTML = html;
 
-    let styled = clip.querySelectorAll("[style]");
-    for (let i = 0; i < styled.length; ++i) {
-      styled[i].removeAttribute("style");
+    if (clip.querySelector("fact-statement")) {
+      // Clear select before paste.
+      let s = this.selection();
+      if (s.field != s.base) {
+        this.delete_selection(s);
+        s = this.selection();
+      }
+
+      // Insert statements from clipboard.
+      let c = clip.firstChild;
+      while (c) {
+        let prop = c.firstChild;
+        let val = c.lastChild;
+        if ((c instanceof FactStatement) &&
+            (prop instanceof FactProperty) &&
+            (val instanceof FactValue)) {
+          let stmt = new FactStatement({
+            property: prop.value(),
+            value: val.value(),
+            qualified: c.className == "qualified",
+          });
+          this.insertBefore(stmt, s.statement);
+        }
+        c = c.nextSibling;
+      }
+      s.selection.collapse(s.statement);
+    } else {
+      // Paste as text.
+      let text = clip.innerText;
+      document.execCommand("insertText", false, text);
     }
-    console.log("clip", clip);
   }
 
   selection() {
@@ -459,6 +506,7 @@ Component.register(FactInput);
 
 class FactField extends Component {
   onconnected() {
+    this.bind("md-search-list", "select", e => this.onselect(e));
     this.input = this.find("fact-input");
     this.list = this.find("md-search-list");
   }
@@ -489,6 +537,24 @@ class FactField extends Component {
     if (item) this.select(item);
   }
 
+  onselect(e) {
+    let item = e.detail.item;
+    let keep = e.detail.keep;
+    if (!keep) this.list.expand(false);
+    if (item && item.state) {
+      this.select(item.state);
+    }
+  }
+
+  onright(e) {
+    // Prevent moving cursor into search box.
+    let selection = window.getSelection();
+    let textlen = this.input.firstChild.length;
+    if (selection.focusOffset == textlen) {
+      this.collapse();
+    }
+  }
+
   next() {
     this.list.next();
   }
@@ -503,7 +569,11 @@ class FactField extends Component {
   }
 
   text() {
-    return this.input.innerText.trim();
+    if (this.input) {
+      return this.input.innerText.trim();
+    } else {
+      return this.innerText;
+    }
   }
 
   value() {
@@ -512,7 +582,7 @@ class FactField extends Component {
       return store.parse(value);
     } else {
       let text = this.text();
-      if (this.state.property.get(n_target) == n_quantity_type) {
+      if (this.state && this.state.property.get(n_target) == n_quantity_type) {
         let number = parseFloat(text);
         if (!isNaN(number)) return number;
       }
@@ -643,7 +713,7 @@ class FactProperty extends FactField {
         content: ":";
       }
       $.encoded {
-        color: #0b0080;
+        color: #0000dd; /*#0645AD;*/ /*#0b0080;*/
       }
       .qualified $ {
         font-weight: normal;
@@ -674,7 +744,7 @@ class FactValue extends FactField {
         display: block;
       }
       $.encoded {
-        color: #0b0080;
+        color: #0000dd; /*#0645AD;*/ /*#0b0080;*/
       }
       $ md-search-list {
         color: black;
