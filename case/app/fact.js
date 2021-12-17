@@ -186,7 +186,6 @@ class FactEditor extends Component {
 
   onspace(e) {
     let s = this.selection();
-    console.log("onspace", s);
     if (s && s.field == s.property && s.position == 0) {
       s.statement.qualified = true;
       e.preventDefault();
@@ -294,12 +293,19 @@ class FactEditor extends Component {
   }
 
   onpaste(e) {
-    // Get HTML from clipboard.
+    // Get HTML from clipboard with fallback to plain text.
     let html = e.clipboardData.getData('text/html');
     let clip = document.createElement("div");
-    clip.innerHTML = html;
+    if (html) {
+      clip.innerHTML = html;
+    } else {
+      let text = e.clipboardData.getData('text/plain');
+      if (!text) return;
+      clip.innerText = text;
+    }
 
     if (clip.querySelector("fact-statement")) {
+      console.log("clip", clip);
       // Clear select before paste.
       let s = this.selection();
       if (s.field != s.base) {

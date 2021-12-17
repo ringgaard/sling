@@ -164,6 +164,22 @@ let xrefs = [
     pattern: /^https?:\/\/academic\.microsoft\.com\/author\/(\d+)/,
     property: store.lookup("P6366"),
   },
+  {
+    pattern: /^https?:\/\/github\.com\/(\d+)/,
+    property: store.lookup("P2037"),
+  },
+  {
+    pattern: /^https?:\/\/dblp\.org\/pid\/(\w+\/\w+)\.html/,
+    property: store.lookup("P2456"),
+  },
+  {
+    pattern: /^https?:\/\/orcid\.org\/([0-9A-Z\-]+)/,
+    property: store.lookup("P496"),
+  },
+  {
+    pattern: /^(mailto:.+)/,
+    property: store.lookup("P968"),
+  },
 ];
 
 export function match_link(url) {
