@@ -265,6 +265,7 @@ class TopicCard extends Component {
     this.editraw = raw;
 
     let content = this.match("md-content");
+    let scrollpos = content ? content.scrollTop : undefined;
     if (editing) {
       if (this.editraw) {
         this.find("item-editor").update(this.state);
@@ -279,6 +280,7 @@ class TopicCard extends Component {
       this.find("fact-panel").update();
       this.find("item-editor").update();
     }
+    if (scrollpos) content.scrollTop = scrollpos;
 
     this.find("#topic-actions").update(!editing && !this.readonly);
     this.find("#edit-actions").update(editing && !this.readonly);
