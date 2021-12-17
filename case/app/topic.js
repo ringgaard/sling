@@ -177,7 +177,7 @@ class TopicList extends Component {
     return `
       $ {
         display: block;
-        padding-bottom: 200px;
+        padding-bottom: 500px;
       }
     `;
   }
@@ -265,7 +265,6 @@ class TopicCard extends Component {
     this.editraw = raw;
 
     let content = this.match("md-content");
-    let scrollpos = content ? content.scrollTop : undefined;
     if (editing) {
       if (this.editraw) {
         this.find("item-editor").update(this.state);
@@ -280,7 +279,6 @@ class TopicCard extends Component {
       this.find("fact-panel").update();
       this.find("item-editor").update();
     }
-    if (scrollpos) content.scrollTop = scrollpos;
 
     this.find("#topic-actions").update(!editing && !this.readonly);
     this.find("#edit-actions").update(editing && !this.readonly);
@@ -323,7 +321,7 @@ class TopicCard extends Component {
 
   onedit(e) {
     e.stopPropagation();
-    this.update_mode(true, !e.ctrlKey);
+    this.update_mode(true, e.ctrlKey);
   }
 
   onnsfw(e, nsfw) {
@@ -411,7 +409,8 @@ class TopicCard extends Component {
 
   async ondiscard(e) {
     let discard = true;
-    if (this.editraw && this.find("item-editor").dirty) {
+    let editor = this.find(this.editraw ? "item-editor" : "fact-editor");
+    if (editor.dirty) {
       let topic = this.state;
       discard = await StdDialog.confirm(
         "Discard changes",
@@ -419,12 +418,11 @@ class TopicCard extends Component {
         "Discard");
     }
     if (discard) {
-      this.update(this.state);
       this.update_mode(false);
       window.getSelection().collapse(this, 0);
       this.focus();
     } else {
-      this.find("item-editor").focus();
+      editor.focus();
     }
   }
 
@@ -650,7 +648,6 @@ class ItemEditor extends Component {
     this.bind("#value md-search", "item", e => this.onitem(e, false));
     this.bind("#property md-search", "enter", e => this.onenter(e, true));
     this.bind("#value md-search", "enter", e => this.onenter(e, false));
-    this.bind("textarea", "input", e => this.adjust());
     this.bind(null, "click", e => this.onclick(e));
 
     let omnibox = this.find("#value");
@@ -667,18 +664,11 @@ class ItemEditor extends Component {
     textarea.value = topic.text(true, true);
     textarea.focus();
     textarea.setSelectionRange(0, 0);
-    this.adjust();
     this.dirty = false;
   }
 
   value() {
     return this.find("textarea").value;
-  }
-
-  adjust() {
-    let textarea = this.find("textarea");
-    textarea.style.height = textarea.scrollHeight + "px";
-    this.dirty = true;
   }
 
   async onitem(e, isprop) {
@@ -787,8 +777,7 @@ class ItemEditor extends Component {
         box-sizing: border-box;
         resize: none;
         width: 100%;
-        height: auto;
-        overflow-y: hidden;
+        height: 500px;
         border: 1px solid #d0d0d0;
         margin-top: 5px;
       }

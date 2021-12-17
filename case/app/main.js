@@ -16,7 +16,6 @@ const n_is = store.is;
 const n_isa = store.isa;
 const n_name = store.lookup("name");
 const n_description = store.lookup("description");
-const n_caseno = store.lookup("caseno"); // TODO remove
 const n_caseid = store.lookup("caseid");
 const n_main = store.lookup("main");
 const n_created = store.lookup("created");
@@ -26,6 +25,7 @@ const n_folders = store.lookup("folders");
 const n_next = store.lookup("next");
 const n_link = store.lookup("link");
 const n_case_file = store.lookup("Q108673968");
+const n_author = store.lookup("P50");
 const n_main_subject = store.lookup("P921");
 const n_instance_of = store.lookup("P31");
 const n_case = store.lookup("PCASE");
@@ -99,7 +99,6 @@ class CaseApp extends Component {
     let response = await fetch("/case/new");
     let newcase = await store.parse(response);
     let caseid = newcase.get(n_caseid);
-    if (!caseid) caseid = newcase.get(n_caseno); // TODO: remove
     let next = 1;
     let topics = new Array();
     let main_topics = new Array();
@@ -112,6 +111,7 @@ class CaseApp extends Component {
     main.add(n_instance_of, n_case_file);
     if (name) main.add(n_name, name);
     if (description) main.add(n_description, description);
+    if (settings.authorid) main.add(n_author, store.lookup(settings.authorid));
     main.add(n_case, caseid.toString());
 
     // Add initial topic.
@@ -158,18 +158,6 @@ class CaseApp extends Component {
     if (!casefile) {
       StdDialog.error(`Case #${caseid} not found`);
       return;
-    }
-
-    // Upgrade legacy cases.
-    // TODO remove after legacy upgrade.
-    if (casefile.get("caseno")) {
-      console.log("Upgrading legacy case file:", casefile.text(true));
-      store.unregister(casefile);
-      casefile.rename(n_caseno, n_caseid);
-      let main = casefile.get(n_main);
-      main.slots[1] = "c/" + caseid;
-      store.frames.set("c/" + caseid, main);
-      console.log("Upgraded:", casefile.text(true));
     }
 
     // Switch to case editor with new case.

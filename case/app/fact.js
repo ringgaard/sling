@@ -78,7 +78,7 @@ class FactPanel extends Component {
         position: absolute;
         color: black;
         font-size: 15px;
-        width: 400px;
+        width: 600px;
       }
     `;
   }
@@ -91,6 +91,7 @@ class FactEditor extends Component {
     this.setAttribute("contenteditable", true);
     this.setAttribute("spellcheck", false);
     this.focus();
+    this.dirty = false;
 
     this.list = this.parentElement.list();
     this.list.bind(null, "select", e => this.onselect(e));
@@ -162,6 +163,7 @@ class FactEditor extends Component {
   }
 
   oninput(e) {
+    this.dirty = true;
     let s = this.selection();
     if (!s) return;
     if (s.field instanceof FactField) {
@@ -182,6 +184,7 @@ class FactEditor extends Component {
       if (s.field == s.value) point = point.nextSibling;
       this.insertBefore(stmt, point);
       s.selection.collapse(stmt, 0);
+      this.dirty = true;
     }
   }
 
@@ -255,7 +258,10 @@ class FactEditor extends Component {
   onspace(e) {
     let s = this.selection();
     if (s && s.field == s.property && s.position == 0) {
-      s.statement.qualified = true;
+      if (!s.statement.qualified) {
+        s.statement.qualified = true;
+        this.dirty = true;
+      }
       e.preventDefault();
     }
   }
@@ -266,8 +272,10 @@ class FactEditor extends Component {
     if (s.position == 0) {
       if (s.field == s.property && s.statement.qualified) {
         s.statement.qualified = false;
+        this.dirty = true;
       } else if (s.statement.empty()) {
         s.statement.remove();
+        this.dirty = true;
       }
       if (s.selection.isCollapsed) e.preventDefault();
     }
@@ -395,6 +403,7 @@ class FactEditor extends Component {
       let text = clip.innerText;
       document.execCommand("insertText", false, text);
     }
+    this.dirty = true;
   }
 
   searchbox(field, results) {
@@ -422,6 +431,7 @@ class FactEditor extends Component {
       c.remove();
       c = next;
     }
+    this.dirty = true;
   }
 
   selection() {
@@ -670,11 +680,11 @@ class FactField extends Component {
   }
 
   text() {
-    return this.innerText;
+    return this.innerText.trim();
   }
 
   empty() {
-    return this.innerText.trim().length == 0;
+    return this.text().length == 0;
   }
 
   value() {

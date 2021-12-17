@@ -408,21 +408,21 @@ export function value_parser(value, results) {
   }
 
   // Parse Month DD, YYYY.
-  m = value.match(/^(\w+) (\d+)(\.|st|nd|rd|th)?[ ,]+(\d+)$/);
+  m = value.match(/^(\w+)\.? (\d+)(\.|st|nd|rd|th)?[ ,]+(\d+)$/);
   if (m) {
     let month = monthnum(m[1]);
     if (month) add_date_result(results, m[4], month, m[2]);
   }
 
   // Parse DD. Month, YYYY.
-  m = value.match(/^(\d+)(\.|st|nd|rd|th)? (\w+)[ ,]+(\d+)$/);
+  m = value.match(/^(\d+)(\.|st|nd|rd|th)? (\w+)\.?[ ,]+(\d+)$/);
   if (m) {
     let month = monthnum(m[3]);
     if (month) add_date_result(results, m[4], month, m[1]);
   }
 
   // Parse Month YYYY.
-  m = value.match(/^(\w+)[ ,]+(\d+)$/);
+  m = value.match(/^(\w+)\.?[ ,]+(\d+)$/);
   if (m) {
     let month = monthnum(m[1]);
     if (month) add_date_result(results, m[2], month, null);

@@ -431,6 +431,7 @@ Component.register(CaseList);
 
 class SettingsPanel extends Component {
   onopen() {
+    this.find("#authorid").value = settings.authorid;
     this.find("#picturesize").value = settings.picturesize;
     this.find("#kbservice").value = settings.kbservice;
     this.find("#imagesearch").checked = settings.imagesearch;
@@ -438,6 +439,7 @@ class SettingsPanel extends Component {
   }
 
   onclose() {
+    settings.authorid = this.find("#authorid").value;
     settings.picturesize = this.find("#picturesize").value;
     settings.kbservice = this.find("#kbservice").value;
     settings.imagesearch = this.find("#imagesearch").checked;
@@ -450,6 +452,10 @@ class SettingsPanel extends Component {
       <div id="settings-title">Settings</div>
       <hr>
       <div id="content">
+        <md-text-field
+          id="authorid"
+          label="Author topic ID">
+        </md-text-field>
         <md-text-field
           id="picturesize"
           label="Profile picture size">
