@@ -269,15 +269,15 @@ class TopicCard extends Component {
     if (editing) {
       if (this.editraw) {
         this.find("item-editor").update(this.state);
-        this.find("fact-editor").update();
+        this.find("fact-panel").update();
       } else {
         this.find("item-editor").update();
-        this.find("fact-editor").update(this.state);
+        this.find("fact-panel").update(this.state);
       }
       this.find("item-panel").update();
     } else {
       this.find("item-panel").update(this.state);
-      this.find("fact-editor").update();
+      this.find("fact-panel").update();
       this.find("item-editor").update();
     }
     if (scrollpos) content.scrollTop = scrollpos;
@@ -389,7 +389,7 @@ class TopicCard extends Component {
       }
     } else {
       topic = this.state;
-      let edit = this.find("fact-editor");
+      let edit = this.find("fact-panel");
       let slots = edit.slots();
       if (!slots) {
         StdDialog.error("Illformed topic");
@@ -559,7 +559,7 @@ class TopicCard extends Component {
         </md-toolbox>
       </md-card-toolbar>
       <item-panel></item-panel>
-      <fact-editor></fact-editor>
+      <fact-panel></fact-panel>
       <item-editor><item-editor>
     `;
   }
