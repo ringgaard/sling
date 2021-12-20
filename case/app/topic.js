@@ -19,6 +19,10 @@ const n_media = store.lookup("media");
 const n_has_quality = store.lookup("P1552");
 const n_not_safe_for_work = store.lookup("Q2716583");
 
+
+// Cross-reference configuration.
+var xrefs;
+
 class TopicList extends Component {
   onconnected() {
     this.bind(null, "keydown", e => this.onkeydown(e));
@@ -241,6 +245,7 @@ class TopicCard extends Component {
     } else {
       this.find("#imgsearch").update(false);
     }
+    this.bind("#copyid", "click", e => this.oncopyid(e));
 
     this.bind(null, "click", e => this.onclick(e));
     this.bind(null, "mousedown", e => this.ondown(e));
@@ -479,6 +484,32 @@ class TopicCard extends Component {
     }
   }
 
+  async oncopyid(e) {
+    // Fetch xrefs from server.
+    if (!xrefs) {
+      let r = await fetch("/case/xrefs");
+      xrefs = await store.parse(r);
+    }
+
+    // Try to find xref property.
+    let topic = this.state;
+    var id;
+    if (!id && topic.has(n_is)) id = topic.get(n_is).id;
+    if (!id) {
+      for (let prop of xrefs.get("properties")) {
+        let val = topic.get(prop);
+        if (val) {
+          id = prop.id + "/" + val;
+          break;
+        }
+      }
+    }
+    if (!id && topic.id) id = topic.id;
+    if (id) {
+      navigator.clipboard.writeText(id);
+    }
+  }
+
   ondown(e) {
     this.ofsx = e.offsetX;
     this.ofsy = e.offsetY;
@@ -553,6 +584,7 @@ class TopicCard extends Component {
           <md-icon-button id="edit" icon="edit"></md-icon-button>
           <md-icon-button id="websearch" icon="search"></md-icon-button>
           <md-icon-button id="imgsearch" icon="image_search"></md-icon-button>
+          <md-icon-button id="copyid" icon="numbers"></md-icon-button>
           <md-icon-button id="moveup" icon="move-up"></md-icon-button>
           <md-icon-button id="movedown" icon="move-down"></md-icon-button>
           <md-icon-button id="delete" icon="delete"></md-icon-button>
@@ -662,7 +694,6 @@ class ItemEditor extends Component {
     let topic = this.state;
     if (!topic) return;
     let textarea = this.find("textarea");
-
     textarea.value = topic.text(true, true);
     textarea.focus();
     textarea.setSelectionRange(0, 0);

@@ -44,6 +44,11 @@ flags.define("--number_service",
              default="https://ringgaard.com/case/new",
              metavar="URL")
 
+flags.define("--xrefs",
+             help="Cross-reference configuration file",
+             default="data/wiki/xrefs.sling",
+             metavar="FILE")
+
 flags.define("--casedb",
              help="database for shared cases",
              default="case",
@@ -81,6 +86,7 @@ commons = sling.Store()
 n_caseid = commons["caseid"]
 n_modified = commons["modified"]
 n_share = commons["share"]
+xrefs = commons.load(flags.arg.xrefs)
 commons.freeze()
 
 # Checkpoint with next case number.
@@ -239,10 +245,15 @@ def service_request(request):
 
   return response
 
+@app.route("/case/xrefs")
+def xrefs_request(request):
+  return xrefs
+
 @app.route("/media")
 def media_request(request):
   # Dummy media service that always redirects to the original url.
   return sling.net.HTTPRedirect(urllib.parse.unquote(request.path[1:]))
+
 
 # Initialize services.
 services.init()

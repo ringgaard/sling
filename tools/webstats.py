@@ -103,6 +103,7 @@ pages = [
   ("kb.js",                re.compile(r"^\/kb/app/kb.js")),
   ("KB home",              re.compile(r"^\/kb\/$")),
   ("KB item",              re.compile(r"^\/kb\/(.+)$")),
+  ("Case home",            re.compile(r"^\/c\/$")),
   ("Case app",             re.compile(r"^\/(case|c)\/app\/(.+)$")),
   ("Case view",            re.compile(r"^\/c\/\d+$")),
   ("Case fetch",           re.compile(r"^\/case/fetch\/?\?(.+)$")),
@@ -197,6 +198,9 @@ worms = [
   ("fbclid", re.compile(r"^\/\?fbclid\=")),
   ("xploidID", re.compile(r"^\/\?xploidID\=")),
   ("author", re.compile(r"^\/\?author\=")),
+  ("jndi", re.compile(r"^\/\?x=\$\{jndi")),
+  ("dns", re.compile(r"^\/\?dns\=")),
+  ("dns", re.compile(r"^\/\?\=PHP")),
 ]
 
 spammers = set([

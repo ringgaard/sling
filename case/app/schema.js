@@ -90,7 +90,7 @@ class PropertyIndex {
     }
 
     // Add matching property id.
-    let prop = this.ids[query];
+    let prop = this.ids.get(query);
     if (prop) matches.add(prop);
 
     // Find first name that is greater than or equal to the prefix.

@@ -25,6 +25,7 @@ SchemaService::SchemaService(Store *kb) {
   // Initialize local store for schemas.
   Store store(kb);
   Handle n_role = store.Lookup("role");
+  Handle n_inverse_property = store.Lookup("P1696");
   Handle n_inverse_label_item = store.Lookup("P7087");
   Handle n_formatter_url = store.Lookup("P1630");
   Handle n_property_constraint = store.Lookup("P2302");
@@ -36,6 +37,7 @@ SchemaService::SchemaService(Store *kb) {
   property_fields.insert(store.Lookup("target"));
   property_fields.insert(store.Lookup("/w/item/fanin"));
   property_fields.insert(n_formatter_url);
+  property_fields.insert(n_inverse_property);
   property_fields.insert(n_inverse_label_item);
   property_fields.insert(n_property_constraint);
 

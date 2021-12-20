@@ -85,7 +85,7 @@ let xrefs = [
     property: store.lookup("P4015"),
   },
   {
-    pattern: /^https?:\/\/(?:www\.)?youtube\.com\/channel\/([^\/\?]+)/i,
+    pattern: /^https?:\/\/(?:www\.|m\.)?youtube\.com\/channel\/([^\/\?]+)/i,
     property: store.lookup("P2397"),
   },
   {

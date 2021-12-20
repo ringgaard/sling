@@ -26,7 +26,9 @@ function qualified(v) {
 }
 
 function range(a, b) {
-  if (!a || !b || a.parentNode != b.parentNode) return [null, null];
+  if (!a || !b || !a.parentNode || a.parentNode != b.parentNode) {
+    return [null, null];
+  }
   let e = a.parentNode.firstChild;
   while (e) {
     if (e == a) return [a, b];
@@ -156,7 +158,7 @@ class FactEditor extends Component {
       }
     } else if (selection.anchorNode != selection.focusNode) {
       let s = this.selection();
-      if (s.field != s.base) {
+      if (s.field && s.base && s.field != s.base) {
         this.delete_selection(s);
       }
     }
@@ -171,20 +173,24 @@ class FactEditor extends Component {
       s.field.onchanged(e);
       this.focused = s.field;
     }
+    if (!this.lastChild.empty()) {
+      let placeholder = new FactStatement();
+      this.appendChild(placeholder);
+    }
   }
 
   onenter(e) {
     e.preventDefault();
-    let s = this.selection();
-    if (!s) return;
-    if (s.selection.isCollapsed) {
+    if (document.getSelection().isCollapsed) {
+      let s = this.selection();
       let stmt = new FactStatement();
-      if (s.statement.qualified) stmt.qualified = true;
-      let point = s.statement;
-      if (s.field == s.value) point = point.nextSibling;
+      let point = s && s.statement;
+      if (point && point.qualified) {
+        stmt.qualified = true;
+      }
+      if (point && s.field == s.value) point = point.nextSibling;
       this.insertBefore(stmt, point);
-      s.selection.collapse(stmt, 0);
-      this.dirty = true;
+      document.getSelection().collapse(stmt, 0);
     }
   }
 
@@ -257,7 +263,8 @@ class FactEditor extends Component {
 
   onspace(e) {
     let s = this.selection();
-    if (s && s.field == s.property && s.position == 0) {
+    if (!s) return;
+    if (s.field == s.property && s.position == 0) {
       if (!s.statement.qualified) {
         s.statement.qualified = true;
         this.dirty = true;
@@ -269,17 +276,21 @@ class FactEditor extends Component {
   onbackspace(e) {
     let s = this.selection();
     if (!s) return;
-    if (s.position == 0) {
-      if (s.field == s.property && s.statement.qualified) {
+    if (s.selection.isCollapsed && s.position == 0) {
+      e.preventDefault();
+      if (s.statement.qualified) {
         s.statement.qualified = false;
         this.dirty = true;
-      } else if (s.statement.empty()) {
-        s.statement.remove();
-        this.dirty = true;
+      } else {
+        let prev = s.statement.previousSibling;
+        if (prev && prev.empty()) {
+          prev.remove();
+        } else if (s.statement.empty()) {
+          s.statement.remove();
+        }
       }
-      if (s.selection.isCollapsed) e.preventDefault();
     }
-    if (s.field != s.base) {
+    if (s.statement && s.field != s.base) {
       e.preventDefault();
       this.delete_selection(s);
     }
@@ -287,9 +298,15 @@ class FactEditor extends Component {
 
   ondelete(e) {
     let s = this.selection();
-    if (s.field != s.base) {
+    if (!s) return;
+    if (s.selection.isCollapsed && s.statement.empty()) {
+      e.preventDefault();
+      s.statement.remove();
+    } else if (s.statement && s.field != s.base) {
       e.preventDefault();
       this.delete_selection(s);
+    } else if (s.field && s.position == s.field.textlen()) {
+      e.preventDefault();
     }
   }
 
@@ -307,10 +324,6 @@ class FactEditor extends Component {
         e.preventDefault();
       } else {
         this.onmove(e, true);
-      }
-    } else if (e.key === "ArrowRight") {
-      if (this.searching()) {
-        this.focused.onright(e);
       }
     } else if (e.key === "Tab") {
       if (this.searching()) {
@@ -353,6 +366,7 @@ class FactEditor extends Component {
 
   oncut(e) {
     let s = this.selection();
+    if (!s) return;
     if (s.field != s.base) {
       e.preventDefault();
       document.execCommand("copy");
@@ -420,8 +434,8 @@ class FactEditor extends Component {
   }
 
   delete_selection(s) {
-    let anchor = s.base.closest("fact-statement");
-    let focus = s.field.closest("fact-statement");
+    let anchor = s.base && s.base.closest("fact-statement");
+    let focus = s.statement;
     if (!anchor || !focus);
 
     let [start, end] = range(anchor, focus);
@@ -438,21 +452,33 @@ class FactEditor extends Component {
     let s = document.getSelection();
     if (!s.focusNode) return;
 
+    var statement;
     let field = s.focusNode;
     if (!field) return;
-    if (field.nodeType == Node.TEXT_NODE) field = field.parentElement;
+    if (field instanceof FactEditor) {
+      statement = field.children.item(s.focusOffset);
+      if (!statement) return;
+      field = statement.firstChild;
+    } else if (field instanceof FactStatement) {
+      statement = field;
+      field = statement.firstChild;
+    } else if (field.nodeType == Node.TEXT_NODE) {
+      field = field.parentElement;
+    }
 
     let base = s.anchorNode;
     if (base) {
       if (base instanceof FactEditor) {
-        base = base.children.item(s.anchorOffset);
+        base = base.children.item(s.anchorOffset).firstChild;
+      } else if (base instanceof FactStatement) {
+        base = base.firstChild;
+      } else if (base.nodeType == Node.TEXT_NODE) {
+        base = base.parentElement;
       }
-
-      if (base.nodeType == Node.TEXT_NODE) base = base.parentElement;
     }
 
-    let statement = field.closest("fact-statement");
-    if (!statement) return;
+    statement = statement || field.parentElement;
+    if (!(statement instanceof FactStatement)) return;
 
     let property = statement.firstChild;
     let value = statement.lastChild;
@@ -486,6 +512,7 @@ class FactEditor extends Component {
       if (!prop || !value) continue;
       let p = prop.value();
       let v = value.value();
+      if (!p || !v) continue;
       if (e.qualified) {
         if (s.length == 0) return;
         let prev = s[s.length - 1];
@@ -569,11 +596,11 @@ class FactStatement extends Component {
   }
 
   placeholder() {
-    return this.childElementCount == 0;
+    return this.childElementCount != 2;
   }
 
   empty() {
-    if (this.placeholder()) return false;
+    if (this.placeholder()) return true;
     return this.firstChild.empty() && this.lastChild.empty();
   }
 
@@ -662,15 +689,6 @@ class FactField extends Component {
     }
   }
 
-  onright(e) {
-    // Prevent moving cursor into search box.
-    let selection = window.getSelection();
-    let textlen = this.firstChild.length;
-    if (selection.focusOffset == textlen) {
-      this.collapse();
-    }
-  }
-
   next() {
     this.list.next();
   }
@@ -680,11 +698,15 @@ class FactField extends Component {
   }
 
   text() {
-    return this.innerText.trim();
+    return this.innerText.trim().replace(/\s/g, " ");
   }
 
   empty() {
     return this.text().length == 0;
+  }
+
+  textlen() {
+    return this.firstChild && this.firstChild.length;
   }
 
   value() {
