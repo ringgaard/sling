@@ -421,6 +421,7 @@ export class MdMenu extends Component {
     content.style.display = "block";
     content.focus();
     current_menu = this;
+    this.scrollIntoView();
   }
 
   close() {

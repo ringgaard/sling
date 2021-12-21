@@ -59,7 +59,7 @@ class PropertyIndex {
     this.ids = new Map();
     this.names = new Array();
     for (let property of schema.get(n_properties)) {
-      this.ids[property.id] = property;
+      this.ids.set(property.id, property);
       for (let name of property.all(n_name)) {
         this.names.push({name: normalized(name), property});
       }

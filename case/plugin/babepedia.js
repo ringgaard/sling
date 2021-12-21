@@ -73,9 +73,9 @@ async function lookup(context, name) {
 export default class BabepediaPlugin {
   async process(action, query, context) {
     let url = new URL(query);
-    let m = url.pathname.match(/^\/babe\/([A-Za-z0-9\._\-]+)/);
+    let m = url.pathname.match(/^\/babe\/([^\/]+)/);
     if (!m) return;
-    let username = m[1];
+    let username = decodeURIComponent(m[1]);
     if (!username) return;
 
     if (action == SEARCHURL) {
@@ -224,7 +224,7 @@ export default class BabepediaPlugin {
     }
 
     // Add reference to babepedia.
-    topic.put(n_described_by_url, url);
+    topic.put(n_described_by_url, decodeURI(url));
 
     // Add profile photo.
     let profimg = doc.getElementById("profimg");

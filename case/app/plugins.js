@@ -124,6 +124,16 @@ var plugins = [
   ],
 },
 
+// Knowledge base links.
+{
+  name: "kb",
+  module: "kb.js",
+  actions: [PASTEURL],
+  patterns: [
+    /^https?:\/\/ringgaard\.com\/kb\//,
+  ],
+},
+
 // Cross-reference links.
 {
   name: "xref",

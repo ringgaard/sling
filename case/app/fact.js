@@ -171,7 +171,6 @@ class FactEditor extends Component {
     if (s.field instanceof FactField) {
       if (this.focused && this.focused != s.field) this.focused.collapse();
       s.field.onchanged(e);
-      this.focused = s.field;
     }
     if (!this.lastChild.empty()) {
       let placeholder = new FactStatement();
@@ -421,11 +420,17 @@ class FactEditor extends Component {
   }
 
   searchbox(field, results) {
-    let field_bbox = field.getBoundingClientRect();
-    let list_bbox = this.list.parentNode.getBoundingClientRect();
-    this.list.style.top = (field_bbox.bottom - list_bbox.top + 6) + "px";
-    this.list.style.left = (field_bbox.left - list_bbox.left) + "px";
-    this.list.update({items: results});
+    if (this.focused == field) {
+      this.list.update({items: results});
+    } else {
+      let field_bbox = field.getBoundingClientRect();
+      let list_bbox = this.list.parentNode.getBoundingClientRect();
+      this.list.style.top = (field_bbox.bottom - list_bbox.top + 6) + "px";
+      this.list.style.left = (field_bbox.left - list_bbox.left) + "px";
+      this.list.update({items: results});
+      this.list.scrollIntoView({block: "end"});
+      this.focused = field;
+    }
   }
 
   searching() {
