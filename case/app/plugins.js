@@ -121,6 +121,7 @@ var plugins = [
     /^https?:\/\/[A-Za-z0-9\-\_\.]+\/showpost.php\?/,
     /^https?:\/\/[A-Za-z0-9\-\_\.]+\/(galleries|gallery|albums|girls|gals)\//,
     /^https?:\/\/[A-Za-z0-9\-\_\.]+\/[a-z\-]+\-(gallery|galley)$/,
+    /^https?:\/\/www\.in\-the\-raw\.org\//,
   ],
 },
 

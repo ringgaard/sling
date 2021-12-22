@@ -428,7 +428,6 @@ class FactEditor extends Component {
       this.list.style.top = (field_bbox.bottom - list_bbox.top + 6) + "px";
       this.list.style.left = (field_bbox.left - list_bbox.left) + "px";
       this.list.update({items: results});
-      this.list.scrollIntoView({block: "end"});
       this.focused = field;
     }
   }

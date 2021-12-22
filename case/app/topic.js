@@ -485,6 +485,9 @@ class TopicCard extends Component {
   }
 
   async oncopyid(e) {
+    // Mark active.
+    e.target.style.color = "black";
+
     // Fetch xrefs from server.
     if (!xrefs) {
       let r = await fetch("/case/xrefs");
@@ -508,6 +511,11 @@ class TopicCard extends Component {
     if (id) {
       navigator.clipboard.writeText(id);
     }
+
+    // Mark done.
+    setTimeout(() => {
+      e.target.style.color = "#808080";
+    }, 100);
   }
 
   ondown(e) {

@@ -191,7 +191,9 @@ export default class AlbumPlugin {
     console.log(`Add photos from ${url} to topic ${context.topic.id}`);
 
     // Fetch forum post.
-    let r = await fetch(context.proxy(url));
+    let r = await fetch(context.proxy(url), {headers: {
+      "XUser-Agent": navigator.userAgent,
+    }});
     let html = await r.text();
 
     // Parse HTML.
@@ -204,7 +206,6 @@ export default class AlbumPlugin {
       if (container) break;
     }
     if (!container) container = doc;
-    console.log(container);
 
     // Find links to images.
     let hrefs = new Array();
