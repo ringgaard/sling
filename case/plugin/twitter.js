@@ -80,7 +80,7 @@ export default class TwitterPlugin {
     topic.put(n_name, strip_emojis(profile.name));
     if (profile.description) {
       let description = strip_links(strip_emojis(profile.description));
-      topic.put(n_description, description);
+      if (description) topic.put(n_description, description);
 
       // Get gender from pronouns.
       let gender = null;

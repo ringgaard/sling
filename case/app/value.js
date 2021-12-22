@@ -7,6 +7,7 @@ import {store, settings} from "./global.js";
 const n_isa = store.isa;
 const n_name = store.lookup("name");
 const n_target = store.lookup("target");
+const n_code = store.lookup("code");
 const n_amount = store.lookup("/w/amount");
 const n_unit = store.lookup("/w/unit");
 const n_cm = store.lookup("Q174728");
@@ -569,7 +570,7 @@ export function value_text(val, prop) {
   } else if (val instanceof QString) {
     if (val.qual) {
       // Qualified string.
-      let lang = val.qual.get(n_name);
+      let lang = val.qual.get(n_code);
       if (!lang) lang = val.qual.id;
       if (lang.startsWith("/lang/")) lang = lang.substring(6, lang.length);
       return [val.text + "@" + lang, true];

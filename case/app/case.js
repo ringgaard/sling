@@ -247,8 +247,10 @@ class CaseEditor extends Component {
   }
 
   onenter(e) {
-    let name = e.detail;
-    this.add_new_topic(null, name.trim());
+    let name = e.detail.trim();
+    if (name) {
+      this.add_new_topic(null, name);
+    }
   }
 
   async onitem(e) {
@@ -1048,148 +1050,6 @@ class CaseEditor extends Component {
 }
 
 Component.register(CaseEditor);
-
-class TopicSearchBox extends Component {
-  onconnected() {
-    this.bind("md-search", "query", e => this.onquery(e));
-  }
-
-  async onquery(e) {
-    let detail = e.detail
-    let target = e.target;
-    let query = detail.trim();
-    let editor = this.match("#editor");
-
-    // Do full match if query ends with period.
-    let full = false;
-    if (query.endsWith(".")) {
-      full = true;
-      query = query.slice(0, -1);
-    }
-
-    // Search case file.
-    let items = [];
-    let seen = new Set();
-    for (let result of editor.search(query, full)) {
-      if (seen.has(result.id)) continue;
-      let name = result.get(n_name);
-      items.push(new MdSearchResult({
-        ref: result.id,
-        name: name,
-        title: name + (result == editor.main ? " 🗄️" : " ⭐"),
-        description: result.get(n_description),
-        topic: result,
-      }));
-      seen.add(result.id);
-      for (let ref of result.all(n_is)) seen.add(ref.id);
-    }
-
-    // Search linked case files.
-    for (let link of editor.links) {
-      let topics = link.get(n_topics);
-      if (topics) {
-        for (let result of editor.search(query, full, topics)) {
-          if (seen.has(result.id)) continue;
-          let name = result.get(n_name);
-          items.push(new MdSearchResult({
-            ref: result.id,
-            name: name,
-            title: name + " 🔗",
-            description: result.get(n_description),
-            topic: result,
-            casefile: link,
-          }));
-          for (let ref of result.all(n_is)) seen.add(ref.id);
-        }
-      }
-    }
-
-    // Search local case database.
-    for (let result of this.match("#app").search(query, full)) {
-      let caseid = "c/" + result.id;
-      if (seen.has(caseid)) continue;
-      items.push(new MdSearchResult({
-        ref: caseid,
-        name: result.name,
-        title: result.name + " 🗄️",
-        description: result.description,
-        caserec: result,
-      }));
-      seen.add(caseid);
-    }
-
-    // Search plug-ins.
-    let context = new plugins.Context(null, editor.casefile, editor);
-    let result = await plugins.process(plugins.SEARCH, query, context);
-    if (result) {
-      if (result instanceof Array) {
-        for (let r of result) items.push(new MdSearchResult(r));
-      } else {
-        items.push(new MdSearchResult(result));
-      }
-    }
-
-    // Search knowledge base.
-    try {
-      let params = "fmt=cjson";
-      if (full) params += "&fullmatch=1";
-      params += `&q=${encodeURIComponent(query)}`;
-      let response = await fetch(`${settings.kbservice}/kb/query?${params}`);
-      let data = await response.json();
-      for (let item of data.matches) {
-        if (seen.has(item.ref)) continue;
-        items.push(new MdSearchResult({
-          ref: item.ref,
-          name: item.text,
-          description: item.description,
-        }));
-      }
-    } catch (error) {
-      console.log("Query error", query, error.message, error.stack);
-      StdDialog.error(error.message);
-      target.populate(detail, null);
-      return;
-    }
-
-    target.populate(detail, items);
-  }
-
-  query() {
-    return this.find("md-search").query();
-  }
-
-  clear() {
-    return this.find("md-search").clear();
-  }
-
-  render() {
-    return `
-      <form>
-        <md-search placeholder="Search for topic..." min-length=2>
-        </md-search>
-      </form>
-    `;
-  }
-
-  static stylesheet() {
-    return `
-      $ {
-        display: block;
-        width: 100%;
-        max-width: 800px;
-        padding-left: 10px;
-        padding-right: 3px;
-      }
-
-      $ form {
-        display: flex;
-        width: 100%;
-      }
-    `;
-  }
-}
-
-Component.register(TopicSearchBox);
 
 class SharingDialog extends MdDialog {
   onconnected() {

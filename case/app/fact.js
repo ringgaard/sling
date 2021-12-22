@@ -417,6 +417,8 @@ class FactEditor extends Component {
       document.execCommand("insertText", false, text);
     }
     this.dirty = true;
+    e.stopPropagation();
+    e.preventDefault();
   }
 
   searchbox(field, results) {
@@ -737,6 +739,9 @@ class FactField extends Component {
         item.context.select = false;
         await item.context.refresh();
         value = item.context.added;
+        if (value instanceof Frame) {
+          text = value.get(n_name) || value.id;
+        }
       }
     } else if (item.topic) {
       if (item.casefile) {

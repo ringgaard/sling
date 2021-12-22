@@ -19,7 +19,6 @@ const n_media = store.lookup("media");
 const n_has_quality = store.lookup("P1552");
 const n_not_safe_for_work = store.lookup("Q2716583");
 
-
 // Cross-reference configuration.
 var xrefs;
 
@@ -509,7 +508,7 @@ class TopicCard extends Component {
     }
     if (!id && topic.id) id = topic.id;
     if (id) {
-      navigator.clipboard.writeText(id);
+      navigator.clipboard.writeText(store.resolve(id));
     }
 
     // Mark done.
