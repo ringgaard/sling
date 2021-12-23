@@ -6,8 +6,9 @@ import {MdSearchList} from "/common/lib/material.js";
 import {Frame, Printer} from "/common/lib/frame.js";
 import {store, settings} from "./global.js";
 import {value_text, value_parser} from "./value.js";
+import {Context} from "./plugins.js";
 import {search} from "./omnibox.js";
-import {psearch} from "./schema.js";
+import {qualified, psearch} from "./schema.js";
 
 const n_id = store.id;
 const n_is = store.is;
@@ -16,14 +17,6 @@ const n_media = store.lookup("media");
 const n_target = store.lookup("target");
 const n_item_type = store.lookup("/w/item");
 const n_quantity_type = store.lookup("/w/quantity");
-
-function qualified(v) {
-  if (v instanceof Frame) {
-    return v.has(n_is) && !v.has(n_id);
-  } else {
-    return false;
-  }
-}
 
 function range(a, b) {
   if (!a || !b || !a.parentNode || a.parentNode != b.parentNode) {
@@ -864,12 +857,30 @@ class FactProperty extends FactField {
 
 Component.register(FactProperty);
 
+function newtopic(query, editor, results) {
+  results.push({
+    ref: query,
+    name: query,
+    description: "new topic",
+    context: new Context(null, editor.casefile, editor),
+    onitem: item => {
+      // Create new topic stub.
+      let topic = item.context.new_topic();
+      if (!topic) return;
+      topic.put(n_name, item.name.trim());
+      item.context.select = false;
+      return true;
+    },
+  });
+}
+
 class FactValue extends FactField {
   backends() {
     let editor = this.match("#editor");
     return [
       (query, full, results) => value_parser(query, results),
       (query, full, results) => editor.search(query, full, results),
+      (query, full, results) => newtopic(query, editor, results),
     ];
   }
 

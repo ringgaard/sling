@@ -105,6 +105,10 @@ let xrefs = [
     property: store.lookup("P345"),
   },
   {
+    pattern: /^https?:\/\/(?:www\.)?themoviedb\.org\/person\/(\d+)/i,
+    property: store.lookup("P4985"),
+  },
+  {
     pattern: /^https?:\/\/(?:www\.)?patreon\.com\/([^\/\?]+)/i,
     property: store.lookup("P4175"),
   },

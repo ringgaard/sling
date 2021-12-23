@@ -5,7 +5,7 @@ import {Component} from "/common/lib/component.js";
 import {StdDialog, MdIcon} from "/common/lib/material.js";
 import {Frame, QString, Printer} from "/common/lib/frame.js";
 import {store, settings} from "./global.js";
-import {get_schema} from "./schema.js";
+import {get_schema, inverse_property} from "./schema.js";
 import {LabelCollector, value_parser} from "./value.js";
 import "./item.js"
 import "./fact.js"
@@ -41,9 +41,6 @@ class TopicList extends Component {
       }
       await labels.retrieve();
     }
-
-    this.scrollTop = 0;
-    if (topics.length > 0) this.select(topics[0]);
   }
 
   onkeydown(e) {
@@ -380,6 +377,8 @@ class TopicCard extends Component {
 
   async onsave(e) {
     e.stopPropagation();
+
+    // Save changes to topic.
     var topic;
     if (this.editraw) {
       let edit = this.find("item-editor");
@@ -402,10 +401,47 @@ class TopicCard extends Component {
       topic.slots = slots;
     }
 
+    // Add inverse properties.
+    let folder_update = false;
+    let editor = this.match("#editor");
+    for (let [prop, value] of topic) {
+      // Get inverse property.
+      if (!(prop instanceof Frame)) continue
+      let inverse = inverse_property(prop, topic);
+      if (!inverse) continue;
+
+      // Skip if target already has the inverse relation.
+      let target = store.resolve(value);
+      if (target.has(inverse, topic)) continue;
+
+      // Only add inverse properties to local topics.
+      if (!(target instanceof Frame)) continue;
+      if (!editor.topics.includes(target)) continue;
+
+      // Add inverse property, including qualifiers.
+      if (target != value) {
+        let q = new Frame();
+        q.add(n_is, topic);
+        for (let [n, v] of value) {
+          if (n != n_is) q.add(n, v);
+        }
+        target.add(inverse, q);
+      } else {
+        target.add(inverse, topic);
+      }
+
+      // Update target topic if it is in the same folder.
+      if (editor.folder.includes(target)) {
+        await editor.update_topic(target);
+      }
+    }
+
+    // Collect labels.
     let labels = new LabelCollector(store)
     labels.add(topic);
     await labels.retrieve();
 
+    // Update topic and folder.
     this.update(topic);
     this.update_mode(false);
     this.mark_dirty();

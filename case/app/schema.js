@@ -5,13 +5,16 @@
 
 import {Component} from "/common/lib/component.js";
 import {MdSearchResult} from "/common/lib/material.js";
+import {Frame} from "/common/lib/frame.js";
 import {store, settings} from "./global.js";
 
 const n_is = store.is;
+const n_id = store.id;
 const n_name = store.lookup("name");
 const n_alias = store.lookup("alias");
 const n_description = store.lookup("description");
 const n_instance_of = store.lookup("P31");
+const n_inverse_property = store.lookup("P1696");
 
 const n_properties = store.lookup("properties");
 const n_fanin = store.lookup("/w/item/fanin");
@@ -164,6 +167,43 @@ export async function get_property_index() {
   // Build property index.
   kbpropidx = new PropertyIndex(schema);
   return kbpropidx;
+}
+
+export function qualified(v) {
+  if (v instanceof Frame) {
+    return v.has(n_is) && !v.has(n_id);
+  } else {
+    return false;
+  }
+}
+
+export function inverse_property(property, source) {
+  if (!(property instanceof Frame)) return;
+  let inverse = property.get(n_inverse_property);
+  if (!inverse) return;
+  if (qualified(inverse)) {
+    // Find inverse property which matches the target, e.g. gendered properties.
+    var fallback;
+    for (let p of property.all(n_inverse_property)) {
+      if (qualified(p)) {
+        let match = true;
+        inverse = null;
+        for (let [n, v] of p) {
+          if (n == n_is) {
+            inverse = v;
+          } else if (!source.has(n, v)) {
+            match = false;
+          }
+        }
+        if (match && inverse) return inverse;
+      } else {
+        fallback = p;
+      }
+    }
+    return fallback;
+  } else {
+    return inverse;
+  }
 }
 
 export async function psearch(query, full, results) {
