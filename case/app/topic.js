@@ -410,13 +410,13 @@ class TopicCard extends Component {
       let inverse = inverse_property(prop, topic);
       if (!inverse) continue;
 
-      // Skip if target already has the inverse relation.
-      let target = store.resolve(value);
-      if (target.has(inverse, topic)) continue;
-
       // Only add inverse properties to local topics.
+      let target = store.resolve(value);
       if (!(target instanceof Frame)) continue;
       if (!editor.topics.includes(target)) continue;
+
+      // Skip if target already has the inverse relation.
+      if (target.has(inverse, topic)) continue;
 
       // Add inverse property, including qualifiers.
       if (target != value) {

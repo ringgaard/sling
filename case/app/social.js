@@ -169,7 +169,7 @@ let xrefs = [
     property: store.lookup("P6366"),
   },
   {
-    pattern: /^https?:\/\/github\.com\/(\d+)/,
+    pattern: /^https?:\/\/github\.com\/([A-Za-z0-9\-]+)/,
     property: store.lookup("P2037"),
   },
   {
