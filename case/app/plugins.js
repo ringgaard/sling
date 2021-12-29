@@ -122,6 +122,11 @@ var plugins = [
     /^https?:\/\/[A-Za-z0-9\-\_\.]+\/(galleries|gallery|albums|girls|gals)\//,
     /^https?:\/\/[A-Za-z0-9\-\_\.]+\/[a-z\-]+\-(gallery|galley)$/,
     /^https?:\/\/www\.in\-the\-raw\.org\//,
+    /^https?:\/\/forum\.burek\.com\//,
+    /^https?:\/\/glam0ur\.net\//,
+    /^https?:\/\/celeb\.gate\.cc\//,
+    /^https?:\/\/forum\.phun\.org\/threads\//,
+    /^https?:\/\/.+\/gallery.html$/,
   ],
 },
 
@@ -149,7 +154,7 @@ var plugins = [
   module: "images.js",
   actions: [PASTEURL],
   patterns: [
-    /^https?:\/\/.*\.(jpg|jpeg|gif|png|mp4|webm)([\/\?].+)?$/,
+    /^https?:\/\/.*\.(jpg|jpeg|gif|png|mp4|webm)([\/\?].+)?$/i,
   ],
 },
 

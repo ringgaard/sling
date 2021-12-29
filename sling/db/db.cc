@@ -501,6 +501,7 @@ Status Database::AddDataShard() {
   // Close current writer.
   if (writer_ != nullptr) {
     writer_->Sync(readers_.back());
+    size_ += writer_->Tell();
     Status st = writer_->Close();
     if (!st.ok()) return st;
     delete writer_;

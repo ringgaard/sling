@@ -161,6 +161,32 @@ const images_services = [
 },
 
 {
+  pattern: /https?:\/\/celeb\.gate\.cc\//,
+  fetch: async (url, context) => {
+    let r = await fetch(context.proxy(url));
+    let html = await r.text();
+    let doc = new DOMParser().parseFromString(html, "text/html");
+    let img = doc.querySelector("img.img-fluid");
+    if (!img) return null;
+    return img.getAttribute("src");
+  },
+  nsfw: true,
+},
+
+{
+  pattern: /https?:\/\/postimage.org\/image\//,
+  fetch: async (url, context) => {
+    let r = await fetch(context.proxy(url));
+    let html = await r.text();
+    let doc = new DOMParser().parseFromString(html, "text/html");
+    let img = doc.getElementById("main-image");
+    if (!img) return null;
+    return img.getAttribute("src");
+  },
+  nsfw: true,
+},
+
+{
   pattern: /https?\:\/\/[A-Za-z0-9\.\-]+\/(uploads|galleries)\//,
   fetch: (url, context) => url,
   nsfw: true,
@@ -176,6 +202,7 @@ const images_services = [
 
 let gallery_containers = [
   "div.gallery",
+  "div.image-gallery",
   "div.actual-gallery-container",
   "div.gallery-block",
   "div.mainGalleryDiv",

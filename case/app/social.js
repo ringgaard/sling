@@ -181,6 +181,14 @@ let xrefs = [
     property: store.lookup("P496"),
   },
   {
+    pattern: /^https?:\/\/(?:www\.)?worldathletics\.org\/athletes\/[^\/]+\/(?:[^?\/]+-)?(\d+)/,
+    property: store.lookup("P1146"),
+  },
+  {
+    pattern: /^https?:\/\/(?:www\.)?the-sports\.org\/.+-spf(\d+).html/,
+    property: store.lookup("P4391"),
+  },
+  {
     pattern: /^(mailto:.+)/,
     property: store.lookup("P968"),
   },
