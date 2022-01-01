@@ -511,7 +511,7 @@ export function value_parser(value, results) {
     }
   }
 
-  // Parse geo-locaion.
+  // Parse geo-location.
   m = value.match(/^([+\-]?\d+\.\d+)\s*,\s*([+\-]?\d+\.\d+)$/);
   if (m) {
     let lat = parseFloat(m[1]);

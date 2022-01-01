@@ -537,7 +537,7 @@ class TopicCard extends Component {
       for (let prop of xrefs.get("properties")) {
         let val = topic.get(prop);
         if (val) {
-          id = prop.id + "/" + val;
+          id = prop.id + "/" + store.resolve(val);
           break;
         }
       }

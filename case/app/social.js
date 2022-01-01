@@ -189,6 +189,10 @@ let xrefs = [
     property: store.lookup("P4391"),
   },
   {
+    pattern: /^https?:\/\/(?:www\.)?fina\.org\/athletes\/(\d+)/,
+    property: store.lookup("P3408"),
+  },
+  {
     pattern: /^(mailto:.+)/,
     property: store.lookup("P968"),
   },

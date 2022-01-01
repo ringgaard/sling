@@ -82,6 +82,7 @@ import {reddit_thumbnail} from "/common/lib/reddit.js";
 
 var sfw = false;
 var hits = false;
+var xpost = false;
 mediadb.enabled = false;
 
 function current_date() {
@@ -101,6 +102,7 @@ class PhotoReportApp extends Component {
     let qs = new URLSearchParams(window.location.search);
     if (qs.get("sfw") == "1") sfw = true;
     if (qs.get("hits") == "1") hits = true;
+    if (qs.get("xpost") == "1") xpost = true;
 
     // Retrieve report.
     let url = `https://ringgaard.com/reddit/report/${date}.json`;
@@ -396,11 +398,15 @@ class SubredditCard extends MdCard {
 
     // Render postings.
     let items = hits ? sr.matched : sr.unmatched;
+    let empty = true;
     for (let item of items) {
       if (sfw && item.posting.over_18) continue;
+      if (xpost && !item.posting.crosspost_parent_list) continue;
       h.push(new RedditPosting(item));
+      empty = false;
     }
 
+    this.style.display = empty ? "none" : "";
     return h;
   }
 

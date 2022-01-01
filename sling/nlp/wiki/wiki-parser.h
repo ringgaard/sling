@@ -218,7 +218,7 @@ class WikiParser {
   bool Matches(const char *prefix);
 
   // Skip whitespace.
-  void SkipWhitespace();
+  void SkipWhitespace(bool newlines = false);
 
   // Check if a character is an XML name character.
   static bool IsNameChar(int c) {

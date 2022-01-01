@@ -464,7 +464,7 @@ void WikiParser::ParseArgument() {
 
   // Skip separator.
   ptr_++;
-  SkipWhitespace();
+  SkipWhitespace(true);
   txt_ = ptr_;
 
   // Push new argument.
@@ -663,11 +663,7 @@ void WikiParser::ParseTag() {
     } else if (type == BTAG && nodes_[node].name() == "gallery") {
       // The gallery tag encloses lines of image links.
       nodes_[node].type = GALLERY;
-      SkipWhitespace();
-      if (*ptr_ == '\n') {
-        ptr_++;
-        SkipWhitespace();
-      }
+      SkipWhitespace(true);
       txt_ = ptr_;
     } else if (type == BTAG && nodes_[node].name() == "mapframe") {
       while (*ptr_ != 0) {
@@ -1040,8 +1036,12 @@ bool WikiParser::Matches(const char *prefix) {
   return strncmp(ptr_, prefix, strlen(prefix)) == 0;
 }
 
-void WikiParser::SkipWhitespace() {
-  while (*ptr_ == ' ') ptr_++;
+void WikiParser::SkipWhitespace(bool newlines) {
+  if (newlines) {
+    while (*ptr_ == ' ' || *ptr_ == '\n') ptr_++;
+  } else {
+    while (*ptr_ == ' ') ptr_++;
+  }
 }
 
 void WikiParser::Node::CheckSpecialLink() {
