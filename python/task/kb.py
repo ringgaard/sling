@@ -78,6 +78,12 @@ class KnowledgeBaseWorkflow:
                             dir=corpora.workdir("org"),
                             format="records/frame")
 
+  def cvr(self):
+    """Resource for CVR items."""
+    return self.wf.resource("cvr.rec",
+                            dir=corpora.workdir("org"),
+                            format="records/frame")
+
   def kbdb(self):
     """Resource for knowledge base database."""
     return self.wf.resource(corpora.kbdb(), format="db/frames")
@@ -91,7 +97,8 @@ class KnowledgeBaseWorkflow:
       self.photos(),
       self.data.wikipedia_summaries(),
       self.elf(),
-      self.gleif())
+      self.gleif(),
+      self.cvr())
 
   def collect_xrefs(self):
     """Collect and cluster item identifiers."""
@@ -101,6 +108,7 @@ class KnowledgeBaseWorkflow:
       self.topics(),
       self.elf(),
       self.gleif(),
+      self.cvr(),
       self.celebs())
 
     with self.wf.namespace("xrefs"):
