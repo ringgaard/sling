@@ -28,7 +28,6 @@ n_id = kb["id"]
 n_is = kb["is"]
 n_name = kb["name"]
 n_instance_of = kb["P31"]
-n_company_number = kb["P2622"]
 n_inception = kb["P571"]
 n_dissolved = kb["P576"]
 n_start_time = kb["P580"]
@@ -44,10 +43,13 @@ n_country_code = kb["P297"]
 n_located_in = kb["P131"]
 n_country_of_citizenship = kb["P27"]
 n_cvr_number = kb["P1059"]
+n_cvr_branch_number = kb["P2814"]
+n_cvr_person_id = kb["P7972"]
 n_inception = kb["P571"]
 n_dissolved = kb["P576"]
 n_opencorporates_id = kb["P1320"]
 n_founded_by = kb["P112"]
+n_founder_of = kb["Q65972149"]
 n_owned_by = kb["P127"]
 n_owner_of = kb["P1830"]
 n_external_auditor = kb["P8571"]
@@ -67,6 +69,9 @@ n_director_manager = kb["P1037"]
 n_board_member = kb["P3320"]
 n_chairperson = kb["P488"]
 n_opencorp = kb["P1320"]
+n_described_by_source = kb["P1343"]
+n_cvr = kb["Q795419"]
+n_external_data_available_at = kb["P1325"]
 
 n_organization = kb["Q43229"]
 n_business = kb["Q4830453"]
@@ -156,7 +161,7 @@ corporate_functions = {
 participant_roles = {
   "TEGNINGSBERETTIGEDE": None,
   "REVISION": None,
-  "STIFTERE": None,
+  "STIFTERE": n_founder_of,
   "FULDT_ANSVARLIG_DELTAGERE": n_owner_of,
   "LEDELSESORGAN": n_employer,
   "SÆRLIGE_FINANSIELLE_DELTAGERE": None,
@@ -180,6 +185,7 @@ legal_forms = {
   80: (kb["Q15649047"], n_business, "Anpartsselskab"),
   81: (kb["Q18586645"], n_business, "Iværksætterselskab"),
   90: (kb["Q157031"], n_foundation, "Fond"),
+  95: (kb["Q854022"], n_organization, "Trust"),
   100: (kb["Q157031"], n_business, "Erhvervsdrivende fond"),
   110: (kb["Q48204"], n_association, "Forening"),
   115: (kb["Q48204"], n_association, "Frivillig forening"),
@@ -409,8 +415,6 @@ for item in kb:
 
 kb.freeze()
 
-store = sling.Store(kb)
-
 class FrameBuilder:
   def __init__(self):
     self.slots = []
@@ -482,15 +486,6 @@ def get_date(s):
   month = int(s[5:7])
   day = int(s[8:10])
   return year * 10000 + month * 100 + day
-
-def get_entity_id(rec):
-  unittype = rec.get("enhedstype")
-  if unittype == "VIRKSOMHED":
-    return "P1059/" + str(rec["cvrNummer"])
-  elif unittype == "PERSON":
-    return "P7972/" + str(rec["enhedsNummer"])
-  else:
-    return None
 
 def convert_address(rec, addr):
   # Country.
@@ -623,42 +618,77 @@ def find_company_id(country, id):
 
   return None, None
 
-print("Reading CVR data")
+print("Convert CVR data")
 cvrdb = sling.Database("vault/cvr")
+recout = sling.RecordWriter("data/e/org/cvr.rec")
 
 num_entities = 0
 num_persons = 0
-num_establishments = 0
-num_branches = 0
 num_companies = 0
-num_unknown_participants = 0
-
+num_branches = 0
+num_other = 0
 num_nationality = 0
 num_nocitizenship = 0
-num_matched_company_ids = 0
-num_company_ids = 0
-
-company_ids = {}
 occupations = {}
 
-entities = []
-for _, _, line in cvrdb:
+for key, rec in cvrdb.items():
   num_entities += 1
   if num_entities % 10000 == 0:
     print(num_entities, "entities")
     sys.stdout.flush()
   #if num_entities == 1000000: break
 
-  vrrec = json.loads(line)
+  # Parse JSON record.
+  data = json.loads(rec)
+  store = sling.Store(kb)
   entity = FrameBuilder()
 
-  entityid = get_entity_id(vrrec)
-  if entityid is None: continue
-  entity[n_id] = entityid
+  # Determine entity type.
+  person = False
+  unittype = data.get("enhedstype")
+  if unittype == "PERSON":
+    # Get CVR person number.
+    cvrpid = str(data["enhedsNummer"])
+    entity[n_id] = "P7972/" + cvrpid
+    entity.add(n_instance_of, n_human)
+    entity.add(n_cvr_person_id, cvrpid)
+
+    person = True
+    num_persons += 1
+  elif unittype == "VIRKSOMHED":
+    # Get CVR number
+    cvrnr = str(data["cvrNummer"])
+    entity[n_id] = "P1059/" + cvrnr
+    entity.add(n_cvr_number, cvrnr)
+    entity.add(n_opencorporates_id, "dk/" + cvrnr)
+
+    # Legal entity form.
+    for form in data["virksomhedsform"]:
+      code = form["virksomhedsformkode"]
+      orgtype = legal_forms.get(code)
+      if orgtype != None:
+        if orgtype[1] != None:
+          entity.add(n_instance_of, orgtype[1])
+        if orgtype[0] != None:
+          entity.add(n_legal_form, orgtype[0])
+      else:
+        print("unknown legal form:", key, code)
+
+    num_companies += 1
+  elif unittype == "PRODUKTIONSENHED":
+    num_branches += 1
+    continue
+  elif unittype == "ANDEN_DELTAGER":
+    cvrpid = str(data["enhedsNummer"])
+    entity[n_id] = "P7972/" + cvrpid
+    num_other += 1
+  else:
+    print("Unknown entity type:", unittype)
+    continue
 
   # Get entity names.
   names = []
-  for n in vrrec["navne"]:
+  for n in data["navne"]:
     name = n.get("navn")
     if name == None or name == "Ukendt": continue
     name = " ".join(name.split())
@@ -680,60 +710,31 @@ for _, _, line in cvrdb:
         if n[1] != None: alias[n_end_time] = n[1]
         entity.add(n_other_name, alias.create(store))
       first = False
-  subnames = vrrec.get("binavne")
+  subnames = data.get("binavne")
   if subnames != None and len(subnames) > 0:
     names = set()
     for n in subnames: names.add(n["navn"])
     for name in names: entity.add(n_other_name, name)
 
-  # Determine entity type.
-  person = False
-  establishment = False
-  unittype = vrrec.get("enhedstype")
-  if unittype == "PERSON":
-    person = True
-    entity.add(n_instance_of, n_human)
-    num_persons += 1
-  elif unittype == "VIRKSOMHED":
-    # Legal entity form.
-    for form in vrrec["virksomhedsform"]:
-      code = form["virksomhedsformkode"]
-      orgtype = legal_forms.get(code)
-      if orgtype != None:
-        if orgtype[1] != None:
-          entity.add(n_instance_of, orgtype[1])
-        if orgtype[0] != None:
-          entity.add(n_legal_form, orgtype[0])
-      else:
-        print("unknown legal form:", vrrec.get("cvrNummer"), code)
-
-    num_companies += 1
-  elif unittype == "PRODUKTIONSENHED":
-    num_branches += 1
-    continue
-  else:
-    print("Unknown entity type:", unittype)
-    continue
-
   # Occupation.
-  occupation = vrrec.get("stilling")
+  occupation = data.get("stilling")
   if occupation != None:
     #occupation = occupation.lower()
     #occupations[occupation] = occupations.get(occupation, 0) + 1
     pass
 
   # Citizenship.
-  id_type = get_attribute(vrrec, "IDENTIFIKATION_TYPE")
+  id_type = get_attribute(data, "IDENTIFIKATION_TYPE")
   citizenship = None
   if id_type == "PASNUMMER" or id_type == "TINNUMMER":
-    nationality = get_attribute(vrrec, "OPRINDELIGT_STATSBORGERSKAB")
+    nationality = get_attribute(data, "OPRINDELIGT_STATSBORGERSKAB")
     if nationality != None and nationality not in no_citizenship:
       citizenship = get_country(nationality)
       if citizenship != None:
        num_nationality += 1
 
     if citizenship == None:
-      country_code = get_attribute(vrrec, "IDENTIFIKATION_LANDEKODE")
+      country_code = get_attribute(data, "IDENTIFIKATION_LANDEKODE")
       country = country_map.get(country_code)
       if country != None:
         citizenship = country
@@ -743,19 +744,13 @@ for _, _, line in cvrdb:
   elif person:
     num_nocitizenship += 1
 
-  # CVR company identifier.
-  cvrno = vrrec.get("cvrNummer")
-  if cvrno != None:
-    entity.add(n_cvr_number, str(cvrno))
-    entity.add(n_opencorporates_id, "dk/" + str(cvrno))
-
   # Foreign companies.
+  """
   if id_type == "UDENLANDSK REGISTRERINGSNUMMER":
-    country_code = get_attribute(vrrec, "IDENTIFIKATION_LANDEKODE")
-    auth = get_attribute(vrrec, "IDENTIFIKATION_MYNDIGHED")
-    company_id = get_attribute(vrrec, u"IDENTIFIKATION_VÆRDI")
+    country_code = get_attribute(data, "IDENTIFIKATION_LANDEKODE")
+    auth = get_attribute(data, "IDENTIFIKATION_MYNDIGHED")
+    company_id = get_attribute(data, u"IDENTIFIKATION_VÆRDI")
     if country_code != None and company_id != None:
-      num_company_ids += 1
       reg, id = find_company_id(country_code, company_id)
       if reg != None:
         company_property = reg[n_company_property]
@@ -767,12 +762,12 @@ for _, _, line in cvrdb:
           opencorp_id = opencorp_prefix + "/" + id
           entity.add(n_opencorporates_id, opencorp_id)
 
-        num_matched_company_ids += 1
       else:
         print(docid, "country:", country_code, "id:", company_id)
+  """
 
   # Lifespan.
-  lifespan = vrrec.get("livsforloeb")
+  lifespan = data.get("livsforloeb")
   inception = None
   dissolved = None
   if lifespan != None:
@@ -796,7 +791,7 @@ for _, _, line in cvrdb:
     entity.add(n_dissolved, dissolved)
 
   # Industry.
-  main_industries = vrrec.get("hovedbranche")
+  main_industries = data.get("hovedbranche")
   if main_industries != None:
     industries = set()
     for min in main_industries:
@@ -810,7 +805,7 @@ for _, _, line in cvrdb:
       entity.add(n_industry, industry)
 
   # Relations (company->person).
-  relations = vrrec.get("deltagerRelation")
+  relations = data.get("deltagerRelation")
   if relations != None:
     for r in relations:
       participant = r["deltager"]
@@ -848,12 +843,12 @@ for _, _, line in cvrdb:
             entity.add(relation, store["P7972/" + str(target)])
 
   # Relations (person->company).
-  relations = vrrec.get("virksomhedSummariskRelation")
+  relations = data.get("virksomhedSummariskRelation")
   if relations != None:
     for r in relations:
       company = r["virksomhed"]
       if company == None: continue
-      target = company.get("enhedsNummer")
+      target = str(company.get("cvrNummer"))
 
       for o in r["organisationer"]:
         maintype = o["hovedtype"]
@@ -881,21 +876,21 @@ for _, _, line in cvrdb:
             entity.add(relation, store["P1059/" + str(target)])
 
   # Mergers.
-  fusions = vrrec.get("fusioner")
+  fusions = data.get("fusioner")
   if fusions != None and len(fusions) > 0:
     for f in fusions:
       orgno = f["enhedsNummerOrganisation"]
-      entity.add(n_followed_by, "P1059/" + str(orgno))
+      entity.add(n_followed_by, store["P1059/" + str(orgno)])
 
   # Splits.
-  splits = vrrec.get("spaltninger")
+  splits = data.get("spaltninger")
   if splits != None and len(splits) > 0:
     for s in splits:
       orgno = s["enhedsNummerOrganisation"]
-      entity.add(n_follows, "P1059/" + str(orgno))
+      entity.add(n_follows, store["P1059/" + str(orgno)])
 
   # Address.
-  for address in vrrec["beliggenhedsadresse"]:
+  for address in data["beliggenhedsadresse"]:
     addr = FrameBuilder()
     convert_address(address, addr)
 
@@ -905,47 +900,25 @@ for _, _, line in cvrdb:
     else:
       entity.add(n_headquarters_location, f)
 
-  if False:
-    print("=========", vrtype, docid)
-    attributes = vrrec.get("attributter")
-    if attributes != None:
-      for attr in attributes:
-        key = attr["type"]
-        for value in attr["vaerdier"]:
-          value = value.get("vaerdi")
-          print("attr", key, ":", value)
+  # Source.
+  entity.add(n_described_by_source, n_cvr)
+  entity.add(n_external_data_available_at,  "http://vault:7070/cvr/" + key)
 
-  # Create item frame for entity.
+  # Write item frame for entity.
   f = entity.create(store)
-  #print(f.data(pretty=True))
-  #print(json.dumps(vrrec, indent=2))
-  entities.append(f)
+  recout.write(f.id, f.data(binary=True))
 
 for o in occupations:
   print("%6d %s" % (occupations[o], o))
 
-for c in company_ids:
-  print(c, len(company_ids[c]))
-  for i in company_ids[c]: print("  ", i)
-print(num_company_ids, "company ids")
-print(num_matched_company_ids, "matched company ids")
-
 print(num_nationality, "with nationality")
 print(num_nocitizenship, "without citizenship")
-
 print(num_entities, "entities")
 print(num_companies, "companies")
 print(num_persons, "persons")
-print(num_establishments, "establishments")
 print(num_branches, "branches")
-print(num_unknown_participants, "unknown participants")
+print(num_other, "other participants")
 
-# Write entities to record file.
-print("Writing entities to file")
-recout = sling.RecordWriter("data/e/org/cvr.rec")
-for entity in entities:
-  recout.write(entity.id, entity.data(binary=True))
 recout.close()
-
 cvrdb.close()
 
