@@ -676,8 +676,10 @@ for key, rec in cvrdb.items():
 
     num_companies += 1
   elif unittype == "PRODUKTIONSENHED":
+    pnr = str(data["pNummer"])
+    entity[n_id] = "P2814/" + pnr
+    entity.add(n_cvr_branch_number, pnr)
     num_branches += 1
-    continue
   elif unittype == "ANDEN_DELTAGER":
     cvrpid = str(data["enhedsNummer"])
     entity[n_id] = "P7972/" + cvrpid
