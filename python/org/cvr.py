@@ -52,12 +52,15 @@ n_founded_by = kb["P112"]
 n_founder_of = kb["Q65972149"]
 n_owned_by = kb["P127"]
 n_owner_of = kb["P1830"]
+n_position_held = kb["P39"]
 n_external_auditor = kb["P8571"]
 n_supervisory_board_member = kb["P5052"]
+n_occupation = kb["P106"]
 n_director = kb["P1037"]
-
 n_subsidiary = kb["P355"]
 n_parent_organization = kb["P749"]
+n_has_part = kb["P527"]
+n_part_of = kb["P361"]
 n_follows = kb["P155"]
 n_followed_by = kb["P156"]
 n_corporate_officer = kb["P2828"]
@@ -79,6 +82,8 @@ n_foundation = kb["Q157031"]
 n_association = kb["Q48204"]
 n_human = kb["Q5"]
 n_family_name = kb["Q101352"]
+
+n_danish = kb["/lang/da"]
 
 aliases = sling.PhraseTable(kb, "data/e/kb/da/phrase-table.repo")
 factex = sling.FactExtractor(kb)
@@ -130,32 +135,71 @@ corporate_roles = {
 }
 
 corporate_functions = {
-  "bestyrelse": n_board_member,
-  "formand": n_chairperson,
-  "næstformand": n_board_member,
-  "bestyrelsesmedlem": n_board_member,
-  "adm. dir": n_chief_executive_officer,
-  "adm. dir.": n_chief_executive_officer,
-  "ordførende direktør": n_chief_executive_officer,
-  "medlem": n_board_member,
-  "tilsynsråd": n_supervisory_board_member,
-  "repræsentantskab": n_board_member,
-  "forretningsudvalg": n_board_member,
-  "hovedbestyrelse": n_board_member,
-  "adm.dir.": n_chief_executive_officer,
-  "koncerndirektør": n_chief_executive_officer,
-  "præsiditet": n_board_member,
   "adm. direktør": n_chief_executive_officer,
-  "konsortierådsmedlem": n_board_member,
+  "adm.direktør": n_chief_executive_officer,
+  "adm. dir.": n_chief_executive_officer,
+  "adm. dir": n_chief_executive_officer,
+  "adm.dir:": n_chief_executive_officer,
+  "adm.dir.": n_chief_executive_officer,
   "adm.dir": n_chief_executive_officer,
-  "styringskomite": n_supervisory_board_member,
-  "overdirektør": n_chief_executive_officer,
+  "administrerende direktør": n_chief_executive_officer,
+  "bestyrelse": n_board_member,
+  "bestyrelsesmedlem": n_board_member,
+  "formand": n_chairperson,
+  "forretningsudvalg": n_board_member,
   "forretningsudvalgsmedlem": n_board_member,
   "generalsekretær": n_chief_executive_officer,
+  "hovedbestyrelse": n_board_member,
   "koncernchef": n_chief_executive_officer,
-  "administrerende direktør": n_chief_executive_officer,
-  "adm.direktør": n_chief_executive_officer,
-  "adm.dir:": n_chief_executive_officer,
+  "koncerndirektør": n_chief_executive_officer,
+  "konsortierådsmedlem": n_board_member,
+  "medlem": n_board_member,
+  "næstformand": n_board_member,
+  "ordførende direktør": n_chief_executive_officer,
+  "overdirektør": n_chief_executive_officer,
+  "præsiditet": n_board_member,
+  "repræsentantskab": n_board_member,
+  "styringskomite": n_supervisory_board_member,
+  "tilsynsråd": n_supervisory_board_member,
+}
+
+corporate_position = {
+  "adm. direktør": kb["Q484876"],
+  "adm.direktør": kb["Q484876"],
+  "adm. dir.": kb["Q484876"],
+  "adm. dir": kb["Q484876"],
+  "adm.dir:": kb["Q484876"],
+  "adm.dir.": kb["Q484876"],
+  "adm.dir": kb["Q484876"],
+  "administrerende direktør": kb["Q484876"],
+  "bestyrelse": kb["Q2824523"],
+  "bestyrelsesmedlem": kb["Q2824523"],
+  "direktion": kb["Q1162163"],
+  "direktør": kb["Q1162163"],
+  "filialbestyrere": kb["Q4956387"],
+  "formand": kb["Q140686"],
+  "forretningsudvalg": kb["Q2824523"],
+  "forretningsudvalgsmedlem": kb["Q2824523"],
+  "generalsekretær": kb["Q484876"],
+  "hovedbestyrelse": kb["Q2824523"],
+  "koncernchef": kb["Q484876"],
+  "koncerndirektør": kb["Q484876"],
+  "konsortierådsmedlem": kb["Q2824523"],
+  "kasserer": kb["Q388338"],
+  "likvidator": kb["Q108559404"],
+  "likvidator iht. vedtægt": kb["Q108559404"],
+  "medlem": kb["Q2824523"],
+  "næstformand": kb["Q1127270"],
+  "ordførende direktør": kb["Q484876"],
+  "overdirektør": kb["Q484876"],
+  "personlig_suppleant": kb["Q3504856"],
+  "præsiditet": kb["Q2824523"],
+  "repræsentantskab": kb["Q2824523"],
+  "styringskomite": kb["Q63858690"],
+  "suppleant": kb["Q3504856"],
+  "tilsynsråd": kb["Q63858690"],
+  "vice administrerende direktør": kb["Q64154210"],
+  "økonomidirektør": kb["Q623268"],
 }
 
 participant_roles = {
@@ -225,6 +269,11 @@ given_names = factex.taxonomy([
 person_names = factex.taxonomy([
   "Q101352", # family name
   "Q202444",  # given name
+])
+
+occupations = factex.taxonomy([
+  "Q12737077",  # occupation
+  "Q192581",    # job
 ])
 
 demonyms = {
@@ -403,13 +452,13 @@ municipality_map = {}
 countries = set()
 for item in kb:
   code = item[n_country_code]
-  if code != None:
+  if code is not None:
     if type(code) is sling.Frame: code = code.resolve()
     country_map[code] = item
     countries.add(item)
 
   code = item[n_municipality_code]
-  if code != None:
+  if code is not None:
     if type(code) is sling.Frame: code = code.resolve()
     municipality_map[code] = item
 
@@ -435,24 +484,24 @@ def is_person_name(name):
     match = False
     if first:
       for m in aliases.lookup(token):
-        if given_names.classify(m) != None: match = True
+        if given_names.classify(m) is not None: match = True
     else:
       for m in aliases.lookup(token):
-        if person_names.classify(m) != None: match = True
+        if person_names.classify(m) is not None: match = True
     if not match: return False
     first = False
   return True
 
 def get_country(name):
-  if name == None: return None
+  if name is None: return None
   country = demonyms.get(name.lower())
-  if country != None: return country
+  if country is not None: return country
   for m in aliases.lookup(name):
     if m in countries: return m
   return None
 
 def located_in(location, region):
-  if region == None: return True
+  if region is None: return True
   closure = [location]
   i = 0
   while i < len(closure):
@@ -471,17 +520,17 @@ def location_in(name, region):
 
 def get_attribute(doc, key):
   attributes = doc.get("attributter")
-  if attributes == None: return None
+  if attributes is None: return None
   for attr in attributes:
     if attr["type"] == key:
       for value in attr["vaerdier"]:
         v = value.get("vaerdi")
-        if v != None: return v
+        if v is not None: return v
   return None
 
 # Convert date from YYYY-MM-DD to SLING format.
 def get_date(s):
-  if s == None or len(s) == 0: return None
+  if s is None or len(s) == 0: return None
   year = int(s[0:4])
   month = int(s[5:7])
   day = int(s[8:10])
@@ -494,60 +543,61 @@ def convert_address(rec, addr):
   text = rec["fritekst"]
   municipality = rec["kommune"]
   addrlines = []
-  if text != None:
+  if text is not None:
     # Free-text address.
     text = text.replace("\r\n", "\n")
     text = text.replace(" ,\n", "\n")
     text = text.replace(",\n", "\n")
     text = text.replace("  ", "\n")
     addrlines = text.split("\n")
-  elif municipality != None:
+  elif municipality is not None:
     # Municipality.
     code = municipality["kommuneKode"]
-    if code != None:
+    if code is not None:
       location = municipality_map.get(str(code))
-      if location != None: place = location
+      if location is not None: place = location
 
     # Postal district.
     post_district = rec["postdistrikt"]
-    if post_district != None:
+    if post_district is not None:
       place = location_in(post_district, place)
 
     # City.
     city_name = rec["bynavn"]
-    if city_name != None:
+    if city_name is not None:
       place = location_in(city_name, place)
 
   # Address lines.
-  if rec["conavn"] != None:
+  if rec["conavn"] is not None:
     careof = rec["conavn"]
     if careof.lower().startswith("c/o"):
       addrlines.append(careof)
     else:
       addrlines.append("c/o " + careof)
-  if rec["postboks"] != None: addrlines.append("Postboks " + rec["postboks"])
-  if rec["vejnavn"] != None:
+  if rec["postboks"] is not None:
+    addrlines.append("Postboks " + rec["postboks"])
+  if rec["vejnavn"] is not None:
     street = rec["vejnavn"]
-    if rec["husnummerFra"] != None:
+    if rec["husnummerFra"] is not None:
       street += " " + str(rec["husnummerFra"])
-    if rec["husnummerTil"] != None:
+    if rec["husnummerTil"] is not None:
       street += "-" + str(rec["husnummerTil"])
-    if rec["bogstavFra"] != None:
+    if rec["bogstavFra"] is not None:
       street += rec["bogstavFra"]
-    if rec["bogstavTil"] != None:
+    if rec["bogstavTil"] is not None:
       street += rec["bogstavTil"]
-    if rec["etage"] != None:
+    if rec["etage"] is not None:
       street += " " + rec["etage"] + "."
-    if rec["sidedoer"] != None:
+    if rec["sidedoer"] is not None:
       street += " " + rec["sidedoer"]
     addrlines.append(street)
-  if rec["bynavn"] != None:
+  if rec["bynavn"] is not None:
     addrlines.append(rec["bynavn"])
-  if rec["postnummer"] != None and rec["postdistrikt"] != None:
+  if rec["postnummer"] is not None and rec["postdistrikt"] is not None:
     addrlines.append(str(rec["postnummer"]) + " " + rec["postdistrikt"])
 
   # Compile address.
-  if place != None: addr.add(n_is, place)
+  if place is not None: addr.add(n_is, place)
 
   if len(addrlines) > 0:
     lines = []
@@ -557,66 +607,73 @@ def convert_address(rec, addr):
     addr.add(n_located_at_street_address, ", ".join(lines))
 
   postal_code = rec["postnummer"]
-  if postal_code != None: addr.add(n_postal_code, postal_code)
+  if postal_code is not None: addr.add(n_postal_code, postal_code)
 
   # Add period.
   period = rec.get("periode")
   start = get_date(period.get("gyldigFra"))
   end = get_date(period.get("gyldigTil"))
-  if end != None:
-    if start != None: addr[n_start_time] = start
+  if end is not None:
+    if start is not None: addr[n_start_time] = start
     addr[n_end_time] = end
 
 def match_company_id(country, company_id):
   regs = regauth.get(country)
-  if regs != None:
+  if regs is not None:
     for register in regs:
       format = register[n_format]
-      if format == None: continue
-      if re.match(format + "$", company_id) != None: return register
+      if format is None: continue
+      if re.match(format + "$", company_id) is not None: return register
   return None
 
 def find_company_id(country, id):
   reg = match_company_id(country, id)
-  if reg != None: return reg, id
+  if reg is not None: return reg, id
 
   # Remove text before colon.
   colon = id.find(":")
   if colon != -1:
     id = id[colon + 1:].strip()
     reg = match_company_id(country, id)
-    if reg != None: return reg, id
+    if reg is not None: return reg, id
 
   # Remove country code prefix.
   if id.startswith(country):
     id = id[len(country):].strip()
     reg = match_company_id(country, id)
-    if reg != None: return reg, id
+    if reg is not None: return reg, id
 
   # Remove spaces.
   if " " in id:
     id = id.replace(" ", "")
     reg = match_company_id(country, id)
-    if reg != None: return reg, id
+    if reg is not None: return reg, id
 
   # Replace dots with dashes.
   if "." in id:
     id = id.replace(".", "-")
     reg = match_company_id(country, id)
-    if reg != None: return reg, id
+    if reg is not None: return reg, id
 
   # Remove dashes
   if "-" in id:
     id = id.replace("-", "")
     reg = match_company_id(country, id)
-    if reg != None: return reg, id
+    if reg is not None: return reg, id
 
   # Add leading zero
   id = "0" + id
   reg = match_company_id(country, id)
-  if reg != None: return reg, id
+  if reg is not None: return reg, id
 
   return None, None
+
+def get_occupation(job):
+  if job is None: return None
+  for item in aliases.lookup(job):
+    if item is None: continue
+    if occupations.classify(item) is not None: return item
+  return None
 
 print("Convert CVR data")
 cvrdb = sling.Database("vault/cvr")
@@ -629,7 +686,7 @@ num_branches = 0
 num_other = 0
 num_nationality = 0
 num_nocitizenship = 0
-occupations = {}
+unk_functions = {}
 
 for key, rec in cvrdb.items():
   num_entities += 1
@@ -645,8 +702,8 @@ for key, rec in cvrdb.items():
 
   # Determine entity type.
   person = False
-  unittype = data.get("enhedstype")
-  if unittype == "PERSON":
+  unit_type = data.get("enhedstype")
+  if unit_type == "PERSON":
     # Get CVR person number.
     cvrpid = str(data["enhedsNummer"])
     entity[n_id] = "P7972/" + cvrpid
@@ -655,7 +712,7 @@ for key, rec in cvrdb.items():
 
     person = True
     num_persons += 1
-  elif unittype == "VIRKSOMHED":
+  elif unit_type == "VIRKSOMHED":
     # Get CVR number
     cvrnr = str(data["cvrNummer"])
     entity[n_id] = "P1059/" + cvrnr
@@ -666,33 +723,46 @@ for key, rec in cvrdb.items():
     for form in data["virksomhedsform"]:
       code = form["virksomhedsformkode"]
       orgtype = legal_forms.get(code)
-      if orgtype != None:
-        if orgtype[1] != None:
+      if orgtype is not None:
+        if orgtype[1] is not None:
           entity.add(n_instance_of, orgtype[1])
-        if orgtype[0] != None:
+        if orgtype[0] is not None:
           entity.add(n_legal_form, orgtype[0])
       else:
         print("unknown legal form:", key, code)
 
     num_companies += 1
-  elif unittype == "PRODUKTIONSENHED":
+  elif unit_type == "PRODUKTIONSENHED":
     pnr = str(data["pNummer"])
     entity[n_id] = "P2814/" + pnr
     entity.add(n_cvr_branch_number, pnr)
     num_branches += 1
-  elif unittype == "ANDEN_DELTAGER":
+  elif unit_type == "ANDEN_DELTAGER":
     cvrpid = str(data["enhedsNummer"])
     entity[n_id] = "P7972/" + cvrpid
-    num_other += 1
+
+    participant_type = get_attribute(data, "ANDRE_DELT_TYPE")
+    if participant_type == "PERSON":
+      entity.add(n_instance_of, n_human)
+      entity.add(n_cvr_person_id, cvrpid)
+      person = True
+      num_persons += 1
+    elif participant_type == "VIRKSOMHED":
+      entity.add(n_instance_of, n_organization)
+      num_companies += 1
+    else:
+      num_other += 1
+      if participant_type is not None:
+        print("unknown participant type:", participant_type, key)
   else:
-    print("Unknown entity type:", unittype)
+    print("Unknown entity type:", unit_type)
     continue
 
   # Get entity names.
   names = []
   for n in data["navne"]:
     name = n.get("navn")
-    if name == None or name == "Ukendt": continue
+    if name is None or name == "Ukendt": continue
     name = " ".join(name.split())
     period = n.get("periode")
     start = get_date(period.get("gyldigFra"))
@@ -708,40 +778,40 @@ for key, rec in cvrdb.items():
       else:
         alias = FrameBuilder()
         alias[n_is] = n[2]
-        if n[0] != None: alias[n_start_time] = n[0]
-        if n[1] != None: alias[n_end_time] = n[1]
+        if n[0] is not None: alias[n_start_time] = n[0]
+        if n[1] is not None: alias[n_end_time] = n[1]
         entity.add(n_other_name, alias.create(store))
       first = False
   subnames = data.get("binavne")
-  if subnames != None and len(subnames) > 0:
+  if subnames is not None and len(subnames) > 0:
     names = set()
     for n in subnames: names.add(n["navn"])
     for name in names: entity.add(n_other_name, name)
 
   # Occupation.
   occupation = data.get("stilling")
-  if occupation != None:
-    #occupation = occupation.lower()
-    #occupations[occupation] = occupations.get(occupation, 0) + 1
-    pass
+  if occupation is not None:
+    job = get_occupation(occupation)
+    if job is None: job = store.qstr(occupation, n_danish)
+    entity[n_occupation] = job
 
   # Citizenship.
   id_type = get_attribute(data, "IDENTIFIKATION_TYPE")
   citizenship = None
   if id_type == "PASNUMMER" or id_type == "TINNUMMER":
     nationality = get_attribute(data, "OPRINDELIGT_STATSBORGERSKAB")
-    if nationality != None and nationality not in no_citizenship:
+    if nationality is not None and nationality not in no_citizenship:
       citizenship = get_country(nationality)
-      if citizenship != None:
+      if citizenship is not None:
        num_nationality += 1
 
-    if citizenship == None:
+    if citizenship is None:
       country_code = get_attribute(data, "IDENTIFIKATION_LANDEKODE")
       country = country_map.get(country_code)
-      if country != None:
+      if country is not None:
         citizenship = country
 
-  if citizenship != None:
+  if citizenship is not None:
     entity.add(n_country_of_citizenship, citizenship)
   elif person:
     num_nocitizenship += 1
@@ -752,15 +822,15 @@ for key, rec in cvrdb.items():
     country_code = get_attribute(data, "IDENTIFIKATION_LANDEKODE")
     auth = get_attribute(data, "IDENTIFIKATION_MYNDIGHED")
     company_id = get_attribute(data, u"IDENTIFIKATION_VÆRDI")
-    if country_code != None and company_id != None:
+    if country_code is not None and company_id is not None:
       reg, id = find_company_id(country_code, company_id)
-      if reg != None:
+      if reg is not None:
         company_property = reg[n_company_property]
         opencorp_prefix = reg[n_opencorporates_jurisdiction]
-        if company_property != None:
+        if company_property is not None:
           comp_id = company_property.id + "/" + id
           entity.add(company_property, id)
-        if opencorp_prefix != None:
+        if opencorp_prefix is not None:
           opencorp_id = opencorp_prefix + "/" + id
           entity.add(n_opencorporates_id, opencorp_id)
 
@@ -772,47 +842,66 @@ for key, rec in cvrdb.items():
   lifespan = data.get("livsforloeb")
   inception = None
   dissolved = None
-  if lifespan != None:
+  if lifespan is not None:
     closed = True
     for l in lifespan:
       period = l.get("periode")
       start = get_date(period.get("gyldigFra"))
       end = get_date(period.get("gyldigTil"))
-      if start != None:
-        if inception == None or start < inception: inception = start
-      if end != None:
-        if dissolved == None or end > dissolved: dissolved = end
+      if start is not None:
+        if inception is None or start < inception: inception = start
+      if end is not None:
+        if dissolved is None or end > dissolved: dissolved = end
       else:
         closed = False
 
     if not closed: dissolved = None
 
-  if inception != None:
+  if inception is not None:
     entity.add(n_inception, inception)
-  if dissolved != None:
+  if dissolved is not None:
     entity.add(n_dissolved, dissolved)
 
   # Industry.
   main_industries = data.get("hovedbranche")
-  if main_industries != None:
+  if main_industries is not None:
     industries = set()
     for min in main_industries:
       dkcode = min["branchekode"]
       industry = nace.get(dkcode[0:4])
-      if industry == None:
-        #print("Unknown industry", cvrno, dkcode)
+      if industry is None:
+        #print("Unknown industry", cvrno, dkcode, key)
         continue
       industries.add(industry)
     for industry in industries:
       entity.add(n_industry, industry)
 
+  # Branches.
+  branches = data.get("penheder")
+  if branches is not None:
+    if len(branches) == 1:
+      # Merge branch with parent organization for single-branch organizations.
+      pnr = str(branches[0]["pNummer"])
+      entity.add(n_cvr_branch_number, pnr)
+    else:
+      # Add branches to this organization as well as inverse relations.
+      this = store["P1059/" + str(data["cvrNummer"])]
+      for branch in branches:
+        pnr = str(branch["pNummer"])
+        entity.add(n_has_part, store["P2814/" + pnr])
+        inverse = FrameBuilder()
+        inverse.add(n_id, "P2814/" + pnr)
+        inverse.add(n_part_of, this)
+        f = inverse.create(store)
+        recout.write(f.id, f.data(binary=True))
+
   # Relations (company->person).
   relations = data.get("deltagerRelation")
-  if relations != None:
+  if relations is not None:
     for r in relations:
       participant = r["deltager"]
-      if participant == None: continue
-      target = participant.get("enhedsNummer")
+      if participant is None: continue
+      target = str(participant.get("enhedsNummer"))
 
       for o in r["organisationer"]:
         maintype = o["hovedtype"]
@@ -830,26 +919,34 @@ for key, rec in cvrdb.items():
                 end = get_date(period["gyldigTil"])
         if start == inception: start = None
         if end == dissolved: end = None
+        position = None
         relation = corporate_roles[maintype]
-        if relation == n_corporate_officer:
+        if relation == n_corporate_officer and function is not None:
           role = corporate_functions.get(function)
-          if role != None: relation = role
-        if relation != None:
-          if start != None or end != None:
+          if role is not None:
+            relation = role
+          else:
+            position = corporate_position.get(function)
+            if position is None:
+              position = store.qstr(function, n_danish)
+              unk_functions[function] = unk_functions.get(function, 0) + 1
+        if relation is not None:
+          if start is not None or end is not None or position is not None:
             f = FrameBuilder()
-            f[n_is] = store["P7972/" + str(target)]
-            if start != None: f[n_start_time] = start
-            if end != None: f[n_end_time] = end
+            f[n_is] = store["P7972/" + target]
+            if position is not None: f[n_position_held] = position
+            if start is not None: f[n_start_time] = start
+            if end is not None: f[n_end_time] = end
             entity.add(relation, f.create(store))
           else:
-            entity.add(relation, store["P7972/" + str(target)])
+            entity.add(relation, store["P7972/" + target])
 
   # Relations (person->company).
   relations = data.get("virksomhedSummariskRelation")
-  if relations != None:
+  if relations is not None:
     for r in relations:
       company = r["virksomhed"]
-      if company == None: continue
+      if company is None: continue
       target = str(company.get("cvrNummer"))
 
       for o in r["organisationer"]:
@@ -862,31 +959,45 @@ for key, rec in cvrdb.items():
             t = a["type"]
             if t == "FUNKTION" or t == "EJERANDEL_PROCENT":
               for v in a["vaerdier"]:
-                function = v["vaerdi"]
+                function = v["vaerdi"].lower()
                 period = v["periode"]
                 start = get_date(period["gyldigFra"])
                 end = get_date(period["gyldigTil"])
         relation = participant_roles[maintype]
-        if relation != None:
-          if start != None or end != None:
+        position = None
+        if relation == n_employer and function is not None:
+          position = corporate_position.get(function)
+          if position is None:
+            position = store.qstr(function, n_danish)
+            unk_functions[function] = unk_functions.get(function, 0) + 1
+        if relation is not None:
+          if start is not None or end is not None or position is not None:
             f = FrameBuilder()
-            f[n_is] = store["P1059/" + str(target)]
-            if start != None: f[n_start_time] = start
-            if end != None: f[n_end_time] = end
+            f[n_is] = store["P1059/" + target]
+            if position is not None: f[n_position_held] = position
+            if start is not None: f[n_start_time] = start
+            if end is not None: f[n_end_time] = end
             entity.add(relation, f.create(store))
           else:
-            entity.add(relation, store["P1059/" + str(target)])
+            entity.add(relation, store["P1059/" + target])
+
+  # Relations (branch->company).
+  relations = data.get("virksomhedsrelation")
+  if relations is not None:
+    for r in relations:
+      target = str(company.get("cvrNummer"))
+      entity.add(n_parent_organization, store["P1059/" + target])
 
   # Mergers.
   fusions = data.get("fusioner")
-  if fusions != None and len(fusions) > 0:
+  if fusions is not None and len(fusions) > 0:
     for f in fusions:
       orgno = f["enhedsNummerOrganisation"]
       entity.add(n_followed_by, store["P1059/" + str(orgno)])
 
   # Splits.
   splits = data.get("spaltninger")
-  if splits != None and len(splits) > 0:
+  if splits is not None and len(splits) > 0:
     for s in splits:
       orgno = s["enhedsNummerOrganisation"]
       entity.add(n_follows, store["P1059/" + str(orgno)])
@@ -910,8 +1021,9 @@ for key, rec in cvrdb.items():
   f = entity.create(store)
   recout.write(f.id, f.data(binary=True))
 
-for o in occupations:
-  print("%6d %s" % (occupations[o], o))
+for f in unk_functions:
+  if unk_functions[f] > 10:
+    print("%6d %s" % (unk_functions[f], f))
 
 print(num_nationality, "with nationality")
 print(num_nocitizenship, "without citizenship")
