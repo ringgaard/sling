@@ -45,6 +45,7 @@ n_country_of_citizenship = kb["P27"]
 n_cvr_number = kb["P1059"]
 n_cvr_branch_number = kb["P2814"]
 n_cvr_person_id = kb["P7972"]
+n_cvr_unit_number = kb["PCVR"]
 n_inception = kb["P571"]
 n_dissolved = kb["P576"]
 n_opencorporates_id = kb["P1320"]
@@ -703,12 +704,12 @@ for key, rec in cvrdb.items():
   # Determine entity type.
   person = False
   unit_type = data.get("enhedstype")
+  unit_number = str(data["enhedsNummer"])
   if unit_type == "PERSON":
     # Get CVR person number.
-    cvrpid = str(data["enhedsNummer"])
-    entity[n_id] = "P7972/" + cvrpid
+    entity[n_id] = "P7972/" + unit_number
     entity.add(n_instance_of, n_human)
-    entity.add(n_cvr_person_id, cvrpid)
+    entity.add(n_cvr_person_id, unit_number)
 
     person = True
     num_persons += 1
@@ -736,15 +737,12 @@ for key, rec in cvrdb.items():
     pnr = str(data["pNummer"])
     entity[n_id] = "P2814/" + pnr
     entity.add(n_cvr_branch_number, pnr)
-    num_branches += 1
   elif unit_type == "ANDEN_DELTAGER":
-    cvrpid = str(data["enhedsNummer"])
-    entity[n_id] = "P7972/" + cvrpid
-
+    entity[n_id] = "PCVR/" + unit_number
     participant_type = get_attribute(data, "ANDRE_DELT_TYPE")
     if participant_type == "PERSON":
       entity.add(n_instance_of, n_human)
-      entity.add(n_cvr_person_id, cvrpid)
+      entity.add(n_cvr_person_id, unit_number)
       person = True
       num_persons += 1
     elif participant_type == "VIRKSOMHED":
@@ -757,6 +755,7 @@ for key, rec in cvrdb.items():
   else:
     print("Unknown entity type:", unit_type)
     continue
+  entity[n_cvr_unit_number] = unit_number
 
   # Get entity names.
   names = []
@@ -885,7 +884,8 @@ for key, rec in cvrdb.items():
       entity.add(n_cvr_branch_number, pnr)
     else:
       # Add branches to this organization as well as inverse relations.
-      this = store["P1059/" + str(data["cvrNummer"])]
+      num_branches += len(branches)
+      this = store["PCVR/" + unit_number]
       for branch in branches:
         pnr = str(branch["pNummer"])
         entity.add(n_has_part, store["P2814/" + pnr])
@@ -901,7 +901,7 @@ for key, rec in cvrdb.items():
     for r in relations:
       participant = r["deltager"]
       if participant is None: continue
-      target = str(participant.get("enhedsNummer"))
+      target = str(participant["enhedsNummer"])
 
       for o in r["organisationer"]:
         maintype = o["hovedtype"]
@@ -933,13 +933,13 @@ for key, rec in cvrdb.items():
         if relation is not None:
           if start is not None or end is not None or position is not None:
             f = FrameBuilder()
-            f[n_is] = store["P7972/" + target]
+            f[n_is] = store["PCVR/" + target]
             if position is not None: f[n_position_held] = position
             if start is not None: f[n_start_time] = start
             if end is not None: f[n_end_time] = end
             entity.add(relation, f.create(store))
           else:
-            entity.add(relation, store["P7972/" + target])
+            entity.add(relation, store["PCVR/" + target])
 
   # Relations (person->company).
   relations = data.get("virksomhedSummariskRelation")
@@ -947,7 +947,7 @@ for key, rec in cvrdb.items():
     for r in relations:
       company = r["virksomhed"]
       if company is None: continue
-      target = str(company.get("cvrNummer"))
+      target = str(company["enhedsNummer"])
 
       for o in r["organisationer"]:
         maintype = o["hovedtype"]
@@ -973,34 +973,27 @@ for key, rec in cvrdb.items():
         if relation is not None:
           if start is not None or end is not None or position is not None:
             f = FrameBuilder()
-            f[n_is] = store["P1059/" + target]
+            f[n_is] = store["PCVR/" + target]
             if position is not None: f[n_position_held] = position
             if start is not None: f[n_start_time] = start
             if end is not None: f[n_end_time] = end
             entity.add(relation, f.create(store))
           else:
-            entity.add(relation, store["P1059/" + target])
-
-  # Relations (branch->company).
-  relations = data.get("virksomhedsrelation")
-  if relations is not None:
-    for r in relations:
-      target = str(company.get("cvrNummer"))
-      entity.add(n_parent_organization, store["P1059/" + target])
+            entity.add(relation, store["PCVR/" + target])
 
   # Mergers.
   fusions = data.get("fusioner")
   if fusions is not None and len(fusions) > 0:
     for f in fusions:
       orgno = f["enhedsNummerOrganisation"]
-      entity.add(n_followed_by, store["P1059/" + str(orgno)])
+      entity.add(n_followed_by, store["PCVR/" + str(orgno)])
 
   # Splits.
   splits = data.get("spaltninger")
   if splits is not None and len(splits) > 0:
     for s in splits:
       orgno = s["enhedsNummerOrganisation"]
-      entity.add(n_follows, store["P1059/" + str(orgno)])
+      entity.add(n_follows, store["PCVR/" + str(orgno)])
 
   # Address.
   for address in data["beliggenhedsadresse"]:
@@ -1015,6 +1008,8 @@ for key, rec in cvrdb.items():
 
   # Source.
   entity.add(n_described_by_source, n_cvr)
+
+  # TODO: remove
   entity.add(n_external_data_available_at,  "http://vault:7070/cvr/" + key)
 
   # Write item frame for entity.

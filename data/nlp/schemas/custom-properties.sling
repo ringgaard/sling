@@ -41,3 +41,26 @@
   }
 }
 
+{
+  =PCVR
+  :/w/property
+  name: "CVR unit number"@/lang/en
+  name: "CVR enhedsnummer"@/lang/da
+  description: "unique identifier for unit in CVR register"@/lang/en
+  description: "unik identifikation for enhed i CVR-registeret"@/lang/da
+  source: /w/entity
+  target: /w/xref
+
+  P31: Q190087 ; data type
+  P31: Q6545185 ; unique identifier
+
+  P2378: Q795419 ; issued by: CVR
+  P1896: "https://cvr.dk" ; source website: cvr.dk
+  P1630: "http://vault:7070/cvr/$1" ; formatter url
+
+  P1793: {
+    +"[0-9]+"
+    P2916: "numeric value"@/lang/en
+  }
+}
+

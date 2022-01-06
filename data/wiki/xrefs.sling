@@ -4,6 +4,7 @@
     P1059, ; Danish CVR company number
     P7972, ; Danish CVR person ID
     P2814, ; Danish CVR branch P-number
+    PCVR,  ; Danish CVR unit number
     P2622, ; UK Companies House company ID
     P5297, ; UK Companies House officer ID
     P3200, ; Northern Ireland charity number
@@ -56,6 +57,7 @@
     "case": "PCASE"     ; SLING case number
 
     "cvr": "P1059"      ; Danish CVR company number
+    "cvrid": "PCVR"     ; Danish CVR unit number
     "coh": "P2622"      ; UK Companies House company ID
     "sec": "P5531"      ; US SEC Central Index Key
     "irs": "P1297"      ; US IRS Employer Identification Number

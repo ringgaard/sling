@@ -469,6 +469,7 @@ export function value_parser(value, results) {
   // Parse and convert implerial units.
   m = value.match(/^(\d+)['’]\s*(\d+\.?\d*)["”]$/);
   if (!m) m = value.match(/^(\d+)\s*ft\s*(\d+\.?\d*)\s*in$/);
+  if (!m) m = value.match(/^(\d+)\s*feet\s*(\d+\.?\d*)\s*inches$/);
   if (m) {
     let feet = parseFloat(m[1]);
     let inches = parseFloat(m[2]);
