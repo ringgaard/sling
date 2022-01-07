@@ -127,6 +127,7 @@ var plugins = [
     /^https?:\/\/celeb\.gate\.cc\//,
     /^https?:\/\/forum\.phun\.org\/threads\//,
     /^https?:\/\/.+\/gallery.html$/,
+    /^https?:\/\/thekameraclub\.co\.uk\//,
   ],
 },
 
