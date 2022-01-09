@@ -76,13 +76,14 @@ var plugins = [
   ],
 },
 
-// Social media profiles from r/BeautifulFemales.
+// Social media profiles from r/BeautifulFemales etc.
 {
   name: "beautyfem",
   module: "beautyfem.js",
   actions: [PASTEURL, SEARCHURL],
   patterns: [
     /^https:\/\/www\.reddit\.com\/r\/BeautifulFemales\/comments\//,
+    /^https:\/\/www\.reddit\.com\/r\/HoneyDrip\/comments\//,
   ],
 },
 

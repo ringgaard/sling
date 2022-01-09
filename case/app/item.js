@@ -50,7 +50,7 @@ class KbLink extends Component {
   onclick(e) {
     e.preventDefault();
     e.stopPropagation();
-    this.dispatch("navigate", this.props.ref, true);
+    this.dispatch("navigate", {ref: this.props.ref, event: e}, true);
   }
 
   static stylesheet() {
@@ -76,7 +76,7 @@ class KbRef extends Component {
   onclick(e) {
     e.preventDefault();
     e.stopPropagation();
-    this.dispatch("navigate", this.state, true);
+    this.dispatch("navigate", {ref: this.state, event: e}, true);
   }
 
   render() {

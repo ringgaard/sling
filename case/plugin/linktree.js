@@ -54,7 +54,6 @@ export default class LinkTreePlugin {
 
     // Get JSON data block.
     let json = JSON.parse(doc.getElementById("__NEXT_DATA__").innerText);
-    console.log("json", json);
     let account = json.props.pageProps.account;
 
     // Add name and description.

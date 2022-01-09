@@ -193,6 +193,10 @@ let xrefs = [
     property: store.lookup("P3408"),
   },
   {
+    pattern: /^(https?:\/\/honeydrip\.com\/model\/.+)/,
+    property: store.lookup("P973"),
+  },
+  {
     pattern: /^(mailto:.+)/,
     property: store.lookup("P968"),
   },

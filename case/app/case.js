@@ -160,9 +160,19 @@ class CaseEditor extends Component {
   onnavigate(e) {
     e.preventDefault();
     e.stopPropagation();
-    let ref = e.detail;
+    let ref = e.detail.ref;
     let item = store.find(ref);
-    if (item && (this.topics.includes(item) || this.scraps.includes(item))) {
+    if (!item) return;
+    if (e.detail.event.ctrlKey) {
+      let topic = this.find_topic(item);
+      if (!topic) {
+        this.add_topic_link(item);
+        return;
+      }
+      item = topic;
+    }
+
+    if (this.topics.includes(item) || this.scraps.includes(item)) {
       this.navigate_to(item);
     } else {
       window.open(`${settings.kbservice}/kb/${ref}`, "_blank");
@@ -457,6 +467,12 @@ class CaseEditor extends Component {
       if (f.value(i).includes(topic)) refs += 1;
     }
     return refs;
+  }
+
+  find_topic(item) {
+    for (let topic of this.topics) {
+      if (topic == item || topic.has(n_is, item)) return topic;
+    }
   }
 
   redirect(source, target) {

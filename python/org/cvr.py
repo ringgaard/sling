@@ -691,9 +691,9 @@ unk_functions = {}
 
 for key, rec in cvrdb.items():
   num_entities += 1
-  if num_entities % 10000 == 0:
-    print(num_entities, "entities")
-    sys.stdout.flush()
+  #if num_entities % 10000 == 0:
+  #  print(num_entities, "entities")
+  #  sys.stdout.flush()
   #if num_entities == 1000000: break
 
   # Parse JSON record.
@@ -987,6 +987,7 @@ for key, rec in cvrdb.items():
     for f in fusions:
       orgno = f["enhedsNummerOrganisation"]
       entity.add(n_followed_by, store["PCVR/" + str(orgno)])
+      print("merger", key, orgno)
 
   # Splits.
   splits = data.get("spaltninger")
@@ -994,6 +995,7 @@ for key, rec in cvrdb.items():
     for s in splits:
       orgno = s["enhedsNummerOrganisation"]
       entity.add(n_follows, store["PCVR/" + str(orgno)])
+      print("split", key, orgno)
 
   # Address.
   for address in data["beliggenhedsadresse"]:
