@@ -714,7 +714,10 @@ class FactField extends Component {
       return store.parse(value);
     } else {
       let text = this.text();
-      if (this.state && this.state.property.get(n_target) == n_quantity_type) {
+      let property = this.state && this.state.property;
+      if (property &&
+          (property instanceof Frame) &&
+          property.get(n_target) == n_quantity_type) {
         let number = parseFloat(text);
         if (!isNaN(number)) return number;
       }

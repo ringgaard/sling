@@ -196,7 +196,7 @@ export class PhotoGallery extends MdModal {
     let photo = this.photos[n];
     let caption = photo.caption;
     if (caption) {
-      caption = caption.replace(/\[\[|\]\]/g, "");
+      caption = caption.toString().replace(/\[\[|\]\]/g, "");
     }
     this.find(".image").replaceWith(photo.image);
     this.find(".caption").update(caption);

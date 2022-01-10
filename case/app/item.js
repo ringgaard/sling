@@ -118,11 +118,15 @@ class PropertyPanel extends Component {
     let died = death ? new Time(death) : null;
 
     function render_name(prop) {
-      let name = prop.get(n_name);
-      if (!name) name = prop.id;
-      h.push(`<kb-link ref="${prop.id}">`);
-      h.push(Component.escape(name));
-      h.push('</kb-link>');
+      if (prop instanceof Frame) {
+        let name = prop.get(n_name);
+        if (!name) name = prop.id;
+        h.push(`<kb-link ref="${prop.id}">`);
+        h.push(Component.escape(name));
+        h.push('</kb-link>');
+      } else {
+        h.push(Component.escape(prop.toString()));
+      }
     }
 
     function render_quantity(val) {
@@ -247,7 +251,8 @@ class PropertyPanel extends Component {
     }
 
     function render_value(val, prop) {
-      let dt = prop ? prop.get(n_target) : undefined;
+      let dt = undefined;
+      if (prop && (prop instanceof Frame)) dt = prop.get(n_target);
       switch (dt) {
         case n_item_type:
           if (val instanceof Frame) {
@@ -283,7 +288,6 @@ class PropertyPanel extends Component {
     let prev = null;
     for (let [name, value] of item) {
       if (name == n_id) continue;
-      if (name.isproxy()) continue;
 
       if (name != prev) {
         // Start new property group for new property.
