@@ -5,8 +5,23 @@ import {Component} from "/common/lib/component.js";
 import * as material from "/common/lib/material.js";
 import {store, settings, save_settings} from "./global.js";
 
+function pad2(num) {
+  return ("0" + num).toString().slice(-2)
+}
+
+function pad4(num) {
+  return ("000" + num).toString().slice(-4)
+}
+
 function date2str(date) {
-  return date.toLocaleString();
+  //return date.toLocaleString();
+  let year = pad4(date.getFullYear());
+  let month = pad2(date.getMonth() + 1);
+  let day = pad2(date.getDate());
+  let hours = pad2(date.getHours());
+  let mins = pad2(date.getMinutes());
+
+  return `${year}-${month}-${day} ${hours}:${mins}`;
 }
 
 //-----------------------------------------------------------------------------
@@ -325,8 +340,8 @@ class CaseList extends material.MdCard {
        <th></th>
        <th>Name</th>
        <th>Description</th>
-       <th>Created</th>
        <th>Modified</th>
+       <th>Created</th>
        <th></th>
      </tr></thead>
     `);
@@ -352,8 +367,8 @@ class CaseList extends material.MdCard {
           <td><div>${icon}</div></td>
           <td>${Component.escape(rec.name)}</td>
           <td>${Component.escape(rec.description)}</td>
-          <td>${date2str(rec.created)}</td>
           <td>${date2str(rec.modified)}</td>
+          <td>${date2str(rec.created)}</td>
           <td><md-icon-button icon="delete"></md-icon-button></td>
         </tr>
      `);

@@ -132,6 +132,7 @@ class CaseEditor extends Component {
     this.bind("#menu", "click", e => this.onmenu(e));
     this.bind("#home", "click", e => this.close());
     this.bind("#merge", "click", e => this.onmerge(e));
+    this.bind("#script", "click", e => this.onscript(e));
     this.bind("#save", "click", e => this.onsave(e));
     this.bind("#share", "click", e => this.onshare(e));
     this.bind("#newfolder", "click", e => this.onnewfolder(e));
@@ -940,6 +941,41 @@ class CaseEditor extends Component {
     }
   }
 
+  async onscript(e) {
+    let dialog = new ScriptDialog();
+    let script = await dialog.show();
+    if (script) {
+      // Execute script.
+      try {
+        if (script.apply(this)) {
+          // Update editor.
+          this.mark_dirty();
+          await this.update_folders();
+          await this.refresh_topics();
+        }
+      } catch(e) {
+        console.log("Script error", e);
+        StdDialog.error(`Error executing script: ${e.message}`);
+      }
+      if (this.log) {
+        StdDialog.alert("Script output", this.log.join(" "));
+      }
+      this.log = null;
+    }
+  }
+
+  store() {
+    return store;
+  }
+
+  print() {
+    if (!this.log) this.log = new Array();
+    for (let msg of arguments) {
+      this.log.push(msg.toString());
+    }
+    this.log.push("\n");
+  }
+
   async update_folders() {
     await this.find("folder-list").update({
       folders: this.folders,
@@ -951,6 +987,10 @@ class CaseEditor extends Component {
 
   async update_topics() {
     await this.find("topic-list").update(this.folder);
+  }
+
+  async refresh_topics() {
+    await this.find("topic-list").refresh(this.folder);
   }
 
   async update_topic(topic) {
@@ -990,9 +1030,14 @@ class CaseEditor extends Component {
           <div id="title">Case #<md-text id="caseid"></md-text></div>
           <omni-box id="search"></omni-box>
           <md-spacer></md-spacer>
-          <md-icon-button id="merge" icon="merge"></md-icon-button>
-          <md-icon-button id="save" icon="save"></md-icon-button>
-          <md-icon-button id="share" icon="share"></md-icon-button>
+          <md-icon-button id="merge" icon="merge">
+          </md-icon-button>
+          <md-icon-button id="script" icon="play_circle_outline">
+          </md-icon-button>
+          <md-icon-button id="save" icon="save">
+          </md-icon-button>
+          <md-icon-button id="share" icon="share">
+          </md-icon-button>
         </md-toolbar>
 
         <md-row-layout>
@@ -1126,4 +1171,52 @@ class SharingDialog extends MdDialog {
 }
 
 Component.register(SharingDialog);
+
+class ScriptDialog extends MdDialog {
+  onconnected() {
+    this.bind("textarea", "keydown", e => e.stopPropagation());
+  }
+
+  submit() {
+    let script = this.find("textarea").value;
+    var func;
+    try {
+      func = new Function(script);
+    } catch(e) {
+      this.find("#msg").innerText = e.message;
+      return;
+    }
+    this.close(func);
+  }
+
+  render() {
+    let script = this.state;
+    return `
+      <md-dialog-top>Execute script</md-dialog-top>
+      <div id="content">
+        <textarea
+          rows="32"
+          cols="80"
+          spellcheck="false">${Component.escape(script)}</textarea>
+          <div id="msg"></div>
+      </div>
+      <md-dialog-bottom>
+        <button id="cancel">Cancel</button>
+        <button id="submit">Run</button>
+      </md-dialog-bottom>
+    `;
+  }
+
+  static stylesheet() {
+    return MdDialog.stylesheet() + `
+      $ #content {
+        display: flex;
+        flex-direction: column;
+        row-gap: 16px;
+      }
+    `;
+  }
+}
+
+Component.register(ScriptDialog);
 

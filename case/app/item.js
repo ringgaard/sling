@@ -670,6 +670,7 @@ class ItemPanel extends Component {
     if (!item) return;
     let top = this.parentNode && this.parentNode.closest("item-panel") == null;
     let names = new Array();
+    let description = null;
     let title = item.get(n_name);
     let props = new Frame(store);
     let xrefs = new Frame(store);
@@ -691,6 +692,8 @@ class ItemPanel extends Component {
       } else if (name === n_name || name === n_alias) {
         let n = store.resolve(value).toString();
         if (!top || n != title) names.push(n);
+      } else if (name === n_description) {
+        description = value;
       } else if ((name instanceof Frame) && name.get(n_target) == n_xref_type) {
         xrefs.add(name, value);
       } else {
@@ -704,7 +707,7 @@ class ItemPanel extends Component {
     // Update panels.
     this.find("#identifier").update(item.id);
     this.find("#names").update(names.join(" • "));
-    this.find("#description").update(item.get(n_description));
+    this.find("#description").update(description);
     this.find("#properties").update(props);
     this.find("#picture").update(gallery);
     this.find("#xrefs").update(xrefs);

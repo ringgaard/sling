@@ -155,6 +155,11 @@ class TopicList extends Component {
     return selected;
   }
 
+  refresh(state) {
+    this.innerHTML = "";
+    return this.update(state);
+  }
+
   render() {
     let topics = this.state;
     if (!topics) return;

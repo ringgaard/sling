@@ -316,7 +316,7 @@ export class StdDialog extends MdDialog {
     }
     if (s.message) {
       h.push("<div>");
-      h.push(Component.escape(s.message));
+      h.push(Component.escape(s.message).replaceAll(/\n/g, "<br>"));
       h.push("</div>");
     }
     if (s.buttons) {
