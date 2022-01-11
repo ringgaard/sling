@@ -947,7 +947,7 @@ class CaseEditor extends Component {
     if (script) {
       // Execute script.
       try {
-        if (script.apply(this)) {
+        if (script.call(this, store, this.print.bind(this))) {
           // Update editor.
           this.mark_dirty();
           await this.update_folders();
@@ -1172,16 +1172,18 @@ class SharingDialog extends MdDialog {
 
 Component.register(SharingDialog);
 
+var user_script;
+
 class ScriptDialog extends MdDialog {
   onconnected() {
     this.bind("textarea", "keydown", e => e.stopPropagation());
   }
 
   submit() {
-    let script = this.find("textarea").value;
+    user_script = this.find("textarea").value;
     var func;
     try {
-      func = new Function(script);
+      func = new Function("store", "print", user_script);
     } catch(e) {
       this.find("#msg").innerText = e.message;
       return;
@@ -1190,14 +1192,13 @@ class ScriptDialog extends MdDialog {
   }
 
   render() {
-    let script = this.state;
     return `
       <md-dialog-top>Execute script</md-dialog-top>
       <div id="content">
         <textarea
           rows="32"
           cols="80"
-          spellcheck="false">${Component.escape(script)}</textarea>
+          spellcheck="false">${Component.escape(user_script)}</textarea>
           <div id="msg"></div>
       </div>
       <md-dialog-bottom>

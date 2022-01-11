@@ -340,6 +340,20 @@ export class Frame {
     }
   }
 
+  // Apply function to all slots in frame.
+  apply(func) {
+    let slots = this.slots;
+    if (slots) {
+      for (let n = 0; n < slots.length; n += 2) {
+        let ret = func(slots[n], slots[n + 1]);
+        if (ret) {
+          slots[n] = ret[0];
+          slots[n + 1] = ret[1];
+        }
+      }
+    }
+  }
+
   // Convert frame to human-readable representation.
   text(pretty, anon) {
     let printer = new Printer(this.store);
