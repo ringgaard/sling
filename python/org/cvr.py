@@ -1053,9 +1053,9 @@ for key, rec in cvrdb.items():
 for mid, m in mergers.items():
   store = sling.Store(kb)
 
-  for key in m.incoming:
-    if key in m.outgoing:
-      m.outgoing.remove(key)
+  for key in m.outgoing:
+    if key in m.incoming:
+      m.incoming.remove(key)
 
   if len(m.incoming) == 0:
     print("merge missing incomming", mid, m.date, m.incoming, m.outgoing)
