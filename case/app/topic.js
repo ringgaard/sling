@@ -123,7 +123,7 @@ class TopicList extends Component {
   navigate_to(topic) {
     let card = this.card(topic);
     if (card) {
-      card.scrollIntoView({behavior: "smooth"});
+      card.scrollIntoView({block: "center", behavior: "smooth"});
       card.focus();
       window.getSelection().collapse(card, 0);
     }

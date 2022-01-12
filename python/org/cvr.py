@@ -32,6 +32,7 @@ n_inception = kb["P571"]
 n_dissolved = kb["P576"]
 n_start_time = kb["P580"]
 n_end_time = kb["P582"]
+n_point_in_time = kb["P585"]
 n_other_name = kb["P2561"]
 n_country = kb["P17"]
 n_work_location = kb["P937"]
@@ -62,8 +63,10 @@ n_subsidiary = kb["P355"]
 n_parent_organization = kb["P749"]
 n_has_part = kb["P527"]
 n_part_of = kb["P361"]
-n_follows = kb["P155"]
-n_followed_by = kb["P156"]
+n_replaces = kb["P1365"]
+n_replaced_by = kb["P1366"]
+n_merged_into = kb["P7888"]
+n_separated_from = kb["P807"]
 n_corporate_officer = kb["P2828"]
 n_employer = kb["P108"]
 n_legal_form = kb["P1454"]
@@ -72,10 +75,11 @@ n_chief_executive_officer = kb["P169"]
 n_director_manager = kb["P1037"]
 n_board_member = kb["P3320"]
 n_chairperson = kb["P488"]
+n_manager = kb["Q2462658"]
+n_business_manager = kb["Q832136"]
 n_opencorp = kb["P1320"]
 n_described_by_source = kb["P1343"]
 n_cvr = kb["Q795419"]
-n_external_data_available_at = kb["P1325"]
 
 n_organization = kb["Q43229"]
 n_business = kb["Q4830453"]
@@ -84,6 +88,7 @@ n_association = kb["Q48204"]
 n_human = kb["Q5"]
 n_family_name = kb["Q101352"]
 
+n_denmark = kb["Q35"]
 n_danish = kb["/lang/da"]
 
 aliases = sling.PhraseTable(kb, "data/e/kb/da/phrase-table.repo")
@@ -146,7 +151,9 @@ corporate_functions = {
   "administrerende direktør": n_chief_executive_officer,
   "bestyrelse": n_board_member,
   "bestyrelsesmedlem": n_board_member,
+  "daglig ledelse": n_manager,
   "formand": n_chairperson,
+  "forretningsfører": n_business_manager,
   "forretningsudvalg": n_board_member,
   "forretningsudvalgsmedlem": n_board_member,
   "generalsekretær": n_chief_executive_officer,
@@ -447,6 +454,15 @@ no_citizenship = set([
   "Uoplyst",
 ])
 
+class Merger:
+  def __init__(self, date, split):
+    self.date = date
+    self.split = split
+    self.incoming = []
+    self.outgoing = []
+
+mergers = {}
+
 # Build country and municipality table.
 country_map = {}
 municipality_map = {}
@@ -466,7 +482,8 @@ for item in kb:
 kb.freeze()
 
 class FrameBuilder:
-  def __init__(self):
+  def __init__(self, store):
+    self.store = store
     self.slots = []
 
   def __setitem__(self, key, value):
@@ -475,8 +492,12 @@ class FrameBuilder:
   def add(self, key, value):
     self.slots.append((key, value))
 
-  def create(self, store):
-    return store.frame(self.slots)
+  def create(self):
+    return self.store.frame(self.slots)
+
+  def write(self, out):
+    frame = self.create()
+    out.write(frame.id, frame.data(binary=True))
 
 def is_person_name(name):
   first = True
@@ -691,15 +712,14 @@ unk_functions = {}
 
 for key, rec in cvrdb.items():
   num_entities += 1
-  #if num_entities % 10000 == 0:
-  #  print(num_entities, "entities")
-  #  sys.stdout.flush()
-  #if num_entities == 1000000: break
+  if num_entities % 10000 == 0:
+    print(num_entities, "entities")
+    sys.stdout.flush()
 
   # Parse JSON record.
   data = json.loads(rec)
   store = sling.Store(kb)
-  entity = FrameBuilder()
+  entity = FrameBuilder(store)
 
   # Determine entity type.
   person = False
@@ -775,11 +795,11 @@ for key, rec in cvrdb.items():
       if first:
         entity.add(n_name, n[2])
       else:
-        alias = FrameBuilder()
+        alias = FrameBuilder(store)
         alias[n_is] = n[2]
         if n[0] is not None: alias[n_start_time] = n[0]
         if n[1] is not None: alias[n_end_time] = n[1]
-        entity.add(n_other_name, alias.create(store))
+        entity.add(n_other_name, alias.create())
       first = False
   subnames = data.get("binavne")
   if subnames is not None and len(subnames) > 0:
@@ -889,11 +909,10 @@ for key, rec in cvrdb.items():
       for branch in branches:
         pnr = str(branch["pNummer"])
         entity.add(n_has_part, store["P2814/" + pnr])
-        inverse = FrameBuilder()
+        inverse = FrameBuilder(store)
         inverse.add(n_id, "P2814/" + pnr)
         inverse.add(n_part_of, this)
-        f = inverse.create(store)
-        recout.write(f.id, f.data(binary=True))
+        inverse.write(recout);
 
   # Relations (company->person).
   relations = data.get("deltagerRelation")
@@ -932,12 +951,12 @@ for key, rec in cvrdb.items():
               unk_functions[function] = unk_functions.get(function, 0) + 1
         if relation is not None:
           if start is not None or end is not None or position is not None:
-            f = FrameBuilder()
+            f = FrameBuilder(store)
             f[n_is] = store["PCVR/" + target]
             if position is not None: f[n_position_held] = position
             if start is not None: f[n_start_time] = start
             if end is not None: f[n_end_time] = end
-            entity.add(relation, f.create(store))
+            entity.add(relation, f.create())
           else:
             entity.add(relation, store["PCVR/" + target])
 
@@ -972,12 +991,12 @@ for key, rec in cvrdb.items():
             unk_functions[function] = unk_functions.get(function, 0) + 1
         if relation is not None:
           if start is not None or end is not None or position is not None:
-            f = FrameBuilder()
+            f = FrameBuilder(store)
             f[n_is] = store["PCVR/" + target]
             if position is not None: f[n_position_held] = position
             if start is not None: f[n_start_time] = start
             if end is not None: f[n_end_time] = end
-            entity.add(relation, f.create(store))
+            entity.add(relation, f.create())
           else:
             entity.add(relation, store["PCVR/" + target])
 
@@ -985,24 +1004,40 @@ for key, rec in cvrdb.items():
   fusions = data.get("fusioner")
   if fusions is not None and len(fusions) > 0:
     for f in fusions:
-      orgno = f["enhedsNummerOrganisation"]
-      entity.add(n_followed_by, store["PCVR/" + str(orgno)])
-      print("merger", key, orgno)
+      mergerid = f["enhedsNummerOrganisation"]
+      date = get_date(f["organisationsNavn"][0]["periode"]["gyldigFra"])
+      merger = mergers.get(mergerid)
+      if merger is None:
+        merger = Merger(date, False)
+        mergers[mergerid] = merger
+
+      incoming = f.get("indgaaende")
+      outgoing = f.get("udgaaende")
+      if incoming != None and len(incoming) > 0: merger.incoming.append(key)
+      if outgoing != None and len(outgoing) > 0: merger.outgoing.append(key)
 
   # Splits.
   splits = data.get("spaltninger")
   if splits is not None and len(splits) > 0:
     for s in splits:
-      orgno = s["enhedsNummerOrganisation"]
-      entity.add(n_follows, store["PCVR/" + str(orgno)])
-      print("split", key, orgno)
+      mergerid = s["enhedsNummerOrganisation"]
+      date = get_date(s["organisationsNavn"][0]["periode"]["gyldigFra"])
+      merger = mergers.get(mergerid)
+      if merger is None:
+        merger = Merger(date, True)
+        mergers[mergerid] = merger
+
+      incoming = s.get("indgaaende")
+      outgoing = s.get("udgaaende")
+      if incoming != None and len(incoming) > 0: merger.incoming.append(key)
+      if outgoing != None and len(outgoing) > 0: merger.outgoing.append(key)
 
   # Address.
   for address in data["beliggenhedsadresse"]:
-    addr = FrameBuilder()
+    addr = FrameBuilder(store)
     convert_address(address, addr)
 
-    f = addr.create(store)
+    f = addr.create()
     if person:
       entity.add(n_work_location, f)
     else:
@@ -1011,12 +1046,48 @@ for key, rec in cvrdb.items():
   # Source.
   entity.add(n_described_by_source, n_cvr)
 
-  # TODO: remove
-  entity.add(n_external_data_available_at,  "http://vault:7070/cvr/" + key)
-
   # Write item frame for entity.
-  f = entity.create(store)
-  recout.write(f.id, f.data(binary=True))
+  entity.write(recout);
+
+# Output mergers.
+for mid, m in mergers.items():
+  store = sling.Store(kb)
+
+  for key in m.incoming:
+    if key in m.outgoing:
+      m.outgoing.remove(key)
+
+  if len(m.incoming) == 0:
+    print("merge missing incomming", mid, m.date, m.incoming, m.outgoing)
+  elif len(m.outgoing) == 0:
+    print("merge missing outgoing", mid, m.date, m.incoming, m.outgoing)
+  elif len(m.incoming) > 1 or len(m.outgoing) > 1:
+    print("multi-merge", mid, m.date, m.incoming, m.outgoing)
+
+  for inkey in m.incoming:
+    for outkey in m.outgoing:
+      incoming = FrameBuilder(store)
+      incoming.add(n_id, "PCVR/" + inkey)
+      o = FrameBuilder(store)
+      o.add(n_is, store["PCVR/" + outkey])
+      o.add(n_point_in_time, m.date);
+      if m.split:
+        incoming.add(n_separated_from, o.create())
+      else:
+        incoming.add(n_replaced_by, o.create())
+
+      outgoing = FrameBuilder(store)
+      outgoing.add(n_id, "PCVR/" + outkey)
+      i = FrameBuilder(store)
+      i.add(n_is, store["PCVR/" + inkey])
+      i.add(n_point_in_time, m.date);
+      if m.split:
+        outgoing.add(n_merged_into, i.create())
+      else:
+        outgoing.add(n_replaces, i.create())
+
+      incoming.write(recout)
+      outgoing.write(recout)
 
 for f in unk_functions:
   if unk_functions[f] > 10:
@@ -1029,6 +1100,7 @@ print(num_companies, "companies")
 print(num_persons, "persons")
 print(num_branches, "branches")
 print(num_other, "other participants")
+print(len(mergers), "mergers")
 
 recout.close()
 cvrdb.close()

@@ -27,7 +27,10 @@ export async function search(query, backends) {
     // Convert items to search results filtering out duplicates.
     let seen = new Set();
     for (let item of items) {
-      if (item.ref && seen.has(item.ref)) continue;
+      if (item.ref) {
+        if (seen.has(item.ref)) continue;
+        seem.add(item.ref);
+      }
       if (item.topic) {
         for (let ref of item.topic.all(n_is)) seen.add(ref.id);
       }
