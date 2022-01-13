@@ -302,7 +302,11 @@ export class Time {
   }
 
   age(time) {
+    if (this.precision < YEAR) return;
+    if (time.precision < YEAR) return;
     let years = time.year - this.year;
+    if (years < 2) return;
+
     if (time.month == this.month) {
       if (time.day < this.day) {
         years -= 1;

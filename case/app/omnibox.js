@@ -29,7 +29,7 @@ export async function search(query, backends) {
     for (let item of items) {
       if (item.ref) {
         if (seen.has(item.ref)) continue;
-        seem.add(item.ref);
+        seen.add(item.ref);
       }
       if (item.topic) {
         for (let ref of item.topic.all(n_is)) seen.add(ref.id);

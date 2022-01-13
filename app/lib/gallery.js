@@ -108,11 +108,10 @@ export class PhotoGallery extends MdModal {
   onload(e) {
     let image = e.target;
     image.style.cursor = null;
-    let n = image.serial;
-    let photo = this.photos[n];
+    let photo = image.photo;
     photo.width = image.naturalWidth;
     photo.height = image.naturalHeight;
-    if (n == this.current) {
+    if (photo == this.photos[this.current]) {
       let w = photo.width;
       let h = photo.height;
       this.find(".size").update(w && h ? `${w} x ${h}`: null);
@@ -163,7 +162,7 @@ export class PhotoGallery extends MdModal {
   }
 
   onclose(e) {
-    e.stopPropagation();
+    if (e) e.stopPropagation();
     if (this.edited) this.dispatch("picedit");
   }
 
@@ -259,8 +258,8 @@ export class PhotoGallery extends MdModal {
         viewer.classList.add("image");
         viewer.referrerPolicy = "no-referrer";
         viewer.addEventListener("load", e => this.onload(e));
-        viewer.serial = n;
         this.photos[n].image = viewer;
+        viewer.photo = this.photos[n];
       }
     }
   }
