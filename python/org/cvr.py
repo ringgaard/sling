@@ -42,6 +42,9 @@ n_headquarters_location = kb["P159"]
 n_municipality_code = kb["P1168"]
 n_country_code = kb["P297"]
 n_located_in = kb["P131"]
+n_phone_number = kb["P1329"]
+n_email_address = kb["P968"]
+n_official_website = kb["P856"]
 n_country_of_citizenship = kb["P27"]
 n_cvr_number = kb["P1059"]
 n_cvr_branch_number = kb["P2814"]
@@ -80,7 +83,6 @@ n_business_manager = kb["Q832136"]
 n_opencorp = kb["P1320"]
 n_described_by_source = kb["P1343"]
 n_cvr = kb["Q795419"]
-
 n_organization = kb["Q43229"]
 n_business = kb["Q4830453"]
 n_foundation = kb["Q157031"]
@@ -639,6 +641,21 @@ def convert_address(rec, addr):
     if start is not None: addr[n_start_time] = start
     addr[n_end_time] = end
 
+def timeframed(value, start, end, store):
+  if end is None: return value
+  timeframe = FrameBuilder(store)
+  timeframe[n_is] = value
+  if start is not None: timeframe[n_start_time] = start
+  timeframe[n_end_time] = end
+  return timeframe.create()
+
+def get_contact(rec):
+  contact = rec["kontaktoplysning"]
+  period = rec["periode"]
+  start = get_date(period["gyldigFra"])
+  end = get_date(period["gyldigTil"])
+  return contact, start, end
+
 def match_company_id(country, company_id):
   regs = regauth.get(country)
   if regs is not None:
@@ -1043,6 +1060,31 @@ for key, rec in cvrdb.items():
     else:
       entity.add(n_headquarters_location, f)
 
+  # Contact information.
+  phones = data.get("telefonNummer")
+  if phones is not None:
+    for phone in phones:
+      contact, start, end = get_contact(phone)
+      if contact is None: continue
+      if not contact.startswith("+"): contact = "+45" + contact
+      entity.add(n_phone_number, timeframed(contact, start, end, store))
+
+  emails = data.get("obligatoriskEmail")
+  if emails is not None:
+    for email in emails:
+      contact, start, end = get_contact(email)
+      if contact is None: continue
+      contact = "mailto:" + contact
+      entity.add(n_email_address, timeframed(contact, start, end, store))
+
+  homepages = data.get("hjemmeside")
+  if homepages != None:
+    for homepage in homepages:
+      contact, start, end = get_contact(homepage)
+      if contact is None: continue
+      contact = "http://"  + contact
+      entity.add(n_official_website, timeframed(contact, start, end, store))
+
   # Source.
   entity.add(n_described_by_source, n_cvr)
 
@@ -1072,7 +1114,7 @@ for mid, m in mergers.items():
       o.add(n_is, store["PCVR/" + outkey])
       o.add(n_point_in_time, m.date);
       if m.split:
-        incoming.add(n_separated_from, o.create())
+        incoming.add(n_merged_into, o.create())
       else:
         incoming.add(n_replaced_by, o.create())
 
@@ -1082,7 +1124,7 @@ for mid, m in mergers.items():
       i.add(n_is, store["PCVR/" + inkey])
       i.add(n_point_in_time, m.date);
       if m.split:
-        outgoing.add(n_merged_into, i.create())
+        outgoing.add(n_separated_from, i.create())
       else:
         outgoing.add(n_replaces, i.create())
 

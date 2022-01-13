@@ -219,8 +219,15 @@ class PropertyPanel extends Component {
     }
 
     function render_url(val) {
+      let url = val;
+      if (typeof val === "string") {
+        if (val.startsWith("http://")) val = val.slice(7);
+        if (val.startsWith("https://")) val = val.slice(8);
+        if (val.startsWith("www.")) val = val.slice(4);
+        if (val.startsWith("mailto:")) val = val.slice(7);
+      }
       h.push('<a href="');
-      h.push(val);
+      h.push(url);
       h.push('" target="_blank" rel="noreferrer">');
       render_value(val);
       h.push('</a>');
