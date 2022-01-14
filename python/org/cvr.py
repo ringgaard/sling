@@ -82,6 +82,7 @@ n_manager = kb["Q2462658"]
 n_business_manager = kb["Q832136"]
 n_opencorp = kb["P1320"]
 n_described_by_source = kb["P1343"]
+n_nace_code = kb["P4496"]
 n_cvr = kb["Q795419"]
 n_organization = kb["Q43229"]
 n_business = kb["Q4830453"]
@@ -114,19 +115,6 @@ for register in registers:
   if regauth.get(country) == None: regauth[country] = []
   regauth[country].append(register)
 """
-
-# Read NACE industry codes.
-nace_file = open("data/c/sic/nace.txt", "r")
-nace = {}
-for line in nace_file:
-  fields = line.strip().split("|")
-  code = fields[0].replace(".", "")
-  qid = fields[1]
-  if len(qid) == 0:
-    nace[code] = None
-  else:
-    nace[code] = kb[qid]
-nace_file.close()
 
 corporate_roles = {
   "TEGNINGSBERETTIGEDE": None,
@@ -465,20 +453,23 @@ class Merger:
 
 mergers = {}
 
+def resolve(f):
+  if type(f) is sling.Frame: f = f.resolve()
+  return f
+
 # Build country and municipality table.
 country_map = {}
 municipality_map = {}
+nace_map = {}
 countries = set()
 for item in kb:
-  code = item[n_country_code]
+  code = resolve(item[n_country_code])
   if code is not None:
-    if type(code) is sling.Frame: code = code.resolve()
     country_map[code] = item
     countries.add(item)
 
-  code = item[n_municipality_code]
+  code = resolve(item[n_municipality_code])
   if code is not None:
-    if type(code) is sling.Frame: code = code.resolve()
     municipality_map[code] = item
 
 kb.freeze()
@@ -904,13 +895,15 @@ for key, rec in cvrdb.items():
     industries = set()
     for min in main_industries:
       dkcode = min["branchekode"]
-      industry = nace.get(dkcode[0:4])
-      if industry is None:
-        #print("Unknown industry", cvrno, dkcode, key)
-        continue
-      industries.add(industry)
+      maincode = dkcode[0:2]
+      subcode = int(dkcode[2:4])
+      if subcode == 0:
+        nacecode = "P4496/" + maincode
+      else:
+        nacecode = "P4496/" + maincode + "." + str(subcode)
+      industries.add(nacecode)
     for industry in industries:
-      entity.add(n_industry, industry)
+      entity.add(n_industry, store[industry])
 
   # Branches.
   branches = data.get("penheder")

@@ -131,6 +131,7 @@ const char *property_order[] = {
   "P156",       // followed by
   "P1365",      // replaces
   "P1366",      // replaced by
+  "P807",       // separated from
   "P7888",      // merged into
   "P272",       // production company
   "P449",       // original network
@@ -148,6 +149,7 @@ const char *property_order[] = {
   "P946",       // ISIN
 
   "P112",       // founded by
+  "Q65972149",  // founder of
   "P35",        // head of state
   "P6",         // head of government
   "P3975",      // secretary general
@@ -166,6 +168,7 @@ const char *property_order[] = {
   "P634",       // captain
   "P488",       // chairperson
   "P3320",      // board member
+  "P8571",      // external auditor
   "P5052",      // supervisory board member
   "P859",       // sponsor
 

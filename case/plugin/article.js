@@ -19,12 +19,14 @@ const n_web_page = store.lookup("Q36774");
 const n_author_name_string = store.lookup("P2093");
 const n_creator = store.lookup("P170");
 const n_language = store.lookup("P407");
+const n_video_id = store.lookup("P1651");
 
 const page_types = {
   "Article": store.lookup("Q5707594"),
   "article": store.lookup("Q5707594"),
   "Text.Article": store.lookup("Q5707594"),
   "ReportageNewsArticle": store.lookup("Q124922"),
+  "video.other": store.lookup("Q34508"),
 };
 
 const date_patterns = [
@@ -351,12 +353,10 @@ export default class ArticlePlugin {
     }
 
     // Get canonical URL.
-    if (!article.url) {
-      let canonical = head.querySelector('link[rel="canonical"]');
-      if (canonical) {
-        let href = canonical.getAttribute("href");
-        if (href) article.url = href;
-      }
+    let canonical = head.querySelector('link[rel="canonical"]');
+    if (canonical) {
+      let href = canonical.getAttribute("href");
+      if (href) article.url = href;
     }
     if (!article.url) {
       article.url = url;
@@ -379,6 +379,12 @@ export default class ArticlePlugin {
         if (e && e.content) lang = e.content;
       }
       if (lang) article.language = lang;
+    }
+
+    // Get YouTube video id.
+    if (article.site == "YouTube") {
+      let u = new URL(article.url);
+      article.videoid = u.searchParams.get("v");
     }
 
     // Trim title and summary.
@@ -473,6 +479,10 @@ export default class ArticlePlugin {
 
     if (article.url) {
       topic.put(n_full_work, decodeURI(article.url));
+    }
+
+    if (article.videoid) {
+      topic.put(n_video_id, article.videoid);
     }
 
     if (article.image) {

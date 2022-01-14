@@ -1,6 +1,8 @@
 {
   ; Properties that are cross-referenced in knowledge base in priority order.
   properties: [
+    P4496, ; NACE industry code
+
     P1059, ; Danish CVR company number
     P7972, ; Danish CVR person ID
     P2814, ; Danish CVR branch P-number
