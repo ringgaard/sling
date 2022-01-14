@@ -72,6 +72,12 @@ class KnowledgeBaseWorkflow:
                             dir=corpora.workdir("org"),
                             format="records/frame")
 
+  def nace(self):
+    """Resource for NACE items."""
+    return self.wf.resource("nace.rec",
+                            dir=corpora.workdir("org"),
+                            format="records/frame")
+
   def gleif(self):
     """Resource for GLEIF items."""
     return self.wf.resource("gleif.rec",
@@ -97,6 +103,7 @@ class KnowledgeBaseWorkflow:
       self.photos(),
       self.data.wikipedia_summaries(),
       self.elf(),
+      self.nace(),
       self.gleif(),
       self.cvr())
 
@@ -107,6 +114,7 @@ class KnowledgeBaseWorkflow:
       self.data.wikidata_items(),
       self.topics(),
       self.elf(),
+      self.nace(),
       self.gleif(),
       self.cvr(),
       self.celebs())
