@@ -93,9 +93,27 @@ n_family_name = kb["Q101352"]
 
 n_denmark = kb["Q35"]
 n_danish = kb["/lang/da"]
+n_copenhagen = kb["Q1748"]
+n_frederiksberg = kb["Q30096"]
 
 aliases = sling.PhraseTable(kb, "data/e/kb/da/phrase-table.repo")
 factex = sling.FactExtractor(kb)
+
+# Read Danish postal codes.
+fin = open("data/org/dkpostnr.txt")
+postalcodes = {}
+for postnr in range(1000, 1800): postalcodes[postnr] = n_copenhagen
+for postnr in range(1800, 2000): postalcodes[postnr] = n_frederiksberg
+
+for line in fin:
+  line = line.strip()
+  if len(line) == 0: continue;
+  fields = line.split(",")
+  postnr = fields[0]
+  qid = fields[2]
+  postalcodes[int(postnr)] = kb[qid]
+fin.close()
+
 
 """
 # Read registers.
@@ -460,7 +478,6 @@ def resolve(f):
 # Build country and municipality table.
 country_map = {}
 municipality_map = {}
-nace_map = {}
 countries = set()
 for item in kb:
   code = resolve(item[n_country_code])
@@ -557,6 +574,8 @@ def convert_address(rec, addr):
 
   text = rec["fritekst"]
   municipality = rec["kommune"]
+  postnr = rec["postnummer"]
+  if postnr == 0 or postnr == 9999: postnr = None
   addrlines = []
   if text is not None:
     # Free-text address.
@@ -573,9 +592,13 @@ def convert_address(rec, addr):
       if location is not None: place = location
 
     # Postal district.
-    post_district = rec["postdistrikt"]
-    if post_district is not None:
-      place = location_in(post_district, place)
+    if postnr is not None:
+      location = postalcodes.get(postnr)
+      if location is not None:
+        place = location
+        #place = location_in(post_district, place)
+      else:
+        print("Unknown postal code", key, postnr, rec["postdistrikt"])
 
     # City.
     city_name = rec["bynavn"]
@@ -608,8 +631,8 @@ def convert_address(rec, addr):
     addrlines.append(street)
   if rec["bynavn"] is not None:
     addrlines.append(rec["bynavn"])
-  if rec["postnummer"] is not None and rec["postdistrikt"] is not None:
-    addrlines.append(str(rec["postnummer"]) + " " + rec["postdistrikt"])
+  if postnr is not None and rec["postdistrikt"] is not None:
+    addrlines.append(str(postnr) + " " + rec["postdistrikt"])
 
   # Compile address.
   if place is not None: addr.add(n_is, place)
@@ -621,8 +644,7 @@ def convert_address(rec, addr):
       if len(l) > 0: lines.append(l)
     addr.add(n_located_at_street_address, ", ".join(lines))
 
-  postal_code = rec["postnummer"]
-  if postal_code is not None: addr.add(n_postal_code, postal_code)
+  if postnr is not None: addr.add(n_postal_code, postnr)
 
   # Add period.
   period = rec.get("periode")
@@ -717,7 +739,7 @@ num_other = 0
 num_nationality = 0
 num_nocitizenship = 0
 unk_functions = {}
-
+industry_codes = {}
 for key, rec in cvrdb.items():
   num_entities += 1
   if num_entities % 10000 == 0:
@@ -895,12 +917,17 @@ for key, rec in cvrdb.items():
     industries = set()
     for min in main_industries:
       dkcode = min["branchekode"]
-      maincode = dkcode[0:2]
-      subcode = int(dkcode[2:4])
-      if subcode == 0:
-        nacecode = "P4496/" + maincode
+      industry_codes[dkcode] = min["branchetekst"]
+      code1 = int(dkcode[0:2])
+      code2 = int(dkcode[2:4])
+      code3 = int(dkcode[4:6])
+      if code1 == 99 or code1 == 98: continue
+      if code3 != 0:
+        nacecode = "P4496/%d.%d.%dDK" % (code1, code2, code3)
+      elif code2 != 0:
+        nacecode = "P4496/%d.%d" % (code1, code2)
       else:
-        nacecode = "P4496/" + maincode + "." + str(subcode)
+        nacecode = "P4496/%d" % (code1)
       industries.add(nacecode)
     for industry in industries:
       entity.add(n_industry, store[industry])
@@ -1127,6 +1154,9 @@ for mid, m in mergers.items():
 for f in unk_functions:
   if unk_functions[f] > 10:
     print("%6d %s" % (unk_functions[f], f))
+
+#for ic in sorted(industry_codes):
+#  print(ic, industry_codes[ic])
 
 print(num_nationality, "with nationality")
 print(num_nocitizenship, "without citizenship")

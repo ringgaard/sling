@@ -78,6 +78,11 @@ class KnowledgeBaseWorkflow:
                             dir=corpora.workdir("org"),
                             format="records/frame")
 
+  def dknace(self):
+    """Resource for Danish NACE items."""
+    return self.wf.resource("dknace.rec",
+                            dir=corpora.workdir("org"),
+                            format="records/frame")
   def gleif(self):
     """Resource for GLEIF items."""
     return self.wf.resource("gleif.rec",
@@ -104,6 +109,7 @@ class KnowledgeBaseWorkflow:
       self.data.wikipedia_summaries(),
       self.elf(),
       self.nace(),
+      self.dknace(),
       self.gleif(),
       self.cvr())
 
@@ -115,6 +121,7 @@ class KnowledgeBaseWorkflow:
       self.topics(),
       self.elf(),
       self.nace(),
+      self.dknace(),
       self.gleif(),
       self.cvr(),
       self.celebs())

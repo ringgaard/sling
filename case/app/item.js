@@ -225,6 +225,7 @@ class PropertyPanel extends Component {
         if (val.startsWith("https://")) val = val.slice(8);
         if (val.startsWith("www.")) val = val.slice(4);
         if (val.startsWith("mailto:")) val = val.slice(7);
+        if (val.endsWith("/")) val = val.slice(0, -1);
       }
       h.push('<a href="');
       h.push(url);
