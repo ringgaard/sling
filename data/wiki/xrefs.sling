@@ -48,6 +48,7 @@
     P3984, ; subreddit
     P2397, ; YouTube channel ID
     P4015, ; Vimeo identifier
+    P3869, ; IAFD female performer ID
 
     P214,  ; VIAF ID
     P646,  ; Freebase MID
@@ -84,6 +85,7 @@
     "vimeo": "P4015"    ; Vimeo identifier
     "pb": "P5346"       ; Playmate ID
     "ph": "P6290"       ; Penthouse ID
+    "iafd": "P3869"     ; IAFD female performer ID
 
     "viaf": "P214"      ; VIAF ID
     "mid": "P646"       ; Freebase MID

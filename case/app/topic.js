@@ -686,7 +686,9 @@ class TopicCard extends Component {
       $ #edit-actions {
         display: flex;
       }
-
+      $ md-icon-button {
+        margin-left: -8px;
+      }
       $.selected div::selection {
         background-color: inherit;
       }

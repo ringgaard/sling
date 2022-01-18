@@ -206,6 +206,36 @@ class FactEditor extends Component {
     e.preventDefault();
   }
 
+  onleft(e) {
+    if (e.ctrlKey && e.shiftKey) {
+      let s = document.getSelection();
+      if (s.focusNode && s.anchorNode) {
+        if (s.focusNode instanceof FactStatement) {
+          if (s.anchorNode.nextSibling == s.focusNode) {
+            let field = s.anchorNode.firstChild;
+            s.selectAllChildren(field);
+            e.preventDefault();
+          }
+        }
+      }
+    }
+  }
+
+  onright(e) {
+    if (e.ctrlKey && e.shiftKey) {
+      let s = document.getSelection();
+      if (s.focusNode && s.anchorNode) {
+        if (s.focusNode instanceof FactStatement) {
+          if (s.focusNode.nextSibling == s.anchorNode) {
+            let field = s.focusNode.lastChild;
+            s.selectAllChildren(field);
+            e.preventDefault();
+          }
+        }
+      }
+    }
+  }
+
   ontab(e) {
     e.preventDefault();
     let forward = !e.shiftKey;
@@ -317,6 +347,10 @@ class FactEditor extends Component {
       } else {
         this.onmove(e, true);
       }
+    } else if (e.key === "ArrowLeft") {
+      this.onleft(e);
+    } else if (e.key === "ArrowRight") {
+      this.onright(e);
     } else if (e.key === "Tab") {
       if (this.searching()) {
         this.focused.ontab(e);

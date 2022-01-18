@@ -2,7 +2,7 @@
 // Licensed under the Apache License, Version 2
 
 import {Component} from "/common/lib/component.js";
-import {MdDialog, StdDialog} from "/common/lib/material.js";
+import {MdDialog, StdDialog, MdIcon} from "/common/lib/material.js";
 import {Store, Frame, Encoder, Printer} from "/common/lib/frame.js";
 
 import {store, settings} from "./global.js";
@@ -133,9 +133,15 @@ class CaseEditor extends Component {
     this.bind("#home", "click", e => this.close());
     this.bind("#merge", "click", e => this.onmerge(e));
     this.bind("#script", "click", e => this.onscript(e));
+    this.bind("#export", "click", e => this.onexport(e));
     this.bind("#save", "click", e => this.onsave(e));
     this.bind("#share", "click", e => this.onshare(e));
     this.bind("#newfolder", "click", e => this.onnewfolder(e));
+
+    this.bind("md-menu #save", "click", e => this.onsave(e));
+    this.bind("md-menu #share", "click", e => this.onshare(e));
+    this.bind("md-menu #imgcache", "click", e => this.onimgcache(e));
+    this.bind("md-menu #export", "click", e => this.onexport(e));
 
     this.bind(null, "cut", e => this.oncut(e));
     this.bind(null, "copy", e => this.oncopy(e));
@@ -348,6 +354,29 @@ class CaseEditor extends Component {
         console.log("Sharing error", r);
         StdDialog.error(`Error ${r.status} sharing case: ${r.statusText}`);
       }
+    }
+  }
+
+  async onimgcache(e) {
+    if (!this.casefile.get(n_share) && !this.casefile.get(n_publish)) {
+      StdDialog.error("Case must be shared to enable image caching");
+      return;
+    }
+
+    // Send image caching request to server.
+    let r  = await fetch(`/case/cacheimg?id=${this.caseid()}`);
+    if (!r.ok) {
+      console.log("Caching error", r);
+      StdDialog.error(`Error ${r.status}: ${r.statusText}`);
+    } else {
+      let data = await r.json();
+      console.log("Cache results", data);
+      StdDialog.alert("Images cached",
+                      `${data.retrieved} / ${data.images} images cached,
+                       ${data.known} known,
+                       ${data.missing} missing,
+                       ${data.errors} errors,
+                       ${data.bytes} bytes`);
     }
   }
 
@@ -964,6 +993,10 @@ class CaseEditor extends Component {
     }
   }
 
+  onexport(e) {
+    console.log("export to wikidata");
+  }
+
   store() {
     return store;
   }
@@ -1032,12 +1065,20 @@ class CaseEditor extends Component {
           <md-spacer></md-spacer>
           <md-icon-button id="merge" icon="merge">
           </md-icon-button>
+          <md-icon-button id="export" icon="wikidata">
+          </md-icon-button>
           <md-icon-button id="script" icon="play_circle_outline">
           </md-icon-button>
           <md-icon-button id="save" icon="save">
           </md-icon-button>
           <md-icon-button id="share" icon="share">
           </md-icon-button>
+          <md-menu>
+            <md-menu-item id="save">Save</md-menu-item>
+            <md-menu-item id="share">Share</md-menu-item>
+            <md-menu-item id="imgcache">Cache images</md-menu-item>
+            <md-menu-item id="export">Export to Wikidata</md-menu-item>
+          </md-menu>
         </md-toolbar>
 
         <md-row-layout>
@@ -1072,6 +1113,15 @@ class CaseEditor extends Component {
       $ md-row-layout {
         overflow: auto;
         height: 100%;
+      }
+      $ md-toolbar md-icon-button {
+        margin-left: -8px;
+      }
+      $ md-toolbar md-menu {
+        color: black;
+      }
+      $ md-toolbar md-menu md-icon-button {
+        margin-left: inherit;
       }
       $ md-drawer md-icon {
         color: #808080;
@@ -1220,4 +1270,15 @@ class ScriptDialog extends MdDialog {
 }
 
 Component.register(ScriptDialog);
+
+MdIcon.custom("wikidata", `
+<svg width="24" height="24" viewBox="0 0 1050 590" style="fill:white;">
+  <path d="m 120,545 h 30 V 45 H 120 V 545 z m 60,0 h 90 V 45 H 180 V 545 z
+           M 300,45 V 545 h 90 V 45 h -90 z"/>
+  <path d="m 840,545 h 30 V 45 H 840 V 545 z M 900,45 V 545 h 30 V 45 H 900 z
+           M 420,545 h 30 V 45 H 420 V 545 z M 480,45 V 545 h 30 V 45 h -30 z"/>
+  <path d="m 540,545 h 90 V 45 h -90 V 545 z m 120,0 h 30 V 45 H 660 V 545 z
+           M 720,45 V 545 h 90 V 45 H 720 z"/>
+</svg>
+`);
 

@@ -27,6 +27,7 @@ import sling.flags as flags
 import sling.log as log
 
 import services
+import imgcache
 
 flags.define("--port",
              help="HTTP port",
@@ -254,6 +255,20 @@ def media_request(request):
   # Dummy media service that always redirects to the original url.
   return sling.net.HTTPRedirect(urllib.parse.unquote(request.path[1:]))
 
+@app.route("/case/cacheimg")
+def cache_images_request(request):
+  # Get case id.
+  caseid = int(request.params()["id"][0])
+
+  # Fetch case file from database.
+  rec, ts  = casedb.get(str(caseid))
+  if rec is None: return 404;
+  store = sling.Store(commons)
+  casefile = store.parse(rec)
+
+  # Start image caching.
+  print("Cache images for case", caseid)
+  return imgcache.cache_images(casefile)
 
 # Initialize services.
 services.init()
