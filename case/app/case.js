@@ -1051,7 +1051,7 @@ class CaseEditor extends Component {
     }
 
     // Scroll to topic in folder.
-    this.find("topic-list").navigate_to(topic);
+    await this.find("topic-list").navigate_to(topic);
   }
 
   prerender() {

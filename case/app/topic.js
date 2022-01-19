@@ -120,12 +120,17 @@ class TopicList extends Component {
     this.match("#editor").delete_topics(this.selection());
   }
 
-  navigate_to(topic) {
+  async navigate_to(topic) {
     let card = this.card(topic);
     if (card) {
-      card.scrollIntoView({block: "center", behavior: "smooth"});
-      card.focus();
-      window.getSelection().collapse(card, 0);
+      return new Promise((resolve) => {
+        setTimeout((card, resolve) => {
+          card.scrollIntoView({block: "center", behavior: "smooth"});
+          card.focus();
+          window.getSelection().collapse(card, 0);
+          resolve();
+        }, 100, card, resolve);
+      });
     }
   }
 

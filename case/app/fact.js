@@ -173,8 +173,8 @@ class FactEditor extends Component {
 
   onenter(e) {
     e.preventDefault();
+    let s = this.selection();
     if (document.getSelection().isCollapsed) {
-      let s = this.selection();
       let stmt = new FactStatement();
       let point = s && s.statement;
       if (point && point.qualified) {
@@ -183,6 +183,11 @@ class FactEditor extends Component {
       if (point && s.field == s.value) point = point.nextSibling;
       this.insertBefore(stmt, point);
       document.getSelection().collapse(stmt, 0);
+    } else if (s.field && s.base && s.field != s.base) {
+      let pos = this.delete_selection(s);
+      let placeholder = new FactStatement();
+      this.insertBefore(placeholder, pos);
+      s.selection.collapse(placeholder);
     }
   }
 
@@ -479,6 +484,8 @@ class FactEditor extends Component {
       c = next;
     }
     this.dirty = true;
+    s.selection.collapse(end);
+    return end;
   }
 
   selection() {

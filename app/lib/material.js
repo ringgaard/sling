@@ -162,6 +162,12 @@ Component.register(MdModal);
 //-----------------------------------------------------------------------------
 
 export class MdDialog extends Component {
+  onconnected() {
+    // Set focus to first input.
+    let active = this.find("input");
+    if (active) active.focus();
+  }
+
   show() {
     // Add dialog to DOM.
     document.body.insertAdjacentHTML("beforeend", "<dialog></dialog>");
@@ -279,6 +285,9 @@ export class MdDialogBottom extends Component {
       }
       $ button:active {
         background-color: #aaaaaa;
+      }
+      $ button:focus {
+        outline: 1px solid #d0d0d0;
       }
     `;
   }
@@ -942,7 +951,9 @@ export class MdRadioButton extends Component {
         user-select: none;
         cursor: pointer;
       }
-
+      $ input:focus {
+        outline: 1px solid #d0d0d0;
+      }
       $ label {
         display: flex;
       }
