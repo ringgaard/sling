@@ -445,7 +445,12 @@ Component.register(CaseList);
 //-----------------------------------------------------------------------------
 
 class SettingsPanel extends Component {
+  visible() {
+    return this.state;
+  }
+
   onopen() {
+    this.update(true);
     this.find("#authorid").value = settings.authorid;
     this.find("#picturesize").value = settings.picturesize;
     this.find("#kbservice").value = settings.kbservice;
@@ -460,6 +465,7 @@ class SettingsPanel extends Component {
     settings.imagesearch = this.find("#imagesearch").checked;
     settings.nsfw = this.find("#nsfw").checked;
     save_settings();
+    this.update(false);
   }
 
   render() {

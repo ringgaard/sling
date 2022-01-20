@@ -187,10 +187,10 @@ class CaseEditor extends Component {
   }
 
   onkeydown(e) {
-    if (e.ctrlKey && e.key === 's') {
+    if (e.ctrlKey && (e.key === 's' || e.key === 'S')) {
       e.preventDefault();
       this.onsave(e);
-    } else if (e.ctrlKey && e.key === 'm') {
+    } else if (e.ctrlKey && (e.key === 'm' || e.key === 'M')) {
       this.onmerge(e);
     } else if (e.key === "Escape") {
       this.find("#search").clear();

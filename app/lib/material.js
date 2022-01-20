@@ -164,7 +164,7 @@ Component.register(MdModal);
 export class MdDialog extends Component {
   onconnected() {
     // Set focus to first input.
-    let active = this.find("input");
+    let active = this.find("input,textarea");
     if (active) active.focus();
   }
 
@@ -1014,6 +1014,9 @@ export class MdCheckbox extends Component {
       $ input {
         transform: scale(1.5)
       }
+      $ input:focus {
+        outline: 1px solid #d0d0d0;
+      }
       $ div {
         font-size: 16px;
         margin-left: 3px;
@@ -1105,8 +1108,18 @@ Component.register(MdSwitch);
 //-----------------------------------------------------------------------------
 
 class MdTextField extends Component {
-  onconnect() {
+  onconnected() {
     if (!this.state) this.state = this.props["value"];
+
+    if (this.contains(document.activeElement)) {
+      this.find("div").className = "focused";
+    }
+  }
+
+  onrendered() {
+    this.bind(null, "focusin", e => this.onfocus(e));
+    this.bind(null, "focusout", e => this.onunfocus(e));
+    this.bind(null, "input", e => this.onchange(e));
   }
 
   get value() {
@@ -1115,12 +1128,6 @@ class MdTextField extends Component {
 
   set value(v) {
     this.update(v);
-  }
-
-  onconnected() {
-    this.bind(null, "focusin", e => this.onfocus(e));
-    this.bind(null, "focusout", e => this.onunfocus(e));
-    this.bind(null, "input", e => this.onchange(e));
   }
 
   onfocus(e) {
@@ -1447,7 +1454,7 @@ export class MdSearchList extends Component {
 
   onclick(e) {
     let item = MdSearchList.item(e.target);
-    let keep = e.ctrlkey;
+    let keep = e.ctrlKey;
     this.dispatch("select", {item, keep})
   }
 

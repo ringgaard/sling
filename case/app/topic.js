@@ -498,7 +498,7 @@ class TopicCard extends Component {
     if (e.key == "Enter" && !this.editing) {
       e.preventDefault();
       this.onedit(e);
-    } else if (e.key === "s" && e.ctrlKey && this.editing) {
+    } else if ((e.key === "s" || e.key === "S") && e.ctrlKey && this.editing) {
       e.stopPropagation();
       e.preventDefault();
       this.onsave(e);

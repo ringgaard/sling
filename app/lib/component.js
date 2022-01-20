@@ -41,102 +41,6 @@ export class Component extends HTMLElement {
     return this.oninit && this.oninit();
   }
 
-/*
-  // Connect web component to DOM.
-  connectedCallback() {
-    // Add attributes to properties.
-    for (const attr of this.attributes) {
-      let name = attr.name.replace(/-/g, "_");
-      let value = attr.value;
-
-      if (value == "null") {
-        value = null;
-      } else if (value == "true") {
-        value = true;
-      } else if (value == "false") {
-        value = false;
-      } else {
-        let n = parseFloat(value);
-        if (!isNaN(n) && isFinite(n)) value = n;
-      }
-
-      this.props[name] = value;
-    }
-
-    // Render component.
-    let p = this.onconnect && this.onconnect();
-    if (p instanceof Promise) {
-      return p.then(() => {
-        if (!this.hide()) {
-          this.generate();
-          let p = this.initialize();
-          if (p instanceof Promise) {
-            return p.then(() => {
-              return this.onconnected && this.onconnected();
-            });
-          } else {
-            return this.onconnected && this.onconnected();
-          }
-        } else {
-          return this.onconnected && this.onconnected();
-        }
-      });
-    } else {
-      if (!this.hide()) {
-        this.generate();
-        let p = this.initialize();
-        if (p instanceof Promise) {
-          return p.then(() => {
-            return this.onconnected && this.onconnected();
-          });
-        } else {
-          return this.onconnected && this.onconnected();
-        }
-      } else {
-        return this.onconnected && this.onconnected();
-      }
-    }
-  }
-
-  // Update component state.
-  update(state) {
-    this.state = state;
-
-    let p = this.onupdate && this.onupdate();
-    if (p instanceof Promise) {
-      return p.then(() => {
-        if (!this.hide()) {
-          this.generate();
-          let p = this.initialize();
-          if (p instanceof Promise) {
-            return p.then(() => {
-              return this.onupdated && this.onupdated();
-            });
-          } else {
-            return this.onupdated && this.onupdated();
-          }
-        } else {
-          return this.onupdated && this.onupdated();
-        }
-      });
-    } else {
-      if (!this.hide()) {
-        this.generate();
-        let p = this.initialize();
-        if (p instanceof Promise) {
-          return p.then(() => {
-            return this.onupdated && this.onupdated();
-          });
-        } else {
-          return this.onupdated && this.onupdated();
-        }
-      } else {
-        return this.onupdated && this.onupdated();
-      }
-    }
-  }
-*/
-
   // Connect web component to DOM.
   async connectedCallback() {
     // Add attributes to properties.
@@ -163,6 +67,7 @@ export class Component extends HTMLElement {
     if (!this.hide()) {
       this.generate();
       await this.initialize();
+      if (this.onrendered) await this.onrendered();
     }
     if (this.onconnected) await this.onconnected();
   }
@@ -174,6 +79,7 @@ export class Component extends HTMLElement {
     if (!this.hide()) {
       this.generate();
       await this.initialize();
+      if (this.onrendered) await this.onrendered();
     }
     if (this.onupdated) await this.onupdated();
   }
