@@ -44,6 +44,7 @@ class HTTPRequest:
     self.query = query
     self.headers = headers
     self.body = body
+    self.qs = None
 
   def __getitem__(self, key):
     """Get HTTP request header"""
@@ -55,7 +56,13 @@ class HTTPRequest:
 
   def params(self):
     # Return query string parameters.
-    return urllib.parse.parse_qs(self.query)
+    if self.qs is None: self.qs = urllib.parse.parse_qs(self.query)
+    return self.qs;
+
+  def param(self, name):
+    params = self.params()
+    if name not in params: return None
+    return params[name][0]
 
   def json(self):
     return json.loads(self.body)

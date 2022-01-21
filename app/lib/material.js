@@ -1108,9 +1108,11 @@ Component.register(MdSwitch);
 //-----------------------------------------------------------------------------
 
 class MdTextField extends Component {
-  onconnected() {
+  onconnect() {
     if (!this.state) this.state = this.props["value"];
+  }
 
+  onconnected() {
     if (this.contains(document.activeElement)) {
       this.find("div").className = "focused";
     }
@@ -1314,6 +1316,48 @@ export class MdToolbox extends Component {
 }
 
 Component.register(MdToolbox);
+
+//-----------------------------------------------------------------------------
+// Snackbar
+//-----------------------------------------------------------------------------
+
+export class MdSnackbar extends Component {
+  onconnected() {
+    this.bind(null, "click", e => this.close());
+    setTimeout(snack => snack.close(), 5000, this);
+  }
+
+  close() {
+    this.remove();
+  }
+
+  render() {
+    return Component.escape(this.state);
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        position: absolute;
+        left: 50%;
+        bottom: 0px;
+        transform: translate(-50%, -50%);
+        padding: 16px;
+        background-color: #323232;
+        color: #e3e3e3;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+    `;
+  }
+}
+
+Component.register(MdSnackbar);
+
+export function inform(message) {
+  let snack = new MdSnackbar(message);
+  document.body.appendChild(snack);
+}
 
 //-----------------------------------------------------------------------------
 // Search box

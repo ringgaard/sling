@@ -2,13 +2,14 @@
 // Licensed under the Apache License, Version 2
 
 import {Component} from "/common/lib/component.js";
-import {MdDialog, StdDialog, MdIcon} from "/common/lib/material.js";
+import {MdDialog, StdDialog, MdIcon, inform} from "/common/lib/material.js";
 import {Store, Frame, Encoder, Printer} from "/common/lib/frame.js";
 
 import {store, settings} from "./global.js";
 import * as plugins from "./plugins.js";
 import {NewFolderDialog} from "./folder.js";
 import {paste_image} from "./drive.js";
+import {wikidata_export} from "./wikibase.js";
 import "./topic.js";
 import "./omnibox.js";
 
@@ -359,7 +360,7 @@ class CaseEditor extends Component {
 
   async onimgcache(e) {
     if (!this.casefile.get(n_share) && !this.casefile.get(n_publish)) {
-      StdDialog.error("Case must be shared to enable image caching");
+      inform("Case must be shared to enable image caching");
       return;
     }
 
@@ -367,16 +368,9 @@ class CaseEditor extends Component {
     let r  = await fetch(`/case/cacheimg?id=${this.caseid()}`);
     if (!r.ok) {
       console.log("Caching error", r);
-      StdDialog.error(`Error ${r.status}: ${r.statusText}`);
+      inform(`Error ${r.status}: ${r.statusText}`);
     } else {
-      let data = await r.json();
-      console.log("Cache results", data);
-      StdDialog.alert("Images cached",
-                      `${data.retrieved} / ${data.images} images cached,
-                       ${data.known} known,
-                       ${data.missing} missing,
-                       ${data.errors} errors,
-                       ${data.bytes} bytes`);
+      inform("Images are being cached in the background");
     }
   }
 
@@ -994,7 +988,7 @@ class CaseEditor extends Component {
   }
 
   onexport(e) {
-    console.log("export to wikidata");
+    wikidata_export(this.casefile);
   }
 
   store() {

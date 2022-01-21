@@ -15,6 +15,7 @@
 """SLING case image caching"""
 
 import email.utils
+import threading
 import requests
 import sling
 import sling.flags as flags
@@ -119,12 +120,16 @@ def cache_images(casefile):
       num_bytes += len(image)
       print("cached", url, len(image))
 
-  return {
-    "images": num_images,
-    "retrieved": num_retrieved,
-    "known": num_known,
-    "missing": num_missing,
-    "errors": num_errors,
-    "bytes": num_bytes,
-  }
+  print("Caching done:",
+        num_images, "images,",
+        num_retrieved, "retrieved,",
+        num_known, "known,",
+        num_missing, "missing,",
+        num_errors, "errors",
+        num_bytes, "bytes")
+
+def start_image_caching(casefile):
+  t = threading.Thread(target=cache_images, args=(casefile,))
+  t.daemon = True
+  t.start()
 
