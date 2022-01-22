@@ -71,9 +71,11 @@ def sign_request(method, url, token, secret):
 
 def handle_initiate(request):
   # First get a request token.
+  cb = request.param("cb")
+  if cb is None: cb = "oob"
   params = {
     "format": "json",
-	  "oauth_callback": "oob",
+	  "oauth_callback": cb,
     "oauth_consumer_key":  consumer_key,
 	  "oauth_version": "1.0",
     "oauth_nonce":  nounce(),
@@ -83,15 +85,18 @@ def handle_initiate(request):
   url = oauth_url + "/initiate?" + urllib.parse.urlencode(params)
   signature = sign_request("GET", url, "", consumer_secret)
   url += "&oauth_signature=" + quote(signature)
+
   r = requests.get(url)
   response = r.json()
   key = response["key"]
   secret = response["secret"]
-  authurl = "%s?oauth_token=%s&oauth_consumer_key=%s" % (
-    authorize_url, key, consumer_key)
-  cb = request.param("cb")
-  if cb is not None:
-    authurl += "&oauth_callback=" + quote(cb)
+
+  authparams = {
+    "oauth_token": key,
+    "oauth_consumer_key": consumer_key,
+    "oauth_callback": cb,
+  }
+  authurl = authorize_url + "?" + urllib.parse.urlencode(authparams)
   return {"url": authurl}
 
 def handle(request):

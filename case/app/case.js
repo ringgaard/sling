@@ -1057,15 +1057,15 @@ class CaseEditor extends Component {
           <div id="title">Case #<md-text id="caseid"></md-text></div>
           <omni-box id="search"></omni-box>
           <md-spacer></md-spacer>
-          <md-icon-button id="merge" icon="merge">
+          <md-icon-button id="merge" class="tool" icon="merge">
           </md-icon-button>
-          <md-icon-button id="export" icon="wikidata">
+          <md-icon-button id="export" class="tool" icon="wikidata">
           </md-icon-button>
-          <md-icon-button id="script" icon="play_circle_outline">
+          <md-icon-button id="script" class="tool" icon="play_circle_outline">
           </md-icon-button>
-          <md-icon-button id="save" icon="save">
+          <md-icon-button id="save" class="tool" icon="save">
           </md-icon-button>
-          <md-icon-button id="share" icon="share">
+          <md-icon-button id="share" class="tool" icon="share">
           </md-icon-button>
           <md-menu>
             <md-menu-item id="save">Save</md-menu-item>
@@ -1108,7 +1108,7 @@ class CaseEditor extends Component {
         overflow: auto;
         height: 100%;
       }
-      $ md-toolbar md-icon-button {
+      $ md-toolbar md-icon-button.tool {
         margin-left: -8px;
       }
       $ md-toolbar md-menu {
