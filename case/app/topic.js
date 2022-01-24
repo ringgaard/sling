@@ -323,7 +323,7 @@ class TopicCard extends Component {
   async refresh() {
     if (!this.editing) {
       let topic = this.state;
-      let labels = new LabelCollector(store)
+      let labels = new LabelCollector(store);
       labels.add(topic);
       await labels.retrieve();
 
@@ -447,7 +447,7 @@ class TopicCard extends Component {
     }
 
     // Collect labels.
-    let labels = new LabelCollector(store)
+    let labels = new LabelCollector(store);
     labels.add(topic);
     await labels.retrieve();
 

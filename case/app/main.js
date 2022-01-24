@@ -4,9 +4,10 @@
 // Case-based knowledge management app.
 
 import {Component, OneOf} from "/common/lib/component.js";
-import {StdDialog} from "/common/lib/material.js";
+import {StdDialog, inform} from "/common/lib/material.js";
 import {store, settings} from "./global.js";
 import {casedb} from "./database.js";
+import {oauth_callback} from "./wikibase.js";
 
 import "./manager.js";
 import "./case.js";
@@ -45,6 +46,15 @@ class CaseApp extends Component {
 
     // Open local case database.
     await casedb.open();
+
+    // Check for OAuth callback.
+    if (window.location.search.includes("oauth_")) {
+      if (await oauth_callback()) {
+        inform("You have now been authorized to publish to Wikidata from SLING");
+      } else {
+        inform("Failed to authorized you for publishing to Wikidata");
+      }
+    }
 
     // Parse url.
     let m = window.location.pathname.match(/\/c\/(\d+)/);

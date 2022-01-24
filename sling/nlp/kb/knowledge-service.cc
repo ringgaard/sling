@@ -1023,6 +1023,8 @@ void KnowledgeService::HandleGetTopic(HTTPRequest *request,
 
   // Build display frame.
   Builder b(store);
+  Text itemid = item.Id();
+  if (itemid != id) b.AddId(itemid);
   b.AddId(id);
   Handle name = item.GetHandle(n_name_);
   if (!name.IsNil()) {

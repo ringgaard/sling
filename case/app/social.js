@@ -41,6 +41,10 @@ let xrefs = [
     property: store.lookup("P1902"),
   },
   {
+    pattern: /^https?:\/\/(?:www\.).pinterest\.\w+\/([^\/\?]+)/,
+    property: store.lookup("P3836"),
+  },
+  {
     pattern: /^https?:\/\/vk\.com\/([^\/\?]+)/,
     property: store.lookup("P3185"),
   },

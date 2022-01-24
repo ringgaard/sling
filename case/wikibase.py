@@ -36,6 +36,8 @@ if os.path.exists(wikikeys):
   consumer_key = apikeys["consumer_key"]
   consumer_secret = apikeys["consumer_secret"]
 
+token_secrets = {}
+
 def quote(s):
   return urllib.parse.quote_plus(s)
 
@@ -69,13 +71,11 @@ def sign_request(method, url, token, secret):
 
   return hmac_sha1(base, signkey)
 
-def handle_initiate(request):
-  # First get a request token.
-  cb = request.param("cb")
-  if cb is None: cb = "oob"
+def handle_authorize(request):
+  # Get request token.
   params = {
     "format": "json",
-	  "oauth_callback": cb,
+	  "oauth_callback": "oob",
     "oauth_consumer_key":  consumer_key,
 	  "oauth_version": "1.0",
     "oauth_nonce":  nounce(),
@@ -86,22 +86,56 @@ def handle_initiate(request):
   signature = sign_request("GET", url, "", consumer_secret)
   url += "&oauth_signature=" + quote(signature)
 
-  r = requests.get(url)
-  response = r.json()
-  key = response["key"]
-  secret = response["secret"]
+  response = requests.get(url).json()
+  token_key = response["key"]
+  token_secret = response["secret"]
 
+  # Remember token secret.
+  authid = str(nounce())
+  token_secrets[authid] = token_secret
+
+  # Send back redirect url for authorization.
+  cb = request.param("cb")
   authparams = {
-    "oauth_token": key,
+    "oauth_token": token_key,
     "oauth_consumer_key": consumer_key,
     "oauth_callback": cb,
   }
   authurl = authorize_url + "?" + urllib.parse.urlencode(authparams)
-  return {"url": authurl}
+  return {
+    "redirect": authurl,
+    "consumer": consumer_key,
+    "authid": authid,
+  }
+
+def handle_access(request):
+  # Get token secret from auth id.
+  authid = request.param("authid")
+  token_secret = token_secrets[authid]
+  del token_secrets[authid]
+
+  # Fetch user access token.
+  params = {
+    "format": "json",
+    "oauth_verifier": request.param("oauth_verifier"),
+    "oauth_consumer_key":  consumer_key,
+		"oauth_token": request.param("oauth_token"),
+ 	  "oauth_version": "1.0",
+    "oauth_nonce":  nounce(),
+    "oauth_timestamp": timestamp(),
+	  "oauth_signature_method": "HMAC-SHA1",
+  }
+  url = oauth_url + "/token?" + urllib.parse.urlencode(params)
+  signature = sign_request("GET", url, token_secret, consumer_secret)
+  url += "&oauth_signature=" + quote(signature)
+  response = requests.get(url).json()
+  return response
 
 def handle(request):
-  if request.path == "/initiate":
-    return handle_initiate(request)
+  if request.path == "/authorize":
+    return handle_authorize(request)
+  elif request.path == "/access":
+    return handle_access(request)
   else:
     return 501
 

@@ -46,6 +46,16 @@ var plugins = [
   ],
 },
 
+// CVR entities.
+{
+  name: "cvr",
+  module: "cvr.js",
+  actions: [PASTEURL, SEARCHURL],
+  patterns: [
+    /^https:\/\/datacvr\.virk\.dk\/data\/visenhed/,
+  ],
+},
+
 // Linktree profiles.
 {
   name: "linktree",
