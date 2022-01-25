@@ -26,9 +26,11 @@ import requests
 import sling.flags as flags
 
 wikikeys = "local/keys/wikimedia.json"
-wikibaseurl = "https://test.wikidata.org"
+#wikibaseurl = "https://test.wikidata.org"
+wikibaseurl = "https://www.wikidata.org"
 oauth_url = wikibaseurl + "/wiki/Special:OAuth"
 authorize_url = wikibaseurl + "/wiki/Special:OAuth/authorize"
+api_url = wikibaseurl + "/w/api.php"
 
 # Get WikiMedia application keys.
 if os.path.exists(wikikeys):
@@ -42,7 +44,7 @@ def quote(s):
   return urllib.parse.quote_plus(s)
 
 def nounce():
-  return random.getrandbits(64)
+  return str(random.getrandbits(64))
 
 def timestamp():
   return str(int(time.time()))
@@ -52,14 +54,18 @@ def hmac_sha1(data, key):
   digest = hashed.digest()
   return base64.b64encode(digest).decode()
 
-def sign_request(method, url, token, secret):
+def sign_request(method, url, token, secret, params=None):
   parts = urllib.parse.urlparse(url)
 
   pairs = []
   query = urllib.parse.parse_qs(parts.query)
-  for var in sorted(query.keys()):
+  for var in query.keys():
     if var != "oauth_signature":
-      pairs.append(var + "=" + query[var][0])
+      pairs.append(quote(var) + "=" + quote(query[var][0]))
+  if params is not None:
+    for var in params.keys():
+      pairs.append(quote(var) + "=" + quote(params[var]))
+  pairs.sort()
 
   base = "&".join([
     quote(method.upper()),
@@ -70,6 +76,31 @@ def sign_request(method, url, token, secret):
   signkey = (quote(secret) + "&" + quote(token)).encode()
 
   return hmac_sha1(base, signkey)
+
+def api_call(client_key, client_secret, params):
+  header_params = {
+    "oauth_consumer_key":  consumer_key,
+		"oauth_token": client_key,
+	  "oauth_version": "1.0",
+    "oauth_nonce":  nounce(),
+    "oauth_timestamp": timestamp(),
+	  "oauth_signature_method": "HMAC-SHA1",
+  }
+
+  signature = sign_request("POST", api_url, client_secret, consumer_secret,
+                           {**header_params, **params})
+  header_params["oauth_signature"] = signature;
+
+  oauthhdrs = [];
+  for name, value in header_params.items():
+    oauthhdrs.append(quote(name) + '="' + quote(value) + '"')
+  oauthhdr = "OAuth " + ", ".join(oauthhdrs)
+  print("oauthhdr", oauthhdr)
+
+  return requests.post(api_url,
+    headers={"Authorization": oauthhdr},
+    data=params
+  ).json()
 
 def handle_authorize(request):
   # Get request token.
@@ -131,11 +162,31 @@ def handle_access(request):
   response = requests.get(url).json()
   return response
 
+def handle_identify(request):
+  client_key = request["Client-Key"]
+  client_secret = request["Client-Secret"]
+  print("client key", client_key, "secret", client_secret)
+  response = api_call(client_key, client_secret, {
+    "format": "json",
+		"action": "query",
+		"meta": "userinfo",
+		"uiprop": "*",
+  })
+
+  return response
+
+def handle_edit(request):
+  return 500
+
 def handle(request):
-  if request.path == "/authorize":
+  if request.path == "/edit":
+    return handle_edit(request)
+  elif request.path == "/authorize":
     return handle_authorize(request)
   elif request.path == "/access":
     return handle_access(request)
+  elif request.path == "/identify":
+    return handle_identify(request)
   else:
     return 501
 

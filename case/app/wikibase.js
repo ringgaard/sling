@@ -4,8 +4,6 @@
 import {Component} from "/common/lib/component.js";
 import {store, settings, save_settings} from "./global.js";
 
-let apiurl = "https://test.wikidata.org/w/api.php"
-
 async function wikidata_initiate() {
   // Initiate authorization and get redirect url.
   let callback = window.location.href;
@@ -38,7 +36,7 @@ export async function oauth_callback() {
 
   // Store client token and secret.
   settings.wikidata_key = response.key;
-  settings.wikidata_secrect = response.secret;
+  settings.wikidata_secret = response.secret;
   save_settings();
 
   return true;
@@ -52,5 +50,14 @@ export async function wikidata_export(casefile) {
   }
 
   console.log("wikidata client token", settings.wikidata_key);
+  let r = await fetch("/case/wikibase/identify", {
+    method: "POST",
+    headers: {
+      "Client-Key": settings.wikidata_key,
+      "Client-Secret": settings.wikidata_secret,
+    }
+  });
+  let data = await r.json();
+  console.log("identify", data);
 }
 

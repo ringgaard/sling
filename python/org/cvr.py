@@ -808,6 +808,16 @@ for key, rec in cvrdb.items():
   entity[n_cvr_unit_number] = unit_number
 
   # Get entity names.
+  name_found = False
+  metadata = data.get("virksomhedMetadata")
+  if metadata is not None:
+    newestname = metadata.get("nyesteNavn")
+    if newestname is not None:
+      name = newestname.get("navn")
+      if name is not None:
+        entity.add(n_name, name)
+        name_found = True
+
   names = []
   for n in data["navne"]:
     name = n.get("navn")
@@ -817,20 +827,16 @@ for key, rec in cvrdb.items():
     start = get_date(period.get("gyldigFra"))
     end = get_date(period.get("gyldigTil"))
     names.append((start, end, name))
-  if len(names) == 1:
-    entity.add(n_name, names[0][2])
-  else:
-    first = True
-    for n in sorted(names, key=lambda x: x[2], reverse=True):
-      if first:
-        entity.add(n_name, n[2])
-      else:
-        alias = FrameBuilder(store)
-        alias[n_is] = n[2]
-        if n[0] is not None: alias[n_start_time] = n[0]
-        if n[1] is not None: alias[n_end_time] = n[1]
-        entity.add(n_other_name, alias.create())
-      first = False
+  for n in sorted(names, key=lambda x: x[2], reverse=True):
+    alias = FrameBuilder(store)
+    alias[n_is] = n[2]
+    if n[0] is not None: alias[n_start_time] = n[0]
+    if n[1] is not None: alias[n_end_time] = n[1]
+    entity.add(n_other_name, alias.create())
+    if not name_found:
+      entity.add(n_name, name)
+      name_found = True
+
   subnames = data.get("binavne")
   if subnames is not None and len(subnames) > 0:
     names = set()
@@ -1090,6 +1096,7 @@ for key, rec in cvrdb.items():
       entity.add(n_phone_number, timeframed(contact, start, end, store))
 
   emails = data.get("obligatoriskEmail")
+  if emails is None: emails = data.get("elektroniskPost")
   if emails is not None:
     for email in emails:
       contact, start, end = get_contact(email)

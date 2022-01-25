@@ -271,7 +271,7 @@ def cache_images_request(request):
   print("Start image caching for case", caseid)
   return imgcache.start_image_caching(casefile)
 
-@app.route("/case/wikibase")
+@app.route("/case/wikibase", methods=["GET", "POST"])
 def wikibase_request(request):
   return wikibase.handle(request)
 

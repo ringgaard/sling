@@ -217,9 +217,9 @@ class HTTPServer:
   def dynamic(self, path, func):
     self.httpd.dynamic(path, HTTPHandler(func))
 
-  def route(self, path, method="GET"):
+  def route(self, path, method="GET", methods=None):
     def inner(func):
-      self.httpd.dynamic(path, HTTPHandler(func, method))
+      self.httpd.dynamic(path, HTTPHandler(func, method, methods))
     return inner
 
   def redirect(self, path, location, status=307):
