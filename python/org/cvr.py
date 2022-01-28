@@ -845,7 +845,7 @@ for key, rec in cvrdb.items():
 
   # Occupation.
   occupation = data.get("stilling")
-  if occupation is not None:
+  if occupation is not None and len(occupation) > 0:
     job = get_occupation(occupation)
     if job is None: job = store.qstr(occupation, n_danish)
     entity[n_occupation] = job

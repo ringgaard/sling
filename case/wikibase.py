@@ -23,14 +23,10 @@ import base64
 import hmac
 import urllib.parse
 import requests
+import requests_oauthlib
 import sling.flags as flags
 
 wikikeys = "local/keys/wikimedia.json"
-#wikibaseurl = "https://test.wikidata.org"
-wikibaseurl = "https://www.wikidata.org"
-oauth_url = wikibaseurl + "/wiki/Special:OAuth"
-authorize_url = wikibaseurl + "/wiki/Special:OAuth/authorize"
-api_url = wikibaseurl + "/w/api.php"
 
 # Get WikiMedia application keys.
 if os.path.exists(wikikeys):
@@ -38,6 +34,14 @@ if os.path.exists(wikikeys):
   consumer_key = apikeys["consumer_key"]
   consumer_secret = apikeys["consumer_secret"]
 
+# Configure wikibase urls.
+wikibaseurl = "https://www.wikidata.org"
+if "site" in apikeys: wikibaseurl = apikeys["site"]
+oauth_url = wikibaseurl + "/wiki/Special:OAuth"
+authorize_url = wikibaseurl + "/wiki/Special:OAuth/authorize"
+api_url = wikibaseurl + "/w/api.php"
+
+# Remembered token secrets for OAuth authorization.
 token_secrets = {}
 
 def quote(s):
@@ -77,36 +81,13 @@ def sign_request(method, url, token, secret, params=None):
 
   return hmac_sha1(base, signkey)
 
-def api_call(client_key, client_secret, params):
-  header_params = {
-    "oauth_consumer_key":  consumer_key,
-		"oauth_token": client_key,
-	  "oauth_version": "1.0",
-    "oauth_nonce":  nounce(),
-    "oauth_timestamp": timestamp(),
-	  "oauth_signature_method": "HMAC-SHA1",
-  }
-
-  signature = sign_request("POST", api_url, client_secret, consumer_secret,
-                           {**header_params, **params})
-  header_params["oauth_signature"] = signature;
-
-  oauthhdrs = [];
-  for name, value in header_params.items():
-    oauthhdrs.append(quote(name) + '="' + quote(value) + '"')
-  oauthhdr = "OAuth " + ", ".join(oauthhdrs)
-  print("oauthhdr", oauthhdr)
-
-  return requests.post(api_url,
-    headers={"Authorization": oauthhdr},
-    data=params
-  ).json()
-
 def handle_authorize(request):
   # Get request token.
+  cb = request.param("cb")
+  if cb is None: cb = "oob"
   params = {
     "format": "json",
-	  "oauth_callback": "oob",
+	  "oauth_callback": cb,
     "oauth_consumer_key":  consumer_key,
 	  "oauth_version": "1.0",
     "oauth_nonce":  nounce(),
@@ -126,7 +107,6 @@ def handle_authorize(request):
   token_secrets[authid] = token_secret
 
   # Send back redirect url for authorization.
-  cb = request.param("cb")
   authparams = {
     "oauth_token": token_key,
     "oauth_consumer_key": consumer_key,
@@ -162,21 +142,94 @@ def handle_access(request):
   response = requests.get(url).json()
   return response
 
+def api_call0(method, client_key, client_secret, params):
+  header_params = {
+    "oauth_consumer_key":  consumer_key,
+		"oauth_token": client_key,
+	  "oauth_version": "1.0",
+    "oauth_nonce":  nounce(),
+    "oauth_timestamp": timestamp(),
+	  "oauth_signature_method": "HMAC-SHA1",
+  }
+
+  signature = sign_request(method, api_url, client_secret, consumer_secret,
+                           {**header_params, **params})
+  header_params["oauth_signature"] = signature;
+
+  oauthhdrs = [];
+  for name, value in header_params.items():
+    oauthhdrs.append(quote(name) + '="' + quote(value) + '"')
+  oauthhdr = "OAuth " + ", ".join(oauthhdrs)
+  print("oauthhdr", oauthhdr)
+  print("params", params)
+
+  r = requests.method(method, api_url,
+    headers={"Authorization": oauthhdr},
+    data=params
+  )
+
+  return r.json()
+
+def api_call(client_key, client_secret, params, post=False):
+  print("API CALL:", params)
+  auth = requests_oauthlib.OAuth1(consumer_key,
+               client_secret=consumer_secret,
+               resource_owner_key=client_key,
+               resource_owner_secret=client_secret)
+  if post:
+    r = requests.post(api_url, data=params, auth=auth)
+  else:
+    r = requests.get(api_url, params=params, auth=auth)
+
+  return r.json()
+
 def handle_identify(request):
+  # Get client credentials.
   client_key = request["Client-Key"]
   client_secret = request["Client-Secret"]
-  print("client key", client_key, "secret", client_secret)
+
+  # Get user information.
   response = api_call(client_key, client_secret, {
     "format": "json",
 		"action": "query",
 		"meta": "userinfo",
-		"uiprop": "*",
+  })
+
+  return response
+
+def handle_token(request):
+  # Get client credentials.
+  client_key = request["Client-Key"]
+  client_secret = request["Client-Secret"]
+
+  # Get CSFR token for editing items.
+  response = api_call(client_key, client_secret, {
+    "format": "json",
+    "action": "query",
+    "meta": "tokens",
   })
 
   return response
 
 def handle_edit(request):
-  return 500
+  # Get client credentials.
+  client_key = request["Client-Key"]
+  client_secret = request["Client-Secret"]
+  csfr_token = request["CSFR-Token"]
+
+  # Request new item if there is no existing QID.
+  entity = request.json()
+  command = {
+    "format": "json",
+    "action": "wbeditentity",
+    "token": csfr_token,
+    "data": json.dumps(entity),
+  }
+  if "id" not in entity: command["new"] = entity["type"]
+
+  response = api_call(client_key, client_secret, command, post=True)
+  print("response", response)
+  return response
 
 def handle(request):
   if request.path == "/edit":
@@ -187,6 +240,8 @@ def handle(request):
     return handle_access(request)
   elif request.path == "/identify":
     return handle_identify(request)
+  elif request.path == "/token":
+    return handle_token(request)
   else:
     return 501
 

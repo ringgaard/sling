@@ -181,6 +181,31 @@ export class Time {
     }
   }
 
+  wikidate() {
+    let y = spad(this.year, 4);
+    let m = pad(this.month, 2);
+    let d = pad(this.day, 2);
+    switch (this.precision) {
+      case MILLENNIUM:
+        return [`${y}-00-00T00:00:00Z`, 6];
+
+      case CENTURY:
+        return [`${y}-00-00T00:00:00Z`, 7];
+
+      case DECADE:
+        return [`${y}-00-00T00:00:00Z`, 8];
+
+      case YEAR:
+        return [`${y}-00-00T00:00:00Z`, 9];
+
+      case MONTH:
+        return [`${y}-${m}-00T00:00:00Z`, 10];
+
+      case DAY:
+        return [`${y}-${m}-${d}T00:00:00Z`, 11];
+    }
+  }
+
   text() {
     switch (this.precision) {
       case MILLENNIUM:

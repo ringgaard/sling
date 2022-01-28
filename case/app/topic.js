@@ -694,28 +694,36 @@ class TopicCard extends Component {
       $ md-icon-button {
         margin-left: -8px;
       }
-      $.selected div::selection {
+      $.selected div {
+        background-color: inherit;
+        user-select: none;
+      }
+      $.selected span {
+        background-color: inherit;
+        user-select: none;
+      }
+      $.selected a {
         background-color: inherit;
       }
-      $.selected a::selection {
+      $.selected img {
+        background-color: inherit;
+        user-select: none;
+      }
+      $.selected kb-link {
         background-color: inherit;
       }
-      $.selected img::selection {
+      $.selected kb-ref {
         background-color: inherit;
       }
-      $.selected kb-link::selection {
+      $.selected md-text {
         background-color: inherit;
+        user-select: none;
       }
-      $.selected kb-ref::selection {
+      $.selected md-image {
         background-color: inherit;
+        user-select: none;
       }
-      $.selected md-text::selection {
-        background-color: inherit;
-      }
-      $.selected md-image::selection {
-        background-color: inherit;
-      }
-      $.selected md-icon::selection {
+      $.selected md-icon {
         background-color: inherit;
       }
       $.selected md-toolbox {

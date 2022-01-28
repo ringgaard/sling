@@ -987,8 +987,12 @@ class CaseEditor extends Component {
     }
   }
 
-  onexport(e) {
-    wikidata_export(this.casefile);
+  async onexport(e) {
+    let list = this.find("topic-list");
+    let topics = list.selection();
+    if (topics.length == 0) topics = this.topics;
+    await wikidata_export(this.casefile, topics);
+    this.refresh_topics();
   }
 
   store() {
@@ -1071,7 +1075,7 @@ class CaseEditor extends Component {
             <md-menu-item id="save">Save</md-menu-item>
             <md-menu-item id="share">Share</md-menu-item>
             <md-menu-item id="imgcache">Cache images</md-menu-item>
-            <md-menu-item id="export">Export to Wikidata</md-menu-item>
+            <md-menu-item id="export">Publish in Wikidata</md-menu-item>
           </md-menu>
         </md-toolbar>
 

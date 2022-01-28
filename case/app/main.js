@@ -144,8 +144,6 @@ class CaseApp extends Component {
     casefile.add(n_folders, store.frame(["Main", main_topics]));
     casefile.add(n_next, next);
 
-    console.log("newcase", casefile.text());
-
     // Switch to case editor with new case.
     await this.show_case(casefile);
     this.editor.mark_dirty();
