@@ -21,7 +21,6 @@ flags.define("--newssites",
              default="data/crawl/newssites.txt",
              help="list of news sites")
 
-
 url_prefixes = ["www.", "eu.", "uk.", "rss.", "rssfeeds.", "m."]
 
 class NewsSite:

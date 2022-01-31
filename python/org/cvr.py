@@ -27,6 +27,7 @@ kb.load("data/e/kb/kb.sling")
 n_id = kb["id"]
 n_is = kb["is"]
 n_name = kb["name"]
+n_description = kb["description"]
 n_instance_of = kb["P31"]
 n_inception = kb["P571"]
 n_dissolved = kb["P576"]
@@ -489,6 +490,10 @@ for item in kb:
   if code is not None:
     municipality_map[code] = item
 
+person_description = sling.String("erhvervsperson", n_danish)
+company_description = sling.String("virksomhed", n_danish)
+branch_description = sling.String("produktionsenhed", n_danish)
+
 kb.freeze()
 
 class FrameBuilder:
@@ -760,6 +765,7 @@ for key, rec in cvrdb.items():
     entity[n_id] = "P7972/" + unit_number
     entity.add(n_instance_of, n_human)
     entity.add(n_cvr_person_id, unit_number)
+    entity.add(n_description, person_description)
 
     person = True
     num_persons += 1
@@ -769,6 +775,7 @@ for key, rec in cvrdb.items():
     entity[n_id] = "P1059/" + cvrnr
     entity.add(n_cvr_number, cvrnr)
     entity.add(n_opencorporates_id, "dk/" + cvrnr)
+    entity.add(n_description, company_description)
 
     # Legal entity form.
     for form in data["virksomhedsform"]:
@@ -787,16 +794,19 @@ for key, rec in cvrdb.items():
     pnr = str(data["pNummer"])
     entity[n_id] = "P2814/" + pnr
     entity.add(n_cvr_branch_number, pnr)
+    entity.add(n_description, branch_description)
   elif unit_type == "ANDEN_DELTAGER":
     entity[n_id] = "PCVR/" + unit_number
     participant_type = get_attribute(data, "ANDRE_DELT_TYPE")
     if participant_type == "PERSON":
       entity.add(n_instance_of, n_human)
       entity.add(n_cvr_person_id, unit_number)
+      entity.add(n_description, person_description)
       person = True
       num_persons += 1
     elif participant_type == "VIRKSOMHED":
       entity.add(n_instance_of, n_organization)
+      entity.add(n_description, company_description)
       num_companies += 1
     else:
       num_other += 1

@@ -431,7 +431,8 @@ void Store::UpdateFrame(Handle handle, Slot *begin, Slot *end) {
       if (options_->symbol_rebinding) {
         CHECK(!symbol->marked()) << "no rebinding of frozen symbols";
       } else {
-        CHECK(!symbol->bound()) << DebugString(symbol->self);
+        if (symbol->bound()) LOG(WARNING) << "Symbol already bound: " << DebugString(symbol->self);
+        //CHECK(!symbol->bound()) << DebugString(symbol->self);
       }
 
       // Check that symbol is in the same pool as the frame.

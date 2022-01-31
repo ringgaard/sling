@@ -16,23 +16,21 @@
 
 import os
 import json
-import hashlib
-import time
 import random
-import base64
-import hmac
-import urllib.parse
+import re
 import requests
 import requests_oauthlib
-import sling.flags as flags
+import sling
 
-wikikeys = "local/keys/wikimedia.json"
+class Credentials:
+  def __init__(self, key, secret):
+    self.key = key
+    self.secret = secret
 
 # Get WikiMedia application keys.
+wikikeys = "local/keys/wikimedia.json"
 if os.path.exists(wikikeys):
   with open(wikikeys, "r") as f: apikeys = json.load(f)
-  consumer_key = apikeys["consumer_key"]
-  consumer_secret = apikeys["consumer_secret"]
 
 # Configure wikibase urls.
 wikibaseurl = "https://www.wikidata.org"
@@ -41,207 +39,398 @@ oauth_url = wikibaseurl + "/wiki/Special:OAuth"
 authorize_url = wikibaseurl + "/wiki/Special:OAuth/authorize"
 api_url = wikibaseurl + "/w/api.php"
 
-# Remembered token secrets for OAuth authorization.
-token_secrets = {}
+# OAuth credentials.
+consumer = Credentials(apikeys["consumer_key"], apikeys["consumer_secret"])
+sessions = {}
 
-def quote(s):
-  return urllib.parse.quote_plus(s)
+# Initialize commons store for Wikidata export.
+kbservice = "https://ringgaard.com"
+commons = sling.Store()
+commons.parse(requests.get(kbservice + "/schema/").content)
+n_id = commons["id"]
+n_is = commons["is"]
+n_name = commons["name"]
+n_description = commons["description"]
+n_alias = commons["alias"]
+n_instance_of = commons["P31"]
+n_case_file = commons["Q108673968"]
+n_english = commons["/lang/en"]
+n_target = commons["target"]
+n_lat = commons["/w/lat"]
+n_lng = commons["/w/lng"]
+n_amount = commons["/w/amount"]
+n_unit = commons["/w/unit"]
+n_topics = commons["topics"]
+n_created = commons["created"]
 
-def nounce():
-  return str(random.getrandbits(64))
+n_item_type = commons["/w/item"]
+n_string_type = commons["/w/string"]
+n_text_type = commons["/w/text"]
+n_xref_type = commons["/w/xref"]
+n_time_type = commons["/w/time"]
+n_url_type = commons["/w/url"]
+n_media_type = commons["/w/media"]
+n_quantity_type = commons["/w/quantity"]
+n_geo_type = commons["/w/geo"]
 
-def timestamp():
-  return str(int(time.time()))
+commons.freeze()
 
-def hmac_sha1(data, key):
-  hashed = hmac.new(key, data.encode(), hashlib.sha1)
-  digest = hashed.digest()
-  return base64.b64encode(digest).decode()
-
-def sign_request(method, url, token, secret, params=None):
-  parts = urllib.parse.urlparse(url)
-
-  pairs = []
-  query = urllib.parse.parse_qs(parts.query)
-  for var in query.keys():
-    if var != "oauth_signature":
-      pairs.append(quote(var) + "=" + quote(query[var][0]))
-  if params is not None:
-    for var in params.keys():
-      pairs.append(quote(var) + "=" + quote(params[var]))
-  pairs.sort()
-
-  base = "&".join([
-    quote(method.upper()),
-    quote(parts.scheme + "://" + parts.hostname + parts.path),
-    quote("&".join(pairs))
-  ])
-
-  signkey = (quote(secret) + "&" + quote(token)).encode()
-
-  return hmac_sha1(base, signkey)
-
-def handle_authorize(request):
+def handle_initiate(request):
   # Get request token.
   cb = request.param("cb")
   if cb is None: cb = "oob"
-  params = {
-    "format": "json",
-	  "oauth_callback": cb,
-    "oauth_consumer_key":  consumer_key,
-	  "oauth_version": "1.0",
-    "oauth_nonce":  nounce(),
-    "oauth_timestamp": timestamp(),
-	  "oauth_signature_method": "HMAC-SHA1",
-  }
-  url = oauth_url + "/initiate?" + urllib.parse.urlencode(params)
-  signature = sign_request("GET", url, "", consumer_secret)
-  url += "&oauth_signature=" + quote(signature)
 
-  response = requests.get(url).json()
-  token_key = response["key"]
-  token_secret = response["secret"]
+  oauth = requests_oauthlib.OAuth1Session(client_key=consumer.key,
+                                          client_secret=consumer.secret,
+                                          callback_uri=cb)
 
-  # Remember token secret.
-  authid = str(nounce())
-  token_secrets[authid] = token_secret
+  oauth.fetch_request_token(oauth_url + "/initiate")
+
+  # Remember session with token secret.
+  authid = str(random.getrandbits(64))
+  sessions[authid] = oauth
 
   # Send back redirect url for authorization.
-  authparams = {
-    "oauth_token": token_key,
-    "oauth_consumer_key": consumer_key,
-    "oauth_callback": cb,
-  }
-  authurl = authorize_url + "?" + urllib.parse.urlencode(authparams)
+  authurl = oauth.authorization_url(authorize_url)
+
   return {
     "redirect": authurl,
-    "consumer": consumer_key,
     "authid": authid,
   }
 
 def handle_access(request):
   # Get token secret from auth id.
   authid = request.param("authid")
-  token_secret = token_secrets[authid]
-  del token_secrets[authid]
+  authurl = request.param("authurl")
+  oauth = sessions[authid]
+  del sessions[authid]
 
   # Fetch user access token.
-  params = {
-    "format": "json",
-    "oauth_verifier": request.param("oauth_verifier"),
-    "oauth_consumer_key":  consumer_key,
-		"oauth_token": request.param("oauth_token"),
- 	  "oauth_version": "1.0",
-    "oauth_nonce":  nounce(),
-    "oauth_timestamp": timestamp(),
-	  "oauth_signature_method": "HMAC-SHA1",
-  }
-  url = oauth_url + "/token?" + urllib.parse.urlencode(params)
-  signature = sign_request("GET", url, token_secret, consumer_secret)
-  url += "&oauth_signature=" + quote(signature)
-  response = requests.get(url).json()
-  return response
+  oauth.parse_authorization_response(authurl)
+  response = oauth.fetch_access_token(oauth_url + "/token")
 
-def api_call0(method, client_key, client_secret, params):
-  header_params = {
-    "oauth_consumer_key":  consumer_key,
-		"oauth_token": client_key,
-	  "oauth_version": "1.0",
-    "oauth_nonce":  nounce(),
-    "oauth_timestamp": timestamp(),
-	  "oauth_signature_method": "HMAC-SHA1",
+  return {
+    "key": response["oauth_token"],
+    "secret": response["oauth_token_secret"],
   }
 
-  signature = sign_request(method, api_url, client_secret, consumer_secret,
-                           {**header_params, **params})
-  header_params["oauth_signature"] = signature;
+def get_credentials(request):
+  return Credentials(request["Client-Key"], request["Client-Secret"])
 
-  oauthhdrs = [];
-  for name, value in header_params.items():
-    oauthhdrs.append(quote(name) + '="' + quote(value) + '"')
-  oauthhdr = "OAuth " + ", ".join(oauthhdrs)
-  print("oauthhdr", oauthhdr)
-  print("params", params)
-
-  r = requests.method(method, api_url,
-    headers={"Authorization": oauthhdr},
-    data=params
-  )
-
-  return r.json()
-
-def api_call(client_key, client_secret, params, post=False):
+def api_call(client, params, post=False):
   print("API CALL:", params)
-  auth = requests_oauthlib.OAuth1(consumer_key,
-               client_secret=consumer_secret,
-               resource_owner_key=client_key,
-               resource_owner_secret=client_secret)
+  oauth = requests_oauthlib.OAuth1(client_key=consumer.key,
+                                   client_secret=consumer.secret,
+                                   resource_owner_key=client.key,
+                                   resource_owner_secret=client.secret)
   if post:
-    r = requests.post(api_url, data=params, auth=auth)
+    r = requests.post(api_url, data=params, auth=oauth)
   else:
-    r = requests.get(api_url, params=params, auth=auth)
+    r = requests.get(api_url, params=params, auth=oauth)
 
   return r.json()
 
-def handle_identify(request):
-  # Get client credentials.
-  client_key = request["Client-Key"]
-  client_secret = request["Client-Secret"]
+qid_pat = re.compile("Q\d+")
+pid_pat = re.compile("P\d+")
 
-  # Get user information.
-  response = api_call(client_key, client_secret, {
-    "format": "json",
-		"action": "query",
-		"meta": "userinfo",
+def is_qid(id):
+  return qid_pat.fullmatch(id)
+
+def is_pid(id):
+  return pid_pat.fullmatch(id)
+
+def get_qid(topic):
+  for name, value in topic:
+    if name == n_id:
+      if is_qid(value): return value
+    elif name == n_is:
+      id = value.id
+      if is_qid(id): return id
+
+  return None
+
+def get_language(s):
+  if type(s) == sling.String:
+    id = s.qual.id
+    if id.startswith("/lang/"): return id.substr(6)
+  return "en"
+
+def itemtext(item):
+  name = item[n_name]
+  if name is not None:
+    return item[n_id] + " " + name
+  else:
+    return item[n_id]
+
+class WikibaseExporter:
+  def __init__(self, client, topics):
+    self.client = client
+    self.topics = topics
+    self.store = topics.store()
+    self.entities = {}
+    self.deferred = {}
+    self.created = {}
+
+    for topic in self.topics:
+      # Never export main case file topic.
+      if topic[n_instance_of] == n_case_file: continue
+
+      # Convert topic to Wikibase JSON format.
+      self.convert_topic(topic)
+
+    for topic, value in self.deferred.items():
+      print("deferred", topic.id, value)
+
+    for topic, entity in self.entities.items():
+      print(topic.id, entity)
+
+  def edit_entity(self, entity):
+    command = {
+      "format": "json",
+      "action": "wbeditentity",
+      "token": self.token,
+      "data": json.dumps(entity),
+    }
+    if "id" not in entity: command["new"] = entity["type"]
+
+    response = api_call(self.client, command, post=True)
+    return response
+
+  def publish(self):
+    # Get CSFR token for editing items.
+    response = api_call(self.client, {
+      "format": "json",
+      "action": "query",
+      "meta": "tokens",
+    })
+    self.token = response["query"]["tokens"]["csrftoken"]
+
+    # Publish topic updates.
+    for topic, entity in self.entities.items():
+      print("publish", topic.id)
+      response = self.edit_entity(entity)
+
+      if "error" in response:
+        print("error editing item:", response, "entity:", entity)
+        return;
+
+      if "id" not in entity:
+        itemid = response["entity"]["id"]
+        entity["id"] = itemid
+        item = self.store[itemid]
+        topic[n_is] = item
+        self.created[topic] = item
+
+  def convert_topic(self, topic):
+    # Add entity with optional existing Wikidata item id.
+    entity = {}
+    qid = get_qid(topic)
+    if qid is None:
+      entity["type"] = "item"
+    else:
+      entity["id"] = qid
+    self.entities[topic] = entity
+
+    # Add labels, description, aliases, and claims.
+    for name, value in topic:
+      if name == n_id or name == n_is:
+        pass
+      elif name == n_name:
+        label = str(value)
+        lang = get_language(value)
+        if "labels" not in entity: entity["labels"] = {}
+        entity["labels"][lang] = {"language": lang, "value": label}
+      elif name == n_description:
+        description = str(value)
+        lang = get_language(value)
+        if "descriptions" not in entity: entity["descriptions"] = {}
+        entity["descriptions"][lang] = {"language": lang, "value": description}
+      elif name == n_alias:
+        alias = str(value)
+        lang = get_language(value)
+        if "aliases" not in entity: entity["aliases"] = {}
+        if lang not in entity["aliases"]: entity["aliases"][lang] = []
+        entity["aliases"][lang].append({"language": lang, "value": alias})
+      else:
+        # Only add claims for Wikidata properties.
+        pid = name.id
+        if not is_pid(pid):
+          print("skip", pid)
+          continue
+
+        # Build main snak.
+        t = name[n_target]
+        v = self.store.resolve(value)
+        if self.skip_value(v):
+          print("skip", itemtext(name), itemtext(v), "for", itemtext(topic))
+          continue
+
+        datatype, datavalue = self.convert_value(t, v)
+        snak = {
+          "snaktype": "value",
+          "property": pid,
+          "datatype": datatype,
+          "datavalue": datavalue,
+        }
+
+        # Build claim.
+        claim = {
+          "type": "statement",
+          "rank": "normal",
+          "mainsnak": snak,
+        }
+
+        if v != value:
+          # Add qualifiers.
+          claim["qualifiers"] = {}
+          for qname, qvalue in value:
+            if qname == n_is: continue
+            pid = qname.id
+            if not is_pid(pid): continue
+
+            # Build snak for qualifier.
+            t = qname[n_target]
+            v = self.store.resolve(qvalue)
+            if self.skip_value(v):
+              print("skip qualifier", itemtext(qname), itemtext(v),
+                    "for", itemtext(topic))
+              continue
+
+            datatype, datavalue = self.convert_value(t, v)
+            snak = {
+              "snaktype": "value",
+              "property": pid,
+              "datatype": datatype,
+              "datavalue": datavalue,
+            }
+
+            # Add qualifier to claim.
+            if pid not in claim["qualifiers"]: claim["qualifiers"][pid] = []
+            claim["qualifiers"][pid].append(snak)
+
+        # Add claim to entity.
+        if "claims" not in entity: entity["claims"] = {}
+        if pid not in entity["claims"]: entity["claims"][pid] = []
+        entity["claims"][pid].append(claim)
+
+  def convert_value(self, type, value):
+    if type is None: type = n_item_type
+    if type == n_item_type:
+      qid = get_qid(value)
+      datatype = "wikibase-item"
+      if qid is not None:
+        datavalue = {
+          "value": {
+            "entity-type": "item",
+            "id": qid,
+          },
+          "type": "wikibase-entityid"
+        }
+      else:
+        datavalue = self.deferred.get(value)
+        if datavalue is None:
+          datavalue = {
+            "value": {
+              "entity-type": "item",
+              "id": value.id
+            },
+            "type": "wikibase-entityid"
+          }
+          self.deferred[value] = datavalue
+    elif type == n_string_type:
+      datatype = "string"
+      datavalue = {
+        "value": value,
+        "type": "string"
+      }
+    elif type == n_text_type:
+      datatype = "monolingualtext"
+      datavalue = {
+        "language": get_language(value),
+        "value": str(value),
+        "type": "string"
+      }
+    elif type == n_xref_type:
+      datatype = "external-id"
+      datavalue = {
+        "value": value,
+        "type": "string"
+      }
+    elif type == n_url_type:
+      datatype = "url"
+      datavalue = {
+        "value": value,
+        "type": "string"
+      }
+    elif type == n_time_type:
+      t = sling.Date(value)
+      datatype = "time"
+      datavalue = {
+        "value": {
+          "time": t.iso(),
+          "precision": t.precision + 5
+        },
+        "type": "time"
+      }
+    elif type == n_media_type:
+      datatype = "commonsMedia"
+      datavalue = {
+        "value": value,
+        "type": "string"
+      }
+    elif type == n_quantity_type:
+      datatype = "quantity"
+      datavalue = {
+        "value": {
+          "amount": str(value[n_amount]),
+          "unit": "http://www.wikidata.org/entity/" + value[n_unit].id,
+        },
+        "type": "quantity"
+      }
+    elif type == n_geo_type:
+      datatype = "globecoordinate"
+      datavalue = {
+        "value": {
+          "latitude": value[n_lat],
+          "longitude": value[n_lng],
+        },
+        "type": "globecoordinate"
+      }
+
+    return datatype, datavalue
+
+  def skip_value(self, value):
+    if type(value) != sling.Frame: return False
+    id = value.id
+    if id is None: return False
+    if is_qid(id): return False
+    if value in self.topics: return False
+    return True
+
+def handle_export(request):
+  # Get client credentials.
+  client = get_credentials(request)
+
+  # Get exported request.
+  store = sling.Store(commons)
+  export = request.frame(store);
+
+  # Export topics to Wikidata.
+  exporter = WikibaseExporter(client, export[n_topics])
+  exporter.publish()
+
+  # Return QIDs for newly created items.
+  return store.frame({
+    n_created: exporter.created,
   })
-
-  return response
-
-def handle_token(request):
-  # Get client credentials.
-  client_key = request["Client-Key"]
-  client_secret = request["Client-Secret"]
-
-  # Get CSFR token for editing items.
-  response = api_call(client_key, client_secret, {
-    "format": "json",
-    "action": "query",
-    "meta": "tokens",
-  })
-
-  return response
-
-def handle_edit(request):
-  # Get client credentials.
-  client_key = request["Client-Key"]
-  client_secret = request["Client-Secret"]
-  csfr_token = request["CSFR-Token"]
-
-  # Request new item if there is no existing QID.
-  entity = request.json()
-  command = {
-    "format": "json",
-    "action": "wbeditentity",
-    "token": csfr_token,
-    "data": json.dumps(entity),
-  }
-  if "id" not in entity: command["new"] = entity["type"]
-
-  response = api_call(client_key, client_secret, command, post=True)
-  print("response", response)
-  return response
 
 def handle(request):
-  if request.path == "/edit":
-    return handle_edit(request)
-  elif request.path == "/authorize":
-    return handle_authorize(request)
+  if request.path == "/export":
+    return handle_export(request)
+  elif request.path == "/initiate":
+    return handle_initiate(request)
   elif request.path == "/access":
     return handle_access(request)
-  elif request.path == "/identify":
-    return handle_identify(request)
-  elif request.path == "/token":
-    return handle_token(request)
   else:
     return 501
 
