@@ -59,6 +59,7 @@ void PyFrame::Define(PyObject *module) {
   methods.Add("isproxy", &PyFrame::IsProxy);
   methods.Add("resolve", &PyFrame::Resolve);
   methods.AddO("count", &PyFrame::Count);
+  methods.Add("has", &PyFrame::Has);
   type.tp_methods = methods.table();
 
   RegisterType(&type, module, "Frame");
@@ -205,6 +206,25 @@ int PyFrame::Contains(PyObject *key) {
   // Check if frame has slot with role.
   if (role.IsNil()) return 0;
   return frame()->has(role);
+}
+
+PyObject *PyFrame::Has(PyObject *args, PyObject *kw) {
+  // Get name and value arguments.
+  PyObject *pyname;
+  PyObject *pyvalue;
+  if (!PyArg_ParseTuple(args, "OO", &pyname, &pyvalue)) return nullptr;
+
+  // Get role.
+  GCLock lock(pystore->store);
+  Handle role = pystore->RoleValue(pyname);
+  if (role.IsError()) return nullptr;
+
+  // Get value.
+  Handle value = pystore->Value(pyvalue);
+  if (value.IsError()) return nullptr;
+
+  // Check if frame has slot with role.
+  return PyBool_FromLong(frame()->has(role, value));
 }
 
 PyObject *PyFrame::GetAttr(PyObject *key) {

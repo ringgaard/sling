@@ -1,13 +1,13 @@
 // Copyright 2020 Ringgaard Research ApS
 // Licensed under the Apache License, Version 2
 
-import {Component} from "/common/lib/component.js";
 import {store, settings, save_settings} from "./global.js";
 import {Frame, Encoder} from "/common/lib/frame.js";
 
 const n_is = store.is;
 const n_topics = store.lookup("topics");
 const n_created = store.lookup("created");
+const n_results = store.lookup("results");
 
 async function wikidata_initiate() {
   // Initiate authorization and get redirect url.
@@ -48,9 +48,27 @@ export async function oauth_callback() {
 }
 
 async function export_topics(topics) {
-  // Encode selected topics.
+  // Encode selected topics including property descriptors.
+  let properties = new Set();
   let encoder = new Encoder(store);
   for (let topic of topics) {
+    // Encode properties.
+    for (let [name, value] of topic) {
+      if (!properties.has(name)) {
+        encoder.encode(name);
+        properties.add(name);
+      }
+      if ((value instanceof Frame) && value.isanonymous()) {
+        for (let [qname, qvalue] of value) {
+          if (!properties.has(qname)) {
+            encoder.encode(qname);
+            properties.add(qname);
+          }
+        }
+      }
+    }
+
+    // Encode topic.
     encoder.encode(topic);
   }
   let request = store.frame();
@@ -68,16 +86,26 @@ async function export_topics(topics) {
 
   if (r.status != 200) {
     console.log("Error exporting topics", r.status);
-    return;
+    throw new Error("Export to Wikidata failed");
   }
 
   let reply = await store.parse(r);
   console.log(reply.text());
 
   // Add QIDs to topics for newly created item.
+  let dirty = false;
   for (let [topic, item] of reply.get(n_created)) {
     topic.put(n_is, item);
+    dirty = true;
   }
+  let status = new Array();
+  for (let [metric, value] of reply.get(n_results)) {
+    if (value != 0) {
+      status.push(`${value} ${metric.id}`);
+    }
+  }
+
+  return [dirty, status.join(", ")];
 }
 
 export async function wikidata_export(casefile, topics) {
@@ -87,6 +115,6 @@ export async function wikidata_export(casefile, topics) {
     return;
   }
 
-  await export_topics(topics);
+  return await export_topics(topics);
 }
 

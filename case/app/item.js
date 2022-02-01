@@ -578,7 +578,11 @@ class TopicExpander extends Component {
     if (!item.ispublic()) {
       let url = `${settings.kbservice}/kb/topic?id=${item.id}`;
       let response = await fetch(url);
-      item = await store.parse(response);
+      if (response.status == 200) {
+        item = await store.parse(response);
+      } else {
+        console.log("Error fetching item", item.id);
+      }
     }
 
     // Retrieve labels.

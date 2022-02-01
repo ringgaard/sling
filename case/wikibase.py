@@ -21,6 +21,7 @@ import re
 import requests
 import requests_oauthlib
 import sling
+import sling.log as log
 
 class Credentials:
   def __init__(self, key, secret):
@@ -30,23 +31,27 @@ class Credentials:
 # Get WikiMedia application keys.
 wikikeys = "local/keys/wikimedia.json"
 if os.path.exists(wikikeys):
-  with open(wikikeys, "r") as f: apikeys = json.load(f)
+  with open(wikikeys, "r") as f: config = json.load(f)
+
+# Wikidata is not updates in dryrun model.
+dryrun = config.get("dryrun", False)
+next_dryid = 1000
+if dryrun: log.info("Wikibase exporter is in dryrun mode")
 
 # Configure wikibase urls.
 wikibaseurl = "https://www.wikidata.org"
-if "site" in apikeys: wikibaseurl = apikeys["site"]
+if "site" in config: wikibaseurl = config["site"]
 oauth_url = wikibaseurl + "/wiki/Special:OAuth"
 authorize_url = wikibaseurl + "/wiki/Special:OAuth/authorize"
 api_url = wikibaseurl + "/w/api.php"
 
 # OAuth credentials.
-consumer = Credentials(apikeys["consumer_key"], apikeys["consumer_secret"])
+consumer = Credentials(config["consumer_key"], config["consumer_secret"])
 sessions = {}
 
 # Initialize commons store for Wikidata export.
-kbservice = "https://ringgaard.com"
 commons = sling.Store()
-commons.parse(requests.get(kbservice + "/schema/").content)
+wikiconv = sling.WikiConverter(commons)
 n_id = commons["id"]
 n_is = commons["is"]
 n_name = commons["name"]
@@ -62,6 +67,7 @@ n_amount = commons["/w/amount"]
 n_unit = commons["/w/unit"]
 n_topics = commons["topics"]
 n_created = commons["created"]
+n_results = commons["results"]
 
 n_item_type = commons["/w/item"]
 n_string_type = commons["/w/string"]
@@ -149,16 +155,16 @@ def get_qid(topic):
 
   return None
 
-def get_language(s):
-  if type(s) == sling.String:
-    id = s.qual.id
-    if id.startswith("/lang/"): return id.substr(6)
-  return "en"
+def empty_entity(entity):
+  for section in ["labels", "aliases", "descriptions", "claims"]:
+    if section in entity: return False
+  return True
 
 def itemtext(item):
+  if type(item) is not sling.Frame: return str(item)
   name = item[n_name]
   if name is not None:
-    return item[n_id] + " " + name
+    return item[n_id] + " " + str(name)
   else:
     return item[n_id]
 
@@ -168,8 +174,20 @@ class WikibaseExporter:
     self.topics = topics
     self.store = topics.store()
     self.entities = {}
-    self.deferred = {}
+    self.references = {}
     self.created = {}
+    self.lang = "en"
+
+    self.num_stubs = 0
+    self.num_created = 0
+    self.num_updated = 0
+    self.num_uptodate = 0
+    self.num_labels = 0
+    self.num_descriptions = 0
+    self.num_aliases = 0
+    self.num_claims = 0
+    self.num_qualifiers = 0
+    self.num_skipped = 0
 
     for topic in self.topics:
       # Never export main case file topic.
@@ -178,20 +196,26 @@ class WikibaseExporter:
       # Convert topic to Wikibase JSON format.
       self.convert_topic(topic)
 
-    for topic, value in self.deferred.items():
-      print("deferred", topic.id, value)
+  def edit_entity(self, qid, entity):
+    if dryrun:
+      if "id" in entity:
+        id = entity["id"]
+      else:
+        global next_dryid
+        id = next_dryid
+        next_dryid += 1
+      return {"entity": {"id": "D" + str(id)}}
 
-    for topic, entity in self.entities.items():
-      print(topic.id, entity)
-
-  def edit_entity(self, entity):
     command = {
       "format": "json",
       "action": "wbeditentity",
       "token": self.token,
       "data": json.dumps(entity),
     }
-    if "id" not in entity: command["new"] = entity["type"]
+    if qid is None:
+      command["new"] = "item"
+    else:
+      command["id"] = qid
 
     response = api_call(self.client, command, post=True)
     return response
@@ -205,67 +229,118 @@ class WikibaseExporter:
     })
     self.token = response["query"]["tokens"]["csrftoken"]
 
+    # Publish stubs for new topics with references.
+    for topic, value in self.references.items():
+      entity = self.entities[topic]
+
+      # Create stub with labels, descriptions, and aliases.
+      stub = {}
+      for section in ["labels", "descriptions", "aliases"]:
+        if section in entity:
+          stub[section] = entity[section]
+          del entity[section]
+
+      # Create stub.
+      response = self.edit_entity(None, stub)
+      if "error" in response:
+        print("error creating stub:", response["error"], "stub:", stub)
+        return
+
+      # Get item id for new stub and patch value.
+      itemid = response["entity"]["id"]
+      item = self.store[itemid]
+      topic[n_is] = item
+      self.created[topic] = item
+      value["value"]["id"] = itemid
+      print("reference", topic.id, value)
+      self.num_stubs += 1
+
     # Publish topic updates.
     for topic, entity in self.entities.items():
-      print("publish", topic.id)
-      response = self.edit_entity(entity)
+      if empty_entity(entity):
+        self.num_uptodate += 1
+        continue
+      qid = get_qid(topic)
+      print("publish", topic.id, qid, json.dumps(entity, indent=2))
+      response = self.edit_entity(qid, entity)
 
       if "error" in response:
-        print("error editing item:", response, "entity:", entity)
-        return;
+        print("error editing item:", response["error"], "entity:", entity)
+        return
 
-      if "id" not in entity:
+      if qid is None:
         itemid = response["entity"]["id"]
-        entity["id"] = itemid
         item = self.store[itemid]
         topic[n_is] = item
         self.created[topic] = item
+        self.num_created += 1
+      else:
+        self.num_updated += 1
 
   def convert_topic(self, topic):
     # Add entity with optional existing Wikidata item id.
     entity = {}
     qid = get_qid(topic)
     if qid is None:
-      entity["type"] = "item"
+      item = None
+      revision = 0
     else:
-      entity["id"] = qid
+      item, revision = self.fetch_item(qid)
     self.entities[topic] = entity
 
-    # Add labels, description, aliases, and claims.
+    # Fetch existing item to check for existing statements.
+    current = None
+    revision = None
+    if qid is not None:
+      current, revision = self.fetch_item(qid)
+
+    # Add new labels, description, aliases, and claims.
     for name, value in topic:
-      if name == n_id or name == n_is:
+      # Skip existing statements.
+      if current and self.has(current, name, value):
+        pass
+      elif name == n_id or name == n_is:
         pass
       elif name == n_name:
         label = str(value)
-        lang = get_language(value)
+        lang = self.get_language(value)
         if "labels" not in entity: entity["labels"] = {}
         entity["labels"][lang] = {"language": lang, "value": label}
+        self.num_labels += 1
       elif name == n_description:
         description = str(value)
-        lang = get_language(value)
+        lang = self.get_language(value)
         if "descriptions" not in entity: entity["descriptions"] = {}
         entity["descriptions"][lang] = {"language": lang, "value": description}
+        self.num_descriptions += 1
       elif name == n_alias:
         alias = str(value)
-        lang = get_language(value)
+        lang = self.get_language(value)
         if "aliases" not in entity: entity["aliases"] = {}
         if lang not in entity["aliases"]: entity["aliases"][lang] = []
         entity["aliases"][lang].append({"language": lang, "value": alias})
+        self.num_aliases += 1
       else:
         # Only add claims for Wikidata properties.
         pid = name.id
-        if not is_pid(pid):
-          print("skip", pid)
-          continue
+        if not is_pid(pid): continue
 
         # Build main snak.
         t = name[n_target]
         v = self.store.resolve(value)
         if self.skip_value(v):
-          print("skip", itemtext(name), itemtext(v), "for", itemtext(topic))
+          print("skip unknown", itemtext(name), itemtext(v),
+                "for", itemtext(topic))
+          self.num_skipped += 1
           continue
 
         datatype, datavalue = self.convert_value(t, v)
+        if datatype is None or datavalue is None:
+          print("skip invalid", itemtext(name), itemtext(v),
+                "for", itemtext(topic))
+          self.num_skipped += 1
+          continue
+
         snak = {
           "snaktype": "value",
           "property": pid,
@@ -279,6 +354,7 @@ class WikibaseExporter:
           "rank": "normal",
           "mainsnak": snak,
         }
+        self.num_claims += 1
 
         if v != value:
           # Add qualifiers.
@@ -307,15 +383,17 @@ class WikibaseExporter:
             # Add qualifier to claim.
             if pid not in claim["qualifiers"]: claim["qualifiers"][pid] = []
             claim["qualifiers"][pid].append(snak)
+            self.num_qualifiers += 1
 
         # Add claim to entity.
         if "claims" not in entity: entity["claims"] = {}
         if pid not in entity["claims"]: entity["claims"][pid] = []
         entity["claims"][pid].append(claim)
 
-  def convert_value(self, type, value):
-    if type is None: type = n_item_type
-    if type == n_item_type:
+  def convert_value(self, dt, value):
+    datatype = None
+    datavalue = None
+    if dt == n_item_type and type(value) is sling.Frame:
       qid = get_qid(value)
       datatype = "wikibase-item"
       if qid is not None:
@@ -327,7 +405,7 @@ class WikibaseExporter:
           "type": "wikibase-entityid"
         }
       else:
-        datavalue = self.deferred.get(value)
+        datavalue = self.references.get(value)
         if datavalue is None:
           datavalue = {
             "value": {
@@ -336,58 +414,69 @@ class WikibaseExporter:
             },
             "type": "wikibase-entityid"
           }
-          self.deferred[value] = datavalue
-    elif type == n_string_type:
+          self.references[value] = datavalue
+    elif dt == n_string_type:
       datatype = "string"
       datavalue = {
-        "value": value,
-        "type": "string"
-      }
-    elif type == n_text_type:
-      datatype = "monolingualtext"
-      datavalue = {
-        "language": get_language(value),
         "value": str(value),
         "type": "string"
       }
-    elif type == n_xref_type:
+    elif dt == n_text_type:
+      datatype = "monolingualtext"
+      datavalue = {
+        "language": self.get_language(value),
+        "value": str(value),
+        "type": "string"
+      }
+    elif dt == n_xref_type:
       datatype = "external-id"
       datavalue = {
-        "value": value,
+        "value": str(value),
         "type": "string"
       }
-    elif type == n_url_type:
+    elif dt == n_url_type:
       datatype = "url"
       datavalue = {
-        "value": value,
+        "value": str(value),
         "type": "string"
       }
-    elif type == n_time_type:
+    elif dt == n_time_type:
       t = sling.Date(value)
-      datatype = "time"
-      datavalue = {
-        "value": {
-          "time": t.iso(),
-          "precision": t.precision + 5
-        },
-        "type": "time"
-      }
-    elif type == n_media_type:
+      if t.precision != 0:
+        datatype = "time"
+        datavalue = {
+          "value": {
+            "time": t.iso(),
+            "precision": t.precision + 5,
+            "timezone": 0,
+            "before": 0,
+            "after": 0,
+            "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+          },
+          "type": "time"
+        }
+    elif dt == n_media_type:
       datatype = "commonsMedia"
       datavalue = {
-        "value": value,
+        "value": str(value),
         "type": "string"
       }
-    elif type == n_quantity_type:
+    elif dt == n_quantity_type:
       datatype = "quantity"
+      if type(value) is sling.Frame:
+        amount = str(value[n_amount])
+        unit = "http://www.wikidata.org/entity/" + value[n_unit].id
+      else:
+        amount = str(value)
+        unit = "1"
       datavalue = {
         "value": {
-          "amount": str(value[n_amount]),
-          "unit": "http://www.wikidata.org/entity/" + value[n_unit].id,
+          "amount": amount,
+          "unit": unit,
         },
         "type": "quantity"
       }
-    elif type == n_geo_type:
+    elif dt == n_geo_type:
       datatype = "globecoordinate"
       datavalue = {
         "value": {
@@ -407,13 +496,43 @@ class WikibaseExporter:
     if value in self.topics: return False
     return True
 
+  def has(self, item, name, value):
+    while type(value) is sling.Frame and n_is in value: value = value[n_is]
+    lang = self.lang
+    if type(value) is sling.String:
+      lang = self.get_language(value)
+      value = value.text()
+    for v in item(name):
+      if v == value: return True
+      if type(v) is sling.Frame:
+        while type(v) is sling.Frame and n_is in v: v = v[n_is]
+        if v == value: return True
+      if type(v) is sling.String:
+        if v.text() == value and self.get_language(v) == lang: return True
+    return False
+
+  def get_language(self, s):
+    if type(s) is sling.String:
+      id = s.qualifier().id
+      if id.startswith("/lang/"): return id[6:]
+    return self.lang
+
+  def fetch_item(self, qid):
+    # Fetch item from wikidata site.
+    url = "https://www.wikidata.org/wiki/Special:EntityData/" + qid + ".json"
+    r = requests.get(url)
+
+    # Convert item to frame.
+    item, revision = wikiconv.convert_wikidata(self.store, r.content)
+    return item, revision
+
 def handle_export(request):
   # Get client credentials.
   client = get_credentials(request)
 
   # Get exported request.
   store = sling.Store(commons)
-  export = request.frame(store);
+  export = request.frame(store)
 
   # Export topics to Wikidata.
   exporter = WikibaseExporter(client, export[n_topics])
@@ -422,6 +541,18 @@ def handle_export(request):
   # Return QIDs for newly created items.
   return store.frame({
     n_created: exporter.created,
+    n_results: {
+      "stubs": exporter.num_stubs,
+      "created": exporter.num_created,
+      "updated": exporter.num_updated,
+      "uptodate": exporter.num_uptodate,
+      "labels": exporter.num_labels,
+      "descriptions": exporter.num_descriptions,
+      "aliases": exporter.num_aliases,
+      "claims": exporter.num_claims,
+      "qualifiers": exporter.num_qualifiers,
+      "skipped": exporter.num_skipped,
+    }
   })
 
 def handle(request):

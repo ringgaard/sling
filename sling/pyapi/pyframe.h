@@ -47,6 +47,9 @@ struct PyFrame : public PyBase, public Root {
   // Check if frame has role.
   int Contains(PyObject *key);
 
+  // Check if frame has role with value.
+  PyObject *Has(PyObject *args, PyObject *kw);
+
   // Get role value for frame wrapper.
   PyObject *GetAttr(PyObject *key);
 

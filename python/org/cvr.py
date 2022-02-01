@@ -490,9 +490,9 @@ for item in kb:
   if code is not None:
     municipality_map[code] = item
 
-person_description = sling.String("erhvervsperson", n_danish)
-company_description = sling.String("virksomhed", n_danish)
-branch_description = sling.String("produktionsenhed", n_danish)
+person_description = kb.qstr("erhvervsperson", n_danish)
+company_description = kb.qstr("virksomhed", n_danish)
+branch_description = kb.qstr("produktionsenhed", n_danish)
 
 kb.freeze()
 

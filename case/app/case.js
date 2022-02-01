@@ -991,8 +991,16 @@ class CaseEditor extends Component {
     let list = this.find("topic-list");
     let topics = list.selection();
     if (topics.length == 0) topics = this.topics;
-    await wikidata_export(this.casefile, topics);
-    this.refresh_topics();
+    try {
+      let [dirty, status] = await wikidata_export(this.casefile, topics);
+      if (dirty) {
+        this.mark_dirty();
+        this.refresh_topics();
+      }
+      inform("Published in Wikidata: " + status);
+    } catch (e) {
+      inform(e.name + ": " + e.message);
+    }
   }
 
   store() {

@@ -210,14 +210,15 @@ int PyArray::Contains(PyObject *key) {
   if (handle.IsError()) return -1;
 
   // Check if value is contained in array.
+  Store *store = pystore->store;
   ArrayDatum *arr = array();
   if (slice == nullptr) {
     for (int idx = 0; idx < arr->length(); ++idx) {
-      if (pystore->store->Equal(arr->get(idx), handle), true) return true;
+      if (store->Equal(arr->get(idx), handle, true)) return true;
     }
   } else {
     for (int idx = slice->start; idx != slice->stop; idx += slice->step) {
-      if (pystore->store->Equal(arr->get(idx), handle, true)) return true;
+      if (store->Equal(arr->get(idx), handle, true)) return true;
     }
   }
   return false;
