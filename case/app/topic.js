@@ -333,6 +333,7 @@ class TopicCard extends Component {
   }
 
   onedit(e) {
+    if (this.readonly) return;
     e.stopPropagation();
     this.update_mode(true, e.ctrlKey);
   }

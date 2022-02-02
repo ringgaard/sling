@@ -838,11 +838,17 @@ for key, rec in cvrdb.items():
     end = get_date(period.get("gyldigTil"))
     names.append((start, end, name))
   for n in sorted(names, key=lambda x: x[2], reverse=True):
-    alias = FrameBuilder(store)
-    alias[n_is] = n[2]
-    if n[0] is not None: alias[n_start_time] = n[0]
-    if n[1] is not None: alias[n_end_time] = n[1]
-    entity.add(n_other_name, alias.create())
+    start = n[0]
+    end = n[1]
+    name = n[2]
+    if start is None and end is None:
+      entity.add(n_other_name, name)
+    else:
+      alias = FrameBuilder(store)
+      alias[n_is] = name
+      if start is not None: alias[n_start_time] = start
+      if end is not None: alias[n_end_time] = end
+      entity.add(n_other_name, alias.create())
     if not name_found:
       entity.add(n_name, name)
       name_found = True

@@ -9,7 +9,7 @@ const n_topics = store.lookup("topics");
 const n_created = store.lookup("created");
 const n_results = store.lookup("results");
 
-async function wikidata_initiate() {
+export async function wikidata_initiate() {
   // Initiate authorization and get redirect url.
   let callback = window.location.href;
   let r = await fetch("/case/wikibase/initiate?cb=" +
@@ -47,7 +47,7 @@ export async function oauth_callback() {
   return true;
 }
 
-async function export_topics(topics) {
+export async function wikidata_export(topics) {
   // Encode selected topics including property descriptors.
   let properties = new Set();
   let encoder = new Encoder(store);
@@ -106,15 +106,5 @@ async function export_topics(topics) {
   }
 
   return [dirty, status.join(", ")];
-}
-
-export async function wikidata_export(casefile, topics) {
-  // Initiate OAuth authorization if we don't have an access token.
-  if (!settings.wikidata_key) {
-    wikidata_initiate();
-    return;
-  }
-
-  return await export_topics(topics);
 }
 

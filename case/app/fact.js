@@ -433,6 +433,16 @@ class FactEditor extends Component {
         if ((c instanceof FactStatement) &&
             (prop instanceof FactProperty) &&
             (val instanceof FactValue)) {
+          // Add stub for pasted items.
+          if (val.className == "encoded") {
+            let v = store.parse(val.getAttribute("value"))
+            if ((v instanceof Frame) && v.isproxy()) {
+              v.add(n_name, val.getAttribute("text"));
+              v.markstub();
+            }
+          }
+
+          // Add new statement.
           let stmt = new FactStatement({
             property: prop.value(),
             value: val.value(),

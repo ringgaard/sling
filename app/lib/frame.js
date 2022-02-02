@@ -250,7 +250,7 @@ export class Frame {
 
   // Mark frame as a stub.
   markstub() {
-    if (this.state == PUBLIC) this.state = STUB;
+    this.state = STUB;
   }
 
   // Add slot to frame.

@@ -14,7 +14,6 @@ function pad4(num) {
 }
 
 function date2str(date) {
-  //return date.toLocaleString();
   let year = pad4(date.getFullYear());
   let month = pad2(date.getMonth() + 1);
   let day = pad2(date.getDate());
@@ -456,6 +455,11 @@ class SettingsPanel extends Component {
     this.find("#kbservice").value = settings.kbservice;
     this.find("#imagesearch").checked = settings.imagesearch;
     this.find("#nsfw").checked = settings.nsfw;
+    this.bind("#clearwd", "click", e => {
+      settings.wikidata_key = null;
+      settings.wikidata_secret = null;
+      material.inform("Wikidata keys cleared");
+    });
   }
 
   onclose() {
@@ -487,6 +491,7 @@ class SettingsPanel extends Component {
         </md-text-field>
         <md-switch id="imagesearch" label="Enable image search"></md-switch>
         <md-switch id="nsfw" label="Show adult content (NSFW)"></md-switch>
+        <md-button id="clearwd" label="Clear Wikidata keys"></md-button>
       </div>
     `;
   }

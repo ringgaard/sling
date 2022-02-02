@@ -9,7 +9,7 @@ import {store, settings} from "./global.js";
 import * as plugins from "./plugins.js";
 import {NewFolderDialog} from "./folder.js";
 import {paste_image} from "./drive.js";
-import {wikidata_export} from "./wikibase.js";
+import {wikidata_initiate, wikidata_export} from "./wikibase.js";
 import "./topic.js";
 import "./omnibox.js";
 
@@ -130,7 +130,7 @@ class CaseEditor extends Component {
     this.bind("omni-box md-search", "item", e => this.onitem(e));
     this.bind("omni-box md-search", "enter", e => this.onenter(e));
 
-    this.bind("#menu", "click", e => this.onmenu(e));
+    this.bind("#drawer", "click", e => this.ondrawer(e));
     this.bind("#home", "click", e => this.close());
     this.bind("#merge", "click", e => this.onmerge(e));
     this.bind("#script", "click", e => this.onscript(e));
@@ -298,7 +298,7 @@ class CaseEditor extends Component {
     }
   }
 
-  onmenu(e) {
+  ondrawer(e) {
     this.find("md-drawer").toogle();
   }
 
@@ -403,9 +403,10 @@ class CaseEditor extends Component {
     }
 
     // Enable/disable action buttons.
-    for (let e of ["#save", "#share", "#merge", "#newfolder"]) {
+    for (let e of ["#save", "#share", "#merge", "#newfolder", "#export"]) {
       this.find(e).update(!this.readonly);
     }
+    this.find("#menu").style.display = this.readonly ? "none" : "";
   }
 
   async onupdated() {
@@ -988,11 +989,24 @@ class CaseEditor extends Component {
   }
 
   async onexport(e) {
+    if (this.readonly) return;
+
+    // Initiate OAuth authorization if we don't have an access token.
+    if (!settings.wikidata_key) {
+      let ok = await StdDialog.confirm("Wikidata export",
+        "Before you can publish topics in Wikidata you need to authorize " +
+        "SLING to make changes in Wikidata on your behalf. You will now be " +
+        "directed to wikidata.org for authorization.");
+      if (ok) wikidata_initiate();
+      return;
+    }
+
+    this.style.cursor = "wait";
     let list = this.find("topic-list");
     let topics = list.selection();
     if (topics.length == 0) topics = this.topics;
     try {
-      let [dirty, status] = await wikidata_export(this.casefile, topics);
+      let [dirty, status] = await wikidata_export(topics);
       if (dirty) {
         this.mark_dirty();
         this.refresh_topics();
@@ -1001,6 +1015,7 @@ class CaseEditor extends Component {
     } catch (e) {
       inform(e.name + ": " + e.message);
     }
+    this.style.cursor = "";
   }
 
   store() {
@@ -1064,7 +1079,7 @@ class CaseEditor extends Component {
     return `
       <md-column-layout>
         <md-toolbar>
-          <md-icon-button id="menu" icon="menu"></md-icon-button>
+          <md-icon-button id="drawer" icon="menu"></md-icon-button>
           <md-toolbar-logo></md-toolbar-logo>
           <div id="title">Case #<md-text id="caseid"></md-text></div>
           <omni-box id="search"></omni-box>
@@ -1079,7 +1094,7 @@ class CaseEditor extends Component {
           </md-icon-button>
           <md-icon-button id="share" class="tool" icon="share">
           </md-icon-button>
-          <md-menu>
+          <md-menu id="menu">
             <md-menu-item id="save">Save</md-menu-item>
             <md-menu-item id="share">Share</md-menu-item>
             <md-menu-item id="imgcache">Cache images</md-menu-item>

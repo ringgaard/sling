@@ -417,10 +417,11 @@ class WikidataPruner : public task::FrameProcessor {
       // name.
       for (int i = 0; i < item.size(); ++i) {
         Handle name = item[i].name;
-        if (name == n_description_ ||
-            (name == n_alias_ && property && !prune_property_aliases_)) {
+        if (name == n_description_ || name == n_alias_) {
           String value(store, store->Resolve(item[i].value));
-          if (value.qualifier() != lang) item[i].name = Handle::nil();
+          if (!lang.IsNil() && value.qualifier() != lang) {
+            item[i].name = Handle::nil();
+          }
         }
       }
       item.Prune();

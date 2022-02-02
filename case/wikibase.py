@@ -84,7 +84,7 @@ commons.freeze()
 def handle_initiate(request):
   # Get request token.
   cb = request.param("cb")
-  if cb is None: cb = "oob"
+  if dryrun or cb is None: cb = "oob"
 
   oauth = requests_oauthlib.OAuth1Session(client_key=consumer.key,
                                           client_secret=consumer.secret,
@@ -181,7 +181,7 @@ class WikibaseExporter:
     self.num_stubs = 0
     self.num_created = 0
     self.num_updated = 0
-    self.num_uptodate = 0
+    self.num_unchanged = 0
     self.num_labels = 0
     self.num_descriptions = 0
     self.num_aliases = 0
@@ -258,7 +258,7 @@ class WikibaseExporter:
     # Publish topic updates.
     for topic, entity in self.entities.items():
       if empty_entity(entity):
-        self.num_uptodate += 1
+        self.num_unchanged += 1
         continue
       qid = get_qid(topic)
       print("publish", topic.id, qid, json.dumps(entity, indent=2))
@@ -280,13 +280,8 @@ class WikibaseExporter:
   def convert_topic(self, topic):
     # Add entity with optional existing Wikidata item id.
     entity = {}
-    qid = get_qid(topic)
-    if qid is None:
-      item = None
-      revision = 0
-    else:
-      item, revision = self.fetch_item(qid)
     self.entities[topic] = entity
+    qid = get_qid(topic)
 
     # Fetch existing item to check for existing statements.
     current = None
@@ -424,9 +419,11 @@ class WikibaseExporter:
     elif dt == n_text_type:
       datatype = "monolingualtext"
       datavalue = {
-        "language": self.get_language(value),
-        "value": str(value),
-        "type": "string"
+        "value": {
+          "text": str(value),
+          "language": self.get_language(value),
+        },
+        "type": "monolingualtext"
       }
     elif dt == n_xref_type:
       datatype = "external-id"
@@ -542,10 +539,10 @@ def handle_export(request):
   return store.frame({
     n_created: exporter.created,
     n_results: {
-      "stubs": exporter.num_stubs,
       "created": exporter.num_created,
       "updated": exporter.num_updated,
-      "uptodate": exporter.num_uptodate,
+      "unchanged": exporter.num_unchanged,
+      "stubs": exporter.num_stubs,
       "labels": exporter.num_labels,
       "descriptions": exporter.num_descriptions,
       "aliases": exporter.num_aliases,

@@ -716,6 +716,71 @@ Component.register(MdToolbarLogo);
 // Button
 //-----------------------------------------------------------------------------
 
+export class MdButton extends Component {
+  constructor(state) {
+    super(state);
+    if (this.state == undefined) this.state = true;
+  }
+
+  onconnected() {
+    this.bind(null, "mousedown", e => e.preventDefault());
+  }
+
+  visible() {
+    return this.state;
+  }
+
+  render() {
+    return `
+      <button${this.props.disabled ? " disabled" : ""}>
+        ${Component.escape(this.props.label)}
+      </button>`;
+  }
+
+  disable() {
+    if (!this.props.disabled) {
+      this.props.disabled = true;
+      this.update(this.state);
+    }
+  }
+
+  enable() {
+    if (this.props.disabled) {
+      this.props.disabled = false;
+      this.update(this.state);
+    }
+  }
+
+  static stylesheet() {
+    return `
+      $ button {
+        font: bold 14px Roboto,Helvetica,sans-serif;
+        color: #00A0D6;
+        background-color: #ffffff;
+        border: none;
+        border-radius: 4px;
+        text-transform: uppercase;
+        letter-spacing: 1.25px;
+        text-align: right;
+        padding: 8px;
+        margin-left: 4px;
+        cursor: pointer;
+      }
+      $ button:hover {
+        background-color: #eeeeee;
+      }
+      $ button:active {
+        background-color: #aaaaaa;
+      }
+      $ button:focus {
+        outline: 1px solid #d0d0d0;
+      }
+    `;
+  }
+}
+
+Component.register(MdButton);
+
 export class MdIconButton extends Component {
   constructor(state) {
     super(state);
