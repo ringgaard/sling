@@ -148,11 +148,6 @@ export async function get_schema() {
   if (kbschema) return kbschema;
   kbschema = await store.parse(response);
 
-  // Mark all properties as stubs.
-  for (let type of kbschema.get("properties")) {
-    type.markstub();
-  }
-
   return kbschema;
 }
 

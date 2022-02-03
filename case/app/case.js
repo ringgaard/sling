@@ -1001,10 +1001,19 @@ class CaseEditor extends Component {
       return;
     }
 
-    this.style.cursor = "wait";
     let list = this.find("topic-list");
     let topics = list.selection();
-    if (topics.length == 0) topics = this.topics;
+    if (topics.length == 0) {
+      // Export all topics if there is no selection.
+      for (let topic of this.topics) {
+        if (topic.get(n_instance_of) == n_case_file) continue;
+        topics.push(topic);
+      }
+    }
+    if (topics.length == 0) return;
+
+    this.style.cursor = "wait";
+    inform(`Publishing ${topics.length} topics to Wikidata`);
     try {
       let [dirty, status] = await wikidata_export(topics);
       if (dirty) {

@@ -57,8 +57,6 @@ n_is = commons["is"]
 n_name = commons["name"]
 n_description = commons["description"]
 n_alias = commons["alias"]
-n_instance_of = commons["P31"]
-n_case_file = commons["Q108673968"]
 n_english = commons["/lang/en"]
 n_target = commons["target"]
 n_lat = commons["/w/lat"]
@@ -79,7 +77,24 @@ n_media_type = commons["/w/media"]
 n_quantity_type = commons["/w/quantity"]
 n_geo_type = commons["/w/geo"]
 
-commons.freeze()
+reference_qualifiers = set([
+  commons["P248"], # stated in
+  commons["P854"], # reference URL
+  commons["P143"], # imported from Wikimedia project
+])
+
+# Defer schema loading.
+schema_loaded = False
+
+def ensure_schema():
+  global schema_loaded;
+  if not schema_loaded:
+    r = requests.get("https://ringgaard.com/schema/")
+    r.raise_for_status()
+    commons.parse(r.content)
+    commons.freeze()
+    schema_loaded = True
+    log.info("Schema loaded for wikidata exporter")
 
 def handle_initiate(request):
   # Get request token.
@@ -187,13 +202,12 @@ class WikibaseExporter:
     self.num_aliases = 0
     self.num_claims = 0
     self.num_qualifiers = 0
+    self.num_references = 0
     self.num_skipped = 0
+    self.num_errors = 0
 
+    # Convert topics to Wikibase JSON format.
     for topic in self.topics:
-      # Never export main case file topic.
-      if topic[n_instance_of] == n_case_file: continue
-
-      # Convert topic to Wikibase JSON format.
       self.convert_topic(topic)
 
   def edit_entity(self, qid, entity):
@@ -244,7 +258,8 @@ class WikibaseExporter:
       response = self.edit_entity(None, stub)
       if "error" in response:
         print("error creating stub:", response["error"], "stub:", stub)
-        return
+        self.num_errors += 1
+        continue
 
       # Get item id for new stub and patch value.
       itemid = response["entity"]["id"]
@@ -266,7 +281,8 @@ class WikibaseExporter:
 
       if "error" in response:
         print("error editing item:", response["error"], "entity:", entity)
-        return
+        self.num_errors += 1
+        continue
 
       if qid is None:
         itemid = response["entity"]["id"]
@@ -352,14 +368,13 @@ class WikibaseExporter:
         self.num_claims += 1
 
         if v != value:
-          # Add qualifiers.
-          claim["qualifiers"] = {}
+          # Add qualifiers/references.
           for qname, qvalue in value:
             if qname == n_is: continue
             pid = qname.id
             if not is_pid(pid): continue
 
-            # Build snak for qualifier.
+            # Build snak for qualifier/reference.
             t = qname[n_target]
             v = self.store.resolve(qvalue)
             if self.skip_value(v):
@@ -375,10 +390,26 @@ class WikibaseExporter:
               "datavalue": datavalue,
             }
 
-            # Add qualifier to claim.
-            if pid not in claim["qualifiers"]: claim["qualifiers"][pid] = []
-            claim["qualifiers"][pid].append(snak)
-            self.num_qualifiers += 1
+            if qname in reference_qualifiers:
+              # Add reference to claim.
+              if "references" not in claim: claim["references"] = []
+              claim["references"].append({
+                "snaks": {
+                  pid: [{
+                    "snaktype": "value",
+                    "property": pid,
+                    "datatype": datatype,
+                    "datavalue": datavalue,
+                  }]
+                }
+              })
+              self.num_references += 1
+            else:
+              # Add qualifier to claim.
+              if "qualifiers" not in claim: claim["qualifiers"] = {}
+              if pid not in claim["qualifiers"]: claim["qualifiers"][pid] = []
+              claim["qualifiers"][pid].append(snak)
+              self.num_qualifiers += 1
 
         # Add claim to entity.
         if "claims" not in entity: entity["claims"] = {}
@@ -527,6 +558,9 @@ def handle_export(request):
   # Get client credentials.
   client = get_credentials(request)
 
+  # Load schema if not already done.
+  ensure_schema()
+
   # Get exported request.
   store = sling.Store(commons)
   export = request.frame(store)
@@ -539,6 +573,7 @@ def handle_export(request):
   return store.frame({
     n_created: exporter.created,
     n_results: {
+      "errors": exporter.num_errors,
       "created": exporter.num_created,
       "updated": exporter.num_updated,
       "unchanged": exporter.num_unchanged,
@@ -548,6 +583,7 @@ def handle_export(request):
       "aliases": exporter.num_aliases,
       "claims": exporter.num_claims,
       "qualifiers": exporter.num_qualifiers,
+      "references": exporter.num_references,
       "skipped": exporter.num_skipped,
     }
   })

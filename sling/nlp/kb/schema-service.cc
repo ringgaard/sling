@@ -22,24 +22,10 @@
 namespace sling {
 
 SchemaService::SchemaService(Store *kb) {
-  // Initialize local store for schemas.
+  // Initialize local store for pre-encoded schema.
   Store store(kb);
   Handle n_role = store.Lookup("role");
-  Handle n_inverse_property = store.Lookup("P1696");
   Handle n_inverse_label_item = store.Lookup("P7087");
-  Handle n_formatter_url = store.Lookup("P1630");
-  Handle n_property_constraint = store.Lookup("P2302");
-
-  HandleSet property_fields;
-  property_fields.insert(store.Lookup("name"));
-  property_fields.insert(store.Lookup("alias"));
-  property_fields.insert(store.Lookup("description"));
-  property_fields.insert(store.Lookup("target"));
-  property_fields.insert(store.Lookup("/w/item/fanin"));
-  property_fields.insert(n_formatter_url);
-  property_fields.insert(n_inverse_property);
-  property_fields.insert(n_inverse_label_item);
-  property_fields.insert(n_property_constraint);
 
   // Build set of properties and inverse properties.
   HandleSet propset;
@@ -53,20 +39,7 @@ SchemaService::SchemaService(Store *kb) {
 
   // Collect properties.
   Handles properties(&store);
-  for (Handle prop : propset) {
-    Frame property(kb, prop);
-
-    // Build client property frame.
-    Builder b(&store);
-    b.AddId(property.Id());
-    for (const Slot &s : property) {
-      if (property_fields.has(s.name)) {
-        b.Add(s.name, s.value);
-      }
-    }
-    Frame p = b.Create();
-    properties.push_back(p.handle());
-  }
+  for (Handle prop : propset) properties.push_back(prop);
   Array property_list(&store, properties);
 
   // Build schema frame.

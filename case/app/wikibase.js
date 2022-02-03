@@ -48,29 +48,14 @@ export async function oauth_callback() {
 }
 
 export async function wikidata_export(topics) {
-  // Encode selected topics including property descriptors.
-  let properties = new Set();
+  // Encode selected topics.
   let encoder = new Encoder(store);
   for (let topic of topics) {
-    // Encode properties.
-    for (let [name, value] of topic) {
-      if (!properties.has(name)) {
-        encoder.encode(name);
-        properties.add(name);
-      }
-      if ((value instanceof Frame) && value.isanonymous()) {
-        for (let [qname, qvalue] of value) {
-          if (!properties.has(qname)) {
-            encoder.encode(qname);
-            properties.add(qname);
-          }
-        }
-      }
-    }
-
-    // Encode topic.
     encoder.encode(topic);
   }
+
+  // TODO: add referenced topics with QIDs.
+
   let request = store.frame();
   request.add(n_topics, topics);
   encoder.encode(request);

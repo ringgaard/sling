@@ -1386,14 +1386,17 @@ Component.register(MdToolbox);
 // Snackbar
 //-----------------------------------------------------------------------------
 
+var current_snack = null;
+
 export class MdSnackbar extends Component {
   onconnected() {
     this.bind(null, "click", e => this.close());
-    setTimeout(snack => snack.close(), 5000, this);
+    setTimeout(snack => snack.close(), 10000, this);
   }
 
   close() {
     this.remove();
+    if (this == current_snack) current_snack = null;
   }
 
   render() {
@@ -1420,8 +1423,9 @@ export class MdSnackbar extends Component {
 Component.register(MdSnackbar);
 
 export function inform(message) {
-  let snack = new MdSnackbar(message);
-  document.body.appendChild(snack);
+  if (current_snack) current_snack.close();
+  current_snack = new MdSnackbar(message);
+  document.body.appendChild(current_snack);
 }
 
 //-----------------------------------------------------------------------------
