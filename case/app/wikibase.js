@@ -47,14 +47,17 @@ export async function oauth_callback() {
   return true;
 }
 
-export async function wikidata_export(topics) {
+export async function wikidata_export(topics, aux) {
   // Encode selected topics.
   let encoder = new Encoder(store);
   for (let topic of topics) {
     encoder.encode(topic);
   }
 
-  // TODO: add referenced topics with QIDs.
+  // Add auxiliary topics.
+  for (let topic of aux) {
+    encoder.encode(topic);
+  }
 
   let request = store.frame();
   request.add(n_topics, topics);

@@ -1001,6 +1001,7 @@ class CaseEditor extends Component {
       return;
     }
 
+    // Get list of topic to export, either selection or all topics.
     let list = this.find("topic-list");
     let topics = list.selection();
     if (topics.length == 0) {
@@ -1012,10 +1013,41 @@ class CaseEditor extends Component {
     }
     if (topics.length == 0) return;
 
+    // Add all referenced topics as auxiliary topics.
+    let aux = new Set();
+    for (let topic of topics) {
+      for (let [name, value] of topic) {
+        if (!(value instanceof Frame)) continue;
+        let ref = value;
+        let qualified = false;
+        if (value.isanonymous() && value.has(n_is)) {
+          ref = value.get(n_is);
+          qualified = true;
+        }
+
+        if (ref instanceof Frame) {
+          if (this.topics.includes(ref) && !topics.includes(ref)) {
+            aux.add(ref);
+          }
+        }
+
+        if (qualified) {
+          for (let [qname, qvalue] of value) {
+            if (qvalue instanceof Frame) {
+              if (this.topics.includes(qvalue) && !topics.includes(qvalue)) {
+                aux.add(qvalue);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Export topics.
     this.style.cursor = "wait";
     inform(`Publishing ${topics.length} topics to Wikidata`);
     try {
-      let [dirty, status] = await wikidata_export(topics);
+      let [dirty, status] = await wikidata_export(topics, aux);
       if (dirty) {
         this.mark_dirty();
         this.refresh_topics();

@@ -57,6 +57,7 @@ n_is = commons["is"]
 n_name = commons["name"]
 n_description = commons["description"]
 n_alias = commons["alias"]
+n_media = commons["media"]
 n_english = commons["/lang/en"]
 n_target = commons["target"]
 n_lat = commons["/w/lat"]
@@ -139,7 +140,7 @@ def get_credentials(request):
   return Credentials(request["Client-Key"], request["Client-Secret"])
 
 def api_call(client, params, post=False):
-  print("API CALL:", params)
+  log.info("Wikibase API CALL:", params)
   oauth = requests_oauthlib.OAuth1(client_key=consumer.key,
                                    client_secret=consumer.secret,
                                    resource_owner_key=client.key,
@@ -257,7 +258,7 @@ class WikibaseExporter:
       # Create stub.
       response = self.edit_entity(None, stub)
       if "error" in response:
-        print("error creating stub:", response["error"], "stub:", stub)
+        log.error("error creating stub:", response["error"], "stub:", stub)
         self.num_errors += 1
         continue
 
@@ -267,7 +268,7 @@ class WikibaseExporter:
       topic[n_is] = item
       self.created[topic] = item
       value["value"]["id"] = itemid
-      print("reference", topic.id, value)
+      log.info("reference", topic.id, value)
       self.num_stubs += 1
 
     # Publish topic updates.
@@ -276,11 +277,11 @@ class WikibaseExporter:
         self.num_unchanged += 1
         continue
       qid = get_qid(topic)
-      print("publish", topic.id, qid, json.dumps(entity, indent=2))
+      log.info("publish", topic.id, qid, json.dumps(entity, indent=2))
       response = self.edit_entity(qid, entity)
 
       if "error" in response:
-        print("error editing item:", response["error"], "entity:", entity)
+        log.error("error editing item:", response["error"], "entity:", entity)
         self.num_errors += 1
         continue
 
@@ -299,7 +300,7 @@ class WikibaseExporter:
     self.entities[topic] = entity
     qid = get_qid(topic)
 
-    # Fetch existing item to check for existing statements.
+    # Fetch existing item to check for existing claims.
     current = None
     revision = None
     if qid is not None:
@@ -308,9 +309,9 @@ class WikibaseExporter:
     # Add new labels, description, aliases, and claims.
     for name, value in topic:
       # Skip existing statements.
-      if current and self.has(current, name, value):
+      if name == n_id or name == n_is or name == n_media:
         pass
-      elif name == n_id or name == n_is:
+      elif current and self.has(current, name, value):
         pass
       elif name == n_name:
         label = str(value)
@@ -340,15 +341,15 @@ class WikibaseExporter:
         t = name[n_target]
         v = self.store.resolve(value)
         if self.skip_value(v):
-          print("skip unknown", itemtext(name), itemtext(v),
-                "for", itemtext(topic))
+          log.info("skip unknown", itemtext(name), itemtext(v),
+                   "for", itemtext(topic))
           self.num_skipped += 1
           continue
 
         datatype, datavalue = self.convert_value(t, v)
         if datatype is None or datavalue is None:
-          print("skip invalid", itemtext(name), itemtext(v),
-                "for", itemtext(topic))
+          log.info("skip invalid", itemtext(name), itemtext(v),
+                   "for", itemtext(topic))
           self.num_skipped += 1
           continue
 
@@ -378,8 +379,8 @@ class WikibaseExporter:
             t = qname[n_target]
             v = self.store.resolve(qvalue)
             if self.skip_value(v):
-              print("skip qualifier", itemtext(qname), itemtext(v),
-                    "for", itemtext(topic))
+              log.info("skip qualifier", itemtext(qname), itemtext(v),
+                       "for", itemtext(topic))
               continue
 
             datatype, datavalue = self.convert_value(t, v)
@@ -525,18 +526,24 @@ class WikibaseExporter:
     return True
 
   def has(self, item, name, value):
-    while type(value) is sling.Frame and n_is in value: value = value[n_is]
+    value = self.store.resolve(value)
     lang = self.lang
     if type(value) is sling.String:
       lang = self.get_language(value)
       value = value.text()
+
+    qid = ""
+    if type(value) is sling.Frame:
+      qid = get_qid(value)
+
     for v in item(name):
+      v = self.store.resolve(v)
       if v == value: return True
       if type(v) is sling.Frame:
-        while type(v) is sling.Frame and n_is in v: v = v[n_is]
-        if v == value: return True
+        if get_qid(v) == qid: return True
       if type(v) is sling.String:
         if v.text() == value and self.get_language(v) == lang: return True
+
     return False
 
   def get_language(self, s):

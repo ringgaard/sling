@@ -398,13 +398,7 @@ export class Frame {
 
   // Resolve frame by following is: chain.
   resolve() {
-    const is = this.store.is;
-    let that = this;
-    while (true) {
-      let next = this.get(is);
-      if (!(next instanceof Frame)) return that;
-      that = next;
-    }
+    return this.store.resolve(this);
   }
 }
 
