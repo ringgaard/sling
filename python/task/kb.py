@@ -66,6 +66,10 @@ class KnowledgeBaseWorkflow:
     """Resource for celebrity profiles."""
     return self.wf.resource(corpora.celebdb(), format="db/frames")
 
+  def forum(self):
+    """Resource for forum profiles."""
+    return self.wf.resource(corpora.forumdb(), format="db/frames")
+
   def elf(self):
     """Resource for ISO 20275 ELF items."""
     return self.wf.resource("elf.rec",
@@ -105,6 +109,7 @@ class KnowledgeBaseWorkflow:
       self.media(),
       self.imdb(),
       self.celebs(),
+      self.forum(),
       self.photos(),
       self.data.wikipedia_summaries(),
       self.elf(),

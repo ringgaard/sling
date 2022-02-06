@@ -62,6 +62,11 @@ flags.define("--celebdb",
              default="celeb",
              metavar="DBURL")
 
+flags.define("--forumdb",
+             help="forum profile database",
+             default="forum",
+             metavar="DBURL")
+
 flags.define("--imdb",
              help="IMDB profile database",
              default="imdb",
@@ -124,6 +129,10 @@ def kbdb():
 def celebdb():
   """Celebrity profile database."""
   return flags.arg.celebdb
+
+def celebdb():
+  """Forum profile database."""
+  return flags.arg.forumdb
 
 def photodb():
   """Photo database."""
