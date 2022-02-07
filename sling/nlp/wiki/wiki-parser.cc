@@ -473,7 +473,7 @@ void WikiParser::ParseArgument() {
   // Try to parse argument name.
   const char *name = ptr_;
   const char *p = name;
-  while (*p != 0 && *p != '\n' && *p != '=' && *p != '<' &&
+  while (*p != 0 && *p != '=' && *p != '<' &&
          *p != ']' && *p != '|' && *p != '}' && *p != '{') {
     p++;
   }
@@ -482,7 +482,7 @@ void WikiParser::ParseArgument() {
     ptr_ = p + 1;
   }
 
-  SkipWhitespace();
+  SkipWhitespace(true);
   txt_ = ptr_;
 }
 

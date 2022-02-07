@@ -525,7 +525,7 @@ class CaseEditor extends Component {
     if (folder != this.folder) {
       this.folder = folder;
       await this.update_folders();
-      await this.update_topics();
+      await this.find("topic-list").refresh(this.folder);
       if (folder.length > 0) {
         await this.navigate_to(folder[0]);
       }
@@ -1233,6 +1233,7 @@ class SharingDialog extends MdDialog {
     } else {
       this.find("#private").update(true);
     }
+    this.find("#sharingurl").update("https://ringgaard.com/c/");
   }
 
   submit() {
@@ -1258,11 +1259,21 @@ class SharingDialog extends MdDialog {
           label="Share (public so other users can view it)">
         </md-radio-button>
         <md-radio-button
+          id="restricted"
+          name="restricted"
+          value="2"
+          label="Restrict (only users with the secret key can view it)">
+        </md-radio-button>
+        <md-radio-button
           id="publish"
           name="sharing"
-          value="2"
+          value="3"
           label="Publish (case topics in public knowledge base)">
         </md-radio-button>
+        <div>
+          Sharing URL:
+          <md-copyable-text id="sharingurl"></md-copyable-text>
+        </div>
       </div>
       <md-dialog-bottom>
         <button id="cancel">Cancel</button>
@@ -1277,6 +1288,9 @@ class SharingDialog extends MdDialog {
         display: flex;
         flex-direction: column;
         row-gap: 16px;
+      }
+      $ #sharingurl {
+        width: 400px;
       }
     `;
   }

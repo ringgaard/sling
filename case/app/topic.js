@@ -11,6 +11,7 @@ import "./item.js"
 import "./fact.js"
 import "./omnibox.js"
 
+const n_id = store.id;
 const n_is = store.is;
 const n_name = store.lookup("name");
 const n_case_file = store.lookup("Q108673968");
@@ -238,6 +239,7 @@ class TopicCard extends Component {
     this.readonly = editor && editor.readonly;
     if (!this.readonly) {
       this.bind("#delete", "click", e => this.ondelete(e));
+      this.bind("#import", "click", e => this.onimport(e));
       this.bind("#moveup", "click", e => this.onmoveup(e));
       this.bind("#movedown", "click", e => this.onmovedown(e));
       this.bind("#edit", "click", e => this.onedit(e));
@@ -485,6 +487,24 @@ class TopicCard extends Component {
     this.match("#editor").delete_topic(topic);
   }
 
+  onimport(e) {
+    let topic = this.state;
+    let changed = false;
+    for (let ref of topic.all(n_is)) {
+      for (let [name, value] of ref) {
+        if (name == n_id || name == n_media) continue;
+        if (topic.put(name, value)) {
+          console.log("import", name.id, value);
+          changed = true;
+        }
+      }
+    }
+    if (changed) {
+      this.mark_dirty();
+      this.refresh();
+    }
+  }
+
   onmoveup(e) {
     e.stopPropagation();
     this.match("#editor").move_topic_up(this.state);
@@ -561,7 +581,7 @@ class TopicCard extends Component {
     // Mark done.
     setTimeout(() => {
       e.target.style.color = "#808080";
-    }, 100);
+    }, 150);
   }
 
   ondown(e) {
@@ -638,7 +658,8 @@ class TopicCard extends Component {
           <md-icon-button id="edit" icon="edit"></md-icon-button>
           <md-icon-button id="websearch" icon="search"></md-icon-button>
           <md-icon-button id="imgsearch" icon="image_search"></md-icon-button>
-          <md-icon-button id="copyid" icon="numbers"></md-icon-button>
+          <md-icon-button id="copyid" icon="numbers" class="ripple"></md-icon-button>
+          <md-icon-button id="import" icon="publish"></md-icon-button>
           <md-icon-button id="moveup" icon="move-up"></md-icon-button>
           <md-icon-button id="movedown" icon="move-down"></md-icon-button>
           <md-icon-button id="delete" icon="delete"></md-icon-button>

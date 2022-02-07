@@ -911,6 +911,57 @@ export class MdLink extends Component {
 
 Component.register(MdLink);
 
+
+export class MdCopyableText extends Component {
+  onrendered() {
+    this.bind("md-icon", "click", e => this.oncopy(e));
+  }
+
+  oncopy(e) {
+    let text = this.find("span").innerText;
+    navigator.clipboard.writeText(text);
+  }
+
+  render() {
+    return `
+      <span>${Component.escape(this.state)}</span>
+      <md-icon icon="content_copy"></md-icon>
+    `;
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        border: 1px solid #d0d0d0;
+      }
+      $ span {
+        width: 100%;
+        padding: 5px;
+        overflow-y: hidden;
+      }
+      $ span::-webkit-scrollbar {
+        height: 0;
+      }
+      $ md-icon {
+        font-size: 18px;
+        margin: 5px;
+        transition: 0.2s all;
+      }
+      $ md-icon:hover {
+        background-color: rgba(0,0,0,10%);
+      }
+      $ md-icon:active {
+        background-color: white;
+      }
+    `;
+  }
+}
+
+Component.register(MdCopyableText);
+
 //-----------------------------------------------------------------------------
 // Image
 //-----------------------------------------------------------------------------
