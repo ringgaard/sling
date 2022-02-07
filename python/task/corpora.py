@@ -130,7 +130,7 @@ def celebdb():
   """Celebrity profile database."""
   return flags.arg.celebdb
 
-def celebdb():
+def forumdb():
   """Forum profile database."""
   return flags.arg.forumdb
 
