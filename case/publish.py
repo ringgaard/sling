@@ -42,6 +42,7 @@ recout = sling.RecordWriter(flags.arg.output)
 # Commons store.
 commons = sling.Store()
 n_id = commons["id"]
+n_is = commons["is"]
 n_name = commons["name"]
 n_caseid = commons["caseid"]
 n_main = commons["main"]
@@ -57,6 +58,7 @@ commons.freeze()
 num_cases = 0
 num_published = 0
 num_topics = 0
+num_new_topics = 0
 for rec in casedb.values():
   # Parse case file.
   num_cases += 1
@@ -73,7 +75,6 @@ for rec in casedb.values():
   publication_date = sling.Date(modified)
   main = casefile[n_main]
   topics = casefile[n_topics]
-  print(f"Publish case #{caseid}: {main[n_name]}")
 
   # Update case title.
   name = main[n_name]
@@ -94,13 +95,21 @@ for rec in casedb.values():
   recout.write(main.id, main.data(binary=True))
 
   # Build topic items.
+  num_new = 0
   for topic in topics:
     if topic == main: continue
     topic.append(n_described_by_source, main)
     recout.write(topic.id, topic.data(binary=True))
     num_topics += 1
+    if topic.get(n_is):
+      num_new += 1
+      num_new_topics += 1
+
+  print(f"Publish case #{caseid}: {main[n_name]}",
+        f"({num_new}/{len(topics)} new topics)")
 
 recout.close()
 
-print(f"{num_published}/{num_cases} cases published with {num_topics} topics")
+print(f"{num_published}/{num_cases} cases published",
+      f"with {num_new_topics}/{num_topics} new topics")
 

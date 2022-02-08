@@ -201,6 +201,10 @@ let xrefs = [
     property: store.lookup("P6005"),
   },
   {
+    pattern: /^(https?:\/\/mubi\.com\/cast\/.+)/,
+    property: store.lookup("P7300"),
+  },
+  {
     pattern: /^(https?:\/\/honeydrip\.com\/model\/.+)/,
     property: store.lookup("P973"),
   },

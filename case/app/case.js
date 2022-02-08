@@ -10,6 +10,7 @@ import * as plugins from "./plugins.js";
 import {NewFolderDialog} from "./folder.js";
 import {paste_image} from "./drive.js";
 import {wikidata_initiate, wikidata_export} from "./wikibase.js";
+import {generate_key, encrypt} from "./crypto.js";
 import "./topic.js";
 import "./omnibox.js";
 
@@ -24,6 +25,7 @@ const n_folders = store.lookup("folders");
 const n_next = store.lookup("next");
 const n_publish = store.lookup("publish");
 const n_share = store.lookup("share");
+const n_secret = store.lookup("secret");
 const n_link = store.lookup("link");
 const n_modified = store.lookup("modified");
 const n_shared = store.lookup("shared");
@@ -322,12 +324,14 @@ class CaseEditor extends Component {
     if (this.readonly) return;
     let share = this.casefile.get(n_share);
     let publish = this.casefile.get(n_publish);
-    let dialog = new SharingDialog({share, publish});
+    let secret = this.casefile.get(n_secret);
+    let dialog = new SharingDialog({share, publish, secret});
     let result = await dialog.show();
     if (result) {
       // Update sharing information.
       this.casefile.set(n_share, result.share);
       this.casefile.set(n_publish, result.publish);
+      this.casefile.set(n_secret, result.secret);
 
       // Update modification and sharing time.
       let ts = new Date().toJSON();
@@ -343,13 +347,23 @@ class CaseEditor extends Component {
       this.match("#app").save_case(this.casefile);
       this.mark_clean();
 
+      // Encrypt case with secret if provided.
+      var data;
+      if (result.secret) {
+        let encrypted = await encrypt(this.casefile);
+        data = encrypted.encode();
+        console.log(encrypted.text());
+      } else {
+        data = this.encoded();
+      }
+
       // Send case to server.
       let r = await fetch("/case/share", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/sling'
         },
-        body: this.encoded()
+        body: data
       });
       if (!r.ok) {
         console.log("Sharing error", r);
@@ -1228,18 +1242,50 @@ class SharingDialog extends MdDialog {
   onconnected() {
     if (this.state.publish) {
       this.find("#publish").update(true);
+    } else if (this.state.secret) {
+      this.find("#restrict").update(true);
     } else if (this.state.share) {
       this.find("#share").update(true);
     } else {
       this.find("#private").update(true);
     }
-    this.find("#sharingurl").update("https://ringgaard.com/c/");
+
+    this.secret = this.state.secret;
+    this.url = window.location.href;
+    this.find("#sharingurl").update(this.sharingurl());
+
+    for (let checkbox of ["#private", "#share", "#restrict", "#publish"]) {
+      this.bind(checkbox, "change", e => this.onchange(e));
+    }
+  }
+
+  onchange(e) {
+    console.log("change", e);
+    if (this.find("#restrict").checked) {
+      this.secret = generate_key();
+    } else {
+      this.secret = null;
+    }
+    this.find("#sharingurl").update(this.sharingurl());
+  }
+
+  sharingurl() {
+    if (this.find("#private").checked) {
+      return "";
+    } else if (this.find("#restrict").checked) {
+      return this.url + "#k=" + this.secret;
+    } else {
+      return this.url;
+    }
   }
 
   submit() {
     let publish = this.find("#publish").checked;
-    let share = publish || this.find("#share").checked;
-    this.close({share, publish});
+    let share = publish ||
+                this.find("#share").checked ||
+                this.find("#restrict").checked;
+    let secret = this.secret;
+    this.close({share, publish, secret});
   }
 
   render() {
@@ -1259,8 +1305,8 @@ class SharingDialog extends MdDialog {
           label="Share (public so other users can view it)">
         </md-radio-button>
         <md-radio-button
-          id="restricted"
-          name="restricted"
+          id="restrict"
+          name="sharing"
           value="2"
           label="Restrict (only users with the secret key can view it)">
         </md-radio-button>

@@ -219,8 +219,14 @@ report = {}
 report["subreddits"] = {}
 seen = set()
 profiles = {}
+
 num_profiles = 0
 num_photos = 0
+num_known = 0
+num_unknown = 0
+num_dups = 0
+num_deleted = 0
+num_selfies = 0
 
 if flags.arg.posting:
   postings = [(flags.arg.posting, redditdb[flags.arg.posting])]
@@ -307,10 +313,14 @@ for key, value in postings:
       continue
 
   # Check if posting has been deleted.
-  if posting_deleted(key): continue
+  if posting_deleted(key):
+    num_deleted += 1
+    continue
 
   # Discard duplicate postings.
-  if url in seen: continue
+  if url in seen:
+    num_dups += 1
+    continue
   seen.add(url)
 
   # Add posting to report.
@@ -329,6 +339,7 @@ for key, value in postings:
   if itemid is None:
     if selfie(title):
       print(sr, key, "SELFIE", title, "NSFW" if nsfw else "", url)
+      num_selfies += 1
     else:
       matches = aliases.query(query)
       p["query"] = query
@@ -336,12 +347,14 @@ for key, value in postings:
       if len(matches) == 1: p["match"] = matches[0].id()
       subreddit["unmatched"].append(p)
       print(sr, key, "UNKNOWN", title, "NSFW" if nsfw else "", url)
+      num_unknown += 1
   else:
     subreddit["matches"] += 1
     p["itemid"] = itemid
     if general: p["query"] = query
     subreddit["matched"].append(p)
     print(sr, key, itemid, title, "NSFW" if nsfw else "", url)
+    num_known += 1
 
     # Add media to photo db.
     if flags.arg.photodb:
@@ -376,7 +389,13 @@ photo.store.coalesce()
 for id in profiles:
   profiles[id].write()
 
-print(num_photos, "photos in", num_profiles, "profiles")
+print(num_photos, "photos,",
+      num_profiles, "profiles,",
+      num_known, "known,",
+      num_unknown, "unknown,",
+      num_dups, "dups,",
+      num_deleted, "deleted,",
+      num_selfies, "selfies")
 
 chkpt.commit(redditdb.position())
 redditdb.close()
