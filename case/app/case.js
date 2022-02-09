@@ -32,6 +32,8 @@ const n_shared = store.lookup("shared");
 const n_media = store.lookup("media");
 const n_case_file = store.lookup("Q108673968");
 const n_instance_of = store.lookup("P31");
+const n_has_quality = store.lookup("P1552");
+const n_nsfw = store.lookup("Q2716583");
 
 const binary_clipboard = false;
 
@@ -347,13 +349,17 @@ class CaseEditor extends Component {
       this.match("#app").save_case(this.casefile);
       this.mark_clean();
 
-      // Encrypt case with secret if provided.
+      // Encode case file.
       var data;
       if (result.secret) {
+        // Share encrypted case.
         let encrypted = await encrypt(this.casefile);
         data = encrypted.encode();
-        console.log(encrypted.text());
+      } else if (!result.share) {
+        // Do not send case content when unsharing.
+        data = store.frame({n_caseid: this.caseid(), n_share: false}).encode();
       } else {
+        // Encode case for sharing.
         data = this.encoded();
       }
 
@@ -1018,10 +1024,28 @@ class CaseEditor extends Component {
     // Get list of topic to export, either selection or all topics.
     let list = this.find("topic-list");
     let topics = list.selection();
-    if (topics.length == 0) {
+    if (topics.length > 0) {
+      for (let topic of this.topics) {
+        if (topic.has(n_instance_of, n_case_file)) {
+          inform("Main case topic cannot be published in Wikidata");
+          return;
+        }
+      }
+    } else {
+      // Do not export from NSFW cases.
+      if (this.main.has(n_has_quality, n_nsfw)) {
+        inform("NSFW cases cannot be published in Wikidata");
+        return;
+      }
+
+      // Ask before publishing all topics.
+      let ok = await StdDialog.ask("Wikidata export",
+                                   "Publish all case topics in Wikidata?");
+      if (!ok) return;
+
       // Export all topics if there is no selection.
       for (let topic of this.topics) {
-        if (topic.get(n_instance_of) == n_case_file) continue;
+        if (topic.has(n_instance_of, n_case_file)) continue;
         topics.push(topic);
       }
     }
@@ -1260,11 +1284,10 @@ class SharingDialog extends MdDialog {
   }
 
   onchange(e) {
-    console.log("change", e);
     if (this.find("#restrict").checked) {
       this.secret = generate_key();
     } else {
-      this.secret = null;
+      this.secret = undefined;
     }
     this.find("#sharingurl").update(this.sharingurl());
   }
@@ -1280,10 +1303,8 @@ class SharingDialog extends MdDialog {
   }
 
   submit() {
+    let share = !this.find("#private").checked;
     let publish = this.find("#publish").checked;
-    let share = publish ||
-                this.find("#share").checked ||
-                this.find("#restrict").checked;
     let secret = this.secret;
     this.close({share, publish, secret});
   }

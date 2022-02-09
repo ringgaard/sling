@@ -101,7 +101,7 @@ for rec in casedb.values():
     topic.append(n_described_by_source, main)
     recout.write(topic.id, topic.data(binary=True))
     num_topics += 1
-    if topic.get(n_is):
+    if topic.get(n_is) is None:
       num_new += 1
       num_new_topics += 1
 

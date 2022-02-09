@@ -187,7 +187,7 @@ def posting_deleted(sid):
 
 # Check for selfies.
 def selfie(title):
-  for prefix in ["Me ", "My ", "Me,", "Me. "]:
+  for prefix in ["Me ", "My ", "Me,", "Me. ", "my "]:
     if title.startswith(prefix): return True
   return False
 

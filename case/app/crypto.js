@@ -16,7 +16,7 @@ const n_salt = store.lookup("salt");
 const n_digest = store.lookup("digest");
 const n_cipher = store.lookup("cipher");
 
-// Default encryption: AES-CBC (NIST SP800-38A) with SHA-256 hashing.
+// Default encryption: 128 bit AES-CBC with SHA-256 hashing.
 const encryption = "AES-CBC";
 const hashing = "SHA-256";
 const keysize = 16;
@@ -88,5 +88,26 @@ export async function encrypt(casefile) {
 }
 
 export async function decrypt(encrypted, secret) {
+  try {
+    // Get encrypted case data.
+    let salt = hex2bin(encrypted.get(n_salt));
+    let cipher = hex2bin(encrypted.get(n_cipher));
+
+    // Decrypt case using secret key.
+    let key = await cryptokey(hex2bin(secret), "decrypt")
+    let algo = {name: encrypted.get(n_encryption), iv: salt};
+    let plaintext = await crypto.subtle.decrypt(algo, key, cipher);
+
+    // Check that digest matches with plaintext.
+    let digest = await crypto.subtle.digest(encrypted.get(n_hashing), plaintext);
+    if (bin2hex(digest) != encrypted.get(n_digest)) {
+      throw Error("Wrong key");
+    }
+
+    // Return decoded plaintext.
+    return store.parse(plaintext);
+  } catch (e) {
+     throw Error("Decryption failed", {cause: e});
+  }
 }
 

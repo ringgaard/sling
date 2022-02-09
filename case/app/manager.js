@@ -349,11 +349,19 @@ class CaseList extends material.MdCard {
       if (rec.nsfw && !settings.nsfw) continue;
       let icon = "";
       if (rec.link) {
-        icon = '<md-icon icon="link" outlined></md-icon>';
+        if (rec.secret) {
+          icon = '<md-icon icon="key" outlined></md-icon>';
+        } else {
+          icon = '<md-icon icon="link" outlined></md-icon>';
+        }
       } else if (rec.publish) {
         icon = '<md-icon icon="public" outlined></md-icon>';
       } else if (rec.share) {
-        icon = '<md-icon icon="share" outlined></md-icon>';
+        if (rec.secret) {
+          icon = '<md-icon icon="lock" outlined></md-icon>';
+        } else {
+          icon = '<md-icon icon="share" outlined></md-icon>';
+        }
       }
       if (rec.share) {
         if (rec.shared && rec.shared < rec.modified) {

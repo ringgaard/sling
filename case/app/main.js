@@ -7,6 +7,7 @@ import {Component, OneOf} from "/common/lib/component.js";
 import {StdDialog, inform} from "/common/lib/material.js";
 import {store, settings} from "./global.js";
 import {casedb} from "./database.js";
+import {decrypt} from "./crypto.js";
 import {oauth_callback} from "./wikibase.js";
 
 import "./manager.js";
@@ -25,11 +26,29 @@ const n_topics = store.lookup("topics");
 const n_folders = store.lookup("folders");
 const n_next = store.lookup("next");
 const n_link = store.lookup("link");
+const n_encryption = store.lookup("encryption");
 const n_case_file = store.lookup("Q108673968");
 const n_author = store.lookup("P50");
 const n_main_subject = store.lookup("P921");
 const n_instance_of = store.lookup("P31");
 const n_case = store.lookup("PCASE");
+
+// Parse parameters in URL fragment.
+function parse_url_fragment() {
+  let params = new Map();
+  let fragment = window.location.hash;
+  if (fragment.startsWith('#')) {
+    for (let kv of fragment.slice(1).split(',')) {
+      let delim = kv.indexOf('=');
+      if (delim == -1) {
+        params.set(kv.trim(), null);
+      } else {
+        params.set(kv.slice(0, delim).trim(), kv.slice(delim + 1).trim());
+      }
+    }
+  }
+  return params;
+}
 
 //-----------------------------------------------------------------------------
 // Case App
@@ -90,9 +109,31 @@ class CaseApp extends Component {
       let response = await fetch(`/case/fetch?id=${caseid}`);
       if (!response.ok) return null;
       casefile = await store.parse(response);
-      casefile.add(n_link, true);
+
+      // Decrypt case if needed.
+      if (casefile.has(n_encryption)) {
+        // Get secret key from url fragment.
+        let fragment = parse_url_fragment();
+        let secret = fragment.get("k");
+
+        // Try to get secret from case directory if there is no key in the url.
+        if (!secret) {
+          if (!this.caselist) this.caselist = await casedb.readdir();
+          for (let caserec of this.caselist) {
+            if (caserec.id == caseid) {
+              secret = caserec.secret;
+              break;
+            }
+          }
+        }
+
+        // Decrypt case using shared secret key.
+        if (!secret) return null;
+        casefile = await decrypt(casefile, secret);
+      }
 
       // Add linked case to directory.
+      casefile.add(n_link, true);
       let rec = casedb.writemeta(casefile);
 
       // Update case list.
@@ -161,17 +202,21 @@ class CaseApp extends Component {
   }
 
   async open_case(caseid) {
-    // Try to read case from local database.
-    let casefile = await this.read_case(caseid);
-    if (!casefile) {
-      StdDialog.error(`Case #${caseid} not found`);
-      return;
+    try {
+      // Try to read case from local database.
+      let casefile = await this.read_case(caseid);
+      if (!casefile) {
+        inform(`Case #${caseid} not found`);
+        return;
+      }
+
+      // Switch to case editor with new case.
+      await this.show_case(casefile);
+
+      return casefile;
+    } catch (e) {
+      inform(`Error opening case #${caseid}: ${e}`);
     }
-
-    // Switch to case editor with new case.
-    await this.show_case(casefile);
-
-    return casefile;
   }
 
   save_case(casefile) {

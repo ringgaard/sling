@@ -267,17 +267,21 @@ export class Frame {
     return true;
   }
 
-  // Set (or add) slot value.
+  // Set (or add/remove) slot value.
   set(name, value) {
-    if (this.slots) {
-      for (let n = 0; n < this.slots.length; n += 2) {
-        if (this.slots[n] === name) {
-          this.slots[n + 1] = value;
-          return;
+    if (value === undefined) {
+      this.remove(name);
+    } else {
+      if (this.slots) {
+        for (let n = 0; n < this.slots.length; n += 2) {
+          if (this.slots[n] === name) {
+            this.slots[n + 1] = value;
+            return;
+          }
         }
       }
+      this.add(name, value);
     }
-    this.add(name, value);
   }
 
   // Return number of slots for frame.
