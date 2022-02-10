@@ -334,6 +334,7 @@ class WikibaseExporter:
         self.num_aliases += 1
       else:
         # Only add claims for Wikidata properties.
+        if name is None: continue
         pid = name.id
         if not is_pid(pid): continue
 
@@ -371,7 +372,7 @@ class WikibaseExporter:
         if v != value:
           # Add qualifiers/references.
           for qname, qvalue in value:
-            if qname == n_is: continue
+            if qname is None or qname == n_is: continue
             pid = qname.id
             if not is_pid(pid): continue
 

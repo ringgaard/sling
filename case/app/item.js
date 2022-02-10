@@ -297,28 +297,39 @@ class PropertyPanel extends Component {
       }
     }
 
-    let prev = null;
+    let prev = undefined;
+    h.push("<table>")
     for (let [name, value] of item) {
-      if (name == n_id) continue;
+      if (name !== prev) {
+        // End previous property group.
+        if (prev !== undefined) h.push('</td></tr>');
 
-      if (name != prev) {
         // Start new property group for new property.
-        if (prev != null) h.push('</div></div>');
-        h.push('<div class="prop-row">');
+        h.push('<tr class="prop-row">');
 
         // Property name.
-        h.push('<div class="prop-name">');
-        render_name(name);
-        h.push('</div>');
-        h.push('<div class="prop-values">');
+        if (name === null) {
+          h.push('<td class="prop-notes" colspan="2">');
+        } else {
+          h.push('<td class="prop-name">');
+          render_name(name);
+          h.push('</td>');
+          h.push('<td class="prop-values">');
+        }
         prev = name;
       }
 
       // Property value.
       let v = store.resolve(value);
-      h.push('<div class="prop-value">');
-      render_value(v, name);
-      h.push('</div>');
+      if (name === null) {
+        h.push('<div class="prop-note">');
+        render_value(v, name);
+        h.push('</div>');
+      } else {
+        h.push('<div class="prop-value">');
+        render_value(v, name);
+        h.push('</div>');
+      }
 
       // Qualifiers.
       if (v != value) {
@@ -350,33 +361,29 @@ class PropertyPanel extends Component {
         h.push('</div>');
       }
     }
-    if (prev != null) h.push('</div></div>');
+    if (prev !== undefined) h.push('</td></tr>');
+    h.push("</table>")
 
     return h.join("");
   }
 
   static stylesheet() {
     return `
-      $ {
-        display: table;
+      $ table {
         font-size: 16px;
         border-collapse: collapse;
         width: 100%;
-        table-layout: fixed;
       }
 
       $ .prop-row {
-        display: table-row;
         border-top: thin solid lightgrey;
       }
 
       $ .prop-row:first-child {
-        display: table-row;
         border-top: none;
       }
 
       $ .prop-name {
-        display: table-cell;
         font-weight: 500;
         width: 20%;
         padding: 8px;
@@ -385,7 +392,6 @@ class PropertyPanel extends Component {
       }
 
       $ .prop-values {
-        display: table-cell;
         vertical-align: top;
         padding-bottom: 8px;
       }
@@ -409,6 +415,15 @@ class PropertyPanel extends Component {
         text-decoration: none;
         cursor: pointer;
         outline: none;
+      }
+
+      $ .prop-notes {
+        padding: 8px 0px 8px 8px;
+      }
+
+      $ .prop-note {
+        display: list-item;
+        margin-left: 16px;
       }
 
       $ .qual-tab {
@@ -685,6 +700,7 @@ class ItemPanel extends Component {
     let item = this.state;
     if (!item) return;
     let top = this.parentNode && this.parentNode.closest("item-panel") == null;
+    let id = null;
     let names = new Array();
     let description = null;
     let title = item.get(n_name);
@@ -703,6 +719,8 @@ class ItemPanel extends Component {
         } else {
           gallery.push({url: value});
         }
+      } else if (name === n_id) {
+        id = value;
       } else if (name === n_is) {
         subtopics.push(value);
       } else if (name === n_name || name === n_alias) {
@@ -721,7 +739,7 @@ class ItemPanel extends Component {
     gallery = censor(gallery, settings.nsfw);
 
     // Update panels.
-    this.find("#identifier").update(item.id);
+    this.find("#identifier").update(id);
     this.find("#names").update(names.join(" • "));
     this.find("#description").update(description);
     this.find("#properties").update(props);

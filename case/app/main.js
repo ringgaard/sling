@@ -146,7 +146,7 @@ class CaseApp extends Component {
     return casefile;
   }
 
-  async add_case(name, description, topicid) {
+  async add_case(name, description, topicid, topictype) {
     let response = await fetch("/case/new");
     let newcase = await store.parse(response);
     let caseid = newcase.get(n_caseid);
@@ -171,6 +171,7 @@ class CaseApp extends Component {
       topics.push(topic);
       main_topics.push(topic);
       topic.add(n_is, store.lookup(topicid));
+      if (topictype) topic.add(n_instance_of, topictype);
       if (name) topic.add(n_name, name);
       main.add(n_main_subject, topic);
     }

@@ -139,6 +139,7 @@ class CaseEditor extends Component {
     this.bind("#merge", "click", e => this.onmerge(e));
     this.bind("#script", "click", e => this.onscript(e));
     this.bind("#export", "click", e => this.onexport(e));
+    this.bind("#addlink", "click", e => this.onaddlink(e));
     this.bind("#save", "click", e => this.onsave(e));
     this.bind("#share", "click", e => this.onshare(e));
     this.bind("#newfolder", "click", e => this.onnewfolder(e));
@@ -427,6 +428,7 @@ class CaseEditor extends Component {
       this.find(e).update(!this.readonly);
     }
     this.find("#menu").style.display = this.readonly ? "none" : "";
+    this.find("#addlink").update(this.readonly);
   }
 
   async onupdated() {
@@ -1025,7 +1027,8 @@ class CaseEditor extends Component {
     let list = this.find("topic-list");
     let topics = list.selection();
     if (topics.length > 0) {
-      for (let topic of this.topics) {
+      // Do not allow exporting case topics.
+      for (let topic of topics) {
         if (topic.has(n_instance_of, n_case_file)) {
           inform("Main case topic cannot be published in Wikidata");
           return;
@@ -1095,6 +1098,17 @@ class CaseEditor extends Component {
       inform(e.name + ": " + e.message);
     }
     this.style.cursor = "";
+  }
+
+  async onaddlink(e) {
+    let ok = await StdDialog.confirm(
+      "Create linked case",
+      "Create you own case linked to this case?");
+    if (ok) {
+      let linkid = this.main.id;
+      let name = this.main.get(n_name);
+      this.match("#app").add_case(name, null, linkid, n_case_file);
+    }
   }
 
   store() {
@@ -1168,6 +1182,8 @@ class CaseEditor extends Component {
           <md-icon-button id="export" class="tool" icon="wikidata">
           </md-icon-button>
           <md-icon-button id="script" class="tool" icon="play_circle_outline">
+          </md-icon-button>
+          <md-icon-button id="addlink" class="tool" icon="playlist_add">
           </md-icon-button>
           <md-icon-button id="save" class="tool" icon="save">
           </md-icon-button>

@@ -1442,7 +1442,7 @@ var current_snack = null;
 export class MdSnackbar extends Component {
   onconnected() {
     this.bind(null, "click", e => this.close());
-    setTimeout(snack => snack.close(), 10000, this);
+    setTimeout(snack => snack.close(), 8000, this);
   }
 
   close() {

@@ -36,6 +36,7 @@ n_end_time = kb["P582"]
 n_point_in_time = kb["P585"]
 n_other_name = kb["P2561"]
 n_country = kb["P17"]
+n_residence = kb["P551"]
 n_work_location = kb["P937"]
 n_located_at_street_address = kb["P6375"]
 n_postal_code = kb["P281"]
@@ -1098,7 +1099,10 @@ for key, rec in cvrdb.items():
 
     f = addr.create()
     if person:
-      entity.add(n_work_location, f)
+      if rec["kommune"]:
+        entity.add(n_residence, f)
+      else:
+        entity.add(n_work_location, f)
     else:
       entity.add(n_headquarters_location, f)
 
