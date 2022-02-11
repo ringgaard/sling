@@ -174,10 +174,6 @@ int PyFrame::Assign(PyObject *key, PyObject *v) {
   if (role.IsError()) return -1;
 
   // Check role.
-  if (role.IsNil()) {
-    PyErr_SetString(PyExc_IndexError, "Role not defined");
-    return -1;
-  };
   if (role == Handle::id()) {
     PyErr_SetString(PyExc_IndexError, "Frame id cannot be changed");
     return -1;

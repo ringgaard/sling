@@ -98,6 +98,7 @@ for rec in casedb.values():
   num_new = 0
   for topic in topics:
     if topic == main: continue
+    del topic[None]
     topic.append(n_described_by_source, main)
     recout.write(topic.id, topic.data(binary=True))
     num_topics += 1

@@ -1099,7 +1099,7 @@ for key, rec in cvrdb.items():
 
     f = addr.create()
     if person:
-      if rec["kommune"]:
+      if address.get("kommune"):
         entity.add(n_residence, f)
       else:
         entity.add(n_work_location, f)
