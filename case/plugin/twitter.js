@@ -41,7 +41,7 @@ export default class TwitterPlugin {
     let username = url.pathname.substring(1);
     if (!username) return;
     let slash = username.indexOf("/");
-    if (slash != -1) s.substring(0, slash);
+    if (slash != -1) username = username.substring(0, slash);
 
     if (action == SEARCHURL) {
       console.log("twitter search for", username);

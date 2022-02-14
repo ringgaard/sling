@@ -247,21 +247,37 @@ class FactEditor extends Component {
     let s = this.selection();
     if (!s) return;
 
-    let focus = forward ? s.field.nextSibling : s.field.previousSibling;
-    if (!focus) {
-      if (forward) {
-        let next = s.statement.nextSibling;
-        if (!next) return;
-        focus = next.firstChild;
-      } else {
-        let next = s.statement.previousSibling;
-        if (!next) return;
-        focus = next.lastChild;
+    if (!s.field && s.statement) {
+      // Repeat previous property.
+      let stmt = s.statement;
+      let prev = stmt.previousSibling && stmt.previousSibling.firstChild;
+      if (forward && prev) {
+        // Repeat previous property.
+        let prop = new FactProperty({property: "", value: prev.value()});
+        let value = new FactValue({property: "", value: ""});
+        stmt.appendChild(prop);
+        stmt.appendChild(value);
+        stmt.qualified = stmt.previousSibling.qualified;
+        s.selection.setBaseAndExtent(value, 0, value, 0);
       }
-    }
-    if (!focus) return;
+    } else {
+      // Move to next/previous value.
+      let focus = forward ? s.field.nextSibling : s.field.previousSibling;
+      if (!focus) {
+        if (forward) {
+          let next = s.statement.nextSibling;
+          if (!next) return;
+          focus = next.firstChild;
+        } else {
+          let next = s.statement.previousSibling;
+          if (!next) return;
+          focus = next.lastChild;
+        }
+      }
+      if (!focus) return;
 
-    s.selection.setBaseAndExtent(focus, 0, focus, 0);
+      s.selection.setBaseAndExtent(focus, 0, focus, 0);
+    }
   }
 
   onhome(e) {
@@ -562,7 +578,7 @@ class FactEditor extends Component {
       if (!prop || !value) continue;
       let p = prop.value();
       let v = value.value();
-      if (!p || !v) continue;
+      if (p === undefined || v === undefined) continue;
       if (e.qualified) {
         if (s.length == 0) return;
         let prev = s[s.length - 1];
@@ -700,9 +716,23 @@ class FactField extends Component {
       this.removeAttribute("text");
       this.className = "";
 
-      // Search for matches.
-      let results = await search(this.text(), this.backends());
-      this.match("fact-editor").searchbox(this, results);
+      if (text == "*") {
+        // Start note.
+        this.collapse();
+        this.setAttribute("value", "nil");
+        this.setAttribute("text", "⚫︎");
+        this.className = "note";
+        this.innerHTML = "⚫︎";
+
+        // Move focus to note.
+        let selection = window.getSelection();
+        selection.selectAllChildren(this.nextSibling);
+        selection.collapseToStart();
+      } else if (!this.isnote()) {
+        // Search for matches.
+        let results = await search(this.text(), this.backends());
+        this.match("fact-editor").searchbox(this, results);
+      }
     }
   }
 
@@ -774,6 +804,10 @@ class FactField extends Component {
       }
       return text;
     }
+  }
+
+  isnote() {
+    return this.previousSibling && this.previousSibling.className == "note";
   }
 
   async select(item) {
@@ -870,6 +904,10 @@ class FactField extends Component {
       this.setAttribute("value", value);
       this.setAttribute("text", text);
       this.className = "encoded";
+    } else if (val == null) {
+      this.setAttribute("value", "nil");
+      this.setAttribute("text", "⚫︎");
+      this.className = "note";
     } else {
       this.removeAttribute("value");
       this.removeAttribute("text");
@@ -904,6 +942,9 @@ class FactProperty extends FactField {
       }
       .qualified $ {
         font-weight: normal;
+      }
+      $.note::after {
+        content: "";
       }
     `;
   }

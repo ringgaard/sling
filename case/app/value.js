@@ -563,7 +563,9 @@ export function value_parser(value, results) {
 export function value_text(val, prop) {
   let dt = prop instanceof Frame ? prop.get(n_target) : n_item_type;
 
-  if (val instanceof Frame) {
+  if (val === null) {
+    return ["⚫︎", false];
+  } else if (val instanceof Frame) {
     if (val.isanonymous()) {
       if (val.has(n_amount)) {
         // Quantity.

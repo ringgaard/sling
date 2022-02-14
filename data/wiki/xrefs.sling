@@ -80,7 +80,6 @@
     "ig": "P2003"       ; Instagram username
     "sr": "P3984"       ; subreddit
     "tiktok": "P7085"   ; TikTok username
-    "yt": "P2397"       ; YouTube channel ID
     "of": "P8604"       ; OnlyFans ID
     "vimeo": "P4015"    ; Vimeo identifier
     "pb": "P5346"       ; Playmate ID

@@ -58,5 +58,27 @@ uint32 Fingerprint32(const char *bytes, size_t len) {
   return fp ^(fp >> 32);
 }
 
+uint64 UncasedFingerprint(const char *bytes, size_t len) {
+  // Case masking.
+  const uint64 casemask = 0x20202020202020u;
+
+  // Some big prime number.
+  uint64 fp = 0xA5B85C5E198ED849u;
+  const char *end = bytes + len;
+  while (bytes + sizeof(uint64) <= end) {
+    uint64 bits = *(reinterpret_cast<const uint64 *>(bytes)) & casemask;
+    fp = FingerprintCat(fp, bits);
+    bytes += sizeof(uint64);
+  }
+  uint64 residual = 0;
+  while (bytes < end) {
+    uint8 bits = *reinterpret_cast<const uint8 *>(bytes) & 0x20;
+    residual = residual << 8 | bits;
+    bytes++;
+  }
+
+  return FingerprintCat(fp, residual);
+}
+
 }  // namespace sling
 

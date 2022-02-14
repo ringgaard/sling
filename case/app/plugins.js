@@ -93,7 +93,7 @@ var plugins = [
   actions: [PASTEURL, SEARCHURL],
   patterns: [
     /^https:\/\/www\.reddit\.com\/r\/BeautifulFemales\/comments\//,
-    /^https:\/\/www\.reddit\.com\/r\/HoneyDrip\/comments\//,
+    /^https:\/\/www\.reddit\.com\/r\/(HoneyDrip|HoneyDripSFW)\/comments\//,
   ],
 },
 
