@@ -117,7 +117,7 @@ directory is configured with `dbdir` configuration option (default is
 body. The configuaration options are colon-separated key-value pairs:
 
 * `data`: _path_ (adds data partition to database to allow database to span multiple disks)
-* `initial_index_capacity`: _1M_ (set the initial capcity of the hash index)
+* `initial_index_capacity`: _1M_ (set the initial capacity of the hash index)
 * `index_load_factor`: _0.75_ (the index is expanded when the load factor is reached)
 * `data_shard_size`: _256G_ (size of each data shard in the database)
 * `buffer_size`: _4096_ (record input/output buffer size)

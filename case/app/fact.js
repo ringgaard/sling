@@ -17,6 +17,9 @@ const n_media = store.lookup("media");
 const n_target = store.lookup("target");
 const n_item_type = store.lookup("/w/item");
 const n_quantity_type = store.lookup("/w/quantity");
+const n_start_time = store.lookup("P580");
+const n_end_time = store.lookup("P582");
+const n_point_in_time = store.lookup("P585");
 
 function range(a, b) {
   if (!a || !b || !a.parentNode || a.parentNode != b.parentNode) {
@@ -28,6 +31,18 @@ function range(a, b) {
     if (e == b) return [b, a];
     e = e.nextSibling;
   }
+}
+
+function previous_statement(stmt) {
+  if (!stmt) return;
+  let prev = stmt.previousSibling;
+  if (!prev) return;
+  if (stmt.qualified) {
+    if (!prev.qualified) return;
+  } else {
+    while (prev && prev.qualified) prev = prev.previousSibling;
+  }
+  return prev;
 }
 
 class FactPanel extends Component {
@@ -175,15 +190,35 @@ class FactEditor extends Component {
     e.preventDefault();
     let s = this.selection();
     if (document.getSelection().isCollapsed) {
-      let stmt = new FactStatement();
-      let point = s && s.statement;
-      if (point && point.qualified) {
-        stmt.qualified = true;
+      if (s.field && s.field.isnote()) {
+        // Split fact note.
+        let note = s.field.text();
+        let pos = s.position;
+        let first = note.slice(0, pos);
+        let second = note.slice(pos);
+        s.field.update({
+          property: null,
+          value: first,
+        });
+        let newstmt = new FactStatement({
+          property: null,
+          value: second,
+          qualified: s.statement.qualified,
+        });
+        this.insertBefore(newstmt, s.statement.nextSibling);
+        document.getSelection().collapse(newstmt.lastChild, 0);
+        this.dirty = true;
+      } else {
+        // Insert new placeholder.
+        let placeholder = new FactStatement();
+        let point = s && s.statement;
+        if (point && point.qualified) placeholder.qualified = true;
+        if (point && s.field == s.value) point = point.nextSibling;
+        this.insertBefore(placeholder, point);
+        document.getSelection().collapse(placeholder, 0);
       }
-      if (point && s.field == s.value) point = point.nextSibling;
-      this.insertBefore(stmt, point);
-      document.getSelection().collapse(stmt, 0);
     } else if (s.field && s.base && s.field != s.base) {
+      // Replace selection with placeholder.
       let pos = this.delete_selection(s);
       let placeholder = new FactStatement();
       this.insertBefore(placeholder, pos);
@@ -249,15 +284,15 @@ class FactEditor extends Component {
 
     if (!s.field && s.statement) {
       // Repeat previous property.
-      let stmt = s.statement;
-      let prev = stmt.previousSibling && stmt.previousSibling.firstChild;
-      if (forward && prev) {
+      let prevstmt = previous_statement(s.statement);
+      let prevprop = prevstmt && prevstmt.firstChild;
+      if (forward && prevprop) {
         // Repeat previous property.
-        let prop = new FactProperty({property: "", value: prev.value()});
+        let prop = new FactProperty({property: "", value: prevprop.value()});
         let value = new FactValue({property: "", value: ""});
-        stmt.appendChild(prop);
-        stmt.appendChild(value);
-        stmt.qualified = stmt.previousSibling.qualified;
+        s.statement.appendChild(prop);
+        s.statement.appendChild(value);
+        s.statement.qualified = prevstmt.qualified;
         s.selection.setBaseAndExtent(value, 0, value, 0);
       }
     } else {
@@ -321,19 +356,40 @@ class FactEditor extends Component {
     if (!s) return;
     if (s.selection.isCollapsed && s.position == 0) {
       e.preventDefault();
-      if (s.statement.qualified) {
-        s.statement.qualified = false;
-        this.dirty = true;
-      } else {
-        let prev = s.statement.previousSibling;
-        if (prev && prev.empty()) {
-          prev.remove();
-        } else if (s.statement.empty()) {
+      if (s.field == s.value && s.field.isnote()) {
+        let prevstmt = s.statement.previousSibling;
+        if (prevstmt && prevstmt.lastChild && prevstmt.lastChild.isnote()) {
+          // Merge note with previous note.
+          let prevnote = prevstmt.lastChild;
+          let first = prevnote.text();
+          let second = s.field.text();
+          prevnote.update({
+            property: null,
+            value: first + second,
+          });
           s.statement.remove();
+          document.getSelection().collapse(prevnote.firstChild, first.length);
+          this.dirty = true;
+        }
+      } else {
+        if (s.statement.qualified) {
+          // Unqualify statement.
+          s.statement.qualified = false;
+          this.dirty = true;
+        } else {
+          // Delete empty statement.
+          let prev = s.statement.previousSibling;
+          if (prev && prev.empty()) {
+            prev.remove();
+          } else if (s.statement.empty()) {
+            s.statement.remove();
+          }
         }
       }
     }
+
     if (s.statement && s.field != s.base) {
+      // Delete selection.
       e.preventDefault();
       this.delete_selection(s);
     }
@@ -345,6 +401,7 @@ class FactEditor extends Component {
     if (s.selection.isCollapsed && s.statement.empty()) {
       e.preventDefault();
       s.statement.remove();
+      this.dirty = true;
     } else if (s.statement && s.field != s.base) {
       e.preventDefault();
       this.delete_selection(s);
@@ -651,6 +708,11 @@ class FactEditor extends Component {
 Component.register(FactEditor);
 
 class FactStatement extends Component {
+  constructor(state) {
+    super(state);
+    if (state && state.qualified) this.className = "qualified";
+  }
+
   get qualified() {
     return this.state && this.state.qualified;
   }
@@ -674,10 +736,14 @@ class FactStatement extends Component {
     let statement = this.state;
     if (!statement) return "";
     this.qualified = statement.qualified;
-    return [
-      new FactProperty({property: n_item_type, value: statement.property}),
-      new FactValue({property: statement.property, value: statement.value}),
-    ];
+    if (statement.property === undefined && statement.value === undefined) {
+      return "";
+    } else {
+      return [
+        new FactProperty({property: n_item_type, value: statement.property}),
+        new FactValue({property: statement.property, value: statement.value}),
+      ];
+    }
   }
 
   static stylesheet() {
@@ -696,6 +762,14 @@ class FactStatement extends Component {
 }
 
 Component.register(FactStatement);
+
+function parse_date(date) {
+  let results = new Array();
+  value_parser(date, results);
+  if (results.length > 0 && results[0].description == "time") {
+    return results[0].value;
+  }
+}
 
 class FactField extends Component {
   oninit() {
@@ -729,8 +803,30 @@ class FactField extends Component {
         selection.selectAllChildren(this.nextSibling);
         selection.collapseToStart();
       } else if (!this.isnote()) {
+        // Split out temporal modifiers in brackets.
+        let modifiers;
+        let query = this.text();
+        let m = query.match(/^(.*)\[(.*)\]\s*$/);
+        if (m) {
+          // Split time interval.
+          modifiers = {};
+          query = m[1];
+          let delim = m[2].indexOf("--");
+          if (delim == -1) {
+            modifiers.time = parse_date(m[2].trim());
+          } else {
+            let start = m[2].slice(0, delim).trim();
+            let end = m[2].slice(delim + 2).trim();
+            if (start) modifiers.start = parse_date(start);
+            if (end) modifiers.end = parse_date(end);
+          }
+        }
+
         // Search for matches.
-        let results = await search(this.text(), this.backends());
+        let results = await search(query, this.backends());
+        if (modifiers) {
+          for (let r of results) r.state.modifiers = modifiers;
+        }
         this.match("fact-editor").searchbox(this, results);
       }
     }
@@ -810,6 +906,14 @@ class FactField extends Component {
     return this.previousSibling && this.previousSibling.className == "note";
   }
 
+  add_qualifier(property, value) {
+    let qualifier = new FactStatement({property, value, qualified: true});
+    let stmt = this.parentElement;
+    let next = stmt.nextSibling;
+    while (next && next.qualified) next = next.nextSibling;
+    stmt.parentElement.insertBefore(qualifier, next);
+  }
+
   async select(item) {
     var value, text;
     let encoded = true;
@@ -881,6 +985,19 @@ class FactField extends Component {
     let selection = window.getSelection();
     selection.removeAllRanges();
     selection.addRange(range);
+
+    // Add modifiers.
+    if (item.modifiers) {
+      if (item.modifiers.start) {
+        this.add_qualifier(n_start_time, item.modifiers.start);
+      }
+      if (item.modifiers.end) {
+        this.add_qualifier(n_end_time, item.modifiers.end);
+      }
+      if (item.modifiers.time) {
+        this.add_qualifier(n_point_in_time, item.modifiers.time);
+      }
+    }
   }
 
   collapse() {

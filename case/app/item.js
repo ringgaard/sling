@@ -298,7 +298,7 @@ class PropertyPanel extends Component {
     }
 
     let prev = undefined;
-    h.push("<table>")
+    h.push("<table>");
     for (let [name, value] of item) {
       if (name !== prev) {
         // End previous property group.
@@ -333,32 +333,41 @@ class PropertyPanel extends Component {
 
       // Qualifiers.
       if (v != value) {
-        h.push('<div class="qual-tab">');
-        let qprev = null;
+        h.push('<table class="qual-tab">');
+        let qprev = undefined;
         for (let [qname, qvalue] of value) {
           if (qname == n_is) continue;
-          if (qname.isproxy()) continue;
 
           if (qname != qprev) {
             // Start new property group for new property.
-            if (qprev != null) h.push('</div></div>');
-            h.push('<div class="qual-row">');
+            if (qprev !== undefined) h.push('</td></tr>');
+            h.push('<tr class="qual-row">');
 
             // Qualified property name.
-            h.push('<div class="qprop-name">');
-            render_name(qname);
-            h.push('</div>');
-            h.push('<div class="qprop-values">');
+            if (qname === null) {
+              h.push('<td class="qprop-notes" colspan="2">');
+            } else {
+              h.push('<td class="qprop-name">');
+              render_name(qname);
+              h.push('</td>');
+              h.push('<td class="qprop-values">');
+            }
             qprev = qname;
           }
 
           // Qualified property value.
-          h.push('<div class="qprop-value">');
-          render_value(qvalue, qname);
-          h.push('</div>');
+          if (qname === null) {
+            h.push('<div class="qprop-note">');
+            render_value(qvalue, qname);
+            h.push('</div>');
+          } else {
+            h.push('<div class="qprop-value">');
+            render_value(qvalue, qname);
+            h.push('</div>');
+          }
         }
-        if (qprev != null) h.push('</div></div>');
-        h.push('</div>');
+        if (qprev !== undefined) h.push('</td></tr>');
+        h.push('</table>');
       }
     }
     if (prev !== undefined) h.push('</td></tr>');
@@ -427,16 +436,13 @@ class PropertyPanel extends Component {
       }
 
       $ .qual-tab {
-        display: table;
         border-collapse: collapse;
       }
 
       $ .qual-row {
-        display: table-row;
       }
 
       $ .qprop-name {
-        display: table-cell;
         font-size: 13px;
         vertical-align: top;
         padding: 1px 3px 1px 30px;
@@ -444,7 +450,6 @@ class PropertyPanel extends Component {
       }
 
       $ .qprop-values {
-        display: table-cell;
         vertical-align: top;
       }
 
@@ -459,6 +464,16 @@ class PropertyPanel extends Component {
         text-decoration: none;
         cursor: pointer;
         outline: none;
+      }
+
+      $ .qprop-notes {
+        vertical-align: top;
+      }
+
+      $ .qprop-note {
+        display: list-item;
+        font-size: 13px;
+        margin-left: 44px;
       }
     `;
   }
