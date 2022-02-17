@@ -8,7 +8,7 @@ import {Store, Frame, Encoder, Printer} from "/common/lib/frame.js";
 import {store, settings} from "./global.js";
 import * as plugins from "./plugins.js";
 import {NewFolderDialog} from "./folder.js";
-import {paste_image} from "./drive.js";
+import {Drive} from "./drive.js";
 import {wikidata_initiate, wikidata_export} from "./wikibase.js";
 import {generate_key, encrypt} from "./crypto.js";
 import "./topic.js";
@@ -35,8 +35,32 @@ const n_instance_of = store.lookup("P31");
 const n_has_quality = store.lookup("P1552");
 const n_nsfw = store.lookup("Q2716583");
 
+const n_document = store.lookup("Q49848");
+const n_image = store.lookup("Q478798");
+const n_publication_date = store.lookup("P577");
+const n_retrieved = store.lookup("P813");
+const n_url = store.lookup("P2699");
+const n_data_size = store.lookup("P3575");
+const n_media_type = store.lookup("P1163");
+
+const media_file_types = [
+  "image/gif",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+];
+
 const binary_clipboard = false;
 
+// Date as SLING numeric date.
+function date_number(d) {
+  let year = d.getFullYear();
+  let month = d.getMonth() + 1;
+  let day = d.getDate();
+  return year * 10000 + month * 100 + day;
+}
+
+// Write topics to clipboard.
 function write_to_clipboard(topics) {
   if (binary_clipboard) {
     // Encode selected topics.
@@ -69,6 +93,7 @@ function write_to_clipboard(topics) {
   }
 }
 
+// Read topics from clipboard.
 async function read_from_clipboard() {
   let clipboard = await navigator.clipboard.read();
   for (let i = 0; i < clipboard.length; i++) {
@@ -93,6 +118,7 @@ async function read_from_clipboard() {
   return null;
 }
 
+// Find topics matching search query.
 function search_topics(query, full, topics) {
   query = query.toLowerCase();
   let results = [];
@@ -137,7 +163,9 @@ class CaseEditor extends Component {
     this.bind("#drawer", "click", e => this.ondrawer(e));
     this.bind("#home", "click", e => this.close());
     this.bind("#merge", "click", e => this.onmerge(e));
-    this.bind("#script", "click", e => this.onscript(e));
+    if (settings.userscripts) {
+      this.bind("#script", "click", e => this.onscript(e));
+    }
     this.bind("#export", "click", e => this.onexport(e));
     this.bind("#addlink", "click", e => this.onaddlink(e));
     this.bind("#save", "click", e => this.onsave(e));
@@ -148,6 +176,7 @@ class CaseEditor extends Component {
     this.bind("md-menu #share", "click", e => this.onshare(e));
     this.bind("md-menu #imgcache", "click", e => this.onimgcache(e));
     this.bind("md-menu #export", "click", e => this.onexport(e));
+    this.bind("md-menu #upload", "click", e => this.onupload(e));
 
     this.bind(null, "cut", e => this.oncut(e));
     this.bind(null, "copy", e => this.oncopy(e));
@@ -429,6 +458,7 @@ class CaseEditor extends Component {
     }
     this.find("#menu").style.display = this.readonly ? "none" : "";
     this.find("#addlink").update(this.readonly);
+    this.find("#script").update(settings.userscripts);
   }
 
   async onupdated() {
@@ -941,7 +971,7 @@ class CaseEditor extends Component {
 
     // Try to paste image.
     if (topic) {
-      let imgurl = await paste_image();
+      let imgurl = await Drive.paste_image();
       if (imgurl) {
         topic.add(n_media, imgurl);
         this.mark_dirty();
@@ -988,6 +1018,7 @@ class CaseEditor extends Component {
   }
 
   async onscript(e) {
+    if (!settings.userscripts) return;
     let dialog = new ScriptDialog();
     let script = await dialog.show();
     if (script) {
@@ -1007,6 +1038,45 @@ class CaseEditor extends Component {
         StdDialog.alert("Script output", this.log.join(" "));
       }
       this.log = null;
+    }
+  }
+
+  async onupload(e) {
+    if (this.readonly) return;
+    let dialog = new UploadDialog();
+    let files = await dialog.show();
+    if (files) {
+      var topic;
+      let now = new Date();
+      for (let file of files) {
+        // Save file to drive.
+        let url = await Drive.save(file);
+
+        // Add topic for file.
+        let isimage = media_file_types.includes(file.type);
+        topic = this.new_topic();
+        topic.add(n_name, file.name);
+        topic.add(n_instance_of, isimage ? n_image : n_document);
+        if (file.lastModified) {
+          let date = new Date(file.lastModified);
+          topic.add(n_publication_date, date_number(date));
+        }
+        topic.add(n_retrieved, date_number(now));
+        topic.add(n_url, url);
+        topic.add(n_data_size, file.size);
+        if (file.type) {
+          topic.add(n_media_type, file.type);
+        }
+        if (isimage) {
+          topic.add(n_media, url);
+        }
+      }
+
+      // Update topic list.
+      await this.update_topics();
+      this.navigate_to(topic);
+
+      inform(`${files.length} files uploaded`);
     }
   }
 
@@ -1192,6 +1262,7 @@ class CaseEditor extends Component {
           <md-menu id="menu">
             <md-menu-item id="save">Save</md-menu-item>
             <md-menu-item id="share">Share</md-menu-item>
+            <md-menu-item id="upload">Upload files</md-menu-item>
             <md-menu-item id="imgcache">Cache images</md-menu-item>
             <md-menu-item id="export">Publish in Wikidata</md-menu-item>
           </md-menu>
@@ -1429,6 +1500,40 @@ class ScriptDialog extends MdDialog {
 }
 
 Component.register(ScriptDialog);
+
+class UploadDialog extends MdDialog {
+  submit() {
+    console.log("submit");
+    this.close(this.find("#files").files);
+  }
+
+  render() {
+    return `
+      <md-dialog-top>Upload files</md-dialog-top>
+      <div id="content">
+        <div>Select files to add to case:</div>
+        <input id="files" type="file" multiple>
+        <div>Each file will be added as a case topic.</div>
+      </div>
+      <md-dialog-bottom>
+        <button id="cancel">Cancel</button>
+        <button id="submit">Upload</button>
+      </md-dialog-bottom>
+    `;
+  }
+
+  static stylesheet() {
+    return MdDialog.stylesheet() + `
+      $ #content {
+        display: flex;
+        flex-direction: column;
+        row-gap: 16px;
+      }
+    `;
+  }
+}
+
+Component.register(UploadDialog);
 
 MdIcon.custom("wikidata", `
 <svg width="24" height="24" viewBox="0 0 1050 590" style="fill:white;">

@@ -26,7 +26,7 @@ flags.parse()
 # Consider all submission to these subreddits as news articles.
 news_reddits = [
   "AutoNewspaper", "nofeenews", "newsdk", "news", "Full_news",
-  "qualitynews", "worldnews", "worldevents",
+  "qualitynews", "worldnews", "worldevents", "newsdk",
 ]
 
 # Ignored subreddits.

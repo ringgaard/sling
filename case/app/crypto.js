@@ -48,8 +48,8 @@ function cryptokey(secret, usage) {
   return crypto.subtle.importKey("raw", secret, encryption,  false, [usage]);
 }
 
-export function generate_key() {
-  let key = crypto.getRandomValues(new Uint8Array(keysize));
+export function generate_key(size) {
+  let key = crypto.getRandomValues(new Uint8Array(size || keysize));
   return bin2hex(key);
 }
 

@@ -4,7 +4,7 @@
 // SLING case plug-in for transcoding videos.
 
 import {store, settings} from "/case/app/global.js";
-import {write_to_drive} from "/case/app/drive.js";
+import {Drive} from "/case/app/drive.js";
 
 const n_media = store.lookup("media");
 
@@ -27,7 +27,7 @@ export default class TranscodePlugin {
 
     // Write transcoded video to drive.
     console.log("write to drive", fn, data.length);
-    let drive_url = await write_to_drive(fn, data);
+    let drive_url = await Drive.write(fn, data);
 
     console.log(`add video ${drive_url} to topic ${context.topic.id}`);
     context.topic.put(n_media, drive_url);

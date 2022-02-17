@@ -3,7 +3,7 @@
 
 // Case-based knowledge management app.
 
-import {Component, OneOf} from "/common/lib/component.js";
+import {Component} from "/common/lib/component.js";
 import {StdDialog, inform} from "/common/lib/material.js";
 import {store, settings} from "./global.js";
 import {casedb} from "./database.js";

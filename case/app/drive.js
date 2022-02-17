@@ -1,32 +1,10 @@
 // Copyright 2020 Ringgaard Research ApS
 // Licensed under the Apache License, Version 2
 
-// Alphabet for encoding serial numbers.
-const digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-
-// Encode number with alphabet.
-function encode(num) {
-  let s = [];
-  let n = num;
-  let base = digits.length;
-  while (n > 0) {
-    s.push(digits.charAt(n % base));
-    n = (n / base) >> 0;
-  }
-  return s.reverse().join("");
-}
-
-// Return serial number based on millisec timestamp and random bits.
-function serial() {
-  let ts = Math.trunc(Date.now() * 1000);
-  let rnd = new Uint32Array(2);
-  window.crypto.getRandomValues(rnd);
-  let salt = rnd[0] | (rnd[1] >> 32);
-  return Math.abs((ts ^ salt) >> 0);
-}
+import {generate_key} from "./crypto.js";
 
 // Write file to drive and return url.
-export async function write_to_drive(filename, content) {
+async function write(filename, content) {
   let url = `https://drive.ringgaard.com/${filename}`;
   console.log("write file to drive", url, content.length);
   let r = await fetch(url, {method: "PUT", body: content});
@@ -34,8 +12,23 @@ export async function write_to_drive(filename, content) {
   return url;
 }
 
+// Save file object to drive and return url.
+async function save(file) {
+  let url = `https://drive.ringgaard.com/d/${generate_key(8)}/${file.name}`;
+  console.log("write file to drive", url, file.size);
+  let r = await fetch(url, {
+    method: "PUT",
+    headers: {
+      "Last-Modified": new Date(file.lastModified).toUTCString(),
+    },
+    body: file,
+  });
+  if (!r.ok) return null;
+  return url;
+}
+
 // Get image from clipboard and store on drive.
-export async function paste_image() {
+async function paste_image() {
   // Get image from clipboard.
   let clipboard = await navigator.clipboard.read();
   let image = null;
@@ -50,9 +43,15 @@ export async function paste_image() {
   if (!image) return null;
 
   // Generate image url.
-  let fn = encode(serial()) + ".png";
+  let fn = generate_key(8) + ".png";
 
   // Write image to drive.
-  return write_to_drive("i/" + fn, image);
+  return write("i/" + fn, image);
+}
+
+export const Drive = {
+  write: write,
+  save: save,
+  paste_image: paste_image,
 }
 

@@ -356,7 +356,7 @@ class FactEditor extends Component {
     if (!s) return;
     if (s.selection.isCollapsed && s.position == 0) {
       e.preventDefault();
-      if (s.field == s.value && s.field.isnote()) {
+      if (s.field && s.field == s.value && s.field.isnote()) {
         let prevstmt = s.statement.previousSibling;
         if (prevstmt && prevstmt.lastChild && prevstmt.lastChild.isnote()) {
           // Merge note with previous note.
@@ -932,12 +932,12 @@ class FactField extends Component {
       if (item.casefile) {
         // Create new topic with reference to topic in external case.
         let editor = this.match("#editor");
-        let link = this.new_topic();
-        link.add(n_is, topic);
-        let name = topic.get(n_name);
+        let link = editor.new_topic();
+        link.add(n_is, item.topic);
+        let name = item.topic.get(n_name);
         if (name) link.add(n_name, name);
-        await editor.update_list();
-        value = link;
+        await editor.update_topics();
+        value = link.id;
         text = name;
       } else {
         value = item.topic.id

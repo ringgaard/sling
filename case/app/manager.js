@@ -461,6 +461,7 @@ class SettingsPanel extends Component {
     this.find("#authorid").value = settings.authorid;
     this.find("#picturesize").value = settings.picturesize;
     this.find("#kbservice").value = settings.kbservice;
+    this.find("#userscripts").checked = settings.userscripts;
     this.find("#imagesearch").checked = settings.imagesearch;
     this.find("#nsfw").checked = settings.nsfw;
     this.bind("#clearwd", "click", e => {
@@ -474,6 +475,7 @@ class SettingsPanel extends Component {
     settings.authorid = this.find("#authorid").value;
     settings.picturesize = this.find("#picturesize").value;
     settings.kbservice = this.find("#kbservice").value;
+    settings.userscripts = this.find("#userscripts").checked;
     settings.imagesearch = this.find("#imagesearch").checked;
     settings.nsfw = this.find("#nsfw").checked;
     save_settings();
@@ -497,6 +499,7 @@ class SettingsPanel extends Component {
           id="kbservice"
           label="Knowledge service URL">
         </md-text-field>
+        <md-switch id="userscripts" label="Enable user scripts"></md-switch>
         <md-switch id="imagesearch" label="Enable image search"></md-switch>
         <md-switch id="nsfw" label="Show adult content (NSFW)"></md-switch>
         <md-button id="clearwd" label="Clear Wikidata keys"></md-button>
