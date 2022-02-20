@@ -78,6 +78,9 @@ cat << EOF > $PKGDIR/etc/slingdb/slingdb.conf
 # Database directory.
 dbdir=/var/lib/slingdb
 
+# PID file for monitoring.
+pidfile=/var/run/slingdb.pid
+
 # Network address and port for service. Comment out the addr line to
 # listen on all network interfaces.
 addr=127.0.0.1

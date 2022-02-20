@@ -52,6 +52,10 @@ void InitProgram(int *argc, char **argv[]);
 // Run module initializers for shared library.
 void InitSharedLibrary();
 
+// Create PID file for daemon. Return file handle for PID file or -1 on error.
+// Returns 0 if no PID file was specified.
+int CreatePIDFile();
+
 }  // namespace sling
 
 #endif  // SLING_BASE_INIT_H_

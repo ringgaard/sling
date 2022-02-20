@@ -541,13 +541,8 @@ void WikiParser::ParseUrlBegin() {
   const char *name = ptr_;
   while (*ptr_ != 0 && *ptr_ != ' ' && *ptr_ != '\n' && *ptr_ != ']') ptr_++;
   SetName(node, name, ptr_);
-
-  while (*ptr_ == ' ') ptr_++;
-  if (*ptr_ == ']') {
-    txt_ = name;
-  } else {
-    txt_ = ptr_;
-  }
+  SkipWhitespace();
+  txt_ = ptr_;
 }
 
 void WikiParser::ParseUrlEnd() {
@@ -881,7 +876,13 @@ bool WikiParser::ParseAttributes(const char *delimiters) {
       attrlen = p++ - attr;
     } else {
       attr = p;
-      while (IsNameChar(*p)  || *p == '#'  || *p == '%' || *p == ';') p++;
+      while (IsNameChar(*p) ||
+             *p == '#'  ||
+             *p == '%' ||
+             *p == ';' ||
+             *p == ',') {
+        p++;
+      }
       if (p == attr) return false;
       attrlen = p - attr;
     }

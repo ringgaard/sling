@@ -28,6 +28,9 @@ PyObject *PySetFlag(PyObject *self, PyObject *args);
 // Log message.
 PyObject *PyLogMessage(PyObject *self, PyObject *args);
 
+// Write PID file if requested.
+PyObject *PyCreatePIDFile();
+
 // Return number of logical CPUs.
 PyObject *PyCPUs();
 

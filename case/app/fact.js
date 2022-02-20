@@ -812,6 +812,8 @@ class FactField extends Component {
           modifiers = {};
           query = m[1];
           let delim = m[2].indexOf("--");
+          if (delim == -1) delim = m[2].indexOf(" - ");
+          if (delim == -1) delim = m[2].indexOf(":");
           if (delim == -1) {
             modifiers.time = parse_date(m[2].trim());
           } else {

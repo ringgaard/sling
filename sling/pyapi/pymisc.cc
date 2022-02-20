@@ -16,6 +16,7 @@
 
 #include <vector>
 
+#include "sling/base/init.h"
 #include "sling/base/flags.h"
 #include "sling/base/logging.h"
 #include "third_party/jit/cpu.h"
@@ -128,6 +129,11 @@ PyObject *PyLogMessage(PyObject *self, PyObject *args) {
   // Output log message.
   LogMessage(filename, line, severity) << message;
 
+  Py_RETURN_NONE;
+}
+
+PyObject *PyCreatePIDFile() {
+  CreatePIDFile();
   Py_RETURN_NONE;
 }
 

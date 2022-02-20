@@ -66,6 +66,9 @@ def parse():
     value = current[name]
     if value != default: api.set_flag(name, value)
 
+  # Create PID file if requested.
+  api.create_pid_file()
+
   # Call all the post-processing hooks.
   for callback in hooks: callback(arg)
 

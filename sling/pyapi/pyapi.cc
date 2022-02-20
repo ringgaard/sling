@@ -37,6 +37,7 @@ static PyMethodDef py_funcs[] = {
   {"get_flags", (PyCFunction) PyGetFlags, METH_NOARGS, ""},
   {"set_flag", (PyCFunction) PySetFlag, METH_VARARGS, ""},
   {"log_message", (PyCFunction) PyLogMessage, METH_VARARGS, ""},
+  {"create_pid_file", (PyCFunction) PyCreatePIDFile, METH_NOARGS, ""},
   {"register_task", (PyCFunction) PyRegisterTask, METH_VARARGS, ""},
   {"start_task_monitor", (PyCFunction) PyStartTaskMonitor, METH_VARARGS, ""},
   {"get_job_statistics", (PyCFunction) PyGetJobStatistics, METH_NOARGS, ""},

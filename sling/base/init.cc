@@ -14,12 +14,18 @@
 
 #include "sling/base/init.h"
 
+#include <fcntl.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/stat.h>
 #include <string>
 
 #include "sling/base/flags.h"
 #include "sling/base/logging.h"
 #include "sling/base/stacktrace.h"
 #include "sling/base/types.h"
+
+DEFINE_string(pidfile, "", "PID file for identifying running daemon process");
 
 namespace sling {
 
@@ -56,6 +62,9 @@ void InitProgram(int *argc, char ***argv) {
     if (Flag::ParseCommandLineFlags(argc, *argv) != 0) exit(1);
   }
 
+  // Write PID file if requested.
+  CreatePIDFile();
+
   // Run module initializers.
   RunModuleInitializers();
 }
@@ -66,6 +75,35 @@ void InitSharedLibrary() {
 
   // Run module initializers.
   RunModuleInitializers();
+}
+
+int CreatePIDFile() {
+  // Only create PID file if requested.
+  if (FLAGS_pidfile.empty()) return 0;
+
+  // Create PID file.
+  const char *pidfn = FLAGS_pidfile.c_str();
+  int fd = open(pidfn, O_RDWR | O_CREAT | O_CLOEXEC, 0644);
+  if (fd == -1) {
+    LOG(ERROR) << "Could not create PID file: " << FLAGS_pidfile;
+    return -1;
+  }
+
+  // Truncate PID file to erase any existing content.
+  if (ftruncate(fd, 0) == -1) {
+    LOG(ERROR) << "Could not truncate PID file: " << FLAGS_pidfile;
+    return -1;
+  }
+
+  // Write PID to file.
+  char buf[32];
+  snprintf(buf, sizeof(buf), "%ld\n", (long) getpid());
+  if (write(fd, buf, strlen(buf)) != strlen(buf)) {
+    LOG(ERROR) << "Error wrting to PID file: " << FLAGS_pidfile;
+    return -1;
+  }
+
+  return fd;
 }
 
 }  // namespace sling
