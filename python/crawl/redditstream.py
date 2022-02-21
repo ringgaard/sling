@@ -20,7 +20,6 @@ import traceback
 import requests
 import sys
 import time
-import urllib
 import sling
 import sling.flags as flags
 
@@ -93,6 +92,7 @@ while True:
             "DUP" if result != sling.DBNEW else "",
             submission.url,
             submission.title)
+      sys.stdout.flush()
 
     print("restart submission stream")
     time.sleep(20)

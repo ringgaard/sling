@@ -100,6 +100,7 @@ HTTPProtocol::HTTPProtocol() {
   // Register standard handlers.
   Register("/helpz", this, &HTTPProtocol::HelpHandler);
   Register("/sockz", this, &HTTPProtocol::SocketHandler);
+  Register("/healthz", this, &HTTPProtocol::HealthHandler);
 }
 
 void HTTPProtocol::Register(const string &uri, const Handler &handler) {
@@ -166,6 +167,13 @@ void HTTPProtocol::SocketHandler(HTTPRequest *req, HTTPResponse *rsp) {
   req->conn()->server()->OutputSocketZ(rsp->buffer());
   rsp->set_content_type("text/json");
   rsp->set_status(200);
+}
+
+
+void HTTPProtocol::HealthHandler(HTTPRequest *req, HTTPResponse *rsp) {
+  rsp->set_content_type("text/plain");
+  rsp->set_status(200);
+  rsp->Append("OK");
 }
 
 HTTPSession::HTTPSession(HTTPProtocol *http, SocketConnection *conn)

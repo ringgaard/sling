@@ -1803,7 +1803,7 @@ export class MdDataTable extends Component {
     h.push("</tr></thead><tbody>");
 
     if (this.state) {
-      for (const row of this.state) {
+      for (const row of Object.values(this.state)) {
         if (row.style) {
           h.push(`<tr style="${row.style}">`);
         } else {

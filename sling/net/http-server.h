@@ -72,6 +72,9 @@ class HTTPProtocol : public SocketProtocol {
   // Handler for /sockz.
   void SocketHandler(HTTPRequest *req, HTTPResponse *rsp);
 
+  // Handler for /healthz.
+  void HealthHandler(HTTPRequest *req, HTTPResponse *rsp);
+
   // Registered HTTP handlers.
   std::vector<Context> contexts_;
 

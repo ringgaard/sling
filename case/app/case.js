@@ -854,9 +854,11 @@ class CaseEditor extends Component {
   oncopy(e) {
     // Allow copying of selected text.
     let s = window.getSelection();
-    let anchor_text = s.anchorNode && s.anchorNode.nodeType == Node.TEXT_NODE;
-    let focus_text = s.focusNode && s.focusNode.nodeType == Node.TEXT_NODE;
-    if (anchor_text && focus_text) return;
+    if (!s.isCollapsed) {
+      let anchor_text = s.anchorNode && s.anchorNode.nodeType == Node.TEXT_NODE;
+      let focus_text = s.focusNode && s.focusNode.nodeType == Node.TEXT_NODE;
+      if (anchor_text && focus_text) return;
+    }
 
     // Get selected topics.
     let list = this.find("topic-list");

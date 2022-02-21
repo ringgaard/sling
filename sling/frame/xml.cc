@@ -33,7 +33,9 @@ Frame XMLReader::Read() {
 
 bool XMLReader::StartElement(const XMLElement &element) {
   // Add empty slot with element name to stack.
-  slots_.emplace_back(store_->Lookup(element.name), Handle::nil());
+  Handle elem = store_->Lookup(element.name);
+  if (elem == Handle::id()) elem = id_;
+  slots_.emplace_back(elem, Handle::nil());
 
   // Add mark to begin new element.
   marks_.push_back(slots_.size());
@@ -41,7 +43,9 @@ bool XMLReader::StartElement(const XMLElement &element) {
   // Add slots for attributes.
   for (const XMLAttribute &attr : element.attrs) {
     Handle name = store_->Lookup(attr.name);
+    if (name == Handle::id()) name = id_;
     Handle value = store_->AllocateString(attr.value);
+    if (value == Handle::id()) value = id_;
     slots_.emplace_back(name, value);
   }
 

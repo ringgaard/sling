@@ -38,6 +38,9 @@ class XMLReader : public XMLParser {
   // Parse XML input and return frame with content or nil on errors.
   Frame Read();
 
+  // Set handle for id tag/attribute.
+  void set_id(Handle id) { id_ = id; }
+
  private:
   // Callbacks from XML parser.
   bool StartElement(const XMLElement &element) override;
@@ -55,6 +58,9 @@ class XMLReader : public XMLParser {
 
   // Stack which marks the first slot for the elements being parsed.
   std::vector<int> marks_;
+
+  // Handle for id tag/attribute.
+  Handle id_ = Handle::id();
 };
 
 }  // namespace sling

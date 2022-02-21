@@ -230,6 +230,7 @@ PyObject *PyStore::Parse(PyObject *args, PyObject *kw) {
     // Parse input as XML.
     Input input(&stream);
     XMLReader reader(store, &input);
+    reader.set_id(store->Lookup("_id"));
     Frame result = reader.Read();
     if (result.IsNil()) {
       PyErr_SetString(PyExc_IOError, "XML error");

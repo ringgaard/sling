@@ -133,6 +133,14 @@ let xrefs = [
     property: store.lookup("P3265"),
   },
   {
+    pattern: /^https?:\/\/(?:www\.)?vimeo\.com\/([^\/\?]+)/,
+    property: store.lookup("P4015"),
+  },
+  {
+    pattern: /^https?:\/\/(?:www\.)?soundcloud\.com\/([^\/\?]+)/,
+    property: store.lookup("P3040"),
+  },
+  {
     pattern: /^https?:\/\/(?:www\.)?reddit\.com\/r\/([^\/\?]+)\/?$/,
     property: store.lookup("P3984"),
   },
@@ -201,7 +209,7 @@ let xrefs = [
     property: store.lookup("P6005"),
   },
   {
-    pattern: /^(https?:\/\/mubi\.com\/cast\/.+)/,
+    pattern: /^https?:\/\/mubi\.com\/cast\/(.+)/,
     property: store.lookup("P7300"),
   },
   {
