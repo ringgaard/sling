@@ -45,7 +45,6 @@ bool XMLReader::StartElement(const XMLElement &element) {
     Handle name = store_->Lookup(attr.name);
     if (name == Handle::id()) name = id_;
     Handle value = store_->AllocateString(attr.value);
-    if (value == Handle::id()) value = id_;
     slots_.emplace_back(name, value);
   }
 

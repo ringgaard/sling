@@ -17,7 +17,6 @@
 import json
 import os
 import signal
-import threading
 import time
 import traceback
 import urllib.parse
@@ -187,27 +186,29 @@ def redirect_page(value, request, response):
   response.status = value.status
   response["Location"] = value.location
 
-stop = threading.Event()
-
-def break_handler(signo, _frame):
-  stop.set()
-
-signal.signal(signal.SIGINT, break_handler)
-
 class HTTPServer:
   def __init__(self, port, addr=""):
     self.httpd = api.HTTPServer(addr, port)
 
-  def run(self):
-    # Start HTTP server.
+  def start(self):
     self.httpd.start()
 
-    # Wait until shutdown.
-    stop.wait()
-
-    # Stop HTTP server.
+  def stop(self):
     self.httpd.stop()
     self.httpd = None
+
+  def run(self):
+    # Start HTTP server.
+    self.start()
+
+    # Wait until shutdown.
+    try:
+      while True: time.sleep(1)
+    except KeyboardInterrupt:
+      pass
+
+    # Stop HTTP server.
+    self.stop()
 
   def static(self, path, dir, internal=False):
     if not internal: dir = os.path.abspath(dir)

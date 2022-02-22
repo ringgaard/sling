@@ -195,16 +195,17 @@ PyObject *PyStore::Save(PyObject *args, PyObject *kw) {
 PyObject *PyStore::Parse(PyObject *args, PyObject *kw) {
   // Parse arguments.
   static const char *kwlist[] = {
-    "data", "binary", "json", "xml", "ttl", nullptr
+    "data", "binary", "json", "xml", "ttl", "idsym", nullptr
   };
   PyObject *object = nullptr;
   bool force_binary = false;
   bool json = false;
   bool xml = false;
   bool ttl = false;
+  PyObject *idsym = nullptr;
   bool ok = PyArg_ParseTupleAndKeywords(
-                args, kw, "O|bbbb", const_cast<char **>(kwlist),
-                &object, &force_binary, &json, &xml, &ttl);
+                args, kw, "O|bbbbO", const_cast<char **>(kwlist),
+                &object, &force_binary, &json, &xml, &ttl, &idsym);
   if (!ok) return nullptr;
 
   // Pass-through empty data.
@@ -230,7 +231,7 @@ PyObject *PyStore::Parse(PyObject *args, PyObject *kw) {
     // Parse input as XML.
     Input input(&stream);
     XMLReader reader(store, &input);
-    reader.set_id(store->Lookup("_id"));
+    if (idsym) reader.set_id(Value(idsym));
     Frame result = reader.Read();
     if (result.IsNil()) {
       PyErr_SetString(PyExc_IOError, "XML error");

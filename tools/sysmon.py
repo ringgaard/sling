@@ -20,6 +20,12 @@ import os
 import sys
 import time
 import requests
+import asyncore
+import smtpd
+import email
+import email.policy
+import traceback
+#import email.message
 
 import sling
 import sling.flags as flags
@@ -32,11 +38,22 @@ flags.define("--port",
              type=int,
              metavar="PORT")
 
+flags.define("--smtpport",
+             help="port number for the SMTP server",
+             default=2525,
+             type=int,
+             metavar="PORT")
+
 flags.define("--schedulers",
              help="list of machines with job schedulers")
 
 flags.define("--monitors",
              help="list of machines with monitors")
+
+flags.define("--mbox",
+             help="file for writing received messages",
+             default="mbox",
+             metavar="FILE")
 
 # Parse command line flags.
 flags.parse()
@@ -79,8 +96,8 @@ app.page("/",
 
           <md-data-table id="alert-table">
             <md-data-field field="time">Time</md-data-field>
-            <md-data-field field="machine" html=1>Machine</md-data-field>
-            <md-data-field field="alert">Alert</md-data-field>
+            <md-data-field field="source" html=1>Source</md-data-field>
+            <md-data-field field="alert" html=1>Alert</md-data-field>
           </md-data-table>
         </md-card>
 
@@ -153,6 +170,9 @@ class MonitorApp extends Component {
 
   static stylesheet() {
     return `
+      $ td {
+        vertical-align: top;
+      }
       td.right {
         text-align: right;
       }
@@ -176,6 +196,7 @@ n_ended = commons["ended"]
 n_command = commons["command"]
 
 n_monit = commons["monit"]
+n_idsym = commons["_id"]
 n_platform = commons["platform"]
 n_name = commons["name"]
 n_release = commons["release"]
@@ -188,6 +209,10 @@ n_collected_sec = commons["collected_sec"]
 
 commons.freeze()
 
+# Received messages.
+inbox = []
+
+# Current system status.
 status = {
   "alerts": [],
   "schedulers": {},
@@ -213,6 +238,20 @@ def refresh():
   alerts = status["alerts"]
   alerts.clear()
 
+  # Add alerts from inbox.
+  for m in inbox:
+    mail = m["mail"]
+    sender = m["from"]
+    tm = time.localtime(m["time"])
+    subject = mail["Subject"]
+    body = mail.get_payload()
+
+    alerts.append({
+      "time": time.strftime("%Y-%m-%d %H:%M:%S", tm),
+      "source": '<a href="%s">%s message</a>' % ("", sender),
+      "alert": (subject + "\n\n" + body).replace("\n", "<br>"),
+    })
+
   # Refresh jobs scheduler status.
   for s in schedulers:
     scheduler = status["schedulers"][s]
@@ -229,7 +268,7 @@ def refresh():
           failed += 1
           alerts.append({
             "time": job[n_ended],
-            "machine": '<a href="%s">%s</a>' % (url, s),
+            "source": '<a href="%s">%s scheduler</a>' % (url, s),
             "alert": "Job %s failed" % (job[n_command])
           })
         else:
@@ -250,7 +289,7 @@ def refresh():
       r = session.get(url + "/_status?format=xml")
       r.raise_for_status()
       store = sling.Store(commons)
-      data = store.parse(r.content, xml=True)
+      data = store.parse(r.content, xml=True, idsym=n_idsym)
       monit = data[n_monit]
 
       # Get system information.
@@ -269,10 +308,10 @@ def refresh():
         st = int(service[n_status])
         if st != 0:
           failures += 1
-          tm = time.gmtime(int(service[n_collected_sec]))
+          tm = time.localtime(int(service[n_collected_sec]))
           alerts.append({
             "time": time.strftime("%Y-%m-%d %H:%M:%S", tm),
-            "machine": '<a href="%s">%s</a>' % (url, m),
+            "source": '<a href="%s">%s monitor</a>' % (url, m),
             "alert": "Probe %s alarm" % (service["name"])
           })
 
@@ -288,21 +327,45 @@ def status_page(request):
   refresh()
   return status
 
-restart = False
+# SMTP server for receiveing alert messages.
+class AlertServer(smtpd.SMTPServer):
+  def process_message(self, peer, mailfrom, rcpttos, data, **kwargs):
+    try:
+      log.info("message received from", mailfrom)
+      mail = email.message_from_bytes(data, policy=email.policy.default)
+      now = time.asctime(time.gmtime(time.time()))
+      mail.set_unixfrom("From %s %s" % (mailfrom, now))
 
-@app.route("/restart", method="POST")
-def restart_command(request):
-  global restart
-  log.info("Restarting monitor")
-  restart = True
-  app.shutdown()
-  return "restarting job scheduler...\n"
+      # Write message to mail box.
+      mbox = open(flags.arg.mbox, "ab")
+      mbox.write(mail.as_bytes(unixfrom=True))
+      mbox.write(b"\n\n")
+      mbox.close()
+
+      # Add message to inbox.
+      inbox.append({
+        "mail": mail,
+        "time": time.time(),
+        "from": mailfrom,
+        "ack": False,
+      })
+
+    except Exception as e:
+      log.info("Error receiving message:", e)
+      traceback.print_exc()
+
+smtpsrv = AlertServer(("0.0.0.0", flags.arg.smtpport), None)
 
 # Run app until shutdown.
-app.run()
-if restart:
-  log.info("restart")
-  os.execv(sys.argv[0], sys.argv)
-else:
-  log.info("stopped")
+try:
+  if flags.arg.smtpport != 0:
+    app.start()
+    asyncore.loop()
+    app.stop()
+  else:
+    app.run()
+except KeyboardInterrupt:
+  pass
+
+log.info("stopped")
 
