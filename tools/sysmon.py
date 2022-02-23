@@ -25,7 +25,6 @@ import smtpd
 import email
 import email.policy
 import traceback
-#import email.message
 
 import sling
 import sling.flags as flags
@@ -98,6 +97,7 @@ app.page("/",
             <md-data-field field="time">Time</md-data-field>
             <md-data-field field="source" html=1>Source</md-data-field>
             <md-data-field field="alert" html=1>Alert</md-data-field>
+            <md-data-field field="ack" class="ack" html=1>Ack</md-data-field>
           </md-data-table>
         </md-card>
 
@@ -110,7 +110,9 @@ app.page("/",
             <md-data-field field="link" html=1>Machine</md-data-field>
             <md-data-field field="status">Status</md-data-field>
             <md-data-field field="running" class="right">Running</md-data-field>
+            <md-data-field field="pending" class="right">Pending</md-data-field>
             <md-data-field field="done" class="right">Done</md-data-field>
+            <md-data-field field="confirmed" class="right">Confirmed</md-data-field>
             <md-data-field field="failed" class="right">Failed</md-data-field>
           </md-data-table>
         </md-card>
@@ -147,11 +149,20 @@ import {Component} from "/common/lib/component.js";
 class MonitorApp extends Component {
   onconnected() {
     this.bind("#refresh", "click", (e) => this.onrefresh(e));
+    this.bind("#alerts", "click", (e) => this.onack(e));
     this.reload();
   }
 
   onrefresh(e) {
     this.reload()
+  }
+
+  async onack(e) {
+    let button = e.target.closest("md-icon-button");
+    let alert_type = button.getAttribute("alerttype");
+    let alert_id = button.getAttribute("alertid");
+    await fetch(`/ack?type=${alert_type}&id=${alert_id}`, {method: "POST"})
+    this.reload();
   }
 
   reload() {
@@ -176,6 +187,12 @@ class MonitorApp extends Component {
       td.right {
         text-align: right;
       }
+      $ md-icon-button {
+        color: #808080;
+      }
+      $ td.ack {
+        padding: 0px;
+      }
     `;
   }
 }
@@ -193,6 +210,7 @@ n_pending = commons["pending"]
 n_terminated = commons["terminated"]
 n_style = commons["style"]
 n_ended = commons["ended"]
+n_job = commons["job"]
 n_command = commons["command"]
 
 n_monit = commons["monit"]
@@ -219,6 +237,8 @@ status = {
   "monitors": {},
 }
 
+acked_job_alerts = set()
+
 schedulers = flags.arg.schedulers.split(",")
 for s in schedulers:
   status["schedulers"][s] = {
@@ -240,16 +260,18 @@ def refresh():
 
   # Add alerts from inbox.
   for m in inbox:
+    if m["ack"]: continue
     mail = m["mail"]
     sender = m["from"]
     tm = time.localtime(m["time"])
     subject = mail["Subject"]
     body = mail.get_payload()
-
     alerts.append({
       "time": time.strftime("%Y-%m-%d %H:%M:%S", tm),
-      "source": '<a href="%s">%s message</a>' % ("", sender),
+      "source": sender,
       "alert": (subject + "\n\n" + body).replace("\n", "<br>"),
+      "ack": '<md-icon-button icon="delete" alerttype="inbox" alertid="' +
+             str(m["msgid"]) + '"></md-icon-button>',
     })
 
   # Refresh jobs scheduler status.
@@ -261,22 +283,30 @@ def refresh():
       r.raise_for_status()
       store = sling.Store(commons)
       data = store.parse(r.content, json=True)
+      confirmed = 0
       failed = 0
       done = 0
       for job in data[n_terminated]:
         if job[n_style]:
-          failed += 1
-          alerts.append({
-            "time": job[n_ended],
-            "source": '<a href="%s">%s scheduler</a>' % (url, s),
-            "alert": "Job %s failed" % (job[n_command])
-          })
+          jobid = s + ":" + job[n_job]
+          if jobid in acked_job_alerts:
+            confirmed += 1
+          else:
+            failed += 1
+            alerts.append({
+              "time": job[n_ended],
+              "source": '<a href="%s">%s scheduler</a>' % (url, s),
+              "alert": "Job %s %s failed" % (job[n_job], job[n_command]),
+              "ack": '<md-icon-button icon="delete" alerttype="job" alertid="' +
+                     jobid + '"></md-icon-button>',
+            })
         else:
           done += 1
       scheduler["status"] = "OK"
       scheduler["running"] = len(data[n_running])
       scheduler["pending"] = len(data[n_pending])
       scheduler["done"] = done
+      scheduler["confirmed"] = confirmed
       scheduler["failed"] = failed
     except Exception as e:
       scheduler["status"] = str(e)
@@ -327,10 +357,28 @@ def status_page(request):
   refresh()
   return status
 
+@app.route("/ack", method="POST")
+def ack_handler(request):
+  acktype = request.param("type")
+  ackid = request.param("id")
+  log.info("acknowledge alarm", acktype, ackid)
+  if acktype == "job":
+    acked_job_alerts.add(ackid)
+  elif acktype == "inbox":
+    for m in inbox:
+      if m["msgid"] == ackid:
+        m["ack"] = True
+        break
+  else:
+    return 404
+
+next_inbox_id = 0
+
 # SMTP server for receiveing alert messages.
 class AlertServer(smtpd.SMTPServer):
   def process_message(self, peer, mailfrom, rcpttos, data, **kwargs):
     try:
+      global next_inbox_id;
       log.info("message received from", mailfrom)
       mail = email.message_from_bytes(data, policy=email.policy.default)
       now = time.asctime(time.gmtime(time.time()))
@@ -347,8 +395,10 @@ class AlertServer(smtpd.SMTPServer):
         "mail": mail,
         "time": time.time(),
         "from": mailfrom,
+        "msgid": str(next_inbox_id),
         "ack": False,
       })
+      next_inbox_id += 1
 
     except Exception as e:
       log.info("Error receiving message:", e)

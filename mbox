@@ -1,0 +1,192 @@
+From monit@dev Wed Feb 23 11:11:10 2022
+From: "Monit" <monit@dev>
+To: admin@ringgaard.com
+Subject: Alert --  Monit instance changed dev
+Date: Wed, 23 Feb 2022 11:11:10 GMT
+X-Mailer: Monit 5.26.0
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+Message-Id: <1645614670.c7bfa45d0be08420@dev>
+
+Date: Wed, 23 Feb 2022 12:11:10
+Action: stop
+Host: dev
+Description: Monit 5.26.0 stopped
+
+From monit@dev Wed Feb 23 11:11:10 2022
+From: "Monit" <monit@dev>
+To: admin@ringgaard.com
+Subject: Alert --  Monit instance changed dev
+Date: Wed, 23 Feb 2022 11:11:10 GMT
+X-Mailer: Monit 5.26.0
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+Message-Id: <1645614670.50212c55b88cb6dc@dev>
+
+Date: Wed, 23 Feb 2022 12:11:10
+Action: start
+Host: dev
+Description: Monit 5.26.0 started
+
+From monit@dev Wed Feb 23 12:06:39 2022
+From: "Monit" <monit@dev>
+To: admin@ringgaard.com
+Subject: Alert --  Monit instance changed dev
+Date: Wed, 23 Feb 2022 12:06:39 GMT
+X-Mailer: Monit 5.26.0
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+Message-Id: <1645617999.33bc4d6c13d2fe15@dev>
+
+Date: Wed, 23 Feb 2022 13:06:39
+Action: stop
+Host: dev
+Description: Monit 5.26.0 stopped
+
+From monit@dev Wed Feb 23 12:06:39 2022
+From: "Monit" <monit@dev>
+To: admin@ringgaard.com
+Subject: Alert --  Monit instance changed dev
+Date: Wed, 23 Feb 2022 12:06:39 GMT
+X-Mailer: Monit 5.26.0
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+Message-Id: <1645617999.10da222ee0d02491@dev>
+
+Date: Wed, 23 Feb 2022 13:06:39
+Action: start
+Host: dev
+Description: Monit 5.26.0 started
+
+From monit@dev Wed Feb 23 12:07:44 2022
+From: "Monit" <monit@dev>
+To: admin@ringgaard.com
+Subject: Alert --  Monit instance changed dev
+Date: Wed, 23 Feb 2022 12:07:44 GMT
+X-Mailer: Monit 5.26.0
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+Message-Id: <1645618064.745dd9822d1a3046@dev>
+
+Date: Wed, 23 Feb 2022 13:07:44
+Action: stop
+Host: dev
+Description: Monit 5.26.0 stopped
+
+From monit@dev Wed Feb 23 12:07:44 2022
+From: "Monit" <monit@dev>
+To: admin@ringgaard.com
+Subject: Alert --  Monit instance changed dev
+Date: Wed, 23 Feb 2022 12:07:44 GMT
+X-Mailer: Monit 5.26.0
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+Message-Id: <1645618064.dccdc0b9e324a2d1@dev>
+
+Date: Wed, 23 Feb 2022 13:07:44
+Action: start
+Host: dev
+Description: Monit 5.26.0 started
+
+From monit@dev Wed Feb 23 12:08:46 2022
+From: "Monit" <monit@dev>
+To: admin@ringgaard.com
+Subject: Alert --  Monit instance changed dev
+Date: Wed, 23 Feb 2022 12:08:46 GMT
+X-Mailer: Monit 5.26.0
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+Message-Id: <1645618126.66235a7ffca7fcfb@dev>
+
+Date: Wed, 23 Feb 2022 13:08:46
+Action: stop
+Host: dev
+Description: Monit 5.26.0 stopped
+
+From monit@dev Wed Feb 23 12:08:46 2022
+From: "Monit" <monit@dev>
+To: admin@ringgaard.com
+Subject: Alert --  Monit instance changed dev
+Date: Wed, 23 Feb 2022 12:08:46 GMT
+X-Mailer: Monit 5.26.0
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+Message-Id: <1645618126.1f20ab9fcc0dde2c@dev>
+
+Date: Wed, 23 Feb 2022 13:08:46
+Action: start
+Host: dev
+Description: Monit 5.26.0 started
+
+From monit@dev Wed Feb 23 12:10:38 2022
+From: "Monit" <monit@dev>
+To: admin@ringgaard.com
+Subject: Alert --  Monit instance changed dev
+Date: Wed, 23 Feb 2022 12:10:38 GMT
+X-Mailer: Monit 5.26.0
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+Message-Id: <1645618238.a7f36a516ca2caae@dev>
+
+Date: Wed, 23 Feb 2022 13:10:38
+Action: stop
+Host: dev
+Description: Monit 5.26.0 stopped
+
+From monit@dev Wed Feb 23 12:10:38 2022
+From: "Monit" <monit@dev>
+To: admin@ringgaard.com
+Subject: Alert --  Monit instance changed dev
+Date: Wed, 23 Feb 2022 12:10:38 GMT
+X-Mailer: Monit 5.26.0
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+Message-Id: <1645618238.22e6af28501072e8@dev>
+
+Date: Wed, 23 Feb 2022 13:10:38
+Action: start
+Host: dev
+Description: Monit 5.26.0 started
+
+From monit@dev Wed Feb 23 13:47:29 2022
+From: "Monit" <monit@dev>
+To: admin@ringgaard.com
+Subject: Alert --  Monit instance changed dev
+Date: Wed, 23 Feb 2022 13:47:29 GMT
+X-Mailer: Monit 5.26.0
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+Message-Id: <1645624049.f5e7aa60ce70ac8d@dev>
+
+Date: Wed, 23 Feb 2022 14:47:29
+Action: stop
+Host: dev
+Description: Monit 5.26.0 stopped
+
+From monit@dev Wed Feb 23 13:47:29 2022
+From: "Monit" <monit@dev>
+To: admin@ringgaard.com
+Subject: Alert --  Monit instance changed dev
+Date: Wed, 23 Feb 2022 13:47:29 GMT
+X-Mailer: Monit 5.26.0
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+Message-Id: <1645624049.55e1ae0bbd3d7de3@dev>
+
+Date: Wed, 23 Feb 2022 14:47:29
+Action: start
+Host: dev
+Description: Monit 5.26.0 started
+
