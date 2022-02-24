@@ -296,7 +296,8 @@ def refresh():
             alerts.append({
               "time": job[n_ended],
               "source": '<a href="%s">%s scheduler</a>' % (url, s),
-              "alert": "Job %s %s failed" % (job[n_job], job[n_command]),
+              "alert": "Job %s %s failed on %s" %
+                       (job[n_job], job[n_command], s),
               "ack": '<md-icon-button icon="delete" alerttype="job" alertid="' +
                      jobid + '"></md-icon-button>',
             })

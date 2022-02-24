@@ -398,6 +398,7 @@ class PropertyPanel extends Component {
         padding: 8px;
         vertical-align: top;
         overflow-wrap: break-word;
+        user-select: none;
       }
 
       $ .prop-values {
@@ -447,6 +448,7 @@ class PropertyPanel extends Component {
         vertical-align: top;
         padding: 1px 3px 1px 30px;
         width: 150px;
+        user-select: none;
       }
 
       $ .qprop-values {
@@ -580,7 +582,8 @@ class PicturePanel extends Component {
       $ img {
         max-width: 100%;
         max-height: ${settings.picturesize || "320px"};
-        vertical-align: middle
+        vertical-align: middle;
+        user-select: none;
       }
     `;
   }
