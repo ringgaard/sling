@@ -13,3 +13,5 @@ dist
 *.pdf_tex
 doc/report/sling.pdf
 .vscode
+mbox
+
