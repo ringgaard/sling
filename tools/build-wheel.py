@@ -95,6 +95,7 @@ pyfiles = [
   'nlp/silver.py',
 
   'task/__init__.py',
+  'task/alert.py',
   'task/alias.py',
   'task/corpora.py',
   'task/data.py',
