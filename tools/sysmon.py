@@ -89,10 +89,7 @@ app.page("/",
       <md-content>
 
         <md-card id="alerts">
-          <md-card-toolbar>
-            <div>Alerts</div>
-          </md-card-toolbar>
-
+          <md-text id="status"></md-text>
           <md-data-table id="alert-table">
             <md-data-field field="time">Time</md-data-field>
             <md-data-field field="source" html=1>Source</md-data-field>
@@ -159,6 +156,7 @@ class MonitorApp extends Component {
 
   async onack(e) {
     let button = e.target.closest("md-icon-button");
+    if (!button) return;
     let alert_type = button.getAttribute("alerttype");
     let alert_id = button.getAttribute("alertid");
     await fetch(`/ack?type=${alert_type}&id=${alert_id}`, {method: "POST"})
@@ -173,10 +171,34 @@ class MonitorApp extends Component {
     });
   }
 
+  failures() {
+    let failures = 0;
+    for (let s of Object.values(this.state.schedulers)) {
+      failures += s.failed;
+    }
+    for (let m of Object.values(this.state.monitors)) {
+      failures += m.failures;
+    }
+    return failures;
+  }
+
   onupdate() {
     this.find("#alert-table").update(this.state.alerts);
     this.find("#scheduler-table").update(this.state.schedulers);
     this.find("#monitor-table").update(this.state.monitors);
+
+    let failures = this.failures();
+    let status = this.find("#status");
+    if (failures == 0) {
+      status.update("ALL SYSTEMS GO");
+      status.className = "success"
+    } else if (failures == 1) {
+      status.update("1 FAILURE");
+      status.className = "failure";
+    } else {
+      status.update(`${failures} FAILURES`);
+      status.className = "failure";
+    }
   }
 
   static stylesheet() {
@@ -192,6 +214,21 @@ class MonitorApp extends Component {
       }
       $ td.ack {
         padding: 0px;
+      }
+      $ #status {
+        display: block;
+        text-align: center;
+        margin-bottom: 10px;
+        padding: 10px;
+        font-size: 20px;
+        font-weight: bold;
+        color: white;
+      }
+      $ .success {
+        background-color: green;
+      }
+      $ .failure {
+        background-color: red;
       }
     `;
   }
