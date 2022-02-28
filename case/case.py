@@ -227,12 +227,16 @@ def service_request(request):
   headers = {}
   ua = request["XUser-Agent"]
   if ua: headers["User-Agent"] = ua
-  cookies = request["XSet-Cookie"]
-  if cookies: headers["Set-Cookie"] = cookies
+  cookies = None
+  cookie = request["XCookie"]
+  if cookie:
+    delim = cookie.find("=")
+    if delim != -1:
+      cookies = {cookie[:delim]: cookie[delim + 1:]}
 
   # Forward request.
-  log.info("Proxy request for", url)
-  r = requests.get(url, headers=headers)
+  log.info("Proxy request for", url, headers, cookies)
+  r = requests.get(url, headers=headers, cookies=cookies)
 
   # Relay back response.
   response = sling.net.HTTPResponse()

@@ -418,6 +418,13 @@ export class QString {
   toString() {
     return this.text;
   }
+
+  // Convert qstring to SLING format.
+  stringify(store) {
+    let printer = new Printer(store);
+    printer.print(this);
+    return printer.output;
+  }
 };
 
 // Binary SLING decoder.

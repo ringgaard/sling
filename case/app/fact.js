@@ -3,7 +3,7 @@
 
 import {Component} from "/common/lib/component.js";
 import {MdSearchList} from "/common/lib/material.js";
-import {Frame, Printer} from "/common/lib/frame.js";
+import {Frame, QString, Printer} from "/common/lib/frame.js";
 import {store, settings} from "./global.js";
 import {value_text, value_parser} from "./value.js";
 import {Context} from "./plugins.js";
@@ -1016,6 +1016,8 @@ class FactField extends Component {
       if (!value) {
         if (val instanceof Frame) {
           value = val.text(false, true);
+        } else if (val instanceof QString) {
+          value = val.stringify(store);
         } else {
           value = val;
         }

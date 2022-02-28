@@ -69,7 +69,9 @@ const images_services = [
 {
   pattern: /https?:\/\/www\.imagebam\.com\/(image|view)\//,
   fetch: async (url, context) => {
-    let r = await fetch(context.proxy(url + "?full=1"));
+    let r = await fetch(context.proxy(url + "?full=1"), {
+      headers: {"XCookie": "nsfw_inter=1"},
+    });
     let html = await r.text();
     let doc = new DOMParser().parseFromString(html, "text/html");
     let img = doc.querySelector("img.main-image");
