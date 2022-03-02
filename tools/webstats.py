@@ -90,24 +90,37 @@ pages = [
   ("About page",           re.compile(r"^\/about$")),
   ("Contact page",         re.compile(r"^\/contact$")),
   ("Privacy page",         re.compile(r"^\/privacy$")),
+  ("Home app",             re.compile(r"^\/home\/app\/")),
+  ("Home image",           re.compile(r"^\/home\/image\/")),
+
   ("JSON item fetch",      re.compile(r"^\/kb/item\?fmt=cjson&id=(.+)$")),
   ("JSON name lookup",     re.compile(r"^\/kb/query\?fmt=cjson&q=(.+)$")),
+
   ("media file",           re.compile(r"^\/media\/.+")),
   ("thumbnail",            re.compile(r"^\/thumb\/.+")),
+
   ("common library",       re.compile(r"^\/common\/")),
-  ("CMS search",           re.compile(r"^\/query:.*$")),
-  ("CMS user",             re.compile(r"^\/\/?user\/.+")),
-  ("CMS system",           re.compile(r"^\/system\/.+")),
-  ("CMS admin",            re.compile(r"^\/admin.*")),
+
+  ("CMS search (legacy)",  re.compile(r"^\/query:.*$")),
+  ("CMS user (legacy)",    re.compile(r"^\/\/?user\/.+")),
+  ("CMS system (legacy)",  re.compile(r"^\/system\/.+")),
+  ("CMS admin (legacy)",   re.compile(r"^\/admin.*")),
+
   ("data download",        re.compile(r"^\/data\/.*")),
-  ("kb.js",                re.compile(r"^\/kb/app/kb.js")),
+  ("KB app",               re.compile(r"^\/kb/app/")),
   ("KB home",              re.compile(r"^\/kb\/$")),
   ("KB item",              re.compile(r"^\/kb\/(.+)$")),
+
+  ("Wikidata auth",        re.compile(r"^\/case/wikibase\/(.+)$")),
   ("Case home",            re.compile(r"^\/c\/$")),
+  ("Case create",          re.compile(r"^\/case\/new$")),
+  ("Case open",            re.compile(r"^\/c\/\d+")),
   ("Case app",             re.compile(r"^\/(case|c)\/app\/(.+)$")),
-  ("Case view",            re.compile(r"^\/c\/\d+$")),
   ("Case fetch",           re.compile(r"^\/case/fetch\/?\?(.+)$")),
+  ("Case service",         re.compile(r"^\/case/service\/?\?(.+)$")),
+  ("Case proxy",           re.compile(r"^\/case/proxy\/?\?(.+)$")),
   ("schema",               re.compile(r"^\/schema(.+)$")),
+
   ("Photo search",         re.compile(r"^\/photosearch\/(.+)$")),
 ]
 
@@ -241,6 +254,7 @@ num_favicons = 0
 num_hits = 0
 num_bytes = 0
 num_mobile = 0
+num_monitor = 0
 
 page_hits = defaultdict(int)
 date_hits = defaultdict(int)
@@ -256,11 +270,13 @@ worm_hits = defaultdict(int)
 spam_hits = defaultdict(int)
 referrers = defaultdict(int)
 referring_domains = defaultdict(int)
-searches = defaultdict(int)
 
 prev_query = {}
 for logfn in flags.arg.logfiles:
-  logfile = gzip.open(logfn, "rt")
+  if logfn.endswith(".gz"):
+    logfile = gzip.open(logfn, "rt")
+  else:
+    logfile = open(logfn, "rt")
   for logline in logfile:
     # Parse log line.
     total_hits += 1
@@ -282,7 +298,10 @@ for logfn in flags.arg.logfiles:
 
     # Internal traffic.
     if ipaddr.startswith("10.1."):
-      num_internal += 1
+      if ua.startswith("Monit/"):
+        num_monitor += 1
+      else:
+        num_internal += 1
       continue
 
     # Bots.
@@ -390,11 +409,6 @@ for logfn in flags.arg.logfiles:
          query_hits[query] = 0
       prev_query[ipaddr] = query
 
-    # Searches.
-    if path.startswith("/query:"):
-      query = urllib.parse.unquote(path[7:])
-      searches[query] += 1
-
     # Known pages.
     known = False
     for page_name, page_pattern in pages:
@@ -452,6 +466,7 @@ print("%6d cached" % num_cached)
 print("%6d POSTs" % num_posts)
 print("%6d mobile hits" % num_mobile)
 print("%6d internal hits" % num_internal)
+print("%6d internal monitoring" % num_monitor)
 print("%6d favicons" % num_favicons)
 print("%6d robots.txt" % num_robotstxt)
 print("%6d bot requests" % num_bots)
@@ -470,7 +485,6 @@ print_table("DOWNLOADS", "file", download_hits)
 print_table("MEDIA", "file", media_hits)
 print_table("ITEMS", "item", item_hits)
 print_table("QUERIES", "query", query_hits)
-print_table("SEARCHES", "query", searches)
 print_table("REFFERING DOMAINS", "domain", referring_domains)
 print_table("REFERRERS", "referrer", referrers)
 print_table("HTTP ERRORS", "HTTP status", http_codes)

@@ -56,6 +56,26 @@ var plugins = [
   ],
 },
 
+// E-mail address.
+{
+  name: "email",
+  module: "email.js",
+  actions: [PASTE],
+  patterns: [
+    /^[A-Za-z0-9_.+-]+@[A-Za-z0-9-]+\.[A-Za-z0-9-.]+$/,
+  ],
+},
+
+// Phone number.
+{
+  name: "phone",
+  module: "phone.js",
+  actions: [PASTE],
+  patterns: [
+    /^\+\d+[0-9- ]*$/,
+  ],
+},
+
 // Linktree profiles.
 {
   name: "linktree",

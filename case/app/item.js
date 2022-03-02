@@ -284,7 +284,11 @@ class PropertyPanel extends Component {
           render_quantity(val);
           break;
         case n_string_type:
-          render_text(val);
+          if (prop && prop.has(n_formatter_url)) {
+            render_xref(val, prop);
+          } else {
+            render_text(val);
+          }
           break;
         case n_url_type:
           render_url(val);
