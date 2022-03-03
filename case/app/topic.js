@@ -651,18 +651,59 @@ class TopicCard extends Component {
         <md-text id="name"></md-text>
         <md-spacer></md-spacer>
         <md-toolbox id="edit-actions">
-          <md-icon-button id="save" icon="save_alt"></md-icon-button>
-          <md-icon-button id="discard" icon="cancel"></md-icon-button>
+          <md-icon-button
+            id="save"
+            icon="save_alt"
+            tooltip="Save topic\n(Ctrl+S)">
+          </md-icon-button>
+          <md-icon-button
+            id="discard"
+            icon="cancel"
+            tooltip="Discard topic changes\n(Escape)">
+          </md-icon-button>
         </md-toolbox>
         <md-toolbox id="topic-actions">
-          <md-icon-button id="edit" icon="edit"></md-icon-button>
-          <md-icon-button id="websearch" icon="search"></md-icon-button>
-          <md-icon-button id="imgsearch" icon="image_search"></md-icon-button>
-          <md-icon-button id="copyid" icon="numbers" class="ripple"></md-icon-button>
-          <md-icon-button id="import" icon="publish"></md-icon-button>
-          <md-icon-button id="moveup" icon="move-up"></md-icon-button>
-          <md-icon-button id="movedown" icon="move-down"></md-icon-button>
-          <md-icon-button id="delete" icon="delete"></md-icon-button>
+          <md-icon-button
+            id="edit"
+            icon="edit"
+            tooltip="Edit topic\n(Enter)">
+          </md-icon-button>
+          <md-icon-button
+            id="websearch"
+            icon="search"
+            tooltip="Web search">
+          </md-icon-button>
+          <md-icon-button
+            id="imgsearch"
+            icon="image_search"
+            tooltip="Image search">
+          </md-icon-button>
+          <md-icon-button
+            id="copyid"
+            icon="numbers"
+            class="ripple"
+            tooltip="Copy topic id to clipboard">
+          </md-icon-button>
+          <md-icon-button
+            id="import"
+            icon="publish"
+            tooltip="Import existing topic">
+          </md-icon-button>
+          <md-icon-button
+            id="moveup"
+            icon="move-up"
+            tooltip="Move topic up\n(Ctrl-Up)">
+          </md-icon-button>
+          <md-icon-button
+            id="movedown"
+            icon="move-down"
+            tooltip="Move topic down\n(Ctrl-Down)">
+          </md-icon-button>
+          <md-icon-button
+            id="delete"
+            icon="delete"
+            tooltip="Delete topic\n(Delete)">
+          </md-icon-button>
         </md-toolbox>
       </md-card-toolbar>
       <item-panel></item-panel>

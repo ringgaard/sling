@@ -205,7 +205,9 @@ worms = [
   ("ignition", re.compile(r"^\/_ignition\/execute-solution")),
   ("shittiest_lang.php", re.compile(r"^\/index.php\/PHP\%0Ais_the_shittiest_lang\.php")),
   ("jenkins login", re.compile(r"^\/jenkins\/login")),
-  ("owa", re.compile(r"^\/owa\/")),
+  ("owa", re.compile(r"^\/owa")),
+  ("nmap", re.compile(r"^\/nmap")),
+  ("pools", re.compile(r"^\/pools")),
   ("phpmyadmin", re.compile(r"^\/phpmyadmin\/")),
   ("cgi-bin", re.compile(r"^\/cgi-bin\/")),
   ("fbclid", re.compile(r"^\/\?fbclid\=")),
@@ -255,6 +257,7 @@ num_hits = 0
 num_bytes = 0
 num_mobile = 0
 num_monitor = 0
+num_curls = 0
 
 page_hits = defaultdict(int)
 date_hits = defaultdict(int)
@@ -383,6 +386,7 @@ for logfn in flags.arg.logfiles:
     if path.startswith("/data"):
       download_hits[path] += 1
       if flags.arg.d: print(logline.strip())
+    if ua.startswith("curl/"): num_curls += 1
 
     # Media.
     if path.startswith("/media/"):
@@ -469,6 +473,7 @@ print("%6d internal hits" % num_internal)
 print("%6d internal monitoring" % num_monitor)
 print("%6d favicons" % num_favicons)
 print("%6d robots.txt" % num_robotstxt)
+print("%6d curl requests" % num_curls)
 print("%6d bot requests" % num_bots)
 print("%6d worm requests" % num_worms)
 print("%6d spam hits" % num_spammers)

@@ -14,8 +14,9 @@
 
 """SLING case system"""
 
-import requests
 import datetime
+import json
+import requests
 import socket
 import time
 import urllib.parse
@@ -260,20 +261,13 @@ def media_request(request):
   # Dummy media service that always redirects to the original url.
   return sling.net.HTTPRedirect(urllib.parse.unquote(request.path[1:]))
 
-@app.route("/case/cacheimg")
+@app.route("/case/cacheimg", method="POST")
 def cache_images_request(request):
-  # Get case id.
-  caseid = int(request.params()["id"][0])
-
-  # Fetch case file from database.
-  rec, ts  = casedb.get(str(caseid))
-  if rec is None: return 404;
-  store = sling.Store(commons)
-  casefile = store.parse(rec)
-
   # Start image caching.
-  print("Start image caching for case", caseid)
-  return imgcache.start_image_caching(casefile)
+  r = json.loads(request.body)
+  media = r["media"]
+  print("Start image caching of", len(media), "images")
+  return imgcache.start_image_caching(media)
 
 @app.route("/case/wikibase", methods=["GET", "POST"])
 def wikibase_request(request):

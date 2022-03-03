@@ -25,7 +25,7 @@ user_agent = "SLING/1.0 bot (https://github.com/ringgaard/sling)"
 mediadb = None
 session = sling.media.photo.session
 
-def cache_images(casefile):
+def cache_images(media):
   # Connect to media database.
   global mediadb
   if mediadb is None:
@@ -38,87 +38,82 @@ def cache_images(casefile):
   num_retrieved = 0
   num_images = 0
   num_bytes = 0
-  for topic in casefile["topics"]:
-    for media in topic("media"):
-      if type(media) is sling.Frame:
-        url = media.resolve()
-      else:
-        url = media
-      num_images += 1
+  for url in media:
+    num_images += 1
 
-      # Check if url is already in media database.
-      if url in mediadb:
-        num_known += 1
-        continue
+    # Check if url is already in media database.
+    if url in mediadb:
+      num_known += 1
+      continue
 
-      # Download image.
-      try:
-        r = session.get(url,
+    # Download image.
+    try:
+      r = session.get(url,
+                      headers={"User-Agent": user_agent},
+                      allow_redirects=False,
+                      timeout=60)
+      if r.status_code == 301:
+        redirect = r.headers['Location']
+        if redirect.endswith("/removed.png"):
+          num_missing += 1
+          print("removed", url)
+          continue
+
+        # Get redirected image.
+        r = session.get(redirect,
                         headers={"User-Agent": user_agent},
                         allow_redirects=False,
                         timeout=60)
-        if r.status_code == 301:
-          redirect = r.headers['Location']
-          if redirect.endswith("/removed.png"):
-            num_missing += 1
-            print("removed", url)
-            continue
-
-          # Get redirected image.
-          r = session.get(redirect,
-                          headers={"User-Agent": user_agent},
-                          allow_redirects=False,
-                          timeout=60)
-          if r.status_code != 200:
-            print("missing", url, r.status_code)
-            num_missing += 1
-            continue
-        if not r.ok:
-          num_errors += 1
-          print("error", r.status_code, url)
-          continue
-        if r.status_code == 302:
-          # Imgur returns redirect to removed.png for missing images.
+        if r.status_code != 200:
+          print("missing", url, r.status_code)
           num_missing += 1
-          print("missing", url)
           continue
-      except Exception as e:
-        print("fail", e, url)
+      if not r.ok:
         num_errors += 1
+        print("error", r.status_code, url)
         continue
-
-      # Check if image is empty.
-      image = r.content
-      if len(image) == 0:
-        print("empty", url)
+      if r.status_code == 302:
+        # Imgur returns redirect to removed.png for missing images.
         num_missing += 1
+        print("missing", url)
         continue
+    except Exception as e:
+      print("fail", e, url)
+      num_errors += 1
+      continue
 
-      # Get modification timestamp.
-      date = None
-      if "Last-Modified" in r.headers:
-        date = r.headers["Last-Modified"]
-      elif "Date" in r.headers:
-        date = r.headers["Date"]
-      if date:
-        ts = email.utils.parsedate_tz(date)
-        last_modified = int(email.utils.mktime_tz(ts))
-      else:
-        last_modified = int(time.time())
+    # Check if image is empty.
+    image = r.content
+    if len(image) == 0:
+      print("empty", url)
+      num_missing += 1
+      continue
 
-      # Check if image is HTML-like.
-      if image.startswith(b"<!doctype html>") or \
-         image.startswith(b"<!DOCTYPE html>"):
-        print("non-image", url)
-        num_errors += 1
-        continue
+    # Get modification timestamp.
+    date = None
+    if "Last-Modified" in r.headers:
+      date = r.headers["Last-Modified"]
+    elif "Date" in r.headers:
+      date = r.headers["Date"]
+    if date:
+      ts = email.utils.parsedate_tz(date)
+      last_modified = int(email.utils.mktime_tz(ts))
+    else:
+      last_modified = int(time.time())
 
-      # Save image in media database.
-      mediadb.put(url, image, version=last_modified, mode=sling.DBNEWER)
+    # Check if image is HTML-like.
+    if image.startswith(b"<!doctype html>") or \
+       image.startswith(b"<!DOCTYPE html>"):
+      print("non-image", url)
+      num_errors += 1
+      continue
 
-      num_retrieved += 1
-      num_bytes += len(image)
-      print("cached", url, len(image))
+    # Save image in media database.
+    mediadb.put(url, image, version=last_modified, mode=sling.DBNEWER)
+
+    num_retrieved += 1
+    num_bytes += len(image)
+    print("cached", url, len(image))
 
   print("Caching done:",
         num_images, "images,",
@@ -128,8 +123,8 @@ def cache_images(casefile):
         num_errors, "errors",
         num_bytes, "bytes")
 
-def start_image_caching(casefile):
-  t = threading.Thread(target=cache_images, args=(casefile,))
+def start_image_caching(media):
+  t = threading.Thread(target=cache_images, args=(media,))
   t.daemon = True
   t.start()
 

@@ -161,7 +161,6 @@ class CaseEditor extends Component {
     this.bind("omni-box md-search", "enter", e => this.onenter(e));
 
     this.bind("#drawer", "click", e => this.ondrawer(e));
-    this.bind("#home", "click", e => this.close());
     this.bind("#merge", "click", e => this.onmerge(e));
     if (settings.userscripts) {
       this.bind("#script", "click", e => this.onscript(e));
@@ -170,6 +169,7 @@ class CaseEditor extends Component {
     this.bind("#addlink", "click", e => this.onaddlink(e));
     this.bind("#save", "click", e => this.onsave(e));
     this.bind("#share", "click", e => this.onshare(e));
+    this.bind("#home", "click", e => this.close(e));
     this.bind("#newfolder", "click", e => this.onnewfolder(e));
 
     this.bind("md-menu #save", "click", e => this.onsave(e));
@@ -409,13 +409,20 @@ class CaseEditor extends Component {
   }
 
   async onimgcache(e) {
-    if (!this.casefile.get(n_share) && !this.casefile.get(n_publish)) {
-      inform("Case must be shared to enable image caching");
-      return;
+    // Collect media in case.
+    let media = new Array();
+    for (let topic of this.topics) {
+      for (let m of topic.all(n_media)) {
+        media.push(store.resolve(m));
+      }
     }
 
     // Send image caching request to server.
-    let r  = await fetch(`/case/cacheimg?id=${this.caseid()}`);
+    let r  = await fetch("/case/cacheimg", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({media}),
+    });
     if (!r.ok) {
       console.log("Caching error", r);
       inform(`Error ${r.status}: ${r.statusText}`);
@@ -1249,17 +1256,47 @@ class CaseEditor extends Component {
           <div id="title">Case #<md-text id="caseid"></md-text></div>
           <omni-box id="search"></omni-box>
           <md-spacer></md-spacer>
-          <md-icon-button id="merge" class="tool" icon="merge">
+          <md-icon-button
+            id="merge"
+            class="tool"
+            icon="merge"
+            tooltip="Merge topics\n(Ctrl+M)">
           </md-icon-button>
-          <md-icon-button id="export" class="tool" icon="wikidata">
+          <md-icon-button
+            id="export"
+            class="tool"
+            icon="wikidata"
+            tooltip="Export to Wikidata">
           </md-icon-button>
-          <md-icon-button id="script" class="tool" icon="play_circle_outline">
+          <md-icon-button
+            id="script"
+            class="tool"
+            icon="play_circle_outline"
+            tooltip="Execute script">
           </md-icon-button>
-          <md-icon-button id="addlink" class="tool" icon="playlist_add">
+          <md-icon-button
+            id="addlink"
+            class="tool"
+            icon="playlist_add"
+            tooltip="Open new linked case">
           </md-icon-button>
-          <md-icon-button id="save" class="tool" icon="save">
+          <md-icon-button
+            id="save"
+            class="tool"
+            icon="save"
+            tooltip="Save case\n(Ctrl+S)">
           </md-icon-button>
-          <md-icon-button id="share" class="tool" icon="share">
+          <md-icon-button
+            id="share"
+            class="tool"
+            icon="share"
+            tooltip="Share case">
+          </md-icon-button>
+          <md-icon-button
+            id="home"
+            class="tool"
+            icon="home"
+            tooltip="Go to\ncase list">
           </md-icon-button>
           <md-menu id="menu">
             <md-menu-item id="save">Save</md-menu-item>
@@ -1272,14 +1309,13 @@ class CaseEditor extends Component {
 
         <md-row-layout>
           <md-drawer>
-            <div id="home">
-              <md-icon-button icon="home"></md-icon-button>
-              SLING Case Home
-            </div>
             <div id="folders-top">
               Folders
               <md-spacer></md-spacer>
-              <md-icon-button id="newfolder" icon="create_new_folder">
+              <md-icon-button
+                id="newfolder"
+                icon="create_new_folder"
+                tooltip="Create new folder">
               </md-icon-button>
             </div>
             <folder-list></folder-list>
@@ -1326,15 +1362,9 @@ class CaseEditor extends Component {
         fill: #808080;
       }
       $ md-drawer {
+        min-width: 200px;
         padding: 3px;
-      }
-      $ #home {
-        display: flex;
-        align-items: center;
-        padding-right: 16px;
-        font-weight: bold;
-        white-space: nowrap;
-        cursor: pointer;
+        overflow: visible;
       }
       $ #folders-top {
         display: flex;
@@ -1344,6 +1374,7 @@ class CaseEditor extends Component {
         margin-left: 6px;
         border-bottom: thin solid #808080;
         margin-bottom: 6px;
+        overflow: visible;
       }
     `;
   }

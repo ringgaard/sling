@@ -28,7 +28,7 @@ function date2str(date) {
 //-----------------------------------------------------------------------------
 
 class CaseManager extends Component {
-  onconnected() {
+  oninit() {
     this.bind("#settings", "click", e => this.onsettings(e));
     this.find("md-search input").focus();
   }
@@ -57,7 +57,11 @@ class CaseManager extends Component {
           <div>Case</div>
           <case-search-box id="search"></case-search-box>
           <md-spacer></md-spacer>
-          <md-icon-button id="settings" icon="settings"></md-icon-button>
+          <md-icon-button
+            id="settings"
+            icon="settings"
+            tooltip="Change\nsettings">
+          </md-icon-button>
         </md-toolbar>
 
         <md-row-layout>
@@ -259,7 +263,11 @@ class CaseSearchBox extends Component {
           placeholder="Search for case or topic..."
           min-length=2>
         </md-search>
-        <md-icon-button id="add" icon="add"></md-icon-button>
+        <md-icon-button
+          id="add"
+          icon="add"
+          tooltip="Open new case">
+        </md-icon-button>
       </form>
     `;
   }
@@ -331,6 +339,9 @@ class CaseList extends material.MdCard {
 
   render() {
     if (!this.state) return null;
+    if (this.state.length == 0) {
+      return `<getting-started></getting-started>`;
+    }
     let h = [];
     h.push("<table>");
     h.push(`
@@ -376,7 +387,8 @@ class CaseList extends material.MdCard {
           <td>${Component.escape(rec.description)}</td>
           <td>${date2str(rec.modified)}</td>
           <td>${date2str(rec.created)}</td>
-          <td><md-icon-button icon="delete"></md-icon-button></td>
+          <td><md-icon-button icon="delete" tooltip="Delete case">
+          </md-icon-button></td>
         </tr>
      `);
     }
@@ -446,6 +458,61 @@ class CaseList extends material.MdCard {
 }
 
 Component.register(CaseList);
+
+//-----------------------------------------------------------------------------
+// Getting started splash screen
+//-----------------------------------------------------------------------------
+
+class GettingStarted extends Component {
+  render() {
+    return `
+      <h1>Getting started...</h1>
+      <p>Welcome to the SLING Case tool, a case-based knowledge management tool
+      for gathering information about topics of interest and organizing
+      these into case files.</p>
+
+      <p>Click the <md-icon icon="add"></md-icon> button to open a new
+      case. Type the name of the case you want to research and an optional
+      description and then click "Create". This opens the new case and you can
+      now start to add topics to the case.</p>
+      </p>
+      <p>You add new topics to the case by typing the name of the topic in the
+      search bar. If the topic is already in the knowledge base, you can just
+      select it from the list. This create a topic that is an extension of an
+      existing topic and you can click <md-icon icon="expand_more"></md-icon> to
+      see the existing information. Otherwise, pressing Enter without selecting
+      a topic will create a new topic.</p>
+      <p>You can add information about the topic by clicking the
+      <md-icon icon="edit"></md-icon> button in the topic toolbar. Save you
+      changes by pressing Ctrl+S or click <md-icon icon="save_alt"></md-icon>
+      in the topic toolbar.</p>
+
+      <p>Your data is only stored locally on your own computer (until you
+      explicitly choose to share it with others). Click the
+      <md-icon icon="save"></md-icon> button in the case toolbar to save your
+      changes in your local case database.
+      </p>
+    `;
+  }
+
+  static stylesheet() {
+    return `
+      $ h1 {
+        text-align: center;
+      }
+      $ p {
+        font-size: 1.2rem;
+        margin: 1rem 7rem 1rem 7rem;
+      }
+      $ md-icon {
+        font-size: 1.2rem;
+        vertical-align: middle;
+      }
+    `;
+  }
+}
+
+Component.register(GettingStarted);
 
 //-----------------------------------------------------------------------------
 // Settings panel

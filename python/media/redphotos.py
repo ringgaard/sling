@@ -314,11 +314,13 @@ for key, value in postings:
 
   # Check if posting has been deleted.
   if posting_deleted(key):
+    print(sr, key, "DELETED", title)
     num_deleted += 1
     continue
 
   # Discard duplicate postings.
   if url in seen:
+    print(sr, key, "DUP", title)
     num_dups += 1
     continue
   seen.add(url)
@@ -363,10 +365,10 @@ for key, value in postings:
       if profile is None:
         profile = photo.Profile(itemid)
         profiles[itemid] = profile
+        num_profiles += 1
 
       try:
         n = profile.add_media(url, None, nsfw)
-        num_profiles += 1
         num_photos += n
       except:
         print("Error processing", url, "for", itemid)

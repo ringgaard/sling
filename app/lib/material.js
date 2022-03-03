@@ -825,6 +825,10 @@ export class MdIconButton extends Component {
 
   static stylesheet() {
     return `
+      $ {
+        position: relative;
+      }
+
       $ button {
         border-radius: 50%;
         border: 0;
@@ -855,6 +859,34 @@ export class MdIconButton extends Component {
 
       $ button:focus {
         outline: none;
+      }
+
+      $[tooltip]:after {
+        content: attr(tooltip);
+        position: absolute;
+        opacity: 0;
+        visibility: none;
+      }
+
+      $[tooltip]:hover::after {
+        font:  10pt arial;
+        color: #fff;
+        background: #666;
+        padding: 5px;
+        border-radius: 5px;
+        z-index: 9999;
+        text-align: center;
+        white-space: pre-wrap;
+        width: 80px;
+        transform: translateX(-50%);
+        left: 50%;
+
+        visibility: visible;
+        opacity: 1;
+        transition-property: opacity;
+        transition-duration: 0.2s;
+        transition-timing-function: ease-in-out;
+        transition-delay: 0.5s;
       }
     `;
   }
