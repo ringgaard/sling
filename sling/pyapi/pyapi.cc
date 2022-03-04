@@ -105,6 +105,7 @@ static PyObject *RegisterPythonModule() {
   PyResource::Define(module);
   PyTask::Define(module);
   PyWebArchive::Define(module);
+  PyWebsiteAnalysis::Define(module);
   PyHTTPServer::Define(module);
 
   return module;

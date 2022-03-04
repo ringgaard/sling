@@ -67,6 +67,7 @@ cc_library(
     "//sling/nlp/parser",
     "//sling/nlp/parser:components",
     "//sling/nlp/parser:frame-evaluation",
+    "//sling/nlp/web:text-extractor",
     "//sling/nlp/wiki:wikidata-converter",
     "//sling/task:dashboard",
     "//sling/task:job",

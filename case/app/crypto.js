@@ -23,7 +23,7 @@ const keysize = 16;
 
 const hexstr = [];
 for (let n = 0; n <= 0xff; ++n) {
-  hexstr.push(n.toString(16).padStart(2,"0"));
+  hexstr.push(n.toString(16).padStart(2, "0"));
 }
 
 function bin2hex(bin) {
@@ -99,7 +99,8 @@ export async function decrypt(encrypted, secret) {
     let plaintext = await crypto.subtle.decrypt(algo, key, cipher);
 
     // Check that digest matches with plaintext.
-    let digest = await crypto.subtle.digest(encrypted.get(n_hashing), plaintext);
+    let hasher = encrypted.get(n_hashing);
+    let digest = await crypto.subtle.digest(hasher, plaintext);
     if (bin2hex(digest) != encrypted.get(n_digest)) {
       throw Error("Wrong key");
     }

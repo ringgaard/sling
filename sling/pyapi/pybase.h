@@ -134,6 +134,18 @@ struct PyBase : public PyVarObject {
     }
   }
 
+  // Get text from Python string or bytes.
+  static Text GetText(PyObject *obj) {
+    char *data = nullptr;
+    Py_ssize_t length = 0;
+    if (PyBytes_Check(obj)) {
+      if (PyBytes_AsStringAndSize(obj, &data, &length) == -1) return Text();
+    } else {
+      data = PyUnicode_AsUTF8AndSize(obj, &length);
+    }
+    return Text(data, length);
+  }
+
   // Type checking.
   static bool TypeCheck(PyObject *object, PyTypeObject *type) {
     if (!PyObject_TypeCheck(object, type)) {

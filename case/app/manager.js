@@ -467,8 +467,8 @@ class GettingStarted extends Component {
   render() {
     return `
       <h1>Getting started...</h1>
-      <p>Welcome to the SLING Case tool, a case-based knowledge management tool
-      for gathering information about topics of interest and organizing
+      <p>Welcome to the <b>SLING Case</b>, a case-based knowledge management
+      tool for gathering information about topics of interest and organizing
       these into case files.</p>
 
       <p>Click the <md-icon icon="add"></md-icon> button to open a new

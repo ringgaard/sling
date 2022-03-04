@@ -16,12 +16,15 @@
 
 #include "sling/stream/file-input.h"
 #include "sling/stream/input.h"
+#include "sling/stream/memory.h"
 #include "sling/web/web-archive.h"
 
 namespace sling {
 
 // Python type declarations.
 PyTypeObject PyWebArchive::type;
+PyTypeObject PyWebsiteAnalysis::type;
+PyMethodTable PyWebsiteAnalysis::methods;
 
 void PyWebArchive::Define(PyObject *module) {
   InitType(&type, "sling.WebArchive", sizeof(PyWebArchive), true);
@@ -93,6 +96,71 @@ PyObject *PyWebArchive::Next() {
   if (content != Py_None) Py_DECREF(content);
 
   return tuple;
+}
+
+void PyWebsiteAnalysis::Define(PyObject *module) {
+  InitType(&type, "sling.WebsiteAnalysis", sizeof(PyWebsiteAnalysis), true);
+  type.tp_init = method_cast<initproc>(&PyWebsiteAnalysis::Init);
+  type.tp_dealloc = method_cast<destructor>(&PyWebsiteAnalysis::Dealloc);
+
+  methods.AddO("analyze", &PyWebsiteAnalysis::Analyze);
+  methods.AddO("extract", &PyWebsiteAnalysis::Extract);
+  methods.Add("fingerprints", &PyWebsiteAnalysis::Fingerprints);
+  type.tp_methods = methods.table();
+
+  RegisterType(&type, module, "WebsiteAnalysis");
+}
+
+int PyWebsiteAnalysis::Init(PyObject *args, PyObject *kwds) {
+  // Initialize web site analysis.
+  analysis = new nlp::WebsiteAnalysis();
+
+  return 0;
+}
+
+void PyWebsiteAnalysis::Dealloc() {
+  delete analysis;
+  Free();
+}
+
+PyObject *PyWebsiteAnalysis::Analyze(PyObject *html) {
+  // Get HTML page content.
+  Text content = GetText(html);
+  if (content.data() == nullptr) return nullptr;
+
+  // Set up input stream for parsing.
+  ArrayInputStream stream(content.data(), content.size());
+  Input input(&stream);
+
+  // Analyze page.
+  nlp::WebPageAnalyzer analyzer(analysis);
+  analyzer.Parse(&input);
+  Py_RETURN_NONE;
+}
+
+PyObject *PyWebsiteAnalysis::Extract(PyObject *html) {
+  // Get HTML page content.
+  Text content = GetText(html);
+  if (content.data() == nullptr) return nullptr;
+
+  // Set up input stream for parsing.
+  ArrayInputStream stream(content.data(), content.size());
+  Input input(&stream);
+
+  // Extract text from HTML page.
+  nlp::WebPageTextExtractor extractor(analysis);
+  extractor.Parse(&input);
+  return AllocateString(extractor.text());
+}
+
+PyObject *PyWebsiteAnalysis::Fingerprints() {
+  // Get fingerprints from analysis.
+  std::vector<uint64> fps;
+  analysis->GetFingerprints(&fps);
+
+  // Return fingerprints as raw unsigned 64-bit integers.
+  const char *data = reinterpret_cast<const char *>(fps.data());
+  return PyBytes_FromStringAndSize(data, fps.size() * sizeof(uint64));
 }
 
 }  // namespace sling

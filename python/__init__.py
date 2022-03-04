@@ -24,6 +24,7 @@ WikiConverter = api.WikiConverter
 FactExtractor = api.FactExtractor
 PlausibilityModel = api.PlausibilityModel
 WebArchive = api.WebArchive
+WebsiteAnalysis = api.WebsiteAnalysis
 
 MILLENNIUM = api.MILLENNIUM
 CENTURY = api.CENTURY

@@ -16,6 +16,7 @@
 
 import sling
 import sling.flags as flags
+import sling.log as log
 import sling.net
 
 flags.define("--crawldb",
@@ -37,12 +38,12 @@ class ArticleService:
     # Handle redirects.
     if article and article.startswith(b"#REDIRECT "):
       url = article[10:]
-      print("redirect", url)
+      log.info("redirect", url)
       article = self.crawldb[url];
 
     # Redirect if article not in database.
     if article is None:
-      print("article not found:", url)
+      log.info("article not found:", url)
       return 404
 
     # Get HTTP body.
@@ -53,6 +54,6 @@ class ArticleService:
     # Return article.
     response = sling.net.HTTPResponse()
     response.body = body
-    print("return article:", url)
+    log.info("return article:", url)
     return response
 

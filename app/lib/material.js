@@ -862,19 +862,19 @@ export class MdIconButton extends Component {
       }
 
       $[tooltip]:after {
-        content: attr(tooltip);
         position: absolute;
         opacity: 0;
         visibility: none;
+        content: attr(tooltip);
       }
 
-      $[tooltip]:hover::after {
+      $[tooltip]:hover:after {
         font:  10pt arial;
         color: #fff;
         background: #666;
         padding: 5px;
         border-radius: 5px;
-        z-index: 9999;
+        z-index: 1;
         text-align: center;
         white-space: pre-wrap;
         width: 80px;

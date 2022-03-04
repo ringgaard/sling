@@ -15,6 +15,7 @@
 #ifndef SLING_PYAPI_PYWEB_H_
 #define SLING_PYAPI_PYWEB_H_
 
+#include "sling/nlp/web/text-extractor.h"
 #include "sling/pyapi/pybase.h"
 #include "sling/web/web-archive.h"
 
@@ -31,10 +32,34 @@ struct PyWebArchive : public PyBase {
   // Return next record in archive as 2-tuple with web url and content.
   PyObject *Next();
 
+  // WARC file.
   WARCFile *warc;
 
   // Registration.
   static PyTypeObject type;
+  static void Define(PyObject *module);
+};
+
+// Pyhton wrapper for website analysis for text extraction.
+struct PyWebsiteAnalysis : public PyBase {
+  int Init(PyObject *args, PyObject *kwds);
+  void Dealloc();
+
+  // Analyze web page and update analysis.
+  PyObject *Analyze(PyObject *html);
+
+  // Extract text from HTML page.
+  PyObject *Extract(PyObject *html);
+
+  // Return analysis fingerprints.
+  PyObject *Fingerprints();
+
+  // Web site analysis.
+  nlp::WebsiteAnalysis *analysis;
+
+  // Registration.
+  static PyTypeObject type;
+  static PyMethodTable methods;
   static void Define(PyObject *module);
 };
 

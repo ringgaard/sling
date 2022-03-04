@@ -22,19 +22,34 @@ import json
 import requests
 
 notified = set()
+sysmon_down = False
 
 def notify(message):
   subprocess.run(["notify-send", "SLING alert", message])
 
 while True:
-  r = requests.get("http://master:8888/status")
-  status = r.json()
-  for alert in status["alerts"]:
-    ack = alert.get("ack")
-    if ack is None: continue
-    if ack in notified: continue
-    message = alert["alert"].replace("<br>", "\n")
-    notify(message)
-    notified.add(ack)
+  try:
+    r = requests.get("http://master:8888/status")
+    r.raise_for_status()
+    if sysmon_down:
+      notify("SLING sysmon up")
+      sysmon_down = False
+    status = r.json()
+    for alert in status["alerts"]:
+      ack = alert.get("ack")
+      if ack is None: continue
+      if ack in notified: continue
+      message = alert["alert"].replace("<br>", "\n")
+      notify(message)
+      notified.add(ack)
+
+  except KeyboardInterrupt:
+    break
+
+  except:
+    if not sysmon_down:
+      notify("SLING sysmon down")
+      sysmon_down = True
+
   time.sleep(5 * 60)
 
