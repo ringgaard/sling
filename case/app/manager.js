@@ -258,28 +258,27 @@ class CaseSearchBox extends Component {
 
   render() {
     return `
-      <form>
-        <md-search
-          placeholder="Search for case or topic..."
-          min-length=2>
-        </md-search>
-        <md-icon-button
-          id="add"
-          icon="add"
-          tooltip="Open new case">
-        </md-icon-button>
-      </form>
+      <md-search
+        placeholder="Search for case or topic..."
+        min-length=2>
+      </md-search>
+      <md-icon-button
+        id="add"
+        icon="add"
+        tooltip="Open new case">
+      </md-icon-button>
     `;
   }
 
   static stylesheet() {
     return `
       $ {
-        display: block;
+        display: flex;
         width: 100%;
         max-width: 800px;
         padding-left: 10px;
         padding-right: 3px;
+        align-items: center;
       }
       $ form {
         display: flex;
@@ -492,7 +491,15 @@ class GettingStarted extends Component {
       <md-icon icon="save"></md-icon> button in the case toolbar to save your
       changes in your local case database.
       </p>
+      ${this.browser_supported() ? "" :
+      "<p><b>Your web browser is not supported by SLING, " +
+      "please use Google Chrome version 98+ for the best experience.</b></p>"}
     `;
+  }
+
+  browser_supported() {
+    if (typeof HTMLDialogElement !== 'function') return false;
+    return true;
   }
 
   static stylesheet() {

@@ -147,6 +147,10 @@ PyObject *PyWebsiteAnalysis::Extract(PyObject *html) {
   ArrayInputStream stream(content.data(), content.size());
   Input input(&stream);
 
+  // Extract HTTP headers.
+  RFC822Headers headers;
+  headers.Parse(&input);
+
   // Extract text from HTML page.
   nlp::WebPageTextExtractor extractor(analysis);
   extractor.Parse(&input);

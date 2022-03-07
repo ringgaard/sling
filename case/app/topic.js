@@ -651,7 +651,7 @@ class TopicCard extends Component {
         <md-icon id="icon"></md-icon>
         <md-text id="name"></md-text>
         <md-spacer></md-spacer>
-        <md-toolbox id="edit-actions">
+        <md-toolbox id="edit-actions" sticky="1">
           <md-icon-button
             id="save"
             icon="save_alt"
@@ -660,7 +660,7 @@ class TopicCard extends Component {
           <md-icon-button
             id="discard"
             icon="cancel"
-            tooltip="Discard topic changes\n(Escape)">
+            tooltip="Discard\ntopic\nedits\n(Esc)">
           </md-icon-button>
         </md-toolbox>
         <md-toolbox id="topic-actions">
@@ -693,17 +693,17 @@ class TopicCard extends Component {
           <md-icon-button
             id="moveup"
             icon="move-up"
-            tooltip="Move topic up\n(Ctrl-Up)">
+            tooltip="Move topic up\n(Ctrl+Up)">
           </md-icon-button>
           <md-icon-button
             id="movedown"
             icon="move-down"
-            tooltip="Move topic down\n(Ctrl-Down)">
+            tooltip="Move topic down\n(Ctrl+Down)">
           </md-icon-button>
           <md-icon-button
             id="delete"
             icon="delete"
-            tooltip="Delete topic\n(Delete)">
+            tooltip="Delete\ntopic\n(Del)">
           </md-icon-button>
         </md-toolbox>
       </md-card-toolbar>
@@ -727,6 +727,7 @@ class TopicCard extends Component {
       }
       $ md-card-toolbar {
         align-items: center;
+        overflow: visible;
       }
       $ #icon {
         color: #000000;

@@ -325,7 +325,7 @@ export class StdDialog extends MdDialog {
     }
     if (s.message) {
       h.push("<div>");
-      h.push(Component.escape(s.message).replaceAll(/\n/g, "<br>"));
+      h.push(Component.escape(s.message).replace(/\n/g, "<br>"));
       h.push("</div>");
     }
     if (s.buttons) {
@@ -787,12 +787,24 @@ export class MdIconButton extends Component {
     if (this.state == undefined) this.state = true;
   }
 
-  onconnected() {
+  onrendered() {
     this.bind(null, "mousedown", e => e.preventDefault());
+    this.bind("button", "mouseenter", e => this.onenter(e));
+    this.bind("button", "mouseleave", e => this.onleave(e));
   }
 
   visible() {
     return this.state;
+  }
+
+  onenter(e) {
+    let tooltip = this.find("div.tooltip");
+    if (tooltip) tooltip.classList.add("tooltip-active");
+  }
+
+  onleave(e) {
+    let tooltip = this.find("div.tooltip");
+    if (tooltip) tooltip.classList.remove("tooltip-active");
   }
 
   render() {
@@ -803,10 +815,16 @@ export class MdIconButton extends Component {
     let iattrs = [];
     iattrs.push(`icon="${this.props.icon}"`);
     if (this.props.outlined != undefined) iattrs.push(`class="outlined"`);
+    let tooltip = "";
+    if (this.props.tooltip) {
+      tooltip =
+        `<div class="tooltip">${Component.escape(this.props.tooltip)}</div>`;
+    }
     return `
       <button ${attrs.join(" ")}>
         <md-icon ${iattrs.join(" ")}></md-icon>
-      </button>`;
+      </button>
+      ${tooltip}`;
   }
 
   disable() {
@@ -827,6 +845,7 @@ export class MdIconButton extends Component {
     return `
       $ {
         position: relative;
+        overflow: visible;
       }
 
       $ button {
@@ -861,14 +880,13 @@ export class MdIconButton extends Component {
         outline: none;
       }
 
-      $[tooltip]:after {
+      $ div.tooltip {
         position: absolute;
         opacity: 0;
-        visibility: none;
-        content: attr(tooltip);
+        visibility: hidden;
       }
 
-      $[tooltip]:hover:after {
+      $ div.tooltip-active {
         font:  10pt arial;
         color: #fff;
         background: #666;
@@ -876,10 +894,10 @@ export class MdIconButton extends Component {
         border-radius: 5px;
         z-index: 1;
         text-align: center;
-        white-space: pre-wrap;
         width: 80px;
         transform: translateX(-50%);
         left: 50%;
+        white-space: pre-wrap;
 
         visibility: visible;
         opacity: 1;
@@ -1425,7 +1443,7 @@ export class MdToolbox extends Component {
   }
 
   visible() {
-    return this.state && this.hover;
+    return this.state && (this.props.sticky || this.hover);
   }
 
   onconnected() {
@@ -1616,13 +1634,14 @@ export class MdSearch extends Component {
   static stylesheet() {
     return `
       $ {
-        display: block;
         position: relative;
         width: 100%;
 
         color: black;
         font-family: Roboto,Helvetica,sans-serif;
         font-size: 15px;
+        margin-top: 5px;
+        margin-bottom: 5px;
       }
 
       $ input {
@@ -1632,6 +1651,10 @@ export class MdSearch extends Component {
         padding: 10px;
         border-radius: 5px;
         font-size: 15px;
+        -webkit-appearance: textfield;
+      }
+      $ input::-webkit-search-decoration {
+        --webkit-apperance: none;
       }
     `;
   }

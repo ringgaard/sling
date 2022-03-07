@@ -156,14 +156,23 @@ class FactEditor extends Component {
     if (!focus) return;
     if ((focus instanceof FactStatement) && focus.placeholder()){
       // Add property and value to current placeholder.
-      focus.appendChild(new FactProperty({property: "", value: ""}));
-      focus.appendChild(new FactValue({property: "", value: ""}));
+      let prop = new FactProperty({property: "", value: ""});
+      let val = new FactValue({property: "", value: ""});
+      focus.appendChild(prop);
+      focus.appendChild(val);
 
-      // Make statement qualified on space.
       if (e.data == " ") {
+        // Make statement qualified on space.
         focus.qualified = true;
-        e.preventDefault();
+      } else {
+        // Add initial character to property.
+        console.log("insert", e.data);
+        let initial = document.createTextNode(e.data);
+        prop.appendChild(initial);
+        selection.collapse(initial, e.data.length);
+        prop.onchanged();
       }
+      e.preventDefault();
     } else if (selection.anchorNode != selection.focusNode) {
       let s = this.selection();
       if (s.field && s.base && s.field != s.base) {
@@ -178,7 +187,7 @@ class FactEditor extends Component {
     if (!s) return;
     if (s.field instanceof FactField) {
       if (this.focused && this.focused != s.field) this.focused.collapse();
-      s.field.onchanged(e);
+      s.field.onchanged();
     }
     if (!this.lastChild.empty()) {
       let placeholder = new FactStatement();
@@ -527,6 +536,17 @@ class FactEditor extends Component {
       }
       s.selection.collapse(s.statement);
     } else {
+      // Add placeholder if needed before inserting text.
+      let selection = document.getSelection();
+      let focus = selection.focusNode;
+      if ((focus instanceof FactStatement) && focus.placeholder()){
+        let prop = new FactProperty({property: "", value: ""});
+        let val = new FactValue({property: "", value: ""});
+        focus.appendChild(prop);
+        focus.appendChild(val);
+        selection.collapse(prop, 0);
+      }
+
       // Paste as text.
       let text = clip.innerText;
       document.execCommand("insertText", false, text);
@@ -776,7 +796,7 @@ class FactField extends Component {
     this.list = this.match("fact-panel").list();
   }
 
-  async onchanged(e) {
+  async onchanged() {
     // Trim content.
     if (this.childElementCount != 0) {
       this.innerHTML = Component.escape(this.text());

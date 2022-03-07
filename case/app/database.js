@@ -37,7 +37,7 @@ class CaseDatabase {
       // Create database if needed.
       request.onupgradeneeded = e => {
         console.log("Database upgrade");
-        let db = event.target.result;
+        let db = e.target.result;
 
         // Create case directory.
         let casedir = db.createObjectStore("casedir", { keyPath: "id" });
@@ -54,7 +54,7 @@ class CaseDatabase {
 
       // Store database connection and install global error handler on success.
       request.onsuccess = e => {
-        this.db = event.target.result;
+        this.db = e.target.result;
         this.db.onerror = e => this.onerror(e);
         resolve(this);
       };

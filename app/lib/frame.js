@@ -571,7 +571,7 @@ export class Decoder {
   }
 
   // Read frame from from input.
-  readFrame = function(size, replace) {
+  readFrame(size, replace) {
     // Make new frame or replace existing frame.
     let frame;
     let refidx = this.refs.length;

@@ -201,30 +201,23 @@ class KbSearchBox extends Component {
 
   render() {
     return `
-      <form>
-        <md-search
-          placeholder="Search knowledge base..."
-          min-length=2
-          autoselect=1
-          autofocus>
-        </md-search>
-      </form>
+      <md-search
+        placeholder="Search knowledge base..."
+        min-length=2
+        autoselect=1
+        autofocus>
+      </md-search>
     `;
   }
 
   static stylesheet() {
     return `
       $ {
-        display: block;
+        display: flex;
         width: 100%;
         max-width: 800px;
         padding-left: 10px;
         padding-right: 3px;
-      }
-
-      $ form {
-        display: flex;
-        width: 100%;
       }
     `;
   }
