@@ -887,7 +887,7 @@ export class MdIconButton extends Component {
       }
 
       $ div.tooltip-active {
-        font:  10pt arial;
+        font: 10pt Roboto, arial;
         color: #fff;
         background: #666;
         padding: 5px;
@@ -905,6 +905,18 @@ export class MdIconButton extends Component {
         transition-duration: 0.2s;
         transition-timing-function: ease-in-out;
         transition-delay: 0.5s;
+      }
+
+      $[tooltip-align="right"] div.tooltip-active {
+        transform: none;
+        left: unset;
+        right: 0;
+      }
+
+      $[tooltip-align="left"] div.tooltip-active {
+        transform: none;
+        left: 0;
+        right: unset;
       }
     `;
   }

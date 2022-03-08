@@ -60,7 +60,8 @@ class CaseManager extends Component {
           <md-icon-button
             id="settings"
             icon="settings"
-            tooltip="Change\nsettings">
+            tooltip="Change settings"
+            tooltip-align="right">
           </md-icon-button>
         </md-toolbar>
 
@@ -280,9 +281,8 @@ class CaseSearchBox extends Component {
         padding-right: 3px;
         align-items: center;
       }
-      $ form {
-        display: flex;
-        width: 100%;
+      $ #add {
+        padding-left: 5px;
       }
     `;
   }

@@ -87,7 +87,7 @@ export class OmniBox extends Component {
         width: 100%;
         max-width: 800px;
         padding-left: 10px;
-        padding-right: 3px;
+        padding-right: 10px;
       }
 
       $ form {

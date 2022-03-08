@@ -124,6 +124,40 @@ pages = [
   ("Photo search",         re.compile(r"^\/photosearch\/(.+)$")),
 ]
 
+browsers = [
+  ("Firefox",              re.compile(r"Firefox\/([0-9\.]+)")),
+  ("Edge",                 re.compile(r"Edge?\/([0-9\.]+)")),
+  ("Chromium",             re.compile(r"Chromium\/([0-9\.]+)")),
+  ("Chrome",               re.compile(r"Chrome\/([0-9\.]+)")),
+  ("Chrome",               re.compile(r"CriOS\/([0-9\.]+)")),
+  ("Safari",               re.compile(r"Safari\/([0-9\.]+)")),
+  ("Opera",                re.compile(r"OPR\/([0-9\.]+)")),
+  ("Opera",                re.compile(r"Opera\/([0-9\.]+)")),
+  ("Internet Explorer",    re.compile(r"; MSIE \d+;")),
+  ("Internet Explorer",    re.compile(r"Trident\/([0-9\.]+)")),
+  ("Facebook",             re.compile(r"Mobile\/15E148")),
+  ("curl",                 re.compile(r"curl\/([0-9\.]+)")),
+  ("python",               re.compile(r"python-requests\/([0-9\.]+)")),
+  ("python",               re.compile(r"Python-urllib\/([0-9\.]+)")),
+  ("python",               re.compile(r"Python\/([0-9\.]+)")),
+  ("pip",                  re.compile(r"pip\/([0-9\.]+)")),
+  ("perl",                 re.compile(r"libwww-perl\/([0-9\.]+)")),
+  ("None",                 re.compile(r"-")),
+  ("Other",                re.compile(r"")),
+]
+
+platforms = [
+  ("Windows",              re.compile(r"Windows NT (\d+\.\d+)")),
+  ("MacOS",                re.compile(r"Mac OS X ([0-9_]+)")),
+  ("IOS",                  re.compile(r"iPhone OS ([0-9_]+)")),
+  ("IOS",                  re.compile(r"iOS ([0-9_]+)")),
+  ("Android",              re.compile(r"Android (\d+)")),
+  ("Chrome OS",            re.compile(r"CrOS (\w+)")),
+  ("Linux",                re.compile(r"Linux (\w+)")),
+  ("FreeBSD",              re.compile(r"FreeBSD (\w+)")),
+  ("Other",                re.compile(r"")),
+]
+
 bots = [
   ("Google",                 re.compile(r"Googlebot")),
   ("Google Adwords",         re.compile(r"Google-Adwords-Instant")),
@@ -144,6 +178,7 @@ bots = [
   ("medium.com",             re.compile(r"Mediumbot-MetaTagFetcher")),
   ("DuckDuckGo Favicons",    re.compile(r"DuckDuckGo-Favicons-Bot")),
   ("commoncrawl.org",        re.compile(r"CCBot")),
+  ("Dataprovider.com",       re.compile(r"Dataprovider\.com")),
 
   ("Majestic",               re.compile(r"MJ12bot")),
   ("Mail.RU",                re.compile(r"Mail.RU_Bot")),
@@ -181,6 +216,8 @@ bots = [
   ("netsystemsresearch",     re.compile(r"netsystemsresearch.com")),
   ("TsunamiSecurityScanner", re.compile(r"TsunamiSecurityScanner")),
   ("Yahoo answers",          re.compile(r"Y!J-DLC/1.0")),
+  ("NetcraftSurveyAgent",    re.compile(r"NetcraftSurveyAgent")),
+
 
   ("Other bots",           re.compile(r"[Bb]ot")),
   ("Other crawlers",       re.compile(r"[Cc]rawl")),
@@ -267,6 +304,8 @@ download_hits = defaultdict(int)
 media_hits = defaultdict(int)
 item_hits = defaultdict(int)
 query_hits = defaultdict(int)
+browser_hits = defaultdict(int)
+platform_hits = defaultdict(int)
 http_codes = defaultdict(int)
 bot_hits = defaultdict(int)
 worm_hits = defaultdict(int)
@@ -358,6 +397,19 @@ for logfn in flags.arg.logfiles:
     # Mobile.
     if mobile_pattern.search(ua):
       num_mobile += 1
+
+    # Browsers and platforms.
+    for browser_name, browser_pattern in browsers:
+      if browser_pattern.search(ua):
+        browser_hits[browser_name] += 1
+        #if browser_name == "Other": print("Browser?", ua)
+        break
+
+    for platform_name, platform_pattern in platforms:
+      if platform_pattern.search(ua):
+        platform_hits[platform_name] += 1
+        #if platform_name == "Other": print("Platform?", ua)
+        break
 
     # Referrers.
     if referrer != "-" and not referrer.startswith("https://ringgaard.com"):
@@ -486,6 +538,8 @@ print("%6d MB" % (num_bytes / (1024 * 1024)))
 print_table("PAGES", "page", page_hits)
 print_table("HITS PER DAY", "date", date_hits, chron=True)
 print_table("VISITS PER DAY", "date", visits_per_day, chron=True)
+print_table("BROWSERS", "browser", browser_hits)
+print_table("PLATFORMS", "platform", platform_hits)
 print_table("DOWNLOADS", "file", download_hits)
 print_table("MEDIA", "file", media_hits)
 print_table("ITEMS", "item", item_hits)

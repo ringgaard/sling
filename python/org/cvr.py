@@ -992,6 +992,7 @@ for key, rec in cvrdb.items():
             t = a["type"]
             if t == "FUNKTION" or t == "EJERANDEL_PROCENT":
               for v in a["vaerdier"]:
+                if "vaerdi" not in v: continue
                 function = v["vaerdi"].lower()
                 period = v["periode"]
                 start = get_date(period["gyldigFra"])

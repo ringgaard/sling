@@ -660,7 +660,8 @@ class TopicCard extends Component {
           <md-icon-button
             id="discard"
             icon="cancel"
-            tooltip="Discard\ntopic\nedits\n(Esc)">
+            tooltip="Discard topic edits\n(Esc)"
+            tooltip-align="right">
           </md-icon-button>
         </md-toolbox>
         <md-toolbox id="topic-actions">
@@ -703,7 +704,8 @@ class TopicCard extends Component {
           <md-icon-button
             id="delete"
             icon="delete"
-            tooltip="Delete\ntopic\n(Del)">
+            tooltip="Delete topic\n(Del)"
+            tooltip-align="right">
           </md-icon-button>
         </md-toolbox>
       </md-card-toolbar>
@@ -727,7 +729,6 @@ class TopicCard extends Component {
       }
       $ md-card-toolbar {
         align-items: center;
-        overflow: visible;
       }
       $ #icon {
         color: #000000;

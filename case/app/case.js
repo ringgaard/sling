@@ -1296,7 +1296,8 @@ class CaseEditor extends Component {
             id="home"
             class="tool"
             icon="home"
-            tooltip="Go to\ncase list">
+            tooltip="Go to case list"
+            tooltip-align="right">
           </md-icon-button>
           <md-menu id="menu">
             <md-menu-item id="save">Save</md-menu-item>
@@ -1315,7 +1316,8 @@ class CaseEditor extends Component {
               <md-icon-button
                 id="newfolder"
                 icon="create_new_folder"
-                tooltip="Create new folder">
+                tooltip="Create new folder"
+                tooltip-align="right">
               </md-icon-button>
             </div>
             <folder-list></folder-list>
@@ -1364,7 +1366,6 @@ class CaseEditor extends Component {
       $ md-drawer {
         min-width: 200px;
         padding: 3px;
-        overflow: visible;
       }
       $ #folders-top {
         display: flex;
@@ -1374,7 +1375,7 @@ class CaseEditor extends Component {
         margin-left: 6px;
         border-bottom: thin solid #808080;
         margin-bottom: 6px;
-        overflow: visible;
+        min-height: 40px;
       }
     `;
   }
