@@ -25,7 +25,6 @@ var plugins = [
   ],
 },
 
-
 // Wikipedia page.
 {
   name: "wikipedia",
@@ -43,6 +42,16 @@ var plugins = [
   actions: [PASTEURL, SEARCHURL],
   patterns: [
     /^https:\/\/(mobile\.)?twitter\.com\//,
+  ],
+},
+
+// VIAF entity.
+{
+  name: "viaf",
+  module: "viaf.js",
+  actions: [PASTEURL, SEARCHURL],
+  patterns: [
+    /^https:\/\/viaf\.org\/viaf\/\d+/,
   ],
 },
 

@@ -121,12 +121,24 @@ let xrefs = [
     property: store.lookup("P7085"),
   },
   {
+    pattern: /^https?:\/\/medium\.com\/@([^\/\?]+)/i,
+    property: store.lookup("P3899"),
+  },
+  {
+    pattern: /^https?:\/\/pinterest\.com\/([^\/\?]+)/i,
+    property: store.lookup("P3836"),
+  },
+  {
     pattern: /^https?:\/\/(?:www\.)?cameo\.com\/([^\/\?]+)/i,
     property: store.lookup("P6908"),
   },
   {
     pattern: /^https?:\/\/([^\s\/]+)\.tumblr\.com\/?/i,
     property: store.lookup("P3943"),
+  },
+  {
+    pattern: /^https?:\/\/([^\s\/]+)\.blogspot\.com\/?/i,
+    property: store.lookup("P8772"),
   },
   {
     pattern: /^https?:\/\/(?:www\.)?myspace\.com\/([^\/\?]+)/,

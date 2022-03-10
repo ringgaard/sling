@@ -14,6 +14,37 @@
 
 import os.path
 
+# Utility class for building frames with slots.
+class FrameBuilder:
+  def __init__(self, store):
+    self.store = store
+    self.slots = []
+
+  # Add slot.
+  def __setitem__(self, name, value):
+    self.slots.append((name, value))
+
+  # Add new slot.
+  def add(self, name, value):
+    self.slots.append((name, value))
+
+  # Add new unique slot.
+  def put(self, name, value):
+    for slot in self.slots:
+      if slot[0] == name and slot[1] == value:
+        return False
+    self.slots.append((name, value))
+    return True
+
+  # Create frame with slots.
+  def create(self):
+    return self.store.frame(self.slots)
+
+  # Write frame with slots to output.
+  def write(self, out):
+    frame = self.create()
+    out.write(frame.id, frame.data(binary=True))
+
 # Class for keeping track of database checkpoint in file
 class Checkpoint:
   def __init__(self, filename):

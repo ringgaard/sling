@@ -115,7 +115,7 @@ def cache_images(media):
     num_bytes += len(image)
     print("cached", url, len(image))
 
-  print("Caching done:",
+  log.info("Caching done:",
         num_images, "images,",
         num_retrieved, "retrieved,",
         num_known, "known,",

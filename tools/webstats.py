@@ -128,11 +128,11 @@ browsers = [
   ("Firefox",              re.compile(r"Firefox\/([0-9\.]+)")),
   ("Edge",                 re.compile(r"Edge?\/([0-9\.]+)")),
   ("Chromium",             re.compile(r"Chromium\/([0-9\.]+)")),
+  ("Opera",                re.compile(r"OPR\/([0-9\.]+)")),
+  ("Opera",                re.compile(r"Opera\/([0-9\.]+)")),
   ("Chrome",               re.compile(r"Chrome\/([0-9\.]+)")),
   ("Chrome",               re.compile(r"CriOS\/([0-9\.]+)")),
   ("Safari",               re.compile(r"Safari\/([0-9\.]+)")),
-  ("Opera",                re.compile(r"OPR\/([0-9\.]+)")),
-  ("Opera",                re.compile(r"Opera\/([0-9\.]+)")),
   ("Internet Explorer",    re.compile(r"; MSIE \d+;")),
   ("Internet Explorer",    re.compile(r"Trident\/([0-9\.]+)")),
   ("Facebook",             re.compile(r"Mobile\/15E148")),
@@ -392,7 +392,6 @@ for logfn in flags.arg.logfiles:
     # POSTs.
     if method == "POST":
       num_posts += 1
-      continue
 
     # Mobile.
     if mobile_pattern.search(ua):

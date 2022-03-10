@@ -34,6 +34,7 @@ services = {
   "transcode": Service("transcode", "TranscodeService"),
   "twitter": Service("twitter", "TwitterService"),
   "wikidata": Service("wikidata", "WikidataService"),
+  "viaf": Service("viaf", "VIAFService"),
 }
 
 def load():
