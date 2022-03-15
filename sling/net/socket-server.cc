@@ -590,6 +590,14 @@ void SocketConnection::Shutdown() {
   shutdown(sock_, SHUT_RDWR);
 }
 
+void SocketConnection::Push() {
+  if (state_ > SOCKET_STATE_RECEIVE) return;
+  if (state_ == SOCKET_STATE_RECEIVE && request()->empty()) return;
+  if (response_body()->empty()) return;
+  state_ = SOCKET_STATE_SEND;
+  Process();
+}
+
 const char *SocketConnection::State() const {
   switch (state_) {
     case SOCKET_STATE_IDLE: return "IDLE";

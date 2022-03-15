@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
   delete httpd;
   httpd = nullptr;
 
-  LOG(INFO) << "Shutting down database sever";
+  LOG(INFO) << "Shutting down database server";
   delete dbservice;
   dbservice = nullptr;
 

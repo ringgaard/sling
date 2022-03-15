@@ -168,6 +168,9 @@ class SocketConnection {
   // Set file for streaming response. This will take ownership of the file.
   void SendFile(File *file) { file_ = file; }
 
+  // Push unsent data.
+  void Push();
+
   // Server for connection.
   SocketServer *server() const { return server_; }
 

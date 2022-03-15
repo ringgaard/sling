@@ -41,6 +41,18 @@ cc_library(
 )
 
 cc_library(
+  name = "web-sockets",
+  srcs = ["web-sockets.cc"],
+  hdrs = ["web-sockets.h"],
+  deps = [
+    ":socket-server",
+    ":http-server",
+    "//sling/base",
+    "//third_party/sha1",
+  ],
+)
+
+cc_library(
   name = "static-content",
   srcs = ["static-content.cc"],
   hdrs = ["static-content.h"],
