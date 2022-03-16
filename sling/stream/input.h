@@ -70,6 +70,9 @@ class Input {
   // Reads line from input into to the string. Return false on end of input.
   bool ReadLine(string *output);
 
+  // Reads variable-length string.
+  bool ReadVarString(string *output);
+
   // Reads 32-bits varint from input. The fast case where we are sure enough
   // data is in the buffer is inlined. The loop will be unrolled by the
   // compiler, so this is faster than using the normal varint routines.

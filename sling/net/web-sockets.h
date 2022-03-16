@@ -54,10 +54,10 @@ class WebSocket : public SocketSession {
   // Send frame to client.
   void Send(int type, const void *data, size_t size);
   void Send(const void *data, size_t size) {
-    Send(WS_OP_TEXT, data, size);
-  }
-  void Send(const char *data, size_t size) {
     Send(WS_OP_BIN, data, size);
+  }
+  void SendText(const char *data, size_t size) {
+    Send(WS_OP_TEXT, data, size);
   }
 
  private:

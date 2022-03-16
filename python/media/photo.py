@@ -127,6 +127,13 @@ def trim_numbering(caption):
   if m != None: return m.group(1)
   return caption
 
+# Tri-state override.
+def tri(value, override):
+  if override is None:
+    return value
+  else:
+    return override
+
 def photodb():
   global db
   if db is None: db = sling.Database(flags.arg.photodb, "photo.py")
@@ -208,7 +215,7 @@ class Profile:
     return False
 
   # Add photo to profile.
-  def add_photo(self, url, caption=None, source=None, nsfw=False):
+  def add_photo(self, url, caption=None, source=None, nsfw=None):
     # Check if photo should be excluded.
     if self.excluded and url in self.excluded:
       print("Skip excluded photo:", url)
@@ -276,7 +283,7 @@ class Profile:
     return 1
 
   # Add Imgur album.
-  def add_imgur_album(self, albumid, caption, isnsfw=False):
+  def add_imgur_album(self, albumid, caption, nsfw_override=None):
     print("Imgur album", albumid)
     auth = {'Authorization': "Client-ID " + imgurkeys["clientid"]}
     r = session.get("https://api.imgur.com/3/album/" + albumid, headers=auth)
@@ -328,7 +335,7 @@ class Profile:
         title = title.replace("\n", " ").strip()
 
       # NSFW flag.
-      nsfw = isnsfw or reply["nsfw"] or image["nsfw"]
+      nsfw = tri(reply["nsfw"] or image["nsfw"], nsfw_override)
 
       # Add media frame to profile.
       if self.add_photo(link, title, None, nsfw): count += 1
@@ -336,7 +343,7 @@ class Profile:
     return count
 
   # Add Imgur image.
-  def add_imgur_image(self, imageid, isnsfw=False):
+  def add_imgur_image(self, imageid, nsfw_override=None):
     print("Imgur image", imageid)
     auth = {'Authorization': "Client-ID " + imgurkeys["clientid"]}
     r = session.get("https://api.imgur.com/3/image/" + imageid, headers=auth)
@@ -365,13 +372,13 @@ class Profile:
       caption = caption.replace("\n", " ").strip()
 
     # NSFW flag.
-    nsfw = isnsfw or reply["nsfw"] or reply["nsfw"]
+    nsfw = tri(reply["nsfw"] or reply["nsfw"], nsfw_override)
 
     # Add media to profile frame.
     return self.add_photo(link, caption, None, nsfw)
 
   # Add Reddit gallery.
-  def add_reddit_gallery(self, galleryid, caption, isnsfw=False):
+  def add_reddit_gallery(self, galleryid, caption, nsfw_override=None):
     print("Redit posting", galleryid)
     r = requests.get("https://api.reddit.com/api/info/?id=t3_" + galleryid,
                      headers = {"User-agent": "SLING Bot 1.0"})
@@ -404,7 +411,7 @@ class Profile:
       title = reply["title"]
       if title is None: title = caption
       if self.captionless: title = None
-      nsfw = isnsfw or reply["over_18"]
+      nsfw = tri(reply["over_18"], nsfw_override)
 
       count = 0
       if flags.arg.albums:
@@ -457,7 +464,7 @@ class Profile:
         title = "%s (%d/%d)" % (title, serial, len(items))
 
       # NSFW flag.
-      nsfw = isnsfw or reply["over_18"]
+      nsfw = tri(reply["over_18"], nsfw_override)
 
       # Add media to profile frame.
       if self.add_photo(link, title, None, nsfw): count += 1

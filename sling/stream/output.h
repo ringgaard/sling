@@ -48,6 +48,12 @@ class Output {
   // Writes 64-bit varint to output.
   void WriteVarint64(uint64 value);
 
+  // Writes variable-size string to output.
+  void WriteVarString(Text str) {
+    WriteVarint32(str.size());
+    Write(str);
+  }
+
   // Writes one character to output.
   void WriteChar(char ch) {
     if (current_ != limit_) {

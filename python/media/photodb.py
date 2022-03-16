@@ -38,6 +38,11 @@ flags.define("--nsfw",
              default=False,
              action="store_true")
 
+flags.define("--sfw",
+             help="mark photos as sfw",
+             default=False,
+             action="store_true")
+
 flags.define("--overwrite",
              help="overwrite existing photos",
              default=False,
@@ -104,6 +109,17 @@ if flags.arg.exclude != None:
   for url in flags.arg.exclude:
     excluded.add(url[0])
 
+# Tri-state override.
+def tri(value, override):
+  if override is None:
+    return value
+  else:
+    return override
+
+nsfw_override = None
+if flags.arg.nsfw: nsfw_override = True
+if flags.arg.sfw: nsfw_override = False
+
 # Bulk load photos from batch file.
 def bulk_load(batch):
   profiles = {}
@@ -132,7 +148,7 @@ def bulk_load(batch):
 
     # Add media to profile.
     try:
-      n = profile.add_media(url, flags.arg.caption, nsfw or flags.arg.nsfw)
+      n = profile.add_media(url, flags.arg.caption, tri(nsfw, nsfw_override))
       if n > 0:
         num_photos += n
         updated.add(id)
@@ -210,7 +226,7 @@ else:
   else:
     # Fetch photo urls.
     for url in flags.arg.url:
-      num_added += profile.add_media(url, flags.arg.caption, flags.arg.nsfw)
+      num_added += profile.add_media(url, flags.arg.caption, nsfw_override)
 
   # Remove duplicates.
   if flags.arg.dedup: num_removed += profile.dedup()

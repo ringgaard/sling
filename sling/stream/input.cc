@@ -120,6 +120,17 @@ bool Input::ReadLine(string *output) {
   }
 }
 
+bool Input::ReadVarString(string *output) {
+  // Read varint-encoded string length.
+  uint32 size;
+  if (!ReadVarint32(&size)) return false;
+
+  // Read string.
+  if (!ReadString(size, output)) return false;
+
+  return true;
+}
+
 bool Input::ReadVarint32Fallback(uint32 *value) {
   uint32 result = 0;
   for (int i = 0; i < 64; i += 7) {
