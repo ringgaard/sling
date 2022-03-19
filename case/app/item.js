@@ -736,7 +736,7 @@ class ItemPanel extends Component {
           gallery.push({
             url: store.resolve(value),
             text: value.get(n_media_legend),
-            nsfw: value.get(n_has_quality) == n_not_safe_for_work,
+            nsfw: value.has(n_has_quality, n_not_safe_for_work),
           });
         } else {
           gallery.push({url: value});

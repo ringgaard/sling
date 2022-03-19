@@ -188,7 +188,6 @@ class TopicList extends Component {
     return `
       $ {
         display: block;
-        overflow: hidden;
         padding-bottom: 500px;
       }
     `;

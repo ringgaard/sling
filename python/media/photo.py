@@ -472,7 +472,7 @@ class Profile:
     return count
 
   # Add media.
-  def add_media(self, url, caption, nsfw):
+  def add_media(self, url, caption=None, nsfw=None):
     # Trim url.
     url = url.replace("/i.imgur.com/", "/imgur.com/")
     url = url.replace("/www.imgur.com/", "/imgur.com/")

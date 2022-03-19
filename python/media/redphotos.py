@@ -242,7 +242,7 @@ for key, value in postings:
   title = posting[n_title]
   if type(title) is bytes: continue
   title = title.replace('\n', ' ').strip()
-  nsfw = posting[n_over_18]
+  nsfw = True if posting[n_over_18] else None
 
   # Discard self-posts.
   if posting[n_is_self]: continue

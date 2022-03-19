@@ -181,6 +181,10 @@ let xrefs = [
     property: store.lookup("P3869"),
   },
   {
+    pattern: /^https?:\/\/www\.egafd\.com\/actresses\/details.php\/id\/(\w+)/,
+    property: store.lookup("P8767"),
+  },
+  {
     pattern: /^https?:\/\/scholar\.google\.com\/citations\/?\?user=(\w+)/,
     property: store.lookup("P1960"),
   },

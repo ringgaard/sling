@@ -197,7 +197,7 @@ class RedditPosting extends Component {
       },
       body: JSON.stringify({
         url: posting.url,
-        nsfw: posting.over_18,
+        nsfw: posting.over_18 ? true : null,
       }),
     })
     .then((response) => {

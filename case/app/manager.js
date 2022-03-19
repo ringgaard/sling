@@ -14,6 +14,7 @@ function pad4(num) {
 }
 
 function date2str(date) {
+  if (!date) return "";
   let year = pad4(date.getFullYear());
   let month = pad2(date.getMonth() + 1);
   let day = pad2(date.getDate());
@@ -358,7 +359,9 @@ class CaseList extends material.MdCard {
     for (let rec of this.state) {
       if (rec.nsfw && !settings.nsfw) continue;
       let icon = "";
-      if (rec.link) {
+      if (rec.collab) {
+        icon = '<md-icon icon="people" outlined></md-icon>';
+      } else if (rec.link) {
         if (rec.secret) {
           icon = '<md-icon icon="key" outlined></md-icon>';
         } else {
@@ -466,7 +469,7 @@ class GettingStarted extends Component {
   render() {
     return `
       <h1>Getting started...</h1>
-      <p>Welcome to the <b>SLING Case</b>, a case-based knowledge management
+      <p>Welcome to <b>KnolCase</b>, a case-based knowledge management
       tool for gathering information about topics of interest and organizing
       these into case files.</p>
 

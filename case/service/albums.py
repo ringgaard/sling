@@ -26,7 +26,7 @@ class AlbumService:
     # Get photos from url(s).
     profile = photolib.Profile(None)
     if params.get("captions") is None: profile.captionless = True
-    for url in urls: profile.add_media(url, None, False)
+    for url in urls: profile.add_media(url)
 
     # Return extracted photos.
     return profile.frame
