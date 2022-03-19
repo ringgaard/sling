@@ -237,7 +237,7 @@ def service_request(request):
 
   # Forward request.
   log.info("Proxy request for", url, headers, cookies)
-  r = requests.get(url, headers=headers, cookies=cookies)
+  r = requests.get(url, headers=headers, cookies=cookies, timeout=30)
 
   # Relay back response.
   response = sling.net.HTTPResponse()
