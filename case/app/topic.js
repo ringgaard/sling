@@ -724,6 +724,7 @@ class TopicCard extends Component {
         border: 1px solid white;
         padding: 10px;
         margin: 5px 5px 15px 5px;
+        overflow-x: clip;
         outline: none;
       }
       $ md-card-toolbar {

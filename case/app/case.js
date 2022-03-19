@@ -1366,6 +1366,7 @@ class CaseEditor extends Component {
       $ md-drawer {
         min-width: 200px;
         padding: 3px;
+        overflow: hidden;
       }
       $ #folders-top {
         display: flex;
