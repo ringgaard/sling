@@ -256,7 +256,7 @@ std::vector<Text> Text::split(char c) const {
   std::vector<Text> parts;
   ssize_t start = 0;
   while (start < length_) {
-    ssize_t end = find('\n', start);
+    ssize_t end = find(c, start);
     if (end == npos) end = length_;
     parts.emplace_back(ptr_ + start, end - start);
     start = end + 1;

@@ -11,6 +11,7 @@ import {NewFolderDialog} from "./folder.js";
 import {Drive} from "./drive.js";
 import {wikidata_initiate, wikidata_export} from "./wikibase.js";
 import {generate_key, encrypt} from "./crypto.js";
+import {Collaboration} from "./collab.js";
 import "./topic.js";
 import "./omnibox.js";
 
@@ -25,13 +26,18 @@ const n_folders = store.lookup("folders");
 const n_next = store.lookup("next");
 const n_publish = store.lookup("publish");
 const n_share = store.lookup("share");
+const n_collaborate = store.lookup("collaborate");
 const n_secret = store.lookup("secret");
 const n_link = store.lookup("link");
+const n_collab = store.lookup("collab");
+const n_userid = store.lookup("userid");
+const n_credentials = store.lookup("credentials");
 const n_modified = store.lookup("modified");
 const n_shared = store.lookup("shared");
 const n_media = store.lookup("media");
 const n_case_file = store.lookup("Q108673968");
 const n_instance_of = store.lookup("P31");
+const n_author = store.lookup("P50");
 const n_has_quality = store.lookup("P1552");
 const n_nsfw = store.lookup("Q2716583");
 
@@ -168,12 +174,14 @@ class CaseEditor extends Component {
     this.bind("#export", "click", e => this.onexport(e));
     this.bind("#addlink", "click", e => this.onaddlink(e));
     this.bind("#save", "click", e => this.onsave(e));
+    this.bind("#invite", "click", e => this.oninvite(e));
     this.bind("#share", "click", e => this.onshare(e));
     this.bind("#home", "click", e => this.close(e));
     this.bind("#newfolder", "click", e => this.onnewfolder(e));
 
     this.bind("md-menu #save", "click", e => this.onsave(e));
     this.bind("md-menu #share", "click", e => this.onshare(e));
+    this.bind("md-menu #collaborate", "click", e => this.oncollaborate(e));
     this.bind("md-menu #imgcache", "click", e => this.onimgcache(e));
     this.bind("md-menu #export", "click", e => this.onexport(e));
     this.bind("md-menu #upload", "click", e => this.onupload(e));
@@ -408,6 +416,42 @@ class CaseEditor extends Component {
     }
   }
 
+  async oncollaborate(e) {
+    if (this.readonly) return;
+    if (this.collab) return this.oninvite(e)
+    if (!this.main.has(n_author)) {
+      inform("No case author defined. Please add yourself as case author.");
+      return;
+    }
+
+    let dialog = new CollaborateDialog("ws://10.1.2.5:7700/collab");
+    let url = await dialog.show();
+    if (url) {
+      // Connect to collaboration server and create new collaboration.
+      let collab = new Collaboration();
+      await collab.connect(url);
+      let credentials = await new Promise((resolve, reject) => {
+        collab.oncreated = (credentials) => resolve(credentials);
+        collab.create(this.casefile);
+      });
+      collab.close();
+
+      // Add collaboration to case.
+      this.casefile.set(n_collaborate, true);
+      this.casefile.set(n_collab, url);
+      this.casefile.set(n_userid, this.main.get(n_author).id);
+      this.casefile.set(n_credentials, credentials);
+
+      // Save and reload.
+      this.match("#app").save_case(this.casefile);
+      this.update(this.casefile);
+    }
+  }
+
+  async oninvite(e) {
+    inform("Collaboration invitations not yet implemented");
+  }
+
   async onimgcache(e) {
     // Collect media in case.
     let media = new Array();
@@ -434,13 +478,34 @@ class CaseEditor extends Component {
   async onupdate() {
     if (!this.state) return;
     this.mark_clean();
+    this.casefile = this.state;
+
+    // Connected to collaboration server for collaboration case.
+    let collab_url = this.casefile.get(n_collab)
+    if (this.casefile.get(n_collab)) {
+      // Connect to collaboration server.
+      this.collab = new Collaboration();
+      await this.collab.connect(collab_url);
+
+      // Login to collaboration.
+      let caseid = this.casefile.get(n_caseid);
+      let userid = this.casefile.get(n_userid);
+      let credentials = this.casefile.get(n_credentials);
+      this.localcase = this.casefile;
+      this.casefile = await new Promise((resolve, reject) => {
+        this.collab.onlogin = (casefile) => resolve(casefile);
+        this.collab.login(caseid, userid, credentials);
+      });
+    } else {
+      this.collab = undefined;
+      this.localcase = undefined;
+    }
 
     // Initialize case editor for new case.
-    this.casefile = this.state;
     this.main = this.casefile.get(n_main);
     this.topics = this.casefile.get(n_topics);
     this.folders = this.casefile.get(n_folders);
-    this.folder = this.casefile.get(n_folders).value(0);
+    this.folder = this.folders.value(0);
     this.scraps = [];
     this.readonly = this.casefile.get(n_link);
 
@@ -462,6 +527,12 @@ class CaseEditor extends Component {
     // Enable/disable action buttons.
     for (let e of ["#save", "#share", "#merge", "#newfolder", "#export"]) {
       this.find(e).update(!this.readonly);
+    }
+    if (this.collab) {
+      this.find("#save").update(false);
+      this.find("#invite").update(true);
+    } else {
+      this.find("#invite").update(false);
     }
     this.find("#menu").style.display = this.readonly ? "none" : "";
     this.find("#addlink").update(this.readonly);
@@ -593,6 +664,13 @@ class CaseEditor extends Component {
 
   add_folder(name) {
     if (this.readonly) return;
+    for (let i = 0; i < this.folders.length; ++i) {
+      if (this.folders.name(i) == name) {
+        inform(`Folder "${name}" already exists`);
+        return;
+      }
+    }
+
     this.folder = new Array();
     this.folders.add(name, this.folder);
     this.mark_dirty();
@@ -602,6 +680,13 @@ class CaseEditor extends Component {
 
   rename_folder(folder, name) {
     if (this.readonly) return;
+    for (let i = 0; i < this.folders.length; ++i) {
+      if (this.folders.name(i) == name) {
+        inform(`Folder "${name}" already exists`);
+        return;
+      }
+    }
+
     let pos = this.folderno(folder);
     if (pos > 0 && pos < this.folders.length) {
       this.folders.set_name(pos, name);
@@ -1287,6 +1372,12 @@ class CaseEditor extends Component {
             tooltip="Save case\n(Ctrl+S)">
           </md-icon-button>
           <md-icon-button
+            id="invite"
+            class="tool"
+            icon="people"
+            tooltip="Invite participant">
+          </md-icon-button>
+          <md-icon-button
             id="share"
             class="tool"
             icon="share"
@@ -1302,6 +1393,7 @@ class CaseEditor extends Component {
           <md-menu id="menu">
             <md-menu-item id="save">Save</md-menu-item>
             <md-menu-item id="share">Share</md-menu-item>
+            <md-menu-item id="collaborate">Collaborate</md-menu-item>
             <md-menu-item id="upload">Upload files</md-menu-item>
             <md-menu-item id="imgcache">Cache images</md-menu-item>
             <md-menu-item id="export">Publish in Wikidata</md-menu-item>
@@ -1366,7 +1458,8 @@ class CaseEditor extends Component {
       $ md-drawer {
         min-width: 200px;
         padding: 3px;
-        overflow: hidden;
+        overflow-x: clip;
+        overflow-y: auto;
       }
       $ #folders-top {
         display: flex;
@@ -1569,6 +1662,50 @@ class UploadDialog extends MdDialog {
 }
 
 Component.register(UploadDialog);
+
+export class CollaborateDialog extends MdDialog {
+  submit() {
+    this.close(this.find("#url").value.trim());
+  }
+
+  render() {
+    let p = this.state;
+    return `
+      <md-dialog-top>Collaborate on case</md-dialog-top>
+      <div id="content">
+        <div>
+          You can move the case from your local machine to a collaboration
+          server so you can collaborate with other participants on the case
+          in real-time.
+        </div>
+        <md-text-field
+          id="url"
+          value="${Component.escape(this.state)}"
+          label="Collaboration server URL">
+        </md-text-field>
+      </div>
+      <md-dialog-bottom>
+        <button id="cancel">Cancel</button>
+        <button id="submit">Collaborate</button>
+      </md-dialog-bottom>
+    `;
+  }
+
+  static stylesheet() {
+    return MdDialog.stylesheet() + `
+      $ #content {
+        display: flex;
+        flex-direction: column;
+        row-gap: 16px;
+      }
+      $ {
+        width: 500px;
+      }
+    `;
+  }
+}
+
+Component.register(CollaborateDialog);
 
 MdIcon.custom("wikidata", `
 <svg width="24" height="24" viewBox="0 0 1050 590" style="fill:white;">

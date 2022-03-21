@@ -430,14 +430,14 @@ export class QString {
 // Binary SLING decoder.
 export class Decoder {
   // Initialize decoder.
-  constructor(store, data) {
+  constructor(store, data, marker = true) {
     this.store = store ? store : new Store();
     this.input = new Uint8Array(data);
     this.pos = 0;
     this.refs = [];
 
     // Skip binary marker.
-    if (this.input.length > 0 && this.input[0] == 0) this.pos = 1;
+    if (marker && this.input.length > 0 && this.input[0] == 0) this.pos = 1;
   }
 
   // Read tag from input. The tag is encoded as a varint64 where the lower three
@@ -480,6 +480,12 @@ export class Decoder {
     let buffer = this.input.slice(this.pos, this.pos + size);
     this.pos += size;
     return strdecoder.decode(buffer);
+  }
+
+  // Read variable-length string from input.
+  readVarString() {
+    let size = this.readVarint32();
+    return this.readString(size);
   }
 
   // Read all the objects from the input.
@@ -674,7 +680,7 @@ const Status = Object.freeze({
 
 // Binary SLING decoder.
 export class Encoder {
-  constructor(store) {
+  constructor(store, marker = true) {
     // Allocate output buffer.
     this.buffer = new Uint8Array(4096);
     this.capacity = this.buffer.byteLength;
@@ -690,7 +696,7 @@ export class Encoder {
     this.refs.set(store.is, {status: Status.ENCODED, index: -4});
 
     // Output binary encoding mark.
-    this.writeByte(0);
+    if (marker) this.writeByte(0);
   }
 
   // Encode object.
@@ -886,6 +892,16 @@ export class Encoder {
       num >>>= 7;
     }
     this.buffer[this.pos++] = num | 0;
+  }
+
+  // Write variable-length string to output.
+  writeVarString(str) {
+    let utf8 = strencoder.encode(str);
+    let len = utf8.byteLength;
+    this.writeVarInt(len);
+    this.ensure(len);
+    this.buffer.subarray(this.pos, this.pos + len).set(utf8);
+    this.pos += len;
   }
 
   // Write varint-encoded tag and argument to output.

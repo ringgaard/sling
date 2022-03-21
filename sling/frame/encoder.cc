@@ -24,7 +24,7 @@
 
 namespace sling {
 
-Encoder::Encoder(const Store *store, Output *output)
+Encoder::Encoder(const Store *store, Output *output, bool marker)
     : store_(store), output_(output),
       global_(store != nullptr && store->globals() == nullptr) {
   // Insert special values in reference mapping.
@@ -34,7 +34,7 @@ Encoder::Encoder(const Store *store, Output *output)
   references_[Handle::is()] = Reference(-WIRE_IS);
 
   // Output binary encoding mark.
-  output_->WriteChar(WIRE_BINARY_MARKER);
+  if (marker) output_->WriteChar(WIRE_BINARY_MARKER);
 }
 
 void Encoder::EncodeAll() {

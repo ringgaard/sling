@@ -28,7 +28,7 @@ namespace sling {
 class Encoder {
  public:
   // Initializes encoder.
-  Encoder(const Store *store, Output *output);
+  Encoder(const Store *store, Output *output, bool marker = true);
 
   // Encodes object to output.
   void Encode(const Object &object) { EncodeObject(object.handle()); }

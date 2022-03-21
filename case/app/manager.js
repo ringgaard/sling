@@ -15,6 +15,7 @@ function pad4(num) {
 
 function date2str(date) {
   if (!date) return "";
+  if (typeof(date) === 'string') date = new Date(date);
   let year = pad4(date.getFullYear());
   let month = pad2(date.getMonth() + 1);
   let day = pad2(date.getDate());
@@ -317,13 +318,16 @@ class CaseList extends material.MdCard {
     let button = e.target.closest("md-icon-button");
     let caseid = row ? parseInt(row.getAttribute("case")) : undefined;
     let link = row ? row.getAttribute("link") == "true" : undefined;
-    if (!caseid) return;
+    let collab = row ? row.getAttribute("collab") == "true" : undefined;
 
     if (button) {
       // Perform action on case.
       let action = button.getAttribute("icon");
       if (action == "delete") {
         let message = `Delete ${link ? "link to " : ""} case #${caseid}?`;
+        if (collab) {
+          message = `Leave collaboration on case #${caseid}?`;
+        }
         material.StdDialog.confirm("Delete case", message, "Delete")
         .then(result => {
           if (result) {
@@ -359,7 +363,7 @@ class CaseList extends material.MdCard {
     for (let rec of this.state) {
       if (rec.nsfw && !settings.nsfw) continue;
       let icon = "";
-      if (rec.collab) {
+      if (rec.collaborate) {
         icon = '<md-icon icon="people" outlined></md-icon>';
       } else if (rec.link) {
         if (rec.secret) {
@@ -382,7 +386,7 @@ class CaseList extends material.MdCard {
         }
       }
       h.push(`
-        <tr case="${rec.id}" link="${rec.link}">
+        <tr case="${rec.id}" link="${rec.link}" collab="${rec.collaborate}">
           <td>${rec.id}</td>
           <td><div>${icon}</div></td>
           <td>${Component.escape(rec.name)}</td>

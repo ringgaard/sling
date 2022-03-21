@@ -16,6 +16,7 @@ const n_shared = store.lookup("shared");
 const n_topics = store.lookup("topics");
 const n_share = store.lookup("share");
 const n_publish = store.lookup("publish");
+const n_collaborate = store.lookup("collaborate");
 const n_secret = store.lookup("secret");
 const n_link = store.lookup("link");
 const n_has_quality = store.lookup("P1552");
@@ -103,9 +104,10 @@ class CaseDatabase {
       shared: date(casefile.get(n_shared)),
       share: !!casefile.get(n_share),
       publish: !!casefile.get(n_publish),
+      collaborate: !!casefile.get(n_collaborate),
       secret: casefile.get(n_secret),
       link: !!casefile.get(n_link),
-      nsfw: main.get(n_has_quality) == n_not_safe_for_work,
+      nsfw: main.has(n_has_quality, n_not_safe_for_work),
     };
 
     // Write record to database.
@@ -115,6 +117,7 @@ class CaseDatabase {
     dirrequest.onsuccess = e => {
       console.log("Wrote record", e.target.result, "to case directory");
     }
+
     return rec;
   }
 

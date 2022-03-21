@@ -26,6 +26,7 @@
 "date de décès": {type: "date" year: 3 month: 2 day: 1 qual: 4 format: /w/dates/fr}
 "date de décès-": {type: "date" year: 3 month: 2 day: 1 qual: 4 format: /w/dates/fr}
 "existe depuis": {type: "date" year: 3 month: 2 day: 1 format: /w/dates/fr}
+"japonais": {type: "tag" argnum: 1}
 
 "Infobox Biographie": {
   type: "infobox"

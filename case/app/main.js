@@ -204,7 +204,7 @@ class CaseApp extends Component {
 
   async open_case(caseid) {
     try {
-      // Try to read case from local database.
+      // Try to load case.
       let casefile = await this.read_case(caseid);
       if (!casefile) {
         inform(`Case #${caseid} not found`);
