@@ -19,6 +19,7 @@ import threading
 import requests
 import sling
 import sling.flags as flags
+import sling.log as log
 import sling.media.photo
 
 user_agent = "SLING/1.0 bot (https://github.com/ringgaard/sling)"
@@ -56,7 +57,7 @@ def cache_images(media):
         redirect = r.headers['Location']
         if redirect.endswith("/removed.png"):
           num_missing += 1
-          print("removed", url)
+          log.info("removed", url)
           continue
 
         # Get redirected image.
@@ -65,27 +66,27 @@ def cache_images(media):
                         allow_redirects=False,
                         timeout=60)
         if r.status_code != 200:
-          print("missing", url, r.status_code)
+          log.info("missing", url, r.status_code)
           num_missing += 1
           continue
       if not r.ok:
         num_errors += 1
-        print("error", r.status_code, url)
+        log.info("error", r.status_code, url)
         continue
       if r.status_code == 302:
         # Imgur returns redirect to removed.png for missing images.
         num_missing += 1
-        print("missing", url)
+        log.info("missing", url)
         continue
     except Exception as e:
-      print("fail", e, url)
+      log.info("fail", e, url)
       num_errors += 1
       continue
 
     # Check if image is empty.
     image = r.content
     if len(image) == 0:
-      print("empty", url)
+      log.info("empty", url)
       num_missing += 1
       continue
 
@@ -104,7 +105,7 @@ def cache_images(media):
     # Check if image is HTML-like.
     if image.startswith(b"<!doctype html>") or \
        image.startswith(b"<!DOCTYPE html>"):
-      print("non-image", url)
+      log.info("non-image", url)
       num_errors += 1
       continue
 
@@ -113,7 +114,7 @@ def cache_images(media):
 
     num_retrieved += 1
     num_bytes += len(image)
-    print("cached", url, len(image))
+    log.info("cached", url, len(image))
 
   log.info("Caching done:",
         num_images, "images,",
