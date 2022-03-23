@@ -32,7 +32,7 @@ export default class WikipeidaPlugin {
 
   async select(item) {
     // Create new topic.
-    let topic = item.context.new_topic();
+    let topic = await item.context.new_topic();
     if (!topic) return;
 
     // Add Wikipedia information to topic.

@@ -36,7 +36,7 @@ export default class LinkTreePlugin {
 
   async select(item) {
     // Create new topic.
-    let topic = item.context.new_topic();
+    let topic = await item.context.new_topic();
     if (!topic) return;
 
     // Fetch profile from linktree and populate topic.

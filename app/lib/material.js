@@ -1620,6 +1620,13 @@ export class MdSearch extends Component {
     return this.find("input").value;
   }
 
+  set(value) {
+    let input = this.find("input");
+    input.value = value;
+    this.populate(null, null);
+    input.focus();
+  }
+
   clear() {
     let input = this.find("input");
     input.value = null;

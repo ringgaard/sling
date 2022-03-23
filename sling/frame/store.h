@@ -1229,6 +1229,9 @@ class Store {
   // Allocates array and initializes its contents.
   Handle AllocateArray(const Handle *begin, const Handle *end);
 
+  // Resize array.
+  void ResizeArray(Handle array, Word length);
+
   // Dereferences a handle and returns a pointer to the object data.
   Datum *Deref(Handle handle) {
     DCHECK(IsValidReference(handle));

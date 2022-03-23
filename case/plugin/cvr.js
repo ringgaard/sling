@@ -34,7 +34,7 @@ export default class CVRPlugin {
 
   async select(item) {
     // Create new topic.
-    let topic = item.context.new_topic();
+    let topic = await item.context.new_topic();
     if (!topic) return;
 
     // Link profile to CVR.

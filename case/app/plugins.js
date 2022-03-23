@@ -229,8 +229,8 @@ export class Context {
     this.updates = null;
   }
 
-  new_topic() {
-    let topic = editor.new_topic();
+  async new_topic() {
+    let topic = await editor.new_topic();
     if (!topic) return null;
     this.added = topic;
     return topic;
@@ -245,12 +245,14 @@ export class Context {
 
   async refresh() {
     if (this.added) {
+      this.editor.topic_updated(this.added);
       await this.editor.update_topics();
       if (this.select) {
         await this.editor.navigate_to(this.added);
       }
     } else if (this.updates) {
       for (let topic of this.updates) {
+        this.editor.topic_updated(topic);
         this.editor.update_topic(topic);
       }
     }

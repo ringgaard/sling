@@ -97,7 +97,7 @@ export default class BabepediaPlugin {
 
   async select(item) {
     // Create new topic.
-    let topic = item.context.new_topic();
+    let topic = await item.context.new_topic();
     if (!topic) return;
 
     // Fetch profile from babepedia and populate topic.

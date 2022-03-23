@@ -386,6 +386,15 @@ class Array : public Object {
   // Sets element in array.
   void set(int index, Handle value) const { *array()->at(index) = value; }
 
+  // Check if element is in array.
+  bool Contains(Handle value) const;
+
+  // Append element to array.
+  void Append(Handle value);
+
+  // Erase element from array. Return false if element is not found.
+  bool Erase(Handle value);
+
  private:
   // Dereferences array reference.
   ArrayDatum *array() const { return datum()->AsArray(); }
@@ -439,6 +448,10 @@ class Frame : public Object {
     DCHECK_LT(index, size());
     return frame()->begin()[index].value;
   }
+
+  // Returns frame slot by index.
+  const Slot &slot(int index) const { return frame()->begin()[index]; }
+  Slot &slot(int index) { return frame()->begin()[index]; }
 
   // Gets (first) id for the object.
   Object id() const {
@@ -970,6 +983,9 @@ class Builder : public External {
   void Update();
 
   // Clears all the slots.
+  Builder &Reset();
+
+  // Clears handle and all the slots.
   Builder &Clear();
 
   // Checks if this is a new frame, i.e. the existing handle is nil or points

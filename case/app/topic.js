@@ -319,7 +319,10 @@ class TopicCard extends Component {
   }
 
   mark_dirty() {
-    this.match("#editor").mark_dirty();
+    let editor = this.match("#editor");
+    let topic = this.state;
+    editor.mark_dirty();
+    editor.topic_updated(topic);
   }
 
   async refresh() {
@@ -848,7 +851,7 @@ class ItemEditor extends Component {
       if (item.casefile) {
         // Create new topic with reference to topic in external case.
         let editor = this.match("#editor");
-        let link = this.new_topic();
+        let link = await this.new_topic();
         link.add(n_is, topic);
         let name = topic.get(n_name);
         if (name) link.add(n_name, name);

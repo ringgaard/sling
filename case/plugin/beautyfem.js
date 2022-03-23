@@ -56,7 +56,7 @@ export default class BeautifulFemalesPlugin {
 
   async select(item) {
     // Create new topic.
-    let topic = item.context.new_topic();
+    let topic = await item.context.new_topic();
     if (!topic) return;
 
     // Fetch profile from r/BeautifulFemales and populate new topic.

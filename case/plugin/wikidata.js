@@ -26,7 +26,7 @@ export default class WikidataPlugin {
     let data = await store.parse(r)
 
     // Create new topic.
-    let topic = item.context.new_topic();
+    let topic = await item.context.new_topic();
     if (!topic) return;
 
     // Add properties from Wikidata item.

@@ -121,7 +121,7 @@ export default class ArticlePlugin {
 
   async select(item) {
     // Create new topic.
-    let topic = item.context.new_topic();
+    let topic = await item.context.new_topic();
     if (!topic) return;
 
     // Fetch profile from twitter and populate topic.

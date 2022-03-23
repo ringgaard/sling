@@ -2,7 +2,8 @@
 // Licensed under the Apache License, Version 2
 
 import {Component} from "/common/lib/component.js";
-import {MdDialog, StdDialog, MdIcon, inform} from "/common/lib/material.js";
+import {MdDialog, StdDialog, MdIcon, MdSearchResult, inform}
+       from "/common/lib/material.js";
 import {Store, Frame, Encoder, Printer} from "/common/lib/frame.js";
 
 import {store, settings} from "./global.js";
@@ -32,12 +33,14 @@ const n_link = store.lookup("link");
 const n_collab = store.lookup("collab");
 const n_userid = store.lookup("userid");
 const n_credentials = store.lookup("credentials");
+const n_created = store.lookup("created");
 const n_modified = store.lookup("modified");
 const n_shared = store.lookup("shared");
 const n_media = store.lookup("media");
 const n_case_file = store.lookup("Q108673968");
 const n_instance_of = store.lookup("P31");
 const n_author = store.lookup("P50");
+const n_participant = store.lookup("P710");
 const n_has_quality = store.lookup("P1552");
 const n_nsfw = store.lookup("Q2716583");
 
@@ -441,6 +444,8 @@ class CaseEditor extends Component {
       this.casefile.set(n_collab, url);
       this.casefile.set(n_userid, this.main.get(n_author).id);
       this.casefile.set(n_credentials, credentials);
+      this.casefile.remove(n_topics);
+      this.casefile.remove(n_next);
 
       // Save and reload.
       this.match("#app").save_case(this.casefile);
@@ -449,7 +454,13 @@ class CaseEditor extends Component {
   }
 
   async oninvite(e) {
-    inform("Collaboration invitations not yet implemented");
+    if (!this.collab) return;
+    let participants = new Array();
+    let dialog = new InviteDialog(Array.from(this.main.all(n_participant)));
+    let participant = await dialog.show();
+    if (participant) {
+      inform("Invite URL for the participant has been copied to the clipboard");
+    }
   }
 
   async onimgcache(e) {
@@ -480,7 +491,7 @@ class CaseEditor extends Component {
     this.mark_clean();
     this.casefile = this.state;
 
-    // Connected to collaboration server for collaboration case.
+    // Connect to collaboration server for collaboration case.
     let collab_url = this.casefile.get(n_collab)
     if (this.casefile.get(n_collab)) {
       // Connect to collaboration server.
@@ -496,6 +507,12 @@ class CaseEditor extends Component {
         this.collab.onlogin = (casefile) => resolve(casefile);
         this.collab.login(caseid, userid, credentials);
       });
+
+      // Update local case.
+      for (let prop of [n_created, n_modified, n_main]) {
+        this.localcase.set(prop, this.casefile.get(prop));
+      }
+      this.match("#app").save_case(this.localcase);
     } else {
       this.collab = undefined;
       this.localcase = undefined;
@@ -566,24 +583,64 @@ class CaseEditor extends Component {
     return encoder.output();
   }
 
-  next_topic() {
-    let next = this.casefile.get(n_next);
-    this.casefile.set(n_next, next + 1);
-    return next;
+  async next_topic() {
+    if (this.collab) {
+      return await this.collab.nextid();
+    } else {
+      let next = this.casefile.get(n_next);
+      this.casefile.set(n_next, next + 1);
+      return next;
+    }
+  }
+
+  topic_updated(topic) {
+    if (this.collab) {
+      this.collab.topic_updated(topic);
+    }
+  }
+
+  topic_deleted(topic) {
+    if (this.collab) {
+      this.collab.topic_deleted(topic);
+    }
+  }
+
+  folder_updated(folder) {
+    if (this.collab && folder != this.scraps) {
+      this.collab.folder_updated(this.folder_name(folder), folder);
+    }
+  }
+
+  folder_renamed(folder, name) {
+    if (this.collab) {
+      this.collab.folder_renamed(this.folder_name(folder), name);
+    }
+  }
+
+  folders_updated() {
+    if (this.collab) {
+      this.collab.folders_updated(this.folders);
+    }
   }
 
   mark_clean() {
+    if (this.collab) return;
     this.dirty = false;
     this.find("#save").disable();
   }
 
   mark_dirty() {
+    if (this.collab) return;
     this.dirty = true;
     this.find("#save").enable();
   }
 
   close() {
-    if (this.dirty) {
+    if (this.collab) {
+      this.collab.close();
+      this.collab = undefined;
+      this.localcase = undefined;
+    } else if (this.dirty) {
       let msg = `Changes to case #${this.caseid()} has not been saved.`;
       let buttons = {
         "Close without saving": "close",
@@ -601,18 +658,23 @@ class CaseEditor extends Component {
           app.show_manager();
         }
       });
-
     } else {
       app.show_manager();
     }
   }
 
-  folderno(folder) {
+  folder_index(folder) {
     let f = this.folders;
     for (let i = 0; i < f.length; ++i) {
-      if (f.value(i) == folder) return i;
+      if (f.value(i) === folder) return i;
     }
-    return undefined;
+  }
+
+  folder_name(folder) {
+    let f = this.folders;
+    for (let i = 0; i < f.length; ++i) {
+      if (f.value(i) === folder) return f.name(i);
+    }
   }
 
   refcount(topic) {
@@ -674,6 +736,7 @@ class CaseEditor extends Component {
     this.folder = new Array();
     this.folders.add(name, this.folder);
     this.mark_dirty();
+    this.folders_updated();
     this.update_folders();
     this.update_topics();
   }
@@ -687,8 +750,9 @@ class CaseEditor extends Component {
       }
     }
 
-    let pos = this.folderno(folder);
+    let pos = this.folder_index(folder);
     if (pos > 0 && pos < this.folders.length) {
+      this.folder_renamed(folder, name);
       this.folders.set_name(pos, name);
       this.mark_dirty();
       this.update_folders();
@@ -697,7 +761,7 @@ class CaseEditor extends Component {
 
   move_folder_up(folder) {
     if (this.readonly) return;
-    let pos = this.folderno(folder);
+    let pos = this.folder_index(folder);
     if (pos > 0 && pos < this.folders.length) {
       // Swap with previous folder.
       let tmp_name = this.folders.name(pos);
@@ -706,6 +770,7 @@ class CaseEditor extends Component {
       this.folders.set_value(pos, this.folders.value(pos - 1));
       this.folders.set_name(pos - 1, tmp_name);
       this.folders.set_value(pos - 1, tmp_value);
+      this.folders_updated();
       this.mark_dirty();
       this.update_folders();
     }
@@ -713,7 +778,7 @@ class CaseEditor extends Component {
 
   move_folder_down(folder) {
     if (this.readonly) return;
-    let pos = this.folderno(folder);
+    let pos = this.folder_index(folder);
     if (pos >= 0 && pos < this.folders.length - 1) {
       // Swap with next folder.
       let tmp_name = this.folders.name(pos);
@@ -722,6 +787,7 @@ class CaseEditor extends Component {
       this.folders.set_value(pos, this.folders.value(pos + 1));
       this.folders.set_name(pos + 1, tmp_name);
       this.folders.set_value(pos + 1, tmp_value);
+      this.folders_updated();
       this.mark_dirty();
       this.update_folders();
     }
@@ -733,7 +799,7 @@ class CaseEditor extends Component {
       StdDialog.alert("Cannot delete folder",
                       "Folder must be empty to be deleted");
     } else {
-      let pos = this.folderno(folder);
+      let pos = this.folder_index(folder);
       if (pos >= 0 && pos < this.folders.length) {
         this.folders.remove(pos);
         if (pos == this.folders.length) {
@@ -741,6 +807,7 @@ class CaseEditor extends Component {
         } else {
           this.folder = this.folders.value(pos);
         }
+        this.folders_updated();
         this.mark_dirty();
         this.update_folders();
         this.update_topics();
@@ -751,15 +818,19 @@ class CaseEditor extends Component {
   add_topic(topic) {
     // Add topic to current folder.
     if (this.readonly) return;
+    this.topic_updated(topic);
     if (!this.topics.includes(topic)) this.topics.push(topic);
-    if (!this.folder.includes(topic)) this.folder.push(topic);
+    if (!this.folder.includes(topic)) {
+      this.folder.push(topic);
+      this.folder_updated(this.folder);
+    }
     this.mark_dirty();
   }
 
-  new_topic() {
+  async new_topic() {
     // Create frame for new topic.
     if (this.readonly) return;
-    let topicid = this.next_topic();
+    let topicid = await this.next_topic();
     let topic = store.frame(`t/${this.caseid()}/${topicid}`);
 
     // Add topic to current folder.
@@ -771,9 +842,10 @@ class CaseEditor extends Component {
   async add_new_topic(itemid, name) {
     // Create new topic.
     if (this.readonly) return;
-    let topic = this.new_topic();
+    let topic = await this.new_topic();
     if (itemid) topic.add(n_is, store.lookup(itemid));
     if (name) topic.add(n_name, name);
+    this.topic_updated(topic);
 
     // Update topic list.
     await this.update_topics();
@@ -782,10 +854,11 @@ class CaseEditor extends Component {
 
   async add_case_link(caserec) {
     // Create new topic with reference to external case.
-    let topic = this.new_topic();
+    let topic = await this.new_topic();
     topic.add(n_is, store.lookup(`c/${caserec.id}`));
     topic.add(n_instance_of, n_case_file);
     if (caserec.name) topic.add(n_name, caserec.name);
+    this.topic_updated(topic);
 
     // Read case and add linked case.
     let casefile = await this.match("#app").read_case(caserec.id);
@@ -800,10 +873,11 @@ class CaseEditor extends Component {
 
   async add_topic_link(topic) {
     // Create new topic with reference to topic in external case.
-    let link = this.new_topic();
+    let link = await this.new_topic();
     link.add(n_is, topic);
     let name = topic.get(n_name);
     if (name) link.add(n_name, name);
+    this.topic_updated(topic);
 
     // Update topic list.
     await this.update_topics();
@@ -851,6 +925,7 @@ class CaseEditor extends Component {
           }
           this.scraps.push(topic);
         }
+        this.topic_deleted(topic);
       }
     }
     this.mark_dirty();
@@ -860,6 +935,7 @@ class CaseEditor extends Component {
     if (scraps_before != scraps_after) await this.update_folders();
 
     // Update topic list and navigate to next topic.
+    this.folder_updated(this.folder);
     await this.update_topics();
     if (next) {
       await this.navigate_to(next);
@@ -903,6 +979,7 @@ class CaseEditor extends Component {
     let tmp = this.folder[pos];
     this.folder[pos] = this.folder[pos - 1];
     this.folder[pos - 1] = tmp;
+    this.folder_updated(this.folder);
     this.mark_dirty();
 
     // Update topic list.
@@ -920,6 +997,7 @@ class CaseEditor extends Component {
     let tmp = this.folder[pos];
     this.folder[pos] = this.folder[pos + 1];
     this.folder[pos + 1] = tmp;
+    this.folder_updated(this.folder);
     this.mark_dirty();
 
     // Update topic list.
@@ -1014,7 +1092,7 @@ class CaseEditor extends Component {
 
           // Copy topic if it is external.
           if (external) {
-            topic = this.new_topic();
+            topic = await this.new_topic();
             import_mapping.set(t.id, topic);
             console.log("paste external topic", t.id, topic.id);
             for (let [name, value] of t) {
@@ -1101,6 +1179,7 @@ class CaseEditor extends Component {
     await this.delete_topics(sources);
 
     // Update target topic.
+    this.topic_updated(target);
     this.mark_dirty();
     let card = list.card(target);
     if (card) {
@@ -1148,7 +1227,7 @@ class CaseEditor extends Component {
 
         // Add topic for file.
         let isimage = media_file_types.includes(file.type);
-        topic = this.new_topic();
+        topic = await this.new_topic();
         topic.add(n_name, file.name);
         topic.add(n_instance_of, isimage ? n_image : n_document);
         if (file.lastModified) {
@@ -1164,6 +1243,7 @@ class CaseEditor extends Component {
         if (isimage) {
           topic.add(n_media, url);
         }
+        this.topic_updated(topic);
       }
 
       // Update topic list.
@@ -1631,7 +1711,6 @@ Component.register(ScriptDialog);
 
 class UploadDialog extends MdDialog {
   submit() {
-    console.log("submit");
     this.close(this.find("#files").files);
   }
 
@@ -1706,6 +1785,83 @@ export class CollaborateDialog extends MdDialog {
 }
 
 Component.register(CollaborateDialog);
+
+export class InviteDialog extends MdDialog {
+  onconnected() {
+    this.bind("md-search", "query", e => this.onquery(e));
+    this.bind("md-search", "item", e => this.onitem(e));
+  }
+
+  onquery(e) {
+    let target = e.target;
+    let detail = e.detail
+    let query = detail.trim().toLowerCase();
+    let results = new Array();
+    let items = [];
+    for (let p of this.state) {
+      let name = p.get(n_name).toString().toLowerCase();
+      if (name && name.startsWith(query)) {
+        items.push(new MdSearchResult({
+          ref: p.id,
+          name: p.get(n_name),
+          description: p.get(n_description),
+        }));
+      }
+    }
+    target.populate(detail, items);
+  }
+
+  onitem(e) {
+    let item = e.detail;
+    console.log("item", item);
+    this.participant = item.ref;
+    this.find("md-search").set(item.name);
+  }
+
+  submit() {
+    this.close(this.participant);
+  }
+
+  render() {
+    return `
+      <md-dialog-top>Invite participant</md-dialog-top>
+      <div id="content">
+        <div>
+          Select participant to invite to collaborate on case.
+        </div>
+        <md-search
+          placeholder="Search for participant..."
+          min-length=0
+          autoselect=1>
+        </md-search>
+      </div>
+      <md-dialog-bottom>
+        <button id="cancel">Cancel</button>
+        <button id="submit">Invite</button>
+      </md-dialog-bottom>
+    `;
+  }
+
+  static stylesheet() {
+    return MdDialog.stylesheet() + `
+      $ #content {
+        display: flex;
+        flex-direction: column;
+        row-gap: 16px;
+        height: 200px;
+      }
+      $ md-search {
+        border: 1px solid #d0d0d0;
+        margin: 5px 0px 5px 5px;
+      }
+      $ {
+        width: 500px;
+      }
+    `;
+  }
+}
+
+Component.register(InviteDialog);
 
 MdIcon.custom("wikidata", `
 <svg width="24" height="24" viewBox="0 0 1050 590" style="fill:white;">

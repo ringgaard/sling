@@ -950,6 +950,39 @@ Array &Array::operator =(const Array &other) {
   return *this;
 }
 
+bool Array::Contains(Handle value) const {
+  ArrayDatum *datum = array();
+  for (Handle *h = datum->begin(); h < datum->end(); ++h) {
+    if (*h == value) return true;
+  }
+  return false;
+}
+
+void Array::Append(Handle value) {
+  int len = length();
+  store()->ResizeArray(handle(), len + 1);
+  *array()->at(len) = value;
+}
+
+bool Array::Erase(Handle value) {
+  // Find element.
+  ArrayDatum *datum = array();
+  int len = length();
+  int pos = -1;
+  for (int i = 0; i < len; ++i) {
+    if (*datum->at(i) == value) {
+      pos = i;
+      break;
+    }
+  }
+  if (pos == -1) return false;
+
+  // Remove element.
+  memmove(datum->at(pos), datum->at(pos) + 1, (len - pos - 1) * sizeof(Handle));
+  store()->ResizeArray(handle(), len - 1);
+  return true;
+}
+
 Builder::Builder(Store *store) : External(store), store_(store) {
   handle_ = Handle::nil();
   slots_.reserve(kInitialSlots * sizeof(Slot));
@@ -1729,6 +1762,11 @@ Frame Builder::Create() {
 
 void Builder::Update() {
   handle_ = store_->AllocateFrame(slots_.base(), slots_.end(), handle_);
+}
+
+Builder &Builder::Reset() {
+  slots_.reset();
+  return *this;
 }
 
 Builder &Builder::Clear() {

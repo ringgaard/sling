@@ -60,7 +60,7 @@ export default class TwitterPlugin {
 
   async select(item) {
     // Create new topic.
-    let topic = item.context.new_topic();
+    let topic = await item.context.new_topic();
     if (!topic) return;
 
     // Fetch profile from twitter and populate topic.
@@ -71,7 +71,6 @@ export default class TwitterPlugin {
     // Retrieve profile from twitter service.
     let r = await fetch(context.service("twitter", {user}));
     let profile = await r.json();
-    console.log("twitter profile", profile);
 
     // Check if user is already in knowledge base.
     let username = profile.screen_name;

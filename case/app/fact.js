@@ -166,7 +166,6 @@ class FactEditor extends Component {
         focus.qualified = true;
       } else {
         // Add initial character to property.
-        console.log("insert", e.data);
         let initial = document.createTextNode(e.data);
         prop.appendChild(initial);
         selection.collapse(initial, e.data.length);
@@ -1099,9 +1098,9 @@ function newtopic(query, editor, results) {
     name: query,
     description: "new topic",
     context: new Context(null, editor.casefile, editor),
-    onitem: item => {
+    onitem: async item => {
       // Create new topic stub.
-      let topic = item.context.new_topic();
+      let topic = await item.context.new_topic();
       if (!topic) return;
       topic.put(n_name, item.name.trim());
       item.context.select = false;

@@ -156,13 +156,16 @@ class WikiMediaExtract:
 
           if "{" in image or "[" in image:
             # Structured annotations.
-            annotations = sling.lex(image, store=store, schema=docschema)
-            for theme in annotations.themes:
-              if theme.isa(n_media):
-                image = theme[p_is]
-                if image is not None:
-                  imagelist.append((image, None))
-                  task.increment("structured_annotations")
+            try:
+              annotations = sling.lex(image, store=store, schema=docschema)
+              for theme in annotations.themes:
+                if theme.isa(n_media):
+                  image = theme[p_is]
+                  if image is not None:
+                    imagelist.append((image, None))
+                    task.increment("structured_annotations")
+            except Exception as e:
+              log.error("Bad Structured annotation:", item.id, image)
           else:
             # Image filename.
             imagelist.append((image, caption))

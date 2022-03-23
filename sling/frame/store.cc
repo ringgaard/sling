@@ -468,6 +468,27 @@ Handle Store::AllocateArray(const Handle *begin, const Handle *end) {
   return AllocateHandle(array);
 }
 
+void Store::ResizeArray(Handle array, Word length) {
+  // Allocate new array.
+  int size = length * sizeof(Handle);
+  ArrayDatum *replacement = AllocateDatum(ARRAY, size)->AsArray();
+
+  // Get array.
+  ArrayDatum *datum = GetArray(array);
+  CHECK(datum->IsArray());
+
+  // Copy payload from old array to replacement.
+  if (size > datum->size()) {
+    memcpy(replacement->begin(), datum->begin(), datum->size());
+    memset(replacement->begin() + datum->size(), 0, size - datum->size());
+  } else {
+    memcpy(replacement->begin(), datum->begin(), size);
+  }
+
+  // Replace array.
+  Replace(array, replacement);
+}
+
 void Store::Set(Handle frame, Handle name, Handle value) {
   // This method cannot be used for id slots because this would require updates
   // to the symbol table.
