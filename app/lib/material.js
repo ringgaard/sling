@@ -1504,7 +1504,11 @@ var current_snack = null;
 export class MdSnackbar extends Component {
   onconnected() {
     this.bind(null, "click", e => this.close());
-    setTimeout(snack => snack.close(), 8000, this);
+    setTimeout(snack => snack.timeout(), 5000, this);
+  }
+
+  timeout() {
+    if (!this.matches(":hover")) this.close();
   }
 
   close() {

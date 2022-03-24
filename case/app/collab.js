@@ -25,11 +25,13 @@ const CCU_RENAME  = 5;
 export class Collaboration {
   // Connect to collaboration server.
   async connect(url) {
+    this.url = url;
     this.socket = new WebSocket(url);
     this.socket.addEventListener("message", e => this.onrecv(e));
     return new Promise((resolve, reject) => {
       this.socket.addEventListener("open", e => resolve(this));
-      this.socket.addEventListener("error", e => reject(this));
+      this.socket.addEventListener("error", e =>
+        reject("Error connecting to collaboration server " + url));
     });
   }
 
@@ -44,28 +46,39 @@ export class Collaboration {
     let decoder = new Decoder(store, await e.data.arrayBuffer(), false);
     let op = decoder.readVarint32();
     switch (op) {
-      case COLLAB_CREATE:
+      case COLLAB_CREATE: {
         let credentials = decoder.readVarString();
         this.oncreated && this.oncreated(credentials);
         break;
-
-      case COLLAB_LOGIN:
+      }
+      case COLLAB_LOGIN: {
         let casefile = decoder.readAll();
         this.onlogin && this.onlogin(casefile);
         break;
-
-      case COLLAB_NEWID:
+      }
+      case COLLAB_INVITE: {
+        let key = decoder.readVarString();
+        this.oninvite && this.oninvite(key);
+        break;
+      }
+      case COLLAB_JOIN: {
+        let credentials = decoder.readVarString();
+        this.onjoin && this.onjoin(credentials);
+        break;
+      }
+      case COLLAB_NEWID: {
         let next = decoder.readVarint32();
         this.onnewid && this.onnewid(next);
         break;
-
-      case COLLAB_ERROR:
+      }
+      case COLLAB_ERROR: {
         let message = decoder.readVarString();
         inform(`Collaboration error: ${message}`);
         break;
-
-      default:
+      }
+      default: {
         console.log("unexpected collab message op", op);
+      }
     }
   }
 
@@ -76,32 +89,68 @@ export class Collaboration {
 
   // Create collaboration for case and return user credentials.
   async create(casefile) {
-    // Send collaboration create request to server.
-    let encoder = new Encoder(store, false);
-    encoder.writeVarInt(COLLAB_CREATE);
-    for (let topic of casefile.get(n_topics)) {
-      encoder.encode(topic);
-    }
-    encoder.encode(casefile);
-    let packet = encoder.output();
-    this.send(packet);
+    return new Promise((resolve, reject) => {
+      collab.oncreated = credentials => resolve(credentials);
+
+      // Send collaboration create request to server.
+      let encoder = new Encoder(store, false);
+      encoder.writeVarInt(COLLAB_CREATE);
+      for (let topic of casefile.get(n_topics)) {
+        encoder.encode(topic);
+      }
+      encoder.encode(casefile);
+      let packet = encoder.output();
+      this.send(packet);
+    });
   }
 
   // Log in to collaboration to send and receive updates.
   async login(caseid, userid, credentials) {
-    let encoder = new Encoder(store, false);
-    encoder.writeVarInt(COLLAB_LOGIN);
-    encoder.writeVarInt(caseid);
-    encoder.writeVarString(userid);
-    encoder.writeVarString(credentials);
-    let packet = encoder.output();
-    this.send(packet);
+    return new Promise((resolve, reject) => {
+      this.onlogin = casefile => resolve(casefile);
+
+      let encoder = new Encoder(store, false);
+      encoder.writeVarInt(COLLAB_LOGIN);
+      encoder.writeVarInt(caseid);
+      encoder.writeVarString(userid);
+      encoder.writeVarString(credentials);
+      let packet = encoder.output();
+      this.send(packet);
+    });
+  }
+
+  // Invite participant to collaborate.
+  async invite(userid) {
+    return new Promise((resolve, reject) => {
+      this.oninvite = key => resolve(key);
+
+      let encoder = new Encoder(store, false);
+      encoder.writeVarInt(COLLAB_INVITE);
+      encoder.writeVarString(userid);
+      let packet = encoder.output();
+      this.send(packet);
+    });
+  }
+
+  // Join collaboration.
+  async join(caseid, userid, key) {
+    return new Promise((resolve, reject) => {
+      this.onjoin = key => resolve(key);
+
+      let encoder = new Encoder(store, false);
+      encoder.writeVarInt(COLLAB_JOIN);
+      encoder.writeVarInt(caseid);
+      encoder.writeVarString(userid);
+      encoder.writeVarString(key);
+      let packet = encoder.output();
+      this.send(packet);
+    });
   }
 
   // Get new topic id.
   async nextid() {
-    return await new Promise((resolve, reject) => {
-      this.onnewid = (next) => resolve(next);
+    return new Promise((resolve, reject) => {
+      this.onnewid = next => resolve(next);
 
       let encoder = new Encoder(store, false);
       encoder.writeVarInt(COLLAB_NEWID);

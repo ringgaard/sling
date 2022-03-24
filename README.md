@@ -53,6 +53,10 @@ A more detailed description of the SLING parser can be found in this paper:
 * Michael Ringgaard, Rahul Gupta, and Fernando C. N. Pereira. 2017.
   *SLING: A framework for frame semantic parsing*. http://arxiv.org/abs/1710.07032.
 
+SLING is also the foundation for [KnolCase](https://ringgaard.com/c/).
+KnolCase is a distributed case-based knowledge management tool for gathering
+information about subjects of interest and organizing these into case files,
+which can be shared with others and published to public knowledge bases.
 </span>
 
 ## More information ...

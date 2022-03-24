@@ -433,10 +433,7 @@ class CaseEditor extends Component {
       // Connect to collaboration server and create new collaboration.
       let collab = new Collaboration();
       await collab.connect(url);
-      let credentials = await new Promise((resolve, reject) => {
-        collab.oncreated = (credentials) => resolve(credentials);
-        collab.create(this.casefile);
-      });
+      let credentials = await collab.create(this.casefile);
       collab.close();
 
       // Add collaboration to case.
@@ -459,7 +456,13 @@ class CaseEditor extends Component {
     let dialog = new InviteDialog(Array.from(this.main.all(n_participant)));
     let participant = await dialog.show();
     if (participant) {
-      inform("Invite URL for the participant has been copied to the clipboard");
+      // Get invite key from collaboration server.
+      let key = await this.collab.invite(participant);
+      let base = window.location.href;
+      let frag = `collab=${this.collab.url},as=${participant},invite=${key}`;
+      let url = base + "#" + frag;
+      navigator.clipboard.writeText(url);
+      inform(`Invite URL for participant has been copied to the clipboard`);
     }
   }
 
@@ -503,10 +506,7 @@ class CaseEditor extends Component {
       let userid = this.casefile.get(n_userid);
       let credentials = this.casefile.get(n_credentials);
       this.localcase = this.casefile;
-      this.casefile = await new Promise((resolve, reject) => {
-        this.collab.onlogin = (casefile) => resolve(casefile);
-        this.collab.login(caseid, userid, credentials);
-      });
+      this.casefile = await this.collab.login(caseid, userid, credentials);
 
       // Update local case.
       for (let prop of [n_created, n_modified, n_main]) {
@@ -1813,7 +1813,6 @@ export class InviteDialog extends MdDialog {
 
   onitem(e) {
     let item = e.detail;
-    console.log("item", item);
     this.participant = item.ref;
     this.find("md-search").set(item.name);
   }

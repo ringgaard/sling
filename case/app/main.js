@@ -7,6 +7,7 @@ import {Component} from "/common/lib/component.js";
 import {StdDialog, inform} from "/common/lib/material.js";
 import {store, settings} from "./global.js";
 import {casedb} from "./database.js";
+import {Collaboration} from "./collab.js";
 import {decrypt} from "./crypto.js";
 import {oauth_callback} from "./wikibase.js";
 
@@ -32,6 +33,10 @@ const n_author = store.lookup("P50");
 const n_main_subject = store.lookup("P921");
 const n_instance_of = store.lookup("P31");
 const n_case = store.lookup("PCASE");
+const n_collaborate = store.lookup("collaborate");
+const n_collab = store.lookup("collab");
+const n_userid = store.lookup("userid");
+const n_credentials = store.lookup("credentials");
 
 // Parse parameters in URL fragment.
 function parse_url_fragment() {
@@ -78,9 +83,20 @@ class CaseApp extends Component {
     // Parse url.
     let m = window.location.pathname.match(/\/c\/(\d+)/);
     if (m) {
-      // Open case specified in url.
+      // Get case number from url.
       let caseid = parseInt(m[1]);
-      this.open_case(caseid);
+
+      // Check for collaboration invite.
+      let fragment = parse_url_fragment();
+      let collab = fragment.get("collab");
+      if (collab) {
+        let userid = fragment.get("as");
+        let key = fragment.get("invite");
+        this.join_case(caseid, collab, userid, key);
+      } else {
+        // Open case specified in url.
+        this.open_case(caseid);
+      }
 
       // Read case list in background.
       casedb.readdir().then(caselist => {
@@ -99,6 +115,24 @@ class CaseApp extends Component {
     } else {
       this.editor.close();
     }
+  }
+
+  async join_case(caseid, url, userid, key) {
+    // Connect to collaboration server and join collaboration.
+    let collab = new Collaboration();
+    await collab.connect(url);
+    let credentials = await collab.join(caseid, userid, key);
+    collab.close();
+
+    // Set up local case.
+    let casefile = store.frame();
+    casefile.set(n_caseid, caseid);
+    casefile.set(n_collaborate, true);
+    casefile.set(n_collab, url);
+    casefile.set(n_userid, userid);
+    casefile.set(n_credentials, credentials);
+
+    this.show_case(casefile);
   }
 
   async read_case(caseid) {
@@ -216,6 +250,7 @@ class CaseApp extends Component {
 
       return casefile;
     } catch (e) {
+      console.log("error", e);
       inform(`Error opening case #${caseid}: ${e}`);
     }
   }
@@ -234,7 +269,7 @@ class CaseApp extends Component {
   async show_case(casefile) {
     let caseid = casefile.get(n_caseid);
     let main = casefile.get(n_main);
-    let name = main.get(n_name);
+    let name = main ? main.get(n_name) : "";
 
     history.pushState(caseid, "", "/c/" + caseid);
     window.document.title = `#${caseid} ${name}`;

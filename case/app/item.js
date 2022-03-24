@@ -789,15 +789,15 @@ class ItemPanel extends Component {
         <md-text id="names"></md-text>
       </div>
       <div><md-text id="description"></md-text></div>
-      <md-row-layout>
-        <md-column-layout style="flex: 1 1 66%;">
+      <div class="columns">
+        <div class="left">
           <property-panel id="properties">
           </property-panel>
-        </md-column-layout>
+        </div>
 
         <div id="vruler"></div>
 
-        <md-column-layout style="flex: 1 1 33%;">
+        <div class="right">
           <picture-panel id="picture">
             <md-image class="photo"></md-image>
             <md-text class="caption"></md-text>
@@ -805,8 +805,8 @@ class ItemPanel extends Component {
           <div id="hruler"></div>
           <xref-panel id="xrefs">
           </xref-panel>
-        </md-column-layout>
-      </md-row-layout>
+        </div>
+      </div>
       <subtopic-panel id="subtopics"></subtopic-panel>
     `;
   }
@@ -829,6 +829,23 @@ class ItemPanel extends Component {
         padding-left: 5px;
         padding-right: 5px;
         display: block;
+      }
+
+      $ .columns {
+        display: flex;
+        flex-direction: row;
+      }
+
+      $ .left {
+        display: flex;
+        flex: 1 1 66%;
+        flex-direction: column;
+      }
+
+      $ .right {
+        display: flex;
+        flex: 1 1 33%;
+        flex-direction: column;
       }
 
       $ #vruler {

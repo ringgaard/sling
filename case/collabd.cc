@@ -249,6 +249,9 @@ class CollabCase {
     }
     if (!valid) return false;
 
+    // Check that user is still a participant.
+    if (!IsParticipant(id)) return false;
+
     // Add client as listener.
     clients_.push_back(client);
     return true;
@@ -261,6 +264,41 @@ class CollabCase {
     if (it != clients_.end()) {
       clients_.erase(it);
     }
+  }
+
+  // Invite participant and return invite key.
+  string Invite(const string &id) {
+    MutexLock lock(&mu_);
+
+    // Check that user is a participant.
+    if (!IsParticipant(id)) return "";
+
+    // Generate new invite key.
+    string key = RandomKey();
+    invites_.emplace_back(id, key);
+    return key;
+  }
+
+  // Join collaboration using invite key.
+  string Join(const string &id, const string &key) {
+    MutexLock lock(&mu_);
+
+    // Check that user has been invited.
+    bool valid = false;
+    for (auto it = invites_.begin(); it != invites_.end(); ++it) {
+      if (it->id == id && it->credentials == key) {
+        valid = true;
+        invites_.erase(it);
+        break;
+      }
+    }
+    if (!valid) return "";
+    if (!IsParticipant(id)) return "";
+
+    // Generate new credentials.
+    string credentials = RandomKey();
+    participants_.emplace_back(id, credentials);
+    return credentials;
   }
 
   // Return new topic id.
@@ -476,6 +514,20 @@ class CollabCase {
     return FLAGS_datadir + "/" + std::to_string(caseid) + ".access";
   }
 
+  // Check if user is a participant.
+  bool IsParticipant(const string &id) {
+    Handle user = store_.LookupExisting(id);
+    if (user.IsNil()) return false;
+    Frame main = casefile_.GetFrame(n_main);
+    if (!main.valid()) return false;
+    for (const Slot &s : main) {
+      if (s.name == n_participant || s.name == n_author) {
+        if (s.value == user) return true;
+      }
+    }
+    return false;
+  }
+
   // Write case to file.
   void WriteCase() {
     FileOutputStream stream(CaseFileName(caseid_));
@@ -647,6 +699,8 @@ class CollabClient : public WebSocket {
     int op = reader.ReadInt();
     switch (op) {
       case COLLAB_CREATE: Create(&reader); break;
+      case COLLAB_INVITE: Invite(&reader); break;
+      case COLLAB_JOIN: Join(&reader); break;
       case COLLAB_LOGIN: Login(&reader); break;
       case COLLAB_NEWID: NewId(&reader); break;
       case COLLAB_UPDATE: Update(&reader); break;
@@ -695,15 +749,71 @@ class CollabClient : public WebSocket {
     collab->WriteParticipants();
     collab->Flush();
 
-   // Return reply with signals to the client that the collaboration server
-   // has taken ownership of the case.
-   CollabWriter writer;
-   writer.WriteInt(COLLAB_CREATE);
-   writer.WriteString(credentials);
-   writer.Send(this);
+    // Return reply which signals to the client that the collaboration server
+    // has taken ownership of the case.
+    CollabWriter writer;
+    writer.WriteInt(COLLAB_CREATE);
+    writer.WriteString(credentials);
+    writer.Send(this);
 
     LOG(INFO) << "Created new collaboration for case #" << collab->caseid()
               << " author " << collab->Author();
+  }
+
+  // Invite participant to collaborate.
+  void Invite(CollabReader *reader) {
+    // Make sure client is logged into case.
+    if (collab_ == nullptr) {
+      Error("user not logged in");
+      return;
+    }
+
+    // Receive <user>.
+    string userid = reader->ReadString();
+    LOG(INFO) << "Invite " << userid << " to case #" << collab_->caseid();
+
+    // Generate invite key for new participant.
+    string key = collab_->Invite(userid);
+    if (key.empty()) {
+      Error("user is not a collaboration participant");
+    }
+
+    // Return new invite key.
+    CollabWriter writer;
+    writer.WriteInt(COLLAB_INVITE);
+    writer.WriteString(key);
+    writer.Send(this);
+  }
+
+  // Join collaboration.
+  void Join(CollabReader *reader) {
+    // Receive <caseid> <user> <invite key>.
+    int caseid = reader->ReadInt();
+    string userid = reader->ReadString();
+    string key = reader->ReadString();
+    LOG(INFO) << "User " << userid << " joining case #" << caseid;
+
+    // Find case.
+    CollabCase *collab = service_->FindCase(caseid);
+    if (collab == nullptr) {
+      Error("unknown collaboration");
+      return;
+    }
+
+    // Join collaboration.
+    string credentials = collab->Join(userid, key);
+    if (credentials.empty()) {
+      LOG(WARNING) << "Joining case #" << caseid << " denied for " << userid;
+      Error("user not invited to collaborate");
+      return;
+    }
+    collab->WriteParticipants();
+
+    // Return credentials for logging into collaboration.
+    CollabWriter writer;
+    writer.WriteInt(COLLAB_JOIN);
+    writer.WriteString(credentials);
+    writer.Send(this);
   }
 
   // Log-in user to collaboration.
@@ -723,7 +833,7 @@ class CollabClient : public WebSocket {
     // Get case.
     collab_ = service_->FindCase(caseid);
     if (collab_ == nullptr) {
-      Error("Unknown collaboration");
+      Error("unknown collaboration");
       return;
     }
 
@@ -737,10 +847,10 @@ class CollabClient : public WebSocket {
     userid_ = userid;
 
     // Return case.
-     CollabWriter writer;
-     writer.WriteInt(COLLAB_LOGIN);
-     collab_->EncodeCase(&writer);
-     writer.Send(this);
+    CollabWriter writer;
+    writer.WriteInt(COLLAB_LOGIN);
+    collab_->EncodeCase(&writer);
+    writer.Send(this);
   }
 
   // Get new topic id.

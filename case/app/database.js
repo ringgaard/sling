@@ -124,8 +124,10 @@ class CaseDatabase {
   write(casefile) {
     // Encode case data.
     let encoder = new Encoder(store);
-    for (let topic of casefile.get(n_topics)) {
-      encoder.encode(topic);
+    if (casefile.has(n_topics)) {
+      for (let topic of casefile.get(n_topics)) {
+        encoder.encode(topic);
+      }
     }
     encoder.encode(casefile);
     let data = {id: casefile.get(n_caseid), data: encoder.output()};
