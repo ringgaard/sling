@@ -110,7 +110,7 @@ string RandomKey() {
 class CollabReader {
  public:
   CollabReader(const uint8 *packet, size_t size)
-    : stream_(packet, size), input_(&stream_) {}
+    : packet_(packet, size), stream_(packet_), input_(&stream_) {}
 
   // Read varint-encoded integer from packet. Return -1 on error.
   int ReadInt() {
@@ -132,7 +132,13 @@ class CollabReader {
     return decoder.DecodeAll();
   }
 
+  // Original packet.
+  const Slice &packet() const { return packet_; }
+
  private:
+  // Original data packet.
+  Slice packet_;
+
   // Packet input stream.
   ArrayInputStream stream_;
 
@@ -414,6 +420,9 @@ class CollabCase {
         LOG(ERROR) << "Invalid case update type " << type;
     }
   }
+
+  // Broadcast packet to clients. Do not send packet to source.
+  void Broadcast(CollabClient *source, const Slice &packet);
 
   // Read case from file.
   bool ReadCase() {
@@ -880,7 +889,8 @@ class CollabClient : public WebSocket {
     // Update collaboration.
     collab_->Update(reader);
 
-    // TODO: broadcast update to all other clients.
+    // Broadcast update to all other clients.
+    collab_->Broadcast(this, reader->packet());
   }
 
   // Return error message to client.
@@ -890,6 +900,8 @@ class CollabClient : public WebSocket {
     writer.WriteString(message);
     writer.Send(this);
   }
+
+  const string &userid() const { return userid_; }
 
  private:
   // Collaboration service.
@@ -908,6 +920,15 @@ void CollabService::Process(HTTPRequest *request, HTTPResponse *response) {
     delete client;
     response->SendError(404);
     return;
+  }
+}
+
+void CollabCase::Broadcast(CollabClient *source, const Slice &packet) {
+  MutexLock lock(&mu_);
+  for (CollabClient *client : clients_) {
+    if (client != source) {
+      client->Send(packet);
+    }
   }
 }
 

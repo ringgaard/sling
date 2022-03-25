@@ -508,6 +508,9 @@ class CaseEditor extends Component {
       this.localcase = this.casefile;
       this.casefile = await this.collab.login(caseid, userid, credentials);
 
+      // Listen on remote collaboration case updates.
+      this.collab.listener = this;
+
       // Update local case.
       for (let prop of [n_created, n_modified, n_main]) {
         this.localcase.set(prop, this.casefile.get(prop));
@@ -540,6 +543,9 @@ class CaseEditor extends Component {
         }
       }
     }
+
+    // Update title.
+    window.document.title = `#${this.caseid()} ${this.main.get(n_name)}`;
 
     // Enable/disable action buttons.
     for (let e of ["#save", "#share", "#merge", "#newfolder", "#export"]) {
@@ -590,36 +596,6 @@ class CaseEditor extends Component {
       let next = this.casefile.get(n_next);
       this.casefile.set(n_next, next + 1);
       return next;
-    }
-  }
-
-  topic_updated(topic) {
-    if (this.collab) {
-      this.collab.topic_updated(topic);
-    }
-  }
-
-  topic_deleted(topic) {
-    if (this.collab) {
-      this.collab.topic_deleted(topic);
-    }
-  }
-
-  folder_updated(folder) {
-    if (this.collab && folder != this.scraps) {
-      this.collab.folder_updated(this.folder_name(folder), folder);
-    }
-  }
-
-  folder_renamed(folder, name) {
-    if (this.collab) {
-      this.collab.folder_renamed(this.folder_name(folder), name);
-    }
-  }
-
-  folders_updated() {
-    if (this.collab) {
-      this.collab.folders_updated(this.folders);
     }
   }
 
@@ -696,20 +672,24 @@ class CaseEditor extends Component {
     let topics = this.topics;
     if (this.scraps.length > 0) topics = topics.concat(this.scraps);
     for (let topic of topics) {
+      let updated = false;
       for (let n = 0; n < topic.length; ++n) {
         let v = topic.value(n);
         if (source == v) {
           topic.set_value(n, target);
+          updated = true;
         } else if (v instanceof Frame) {
           if (v.isanonymous() && v.has(n_is)) {
             for (let m = 0; m < v.length; ++m) {
               if (source == v.value(m)) {
                 v.set_value(m, target);
+               updated = true;
               }
             }
           }
         }
       }
+      if (updated && !this.scraps.include(topic)) this.topic_updated(topic);
     }
   }
 
@@ -1067,7 +1047,6 @@ class CaseEditor extends Component {
         let scraps_before = this.scraps.length > 0;
         let import_mapping = new Map();
         for (let t of topics) {
-
           // Determine if pasted topic is from this case.
           let topic = store.find(t.id);
           let external = true;
@@ -1100,6 +1079,7 @@ class CaseEditor extends Component {
                 topic.add(store.transfer(name), store.transfer(value));
               }
             }
+            this.topic_updated(topic);
           }
 
           if (!first) first = topic;
@@ -1365,6 +1345,85 @@ class CaseEditor extends Component {
       this.log.push(msg.toString());
     }
     this.log.push("\n");
+  }
+
+  topic_updated(topic) {
+    if (this.collab) {
+      this.collab.topic_updated(topic);
+    }
+  }
+
+  topic_deleted(topic) {
+    if (this.collab) {
+      this.collab.topic_deleted(topic);
+    }
+  }
+
+  folder_updated(folder) {
+    if (this.collab && folder != this.scraps) {
+      this.collab.folder_updated(this.folder_name(folder), folder);
+    }
+  }
+
+  folder_renamed(folder, name) {
+    if (this.collab) {
+      this.collab.folder_renamed(this.folder_name(folder), name);
+    }
+  }
+
+  folders_updated() {
+    if (this.collab) {
+      this.collab.folders_updated(this.folders);
+    }
+  }
+
+  remote_topic_update(topic) {
+    console.log("received topic update", topic.id);
+    if (!this.topics.includes(topic)) this.topics.push(topic);
+    this.update_topic(topic);
+  }
+
+  remote_folder_update(name, topics) {
+    console.log("received folder update", name);
+    let f = this.folders;
+    for (let i = 0; i < f.length; ++i) {
+      if (f.name(i) == name) {
+        let folder = f.value(i);
+        folder.length = 0;
+        folder.push(...topics);
+        if (folder == this.folder) this.update_topics();
+      }
+    }
+  }
+
+  remote_folders_update(folders) {
+    console.log("received folder list update", folders.length);
+    let foldermap = new Map();
+    for (let [name, content] of this.folders) {
+      foldermap.set(name, content);
+    }
+    this.folders = store.frame();
+    for (let name of folders) {
+      let topics = foldermap.get(name);
+      if (!topics) topics = new Array();
+      this.folders.add(name, topics);
+    }
+    this.update_folders();
+  }
+
+  remote_topic_delete(topicid) {
+    console.log("received topic delete", topicid);
+    let topic = store.lookup(topicid);
+    let pos = this.topics.indexOf(topic);
+    if (pos != -1) this.topics.splice(pos, 1);
+  }
+
+  remote_folder_rename(oldname, newname) {
+    console.log("received folder rename", oldname, newname);
+    this.folders.apply((name, content) => {
+      if (name == oldname) return [newname, content];
+    });
+    this.update_folders();
   }
 
   async update_folders() {

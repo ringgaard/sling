@@ -592,7 +592,6 @@ void SocketConnection::Shutdown() {
 
 void SocketConnection::Push() {
   if (state_ > SOCKET_STATE_RECEIVE) return;
-  if (state_ == SOCKET_STATE_RECEIVE && request()->empty()) return;
   if (response_body()->empty()) return;
   state_ = SOCKET_STATE_SEND;
   Process();

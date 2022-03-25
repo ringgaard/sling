@@ -46,6 +46,44 @@ export class Collaboration {
     let decoder = new Decoder(store, await e.data.arrayBuffer(), false);
     let op = decoder.readVarint32();
     switch (op) {
+      case COLLAB_UPDATE: {
+        if (this.listener) {
+          let type = decoder.readVarint32();
+          switch (type) {
+            case CCU_TOPIC: {
+              let topic = decoder.readAll();
+              this.listener.remote_topic_update(topic);
+              break;
+            }
+            case CCU_FOLDER: {
+              let folder = decoder.readVarString();
+              let topics = decoder.readAll();
+              this.listener.remote_folder_update(folder, topics);
+              break;
+            }
+            case CCU_FOLDERS: {
+              let folders = decoder.readAll();
+              this.listener.remote_folders_update(folders);
+              break;
+            }
+            case CCU_DELETE: {
+              let topicid = decoder.readVarString();
+              this.listener.remote_topic_delete(topicid);
+              break;
+            }
+            case CCU_RENAME: {
+              let oldname = decoder.readVarString();
+              let newname = decoder.readVarString();
+              this.listener.remote_folder_rename(oldname, newname);
+              break;
+            }
+            default: {
+              console.log("unexpected collab update type", type);
+            }
+          }
+        }
+        break;
+      }
       case COLLAB_CREATE: {
         let credentials = decoder.readVarString();
         this.oncreated && this.oncreated(credentials);
@@ -172,7 +210,6 @@ export class Collaboration {
 
   // Send topic deletion.
   topic_deleted(topic) {
-    console.log("topic deleted", topic.id);
     let encoder = new Encoder(store, false);
     encoder.writeVarInt(COLLAB_UPDATE);
     encoder.writeVarInt(CCU_DELETE);
