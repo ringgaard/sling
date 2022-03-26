@@ -427,7 +427,7 @@ class CaseEditor extends Component {
       return;
     }
 
-    let dialog = new CollaborateDialog("ws://10.1.2.5:7700/collab");
+    let dialog = new CollaborateDialog(settings.collaburl);
     let url = await dialog.show();
     if (url) {
       // Connect to collaboration server and create new collaboration.
@@ -1910,7 +1910,10 @@ export class InviteDialog extends MdDialog {
       }
       $ md-search {
         border: 1px solid #d0d0d0;
-        margin: 5px 0px 5px 5px;
+        margin: 0px;
+      }
+      $ md-search-list {
+        max-height: 150px;
       }
       $ {
         width: 500px;

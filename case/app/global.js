@@ -12,6 +12,7 @@ export var settings = {}
 export function read_settings() {
   settings = JSON.parse(window.localStorage.getItem("settings") || "{}");
   if (!settings.kbservice) settings.kbservice = "https://ringgaard.com";
+  if (!settings.collaburl) settings.collaburl = "wss://ringgaard.com/collab/";
 }
 
 export function save_settings() {

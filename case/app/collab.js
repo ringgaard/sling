@@ -128,7 +128,7 @@ export class Collaboration {
   // Create collaboration for case and return user credentials.
   async create(casefile) {
     return new Promise((resolve, reject) => {
-      collab.oncreated = credentials => resolve(credentials);
+      this.oncreated = credentials => resolve(credentials);
 
       // Send collaboration create request to server.
       let encoder = new Encoder(store, false);

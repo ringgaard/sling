@@ -120,8 +120,9 @@ pages = [
   ("Case service",         re.compile(r"^\/case/service\/?\?(.+)$")),
   ("Case proxy",           re.compile(r"^\/case/proxy\/?\?(.+)$")),
   ("schema",               re.compile(r"^\/schema(.+)$")),
+  ("collaboration",        re.compile(r"^\/collab\/")),
 
-  ("Photo search",         re.compile(r"^\/photosearch\/(.+)$")),
+  ("photo search",         re.compile(r"^\/photosearch\/(.+)$")),
 ]
 
 browsers = [
