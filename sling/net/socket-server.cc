@@ -188,15 +188,14 @@ void SocketServer::Worker() {
           // Process connection data.
           VLOG(5) << "Begin " << conn->sock_ << " in state " << conn->State();
           do {
+            conn->Lock();
             Status s = conn->Process();
+            conn->Unlock();
             if (!s.ok()) {
               LOG(ERROR) << "Socket error: " << s;
               conn->state_ = SOCKET_STATE_TERMINATE;
             }
-            if (conn->state_ == SOCKET_STATE_IDLE) {
-              VLOG(5) << "Process " << conn->sock_ << " again";
-            }
-          } while (conn->state_ == SOCKET_STATE_IDLE);
+          } while (conn->state_ == SOCKET_STATE_PROCESS);
           VLOG(5) << "End " << conn->sock_ << " in state " << conn->State();
 
           if (conn->state_ == SOCKET_STATE_TERMINATE) {
@@ -389,7 +388,6 @@ SocketConnection::~SocketConnection() {
 }
 
 Status SocketConnection::Process() {
-  MutexLock lock(&mu_);
   SocketSession *session = session_;
   switch (state_) {
     case SOCKET_STATE_IDLE:
@@ -424,9 +422,12 @@ Status SocketConnection::Process() {
       FALLTHROUGH_INTENDED;
     }
 
-    case SOCKET_STATE_PROCESS:
+    case SOCKET_STATE_PROCESS: {
       // Process received data.
-      switch (session_->Process(this)) {
+      worker_ = pthread_self();
+      auto cont = session_->Process(this);
+      worker_ = 0;
+      switch (cont) {
         case SocketSession::CONTINUE:
           state_ = SOCKET_STATE_RECEIVE;
           return Status::OK;
@@ -449,6 +450,7 @@ Status SocketConnection::Process() {
       num_requests_++;
       state_ = SOCKET_STATE_SEND;
       FALLTHROUGH_INTENDED;
+    }
 
     case SOCKET_STATE_SEND: {
       // Send response header.
@@ -502,15 +504,19 @@ Status SocketConnection::Process() {
         }
       }
 
-      // Reset buffer and go back to idle if connection should be kept open.
+      // Reset buffer.
       if (!close_) {
         // Clear buffers.
         request_.Flush();
         response_header_.Clear();
         response_body_.Clear();
 
-        // Mark connection as idle.
-        state_ = SOCKET_STATE_IDLE;
+        // Mark connection as idle if all received data has been processed.
+        if (request_.available() > 0) {
+          state_ = SOCKET_STATE_PROCESS;
+        } else {
+          state_ = SOCKET_STATE_IDLE;
+        }
         return Status::OK;
       }
 
@@ -590,11 +596,20 @@ void SocketConnection::Shutdown() {
   shutdown(sock_, SHUT_RDWR);
 }
 
-void SocketConnection::Push() {
-  if (state_ > SOCKET_STATE_RECEIVE) return;
-  if (response_body()->empty()) return;
-  state_ = SOCKET_STATE_SEND;
-  Process();
+void SocketConnection::Push(const void *hdr, size_t hdrlen,
+                            const void *data, size_t datalen) {
+  bool self = pthread_self() == worker_;
+  if (!self) Lock();
+
+  IOBuffer *out = response_body();
+  if (hdr) out->Write(hdr, hdrlen);
+  if (data) out->Write(data, datalen);
+
+  if (!self) {
+    state_ = SOCKET_STATE_SEND;
+    Process();
+    Unlock();
+  }
 }
 
 const char *SocketConnection::State() const {

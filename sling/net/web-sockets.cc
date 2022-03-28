@@ -193,12 +193,7 @@ void WebSocket::Send(int type, const void *data, size_t size) {
   }
 
   // Write header and payload to output.
-  IOBuffer *out = conn_->response_body();
-  out->Write(&hdr, hdrlen);
-  out->Write(data, size);
-
-  // Push data.
-  conn_->Push();
+  conn_->Push(&hdr, hdrlen, data, size);
 }
 
 }  // namespace sling

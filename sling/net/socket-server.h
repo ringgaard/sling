@@ -168,8 +168,8 @@ class SocketConnection {
   // Set file for streaming response. This will take ownership of the file.
   void SendFile(File *file) { file_ = file; }
 
-  // Push unsent data.
-  void Push();
+  // Send data back to client.
+  void Push(const void *hdr, size_t hdrlen, const void *data, size_t datalen);
 
   // Server for connection.
   SocketServer *server() const { return server_; }
@@ -185,6 +185,10 @@ class SocketConnection {
 
   // Return connection state name.
   const char *State() const;
+
+  // Lock/unlock access to connection.
+  void Lock() { mu_.Lock(); }
+  void Unlock() { mu_.Unlock(); }
 
  private:
   // Receive data into buffer until it is full or all data that can be received
@@ -230,6 +234,9 @@ class SocketConnection {
 
   // Close connection after response has been sent.
   bool close_ = false;
+
+  // Thread handle for worker processing a request on the connection.
+  pthread_t worker_ = 0;
 
   // Statistics.
   uint64 rx_bytes_ = 0;

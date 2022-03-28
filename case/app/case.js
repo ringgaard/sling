@@ -904,8 +904,8 @@ class CaseEditor extends Component {
             console.log("topic not found", topic.id);
           }
           this.scraps.push(topic);
+          this.topic_deleted(topic);
         }
-        this.topic_deleted(topic);
       }
     }
     this.mark_dirty();

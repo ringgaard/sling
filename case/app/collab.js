@@ -199,6 +199,7 @@ export class Collaboration {
 
   // Send topic update.
   topic_updated(topic) {
+    console.log("send topic update", topic.id, topic);
     let encoder = new Encoder(store, false);
     encoder.writeVarInt(COLLAB_UPDATE);
     encoder.writeVarInt(CCU_TOPIC);
@@ -210,6 +211,7 @@ export class Collaboration {
 
   // Send topic deletion.
   topic_deleted(topic) {
+    console.log("send topic delete", topic.id);
     let encoder = new Encoder(store, false);
     encoder.writeVarInt(COLLAB_UPDATE);
     encoder.writeVarInt(CCU_DELETE);
@@ -220,6 +222,7 @@ export class Collaboration {
 
   // Send folder update.
   folder_updated(name, content) {
+    console.log("send folder update", name, content);
     let encoder = new Encoder(store, false);
     encoder.writeVarInt(COLLAB_UPDATE);
     encoder.writeVarInt(CCU_FOLDER);
@@ -231,6 +234,7 @@ export class Collaboration {
 
   // Send folder rename.
   folder_renamed(oldname, newname) {
+    console.log("send folder rename", oldname, newname);
     let encoder = new Encoder(store, false);
     encoder.writeVarInt(COLLAB_UPDATE);
     encoder.writeVarInt(CCU_RENAME);
@@ -246,6 +250,7 @@ export class Collaboration {
     for (let [name, content] of folders) {
       folder_names.push(name);
     }
+    console.log("send folder list update", folder_names);
     let encoder = new Encoder(store, false);
     encoder.writeVarInt(COLLAB_UPDATE);
     encoder.writeVarInt(CCU_FOLDERS);
@@ -253,6 +258,5 @@ export class Collaboration {
     let packet = encoder.output();
     this.send(packet);
   }
-
 };
 
