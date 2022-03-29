@@ -42,6 +42,7 @@ DEFINE_string(addr, "", "HTTP server address");
 DEFINE_int32(port, 7700, "HTTP server port");
 DEFINE_int32(workers, 16, "Number of network worker threads");
 DEFINE_int32(flush, 30, "Number of seconds before writing changes to disk");
+DEFINE_int32(ping, 30, "Number of seconds between keep-alive pings");
 DEFINE_string(datadir, ".", "Data directory for collaborations");
 
 // Collaboration protocol opcodes.
@@ -424,6 +425,9 @@ class CollabCase {
   // Broadcast packet to clients. Do not send packet to source.
   void Broadcast(CollabClient *source, const Slice &packet);
 
+  // Send pings to client to keep connection alive.
+  void SendKeepAlivePings();
+
   // Read case from file.
   bool ReadCase() {
     MutexLock lock(&mu_);
@@ -655,14 +659,24 @@ class CollabService {
 
  private:
   void Checkpoint() {
-    time_t last = time(nullptr);
+    time_t last_flush = time(nullptr);
+    time_t last_ping = time(nullptr);
     for (;;) {
+      // Wait.
       sleep(1);
       if (terminate_) return;
       time_t now = time(nullptr);
-      if (now - last >= FLAGS_flush) {
+
+      // Flush changes to disk.
+      if (now - last_flush >= FLAGS_flush) {
         Flush();
-        last = now;
+        last_flush = now;
+      }
+
+      // Send keep-alive pings to clients.
+      if (now - last_ping >= FLAGS_ping) {
+        SendKeepAlivePings();
+        last_ping = now;
       }
     }
   }
@@ -672,6 +686,13 @@ class CollabService {
     MutexLock lock(&mu_);
     for (CollabCase *collab : collaborations_) {
       collab->Flush();
+    }
+  }
+
+  void SendKeepAlivePings() {
+    MutexLock lock(&mu_);
+    for (CollabCase *collab : collaborations_) {
+      collab->SendKeepAlivePings();
     }
   }
 
@@ -928,6 +949,16 @@ void CollabCase::Broadcast(CollabClient *source, const Slice &packet) {
   for (CollabClient *client : clients_) {
     if (client != source) {
       client->Send(packet);
+    }
+  }
+}
+
+void CollabCase::SendKeepAlivePings() {
+  MutexLock lock(&mu_);
+  time_t now = time(nullptr);
+  for (CollabClient *client : clients_) {
+    if (now - client->last() > FLAGS_ping) {
+      client->Ping("keep-alive", 10);
     }
   }
 }

@@ -547,7 +547,7 @@ class FactEditor extends Component {
       }
 
       // Paste as text.
-      let text = clip.innerText;
+      let text = clip.innerText.trim().replace(/\n/g, " ");
       document.execCommand("insertText", false, text);
     }
     this.dirty = true;

@@ -63,6 +63,9 @@ class WebSocket : public SocketSession {
     Send(WS_OP_TEXT, data, size);
   }
 
+  // Last time event was received on connection.
+  time_t last() const { return conn_->last(); }
+
  private:
   // Socket connection to client.
   SocketConnection *conn_;

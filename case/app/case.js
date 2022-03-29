@@ -446,7 +446,10 @@ class CaseEditor extends Component {
 
       // Save and reload.
       this.match("#app").save_case(this.casefile);
-      this.update(this.casefile);
+      await this.update(this.casefile);
+
+      inform("Case has been turned into a collaboration. "+
+             "You can now invite participants to join.");
     }
   }
 

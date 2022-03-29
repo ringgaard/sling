@@ -74,7 +74,7 @@ const char *WebSocket::Name() {
 }
 
 int WebSocket::IdleTimeout() {
-  return 86400;  // 24 hours timeout
+  return 3600;  // one hour timeout
 }
 
 WebSocket::Continuation WebSocket::Process(SocketConnection *conn) {
@@ -159,7 +159,7 @@ WebSocket::Continuation WebSocket::Process(SocketConnection *conn) {
 }
 
 void WebSocket::Ping(const void *data, size_t size) {
-  Send(WS_OP_PONG, data, size);
+  Send(WS_OP_PING, data, size);
 }
 
 void WebSocket::Close() {

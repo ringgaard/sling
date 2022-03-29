@@ -19,7 +19,7 @@ const n_inverse_property = store.lookup("P1696");
 const n_properties = store.lookup("properties");
 const n_fanin = store.lookup("/w/item/fanin");
 
-const max_fainin = Number.MAX_VALUE;
+const max_fainin = 1000000;
 
 n_is.add(n_name, "is");
 n_is.add(n_description, "same as");
@@ -35,7 +35,6 @@ n_description.add(n_fanin, max_fainin);
 
 n_instance_of.add(n_name, "instance of");
 n_instance_of.add(n_description, "item type");
-n_instance_of.add(n_fanin, max_fainin);
 
 n_alias.add(n_name, "alias");
 n_alias.add(n_description, "item alias");
@@ -67,7 +66,7 @@ class PropertyIndex {
         this.names.push({name: normalized(name), property});
       }
       for (let alias of property.all(n_alias)) {
-        this.names.push({name: normalized(alias), property});
+        this.names.push({name: normalized(alias), property, alias: true});
       }
     }
 
@@ -85,10 +84,12 @@ class PropertyIndex {
 
     // Add property shortcut matches.
     let matches = new Set();
+    let scores = new Map();
     let query_len = normalized_query.length;
     for (let [name, value] of Object.entries(property_shortcuts)) {
       if (name.substring(0, query_len) == normalized_query) {
         matches.add(value);
+        scores.set(value, 1000);
       }
     }
 
@@ -117,21 +118,27 @@ class PropertyIndex {
 
       // Stop if the current name does not match (the prefix).
       let entry = this.names[index];
+      let fullmatch = entry.name == normalized_query
       if (prefix) {
         if (!entry.name.startsWith(normalized_query)) break;
       } else {
-        if (entry.name != normalized_query) break;
+        if (!fullmatch) break;
       }
 
-      matches.add(entry.property);
+      let prop = entry.property;
+      matches.add(prop);
+      let score = scores.get(prop) || 1;
+      if (!entry.alias) score = 100;
+      if (fullmatch) score *= 100;
+      scores.set(prop, score);
       index++;
     }
 
     // Rank search results.
     let results = Array.from(matches);
     results.sort((a, b) => {
-      let fa = a.get(n_fanin) || 0;
-      let fb = b.get(n_fanin) || 0;
+      let fa = (a.get(n_fanin) || 1) * scores.get(a);
+      let fb = (b.get(n_fanin) || 1) * scores.get(b);
       return fb - fa;
     });
 

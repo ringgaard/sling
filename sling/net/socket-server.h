@@ -190,6 +190,9 @@ class SocketConnection {
   void Lock() { mu_.Lock(); }
   void Unlock() { mu_.Unlock(); }
 
+  // Last time event was received on connection.
+  time_t last() const { return last_; }
+
  private:
   // Receive data into buffer until it is full or all data that can be received
   // without blocking has been received.
