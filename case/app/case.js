@@ -459,6 +459,12 @@ class CaseEditor extends Component {
     let dialog = new InviteDialog(Array.from(this.main.all(n_participant)));
     let participant = await dialog.show();
     if (participant) {
+      // Add invited user as participant.
+      if (this.main.put(n_participant, store.lookup(participant))) {
+        this.update_topic(this.main);
+        this.topic_updated(this.main);
+      }
+
       // Get invite key from collaboration server.
       let key = await this.collab.invite(participant);
       let base = window.location.href;
@@ -692,7 +698,7 @@ class CaseEditor extends Component {
           }
         }
       }
-      if (updated && !this.scraps.include(topic)) this.topic_updated(topic);
+      if (updated && !this.scraps.includes(topic)) this.topic_updated(topic);
     }
   }
 
@@ -1180,7 +1186,7 @@ class CaseEditor extends Component {
     if (script) {
       // Execute script.
       try {
-        if (script.call(this, store, this.print.bind(this))) {
+        if (await script.call(this, store, this.print.bind(this))) {
           // Update editor.
           this.mark_dirty();
           await this.update_folders();
@@ -1348,6 +1354,10 @@ class CaseEditor extends Component {
       this.log.push(msg.toString());
     }
     this.log.push("\n");
+  }
+
+  fetch(resource, init) {
+    return fetch(`/case/proxy?url=${encodeURIComponent(resource)}`, init);
   }
 
   topic_updated(topic) {
@@ -1723,6 +1733,7 @@ class SharingDialog extends MdDialog {
 Component.register(SharingDialog);
 
 var user_script;
+var AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
 
 class ScriptDialog extends MdDialog {
   onconnected() {
@@ -1733,7 +1744,7 @@ class ScriptDialog extends MdDialog {
     user_script = this.find("textarea").value;
     var func;
     try {
-      func = new Function("store", "print", user_script);
+      func = new AsyncFunction("store", "print", user_script);
     } catch(e) {
       this.find("#msg").innerText = e.message;
       return;
@@ -1850,32 +1861,41 @@ Component.register(CollaborateDialog);
 
 export class InviteDialog extends MdDialog {
   onconnected() {
-    this.bind("md-search", "query", e => this.onquery(e));
     this.bind("md-search", "item", e => this.onitem(e));
+
+    let omnibox = this.find("#value");
+    let editor = document.getElementById("editor");
+    omnibox.add((query, full, results) => editor.search(query, full, results));
+    omnibox.add((query, full, results) => {
+      results.push({
+        ref: query,
+        name: query,
+        description: "new participant",
+        context: new plugins.Context(null, editor.casefile, editor),
+        onitem: async item => {
+          // Create new topic stub.
+          let topic = await item.context.new_topic();
+          if (!topic) return;
+          topic.put(n_name, item.name.trim());
+          return topic;
+        },
+      });
+    });
   }
 
-  onquery(e) {
-    let target = e.target;
-    let detail = e.detail
-    let query = detail.trim().toLowerCase();
-    let results = new Array();
-    let items = [];
-    for (let p of this.state) {
-      let name = p.get(n_name).toString().toLowerCase();
-      if (name && name.startsWith(query)) {
-        items.push(new MdSearchResult({
-          ref: p.id,
-          name: p.get(n_name),
-          description: p.get(n_description),
-        }));
-      }
-    }
-    target.populate(detail, items);
-  }
-
-  onitem(e) {
+  async onitem(e) {
     let item = e.detail;
-    this.participant = item.ref;
+
+    if (item.onitem) {
+      let topic = await item.onitem(item);
+      if (item.context) await item.context.refresh();
+      this.participant = topic.id;
+    } else if (item.topic) {
+      this.participant = item.topic.id;
+    } else if (item.ref) {
+      this.participant = item.ref;
+    }
+
     this.find("md-search").set(item.name);
   }
 
@@ -1884,17 +1904,26 @@ export class InviteDialog extends MdDialog {
   }
 
   render() {
+    let editor = document.getElementById("editor");
+    let userid = editor.localcase.get(n_userid);
     return `
       <md-dialog-top>Invite participant</md-dialog-top>
       <div id="content">
         <div>
           Select participant to invite to collaborate on case.
+          You can either choose an existing topic or create a new topic for
+          the participant.
         </div>
-        <md-search
-          placeholder="Search for participant..."
-          min-length=0
-          autoselect=1>
-        </md-search>
+        <div id="search">
+          <omni-box id="value"></omni-box>
+        </div>
+        <fieldset>
+          <legend>Case collaboration</legend>
+          Collaboration server: ${editor.collab.url}<br/>
+          Case #: ${editor.caseid()}<br/>
+          Created: ${editor.casefile.get(n_modified)}<br/>
+          Your participant id: ${userid}<br/>
+        </fieldset>
       </div>
       <md-dialog-bottom>
         <button id="cancel">Cancel</button>
@@ -1909,10 +1938,16 @@ export class InviteDialog extends MdDialog {
         display: flex;
         flex-direction: column;
         row-gap: 16px;
-        height: 200px;
+        height: 300px;
       }
-      $ md-search {
+      $ #search {
+        height: 100%;
+      }
+      $ omni-box {
         border: 1px solid #d0d0d0;
+        padding: 0px;
+      }
+      $ omni-box md-search {
         margin: 0px;
       }
       $ md-search-list {

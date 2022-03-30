@@ -73,26 +73,24 @@ export class OmniBox extends Component {
 
   render() {
     return `
-      <form>
-        <md-search placeholder="Search for topic..." min-length=2>
-        </md-search>
-      </form>
+      <md-search placeholder="Search for topic..." min-length=2>
+      </md-search>
     `;
   }
 
   static stylesheet() {
     return `
       $ {
+        display: flex;
+        width: 100%;
+      }
+
+      $ {
         display: block;
         width: 100%;
         max-width: 800px;
         padding-left: 10px;
         padding-right: 10px;
-      }
-
-      $ form {
-        display: flex;
-        width: 100%;
       }
     `;
   }

@@ -294,6 +294,7 @@ class CollabCase {
     bool valid = false;
     for (auto it = invites_.begin(); it != invites_.end(); ++it) {
       if (it->id == id && it->credentials == key) {
+        // Remove invite so it cannot be used again.
         valid = true;
         invites_.erase(it);
         break;
@@ -806,6 +807,7 @@ class CollabClient : public WebSocket {
     string key = collab_->Invite(userid);
     if (key.empty()) {
       Error("user is not a collaboration participant");
+      return;
     }
 
     // Return new invite key.
