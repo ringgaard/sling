@@ -201,8 +201,10 @@ export class Frame {
   // Return (first) value for frame slot.
   get(name) {
     if (typeof name === 'string') name = this.store.lookup(name);
-    for (let n = 0; n < this.slots.length; n += 2) {
-      if (this.slots[n] === name) return this.slots[n + 1];
+    if (this.slots) {
+      for (let n = 0; n < this.slots.length; n += 2) {
+        if (this.slots[n] === name) return this.slots[n + 1];
+      }
     }
     return undefined;
   }

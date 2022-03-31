@@ -455,8 +455,7 @@ class CaseEditor extends Component {
 
   async oninvite(e) {
     if (!this.collab) return;
-    let participants = new Array();
-    let dialog = new InviteDialog(Array.from(this.main.all(n_participant)));
+    let dialog = new InviteDialog();
     let participant = await dialog.show();
     if (participant) {
       // Add invited user as participant.
@@ -1135,6 +1134,7 @@ class CaseEditor extends Component {
       let imgurl = await Drive.paste_image();
       if (imgurl) {
         topic.add(n_media, imgurl);
+        this.topic_updated(topic);
         this.mark_dirty();
         await this.update_topic(topic);
         return;
@@ -1906,6 +1906,13 @@ export class InviteDialog extends MdDialog {
   render() {
     let editor = document.getElementById("editor");
     let userid = editor.localcase.get(n_userid);
+    let collab = editor.collab;
+    let status;
+    if (collab.connected()) {
+      status = '<span class="green">⬤</span> Connected';
+    } else {
+      status = '<span class="red">⬤</span> Disconnected';
+    }
     return `
       <md-dialog-top>Invite participant</md-dialog-top>
       <div id="content">
@@ -1919,7 +1926,8 @@ export class InviteDialog extends MdDialog {
         </div>
         <fieldset>
           <legend>Case collaboration</legend>
-          Collaboration server: ${editor.collab.url}<br/>
+          Server: ${collab.url}<br/>
+          Status: ${status}<br/>
           Case #: ${editor.caseid()}<br/>
           Created: ${editor.casefile.get(n_modified)}<br/>
           Your participant id: ${userid}<br/>
@@ -1955,6 +1963,12 @@ export class InviteDialog extends MdDialog {
       }
       $ {
         width: 500px;
+      }
+      $ .red {
+        color: red;
+      }
+      $ .green {
+        color: green;
       }
     `;
   }

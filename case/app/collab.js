@@ -29,15 +29,24 @@ export class Collaboration {
     this.socket = new WebSocket(url);
     this.socket.addEventListener("message", e => this.onrecv(e));
     return new Promise((resolve, reject) => {
-      this.socket.addEventListener("open", e => resolve(this));
-      this.socket.addEventListener("error", e =>
-        reject("Error connecting to collaboration server " + url));
+      this.socket.addEventListener("open", e => {
+        resolve(this);
+      });
+      this.socket.addEventListener("error", e => {
+        reject("Error connecting to collaboration server " + url);
+      });
     });
   }
 
   // Close connection to collaboration server.
   close() {
+    this.connected = false;
     this.socket.close();
+  }
+
+  // Check if connected to collaboration server.
+  connected() {
+    return this.socket.readyState == 1;
   }
 
   // Message received from server.

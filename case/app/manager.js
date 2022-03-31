@@ -335,7 +335,7 @@ class CaseList extends material.MdCard {
           }
         });
       }
-    } else {
+    } else if (caseid) {
       // Open case.
       app.open_case(caseid);
     }
@@ -472,7 +472,7 @@ Component.register(CaseList);
 class GettingStarted extends Component {
   render() {
     return `
-      <h1>Getting started...</h1>
+      <h1>Getting started with KnolCase...</h1>
       <p>Welcome to <b>KnolCase</b>, a case-based knowledge management
       tool for gathering information about topics of interest and organizing
       these into case files.</p>
