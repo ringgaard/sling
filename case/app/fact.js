@@ -5,7 +5,7 @@ import {Component} from "/common/lib/component.js";
 import {MdSearchList} from "/common/lib/material.js";
 import {Frame, QString, Printer} from "/common/lib/frame.js";
 import {store, settings} from "./global.js";
-import {value_text, value_parser} from "./value.js";
+import {value_text, value_parser, LabelCollector} from "./value.js";
 import {Context} from "./plugins.js";
 import {search} from "./omnibox.js";
 import {qualified, psearch} from "./schema.js";
@@ -20,6 +20,11 @@ const n_quantity_type = store.lookup("/w/quantity");
 const n_start_time = store.lookup("P580");
 const n_end_time = store.lookup("P582");
 const n_point_in_time = store.lookup("P585");
+const n_instance_of = store.lookup("P31");
+const n_human = store.lookup("Q5");
+const n_gender = store.lookup("P21");
+const n_female = store.lookup("Q6581072");
+const n_male = store.lookup("Q6581097");
 
 function range(a, b) {
   if (!a || !b || !a.parentNode || a.parentNode != b.parentNode) {
@@ -462,6 +467,14 @@ class FactEditor extends Component {
         this.focused.collapse();
         e.stopPropagation();
       }
+    } else if (e.key == "f" && e.ctrlKey) {
+      this.human(n_female);
+      e.stopPropagation();
+      e.preventDefault();
+    } else if (e.key == "m" && e.ctrlKey) {
+      this.human(n_male);
+      e.stopPropagation();
+      e.preventDefault();
     } else if (e.key == " ") {
       this.onspace(e);
     }
@@ -553,6 +566,21 @@ class FactEditor extends Component {
     this.dirty = true;
     e.stopPropagation();
     e.preventDefault();
+  }
+
+  async human(gender) {
+    let s = this.selection();
+    if (!s.statement) return;
+
+    let labels = new LabelCollector(store);
+    labels.add_item(n_human);
+    labels.add_item(gender);
+    await labels.retrieve();
+
+    let t = new FactStatement({property: n_instance_of, value: n_human});
+    let g = new FactStatement({property: n_gender, value: gender});
+    this.insertBefore(t, s.statement);
+    this.insertBefore(g, s.statement);
   }
 
   searchbox(field, results) {

@@ -364,6 +364,10 @@ export class LabelCollector {
     }
   }
 
+  add_item(item) {
+    if (item.isproxy()) this.items.add(item);
+  }
+
   async retrieve() {
     // Skip if all labels has already been resolved.
     if (this.items.size == 0) return null;

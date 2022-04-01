@@ -845,7 +845,7 @@ class CaseEditor extends Component {
     let topic = await this.new_topic();
     topic.add(n_is, store.lookup(`c/${caserec.id}`));
     topic.add(n_instance_of, n_case_file);
-    if (caserec.name) topic.add(n_name, caserec.name);
+    if (caserec.name) topic.add(n_name, `Case #${caserec.id}: ${caserec.name}`);
     this.topic_updated(topic);
 
     // Read case and add linked case.
