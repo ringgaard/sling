@@ -2,7 +2,7 @@
 // Licensed under the Apache License, Version 2
 
 import {Component} from "/common/lib/component.js";
-import {StdDialog, MdIcon} from "/common/lib/material.js";
+import {StdDialog, MdIcon, MdDialog} from "/common/lib/material.js";
 import {Frame, QString, Printer} from "/common/lib/frame.js";
 import {store, settings} from "./global.js";
 import {get_schema, inverse_property} from "./schema.js";
@@ -273,27 +273,12 @@ class TopicCard extends Component {
     this.update_title();
   }
 
-  update_mode(editing, raw) {
+  update_mode(editing) {
     this.editing = editing;
-    this.editraw = raw;
 
     let content = this.match("md-content");
-    let scrollpos = content ? content.scrollTop : undefined;
-    if (editing) {
-      if (this.editraw) {
-        this.find("item-editor").update(this.state);
-        this.find("fact-panel").update();
-      } else {
-        this.find("item-editor").update();
-        this.find("fact-panel").update(this.state);
-      }
-      this.find("item-panel").update();
-    } else {
-      this.find("item-panel").update(this.state);
-      this.find("fact-panel").update();
-      this.find("item-editor").update();
-    }
-    if (scrollpos) content.scrollTop = scrollpos;
+    this.find("item-panel").update(this.editing ? null : this.state);
+    this.find("fact-panel").update(this.editing ? this.state : null);
 
     this.find("#topic-actions").update(!editing && !this.readonly);
     this.find("#edit-actions").update(editing && !this.readonly);
@@ -337,10 +322,20 @@ class TopicCard extends Component {
     }
   }
 
-  onedit(e) {
+  async onedit(e) {
     if (this.readonly) return;
     e.stopPropagation();
-    this.update_mode(true, e.ctrlKey);
+    if (e.ctrlKey) {
+      let topic = this.state;
+      let dialog = new RawEditDialog(topic)
+      let result = await dialog.show();
+      if (result) {
+        this.update(result);
+        this.mark_dirty();
+      }
+    } else {
+      this.update_mode(true);
+    }
   }
 
   onnsfw(e, nsfw) {
@@ -395,27 +390,14 @@ class TopicCard extends Component {
     e.stopPropagation();
 
     // Save changes to topic.
-    var topic;
-    if (this.editraw) {
-      let edit = this.find("item-editor");
-      let content = edit.value();
-      try {
-        topic = store.parse(content);
-      } catch (error) {
-        console.log("parse error", content);
-        StdDialog.error(`Error parsing topic: ${error}`);
-        return;
-      }
-    } else {
-      topic = this.state;
-      let edit = this.find("fact-panel");
-      let slots = edit.slots();
-      if (!slots) {
-        StdDialog.error("Illformed topic");
-        return;
-      }
-      topic.slots = slots;
+    let topic = this.state;
+    let edit = this.find("fact-panel");
+    let slots = edit.slots();
+    if (!slots) {
+      StdDialog.error("Illformed topic");
+      return;
     }
+    topic.slots = slots;
 
     // Add inverse properties.
     let folder_update = false;
@@ -467,7 +449,7 @@ class TopicCard extends Component {
 
   async ondiscard(e) {
     let discard = true;
-    let editor = this.find(this.editraw ? "item-editor" : "fact-editor");
+    let editor = this.find("fact-editor");
     if (editor.dirty) {
       let topic = this.state;
       discard = await StdDialog.confirm(
@@ -497,7 +479,6 @@ class TopicCard extends Component {
       for (let [name, value] of ref) {
         if (name == n_id || name == n_media) continue;
         if (topic.put(name, value)) {
-          console.log("import", name.id, value);
           changed = true;
         }
       }
@@ -639,7 +620,7 @@ class TopicCard extends Component {
       if (anchor == focus) {
         selection.collapse(anchor, 0);
       } else {
-        selection.setBaseAndExtent(anchor, 1, focus, focus.childElementCount);
+        selection.setBaseAndExtent(anchor, 0, focus, 0);
       }
     }
   }
@@ -713,7 +694,6 @@ class TopicCard extends Component {
       </md-card-toolbar>
       <item-panel></item-panel>
       <fact-panel></fact-panel>
-      <item-editor><item-editor>
     `;
   }
 
@@ -804,153 +784,52 @@ class TopicCard extends Component {
 
 Component.register(TopicCard);
 
-class ItemEditor extends Component {
-  visible() {
-    return this.state;
+class RawEditDialog extends MdDialog {
+  onconnected() {
+    this.bind("textarea", "keydown", e => e.stopPropagation());
   }
 
-  oninit() {
-    this.bind("#property md-search", "item", e => this.onitem(e, true));
-    this.bind("#value md-search", "item", e => this.onitem(e, false));
-    this.bind("#property md-search", "enter", e => this.onenter(e, true));
-    this.bind("#value md-search", "enter", e => this.onenter(e, false));
-    this.bind(null, "click", e => this.onclick(e));
-
-    let omnibox = this.find("#value");
-    let editor = this.match("#editor");
-    omnibox.add((query, full, results) => value_parser(query, results));
-    omnibox.add((query, full, results) => editor.search(query, full, results));
+  submit() {
+    let content = this.find("textarea").value;
+    try {
+      let topic = store.parse(content);
+      this.close(topic);
+    } catch (error) {
+      console.log("error", error);
+      this.find("#msg").innerText = `Error: ${error.message}`;
+    }
   }
 
-  onupdated() {
+  render() {
     let topic = this.state;
-    if (!topic) return;
-    let textarea = this.find("textarea");
-    textarea.value = topic.text(true, true);
-    textarea.focus();
-    textarea.setSelectionRange(0, 0);
-    this.dirty = false;
-  }
-
-  value() {
-    return this.find("textarea").value;
-  }
-
-  async onitem(e, isprop) {
-    let item = e.detail;
-    var value;
-    if (item.onitem) {
-      // Run plug-in and use new topic as value.
-      await item.onitem(item);
-      if (item.context && item.context.added) {
-        item.context.select = false;
-        await item.context.refresh();
-        value = item.context.added;
-      }
-    } else if (item.topic) {
-      if (item.casefile) {
-        // Create new topic with reference to topic in external case.
-        let editor = this.match("#editor");
-        let link = await this.new_topic();
-        link.add(n_is, topic);
-        let name = topic.get(n_name);
-        if (name) link.add(n_name, name);
-        await editor.update_list();
-        value = link;
-      } else {
-        value = item.topic.id
-      }
-    } else if (item.value) {
-      if (item.value instanceof Frame) {
-        value = item.value.id || item.value.text(false, true);
-      } else {
-        let printer = new Printer(store);
-        printer.refs = null;
-        printer.print(item.value);
-        value = printer.output;
-      }
-    } else if (item.ref) {
-      value = item.ref;
-    }
-
-    e.target.clear();
-    if (value) {
-      if (isprop) value += ": "
-      this.insert(value);
-    }
-
-    if (isprop) {
-      this.find("#value input").focus();
-    } else {
-      this.find("textarea").focus();
-    }
-  }
-
-  onenter(e, isprop) {
-    e.target.clear();
-    let name = e.detail;
-    let text = JSON.stringify(name);
-    if (isprop) text += ": "
-    this.insert(text);
-
-    if (isprop) {
-      this.find("#value input").focus();
-    } else {
-      this.find("textarea").focus();
-    }
-  }
-
-  insert(text) {
-    let textarea = this.find("textarea");
-    let start = textarea.selectionStart;
-    let end = textarea.selectionEnd;
-    textarea.setRangeText(text, start, end, "end");
-  }
-
-  onclick(e) {
-    // Prevent topic selection.
-    e.stopPropagation();
-  }
-
-  prerender() {
-    let topic = this.state;
-    let content = topic ? topic.text(true) : "";
+    let content = topic.text(true, true)
     return `
-      <textarea spellcheck="false">${Component.escape(content)}</textarea>
-      <div id="search-box">
-        <property-search-box id="property"></property-search-box>
-        <omni-box id="value"></omni-box>
-      </div>
+      <md-dialog-top>Edit topic code</md-dialog-top>
+        <textarea
+          spellcheck="false">${Component.escape(content)}</textarea>
+      <md-dialog-bottom>
+        <span id="msg"></span>
+        <md-spacer></md-spacer>
+        <button id="cancel">Cancel</button>
+        <button id="submit">Update</button>
+      </md-dialog-bottom>
     `;
   }
 
   static stylesheet() {
-    return `
-      $ #search-box {
-        display: flex;
-      }
-      $ #property {
-        border: 1px solid #d0d0d0;
-        margin: 5px 5px 5px 0px;
-      }
-      $ #value {
-        border: 1px solid #d0d0d0;
-        margin: 5px 0px 5px 5px;
-      }
+    return MdDialog.stylesheet() + `
       $ textarea {
-        font-size: 12px;
-        box-sizing: border-box;
-        resize: none;
-        width: 100%;
-        height: 500px;
-        border: 1px solid #d0d0d0;
-        margin-top: 5px;
+        width: calc(100vw * 0.8);
+        height: calc(100vh * 0.8);
+      }
+      $ #msg {
+        color: red;
       }
     `;
   }
 }
 
-Component.register(ItemEditor);
+Component.register(RawEditDialog);
 
 MdIcon.custom("move-down", `
 <svg width="24" height="24" viewBox="0 0 32 32">

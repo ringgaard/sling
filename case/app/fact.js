@@ -87,6 +87,7 @@ class FactPanel extends Component {
   static stylesheet() {
     return `
       $ {
+        display: block;
         position: relative;
       }
       $ md-search-list {
@@ -149,9 +150,20 @@ class FactEditor extends Component {
   }
 
   onselection(focus, anchor) {
+    // Keep track of focused topic.
     if (this.focused && this.focused != focus.field) {
       this.focused.collapse();
       this.focused = null;
+    }
+
+    // Scroll current statement into view.
+    let cursor = focus.field || focus.statement;
+    if (cursor) {
+      if (cursor.scrollIntoViewIfNeeded) {
+        cursor.scrollIntoViewIfNeeded(false);
+      } else {
+        cursor.scrollIntoView({block: "nearest"});
+      }
     }
   }
 
@@ -202,6 +214,7 @@ class FactEditor extends Component {
   onenter(e) {
     e.preventDefault();
     let s = this.selection();
+    if (!s) return;
     if (document.getSelection().isCollapsed) {
       if (s.field && s.field.isnote()) {
         // Split fact note.
@@ -395,7 +408,11 @@ class FactEditor extends Component {
           if (prev && prev.empty()) {
             prev.remove();
           } else if (s.statement.empty()) {
-            s.statement.remove();
+            if (s.statement == this.lastChild) {
+              s.statement.clear();
+            } else {
+              s.statement.remove();
+            }
           }
         }
       }
@@ -413,8 +430,10 @@ class FactEditor extends Component {
     if (!s) return;
     if (s.selection.isCollapsed && s.statement.empty()) {
       e.preventDefault();
-      s.statement.remove();
-      this.dirty = true;
+      if (s.statement != this.lastChild) {
+        s.statement.remove();
+        this.dirty = true;
+      }
     } else if (s.statement && s.field != s.base) {
       e.preventDefault();
       this.delete_selection(s);
@@ -588,9 +607,13 @@ class FactEditor extends Component {
       this.list.update({items: results});
     } else {
       let field_bbox = field.getBoundingClientRect();
-      let list_bbox = this.list.parentNode.getBoundingClientRect();
-      this.list.style.top = (field_bbox.bottom - list_bbox.top + 6) + "px";
-      this.list.style.left = (field_bbox.left - list_bbox.left) + "px";
+      let panel_bbox = this.list.parentNode.getBoundingClientRect();
+
+      let top = Math.round(field_bbox.bottom - panel_bbox.top);
+      let left = Math.round(field_bbox.left - panel_bbox.left);
+
+      this.list.style.top = top + "px";
+      this.list.style.left = left + "px";
       this.list.update({items: results});
       this.focused = field;
     }
@@ -742,7 +765,6 @@ class FactEditor extends Component {
       $ {
         display: block;
         font-size: 16px;
-        margin-top: 8px;
         padding-left: 4px;
         padding-bottom: 4px;
         border: thin solid lightgrey;
@@ -777,6 +799,11 @@ class FactStatement extends Component {
   empty() {
     if (this.placeholder()) return true;
     return this.firstChild.empty() && this.lastChild.empty();
+  }
+
+  clear() {
+    if (this.firstChild) this.firstChild.remove();
+    if (this.lastChild) this.lastChild.remove();
   }
 
   render() {
