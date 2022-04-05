@@ -276,7 +276,6 @@ class TopicCard extends Component {
   update_mode(editing) {
     this.editing = editing;
 
-    let content = this.match("md-content");
     this.find("item-panel").update(this.editing ? null : this.state);
     this.find("fact-panel").update(this.editing ? this.state : null);
 
@@ -289,10 +288,11 @@ class TopicCard extends Component {
     let topic = this.state;
     let icon = "subject";
     if (topic.get(n_instance_of) == n_case_file) {
-      if (topic.get(n_is)) {
+      if (topic.has(n_is)) {
         icon = "link";
       } else {
         icon = "folder_special";
+        this.match("#editor").update_title();
       }
     }
     this.find("#icon").update(icon);
@@ -330,7 +330,7 @@ class TopicCard extends Component {
       let dialog = new RawEditDialog(topic)
       let result = await dialog.show();
       if (result) {
-        this.update(result);
+        this.refresh();
         this.mark_dirty();
       }
     } else {
@@ -620,7 +620,7 @@ class TopicCard extends Component {
       if (anchor == focus) {
         selection.collapse(anchor, 0);
       } else {
-        selection.setBaseAndExtent(anchor, 0, focus, 0);
+        selection.setBaseAndExtent(anchor, 0, focus, focus.childElementCount);
       }
     }
   }
@@ -786,7 +786,15 @@ Component.register(TopicCard);
 
 class RawEditDialog extends MdDialog {
   onconnected() {
-    this.bind("textarea", "keydown", e => e.stopPropagation());
+    this.bind("textarea", "keydown", e => this.onkeydown(e));
+  }
+
+  onkeydown(e) {
+    if (e.ctrlKey && (e.key === 's' || e.key === 'S')) {
+      this.submit();
+      e.preventDefault()
+    }
+    e.stopPropagation()
   }
 
   submit() {

@@ -272,7 +272,6 @@ class CaseApp extends Component {
     let name = main ? main.get(n_name) : "";
 
     history.pushState(caseid, "", "/c/" + caseid);
-    window.document.title = `#${caseid} ${name}`;
 
     this.manager.style.display = "none";
     this.editor.style.display = "";

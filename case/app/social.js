@@ -181,6 +181,10 @@ let xrefs = [
     property: store.lookup("P3869"),
   },
   {
+    pattern: /^https?:\/\/www\.adultfilmdatabase\.com\/actor.cfm\?actorid=(\w+)/,
+    property: store.lookup("P3351"),
+  },
+  {
     pattern: /^https?:\/\/www\.egafd\.com\/actresses\/details.php\/id\/(\w+)/,
     property: store.lookup("P8767"),
   },

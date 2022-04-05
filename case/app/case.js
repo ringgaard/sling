@@ -553,7 +553,7 @@ class CaseEditor extends Component {
     }
 
     // Update title.
-    window.document.title = `#${this.caseid()} ${this.main.get(n_name)}`;
+    this.update_title();
 
     // Enable/disable action buttons.
     for (let e of ["#save", "#share", "#merge", "#newfolder", "#export"]) {
@@ -568,6 +568,10 @@ class CaseEditor extends Component {
     this.find("#menu").style.display = this.readonly ? "none" : "";
     this.find("#addlink").update(this.readonly);
     this.find("#script").update(settings.userscripts);
+  }
+
+  update_title() {
+    window.document.title = `#${this.caseid()} ${this.main.get(n_name)}`;
   }
 
   async onupdated() {
