@@ -443,58 +443,58 @@ class FactEditor extends Component {
   }
 
   onkeydown(e) {
-    if (e.key === "ArrowUp") {
+    if (e.code === "ArrowUp") {
       if (this.searching()) {
         this.focused.prev();
         e.preventDefault();
       } else {
         this.onmove(e, false);
       }
-    } else if (e.key === "ArrowDown") {
+    } else if (e.code === "ArrowDown") {
       if (this.searching()) {
         this.focused.next();
         e.preventDefault();
       } else {
         this.onmove(e, true);
       }
-    } else if (e.key === "ArrowLeft") {
+    } else if (e.code === "ArrowLeft") {
       this.onleft(e);
-    } else if (e.key === "ArrowRight") {
+    } else if (e.code === "ArrowRight") {
       this.onright(e);
-    } else if (e.key === "Tab") {
+    } else if (e.code === "Tab") {
       if (this.searching()) {
         this.focused.ontab(e);
       } else {
         this.ontab(e);
       }
-    } else if (e.key === "Home") {
+    } else if (e.code === "Home") {
       this.onhome(e);
-    } else if (e.key === "End") {
+    } else if (e.code === "End") {
       this.onend(e);
-    } else if (e.key === "Backspace") {
+    } else if (e.code === "Backspace") {
       this.onbackspace(e);
-    } else if (e.key === "Delete") {
+    } else if (e.code === "Delete") {
       this.ondelete(e);
-    } else if (e.key === "Enter") {
+    } else if (e.code === "Enter") {
       if (this.searching()) {
         this.focused.onenter(e);
       } else {
         this.onenter(e);
       }
-    } else if (e.key === "Escape") {
+    } else if (e.code === "Escape") {
       if (this.searching()) {
         this.focused.collapse();
         e.stopPropagation();
       }
-    } else if (e.key == "f" && e.ctrlKey) {
+    } else if (e.code === "KeyF" && e.ctrlKey) {
       this.human(n_female);
       e.stopPropagation();
       e.preventDefault();
-    } else if (e.key == "m" && e.ctrlKey) {
+    } else if (e.code == "KeyM" && e.ctrlKey) {
       this.human(n_male);
       e.stopPropagation();
       e.preventDefault();
-    } else if (e.key == " ") {
+    } else if (e.code == " ") {
       this.onspace(e);
     }
   }

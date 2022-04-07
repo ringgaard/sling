@@ -50,9 +50,9 @@ class TopicList extends Component {
       let topics = this.state;
       let pos = topics.indexOf(active);
       if (pos != -1) {
-        if (e.key == "Delete") {
+        if (e.code === "Delete") {
           this.delete_selected();
-        } else if (e.key == "ArrowDown" && pos < topics.length - 1) {
+        } else if (e.code === "ArrowDown" && pos < topics.length - 1) {
           e.preventDefault();
           let next = topics[pos + 1];
           if (e.ctrlKey) {
@@ -62,7 +62,7 @@ class TopicList extends Component {
           } else {
             this.select(next, false);
           }
-        } else if (e.key == "ArrowUp" && pos > 0) {
+        } else if (e.code === "ArrowUp" && pos > 0) {
           e.preventDefault();
           let prev = topics[pos - 1];
           if (e.ctrlKey) {
@@ -72,6 +72,9 @@ class TopicList extends Component {
           } else {
             this.select(prev, false);
           }
+        } else if (e.ctrlKey && e.code === "KeyA") {
+          e.preventDefault();
+          this.select_all();
         }
       }
     }
@@ -95,14 +98,29 @@ class TopicList extends Component {
   select(topic, extend) {
     let card = this.card(topic);
     if (card) {
-      let selection = window.getSelection();
-      if (extend) {
-        selection.extend(card, 0);
-      } else {
-        selection.collapse(card, 0);
+      // Get current anchor and focus topics.
+      let s = window.getSelection();
+      let a = s.anchorNode;
+      let f = s.focusNode;
+      if (a == f) a = f = document.activeElement;
+      while (a) {
+        if (a instanceof TopicCard) break;
+        a = a.parentNode;
       }
-      TopicCard.align_selection();
+      while (focus) {
+        if (f instanceof TopicCard) break;
+        f = f.parentNode;
+      }
+
+      // Focus new card.
       card.focus();
+
+      // Update selection.
+      f = card;
+      if (!extend) a = f;
+
+      // Set new selection.
+      window.getSelection().setBaseAndExtent(a, 0, f, 0);
     }
   }
 
@@ -113,8 +131,12 @@ class TopicList extends Component {
     if (a == f) {
       selection.collapse(a, 0);
     } else {
-      selection.setBaseAndExtent(a, 1, f, f.childElementCount);
+      selection.setBaseAndExtent(a, 0, f, 0);
     }
+  }
+
+  select_all() {
+    this.select_range(this.firstChild.state, this.lastChild.state);
   }
 
   async delete_selected() {
@@ -500,14 +522,14 @@ class TopicCard extends Component {
   }
 
   onkeydown(e) {
-    if (e.key == "Enter" && !this.editing) {
+    if (e.code === "Enter" && !this.editing) {
       e.preventDefault();
       this.onedit(e);
-    } else if ((e.key === "s" || e.key === "S") && e.ctrlKey && this.editing) {
+    } else if (e.code === "KeyS" && e.ctrlKey && this.editing) {
       e.stopPropagation();
       e.preventDefault();
       this.onsave(e);
-    } else if (e.key === "Escape" && this.editing) {
+    } else if (e.code === "Escape" && this.editing) {
       e.stopPropagation();
       e.preventDefault();
       this.ondiscard(e);
@@ -620,7 +642,7 @@ class TopicCard extends Component {
       if (anchor == focus) {
         selection.collapse(anchor, 0);
       } else {
-        selection.setBaseAndExtent(anchor, 0, focus, focus.childElementCount);
+        selection.setBaseAndExtent(anchor, 0, focus, 0);
       }
     }
   }
@@ -743,39 +765,39 @@ class TopicCard extends Component {
       $ md-icon-button {
         margin-left: -8px;
       }
-      $.selected div {
+      $.selected div::selection {
         background-color: inherit;
         user-select: none;
       }
-      $.selected span {
+      $.selected span::selection {
         background-color: inherit;
         user-select: none;
       }
-      $.selected a {
+      $.selected a::selection {
         background-color: inherit;
       }
-      $.selected img {
-        background-color: inherit;
-        user-select: none;
-      }
-      $.selected kb-link {
-        background-color: inherit;
-      }
-      $.selected kb-ref {
-        background-color: inherit;
-      }
-      $.selected md-text {
+      $.selected img::selection {
         background-color: inherit;
         user-select: none;
       }
-      $.selected md-image {
+      $.selected kb-link::selection {
+        background-color: inherit;
+      }
+      $.selected kb-ref::selection {
+        background-color: inherit;
+      }
+      $.selected md-text::selection {
         background-color: inherit;
         user-select: none;
       }
-      $.selected md-icon {
+      $.selected md-image::selection {
+        background-color: inherit;
+        user-select: none;
+      }
+      $.selected md-icon::selection {
         background-color: inherit;
       }
-      $.selected md-toolbox {
+      $.selected md-toolbox::selection {
         box-shadow: inherit;
       }
     `;
@@ -790,7 +812,7 @@ class RawEditDialog extends MdDialog {
   }
 
   onkeydown(e) {
-    if (e.ctrlKey && (e.key === 's' || e.key === 'S')) {
+    if (e.ctrlKey && e.code === "KeyS") {
       this.submit();
       e.preventDefault()
     }

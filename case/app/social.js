@@ -113,6 +113,10 @@ let xrefs = [
     property: store.lookup("P4985"),
   },
   {
+    pattern: /^https?:\/\/(?:www\.)?dfi\.dk\/viden-om-film\/filmdatabasen\/person\/(\w+)/i,
+    property: store.lookup("P2626"),
+  },
+  {
     pattern: /^https?:\/\/(?:www\.)?patreon\.com\/([^\/\?]+)/i,
     property: store.lookup("P4175"),
   },

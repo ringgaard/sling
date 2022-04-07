@@ -59,8 +59,6 @@ const media_file_types = [
   "image/webp",
 ];
 
-const binary_clipboard = false;
-
 // Date as SLING numeric date.
 function date_number(d) {
   let year = d.getFullYear();
@@ -70,61 +68,37 @@ function date_number(d) {
 }
 
 // Write topics to clipboard.
-function write_to_clipboard(topics) {
-  if (binary_clipboard) {
-    // Encode selected topics.
-    let encoder = new Encoder(store);
-    for (let topic of topics) {
-      encoder.encode(topic);
-    }
-    let clip = store.frame();
-    clip.add(n_topics, topics);
-    encoder.encode(clip);
-
-    // Add selected topics to clipboard.
-    var blob = new Blob([encoder.output()], {type: "text/plain"});
-    let item = new ClipboardItem({"text/plain": blob});
-    return navigator.clipboard.write([item]);
-  } else {
-    // Convert selected topics to text.
-    let printer = new Printer(store);
-    for (let topic of topics) {
-      printer.print(topic);
-    }
-    let clip = store.frame();
-    clip.add(n_topics, topics);
-    printer.print(clip);
-
-    // Add selected topics to clipboard.
-    var blob = new Blob([printer.output], {type: "text/plain"});
-    let item = new ClipboardItem({"text/plain": blob});
-    return navigator.clipboard.write([item]);
+async function write_to_clipboard(topics) {
+  // Convert selected topics to text.
+  let printer = new Printer(store);
+  for (let topic of topics) {
+    printer.print(topic);
   }
+  let clip = store.frame();
+  clip.add(n_topics, topics);
+  printer.print(clip);
+
+  // Write selected topics to clipboard.
+  if (!navigator.clipboard) throw "Access to clipboard denied";
+  await navigator.clipboard.writeText(printer.output);
 }
 
 // Read topics from clipboard.
 async function read_from_clipboard() {
-  let clipboard = await navigator.clipboard.read();
-  for (let i = 0; i < clipboard.length; i++) {
-    if (clipboard[i].types.includes("text/plain")) {
-      // Get data from clipboard.
-      let blob = await clipboard[i].getType("text/plain");
-      let data = await blob.arrayBuffer();
+  // Read clipboard text.
+  if (!navigator.clipboard) throw "Access to clipboard denied";
+  let clipboard = await navigator.clipboard.readText();
 
-      // Try to parse data SLING frames if it starts with \0 or '{'.
-      let bytes = new Uint8Array(data);
-      if (bytes[0] == 0 || bytes[0] == 123) {
-        try {
-          let store = new Store();
-          let obj = await store.parse(data);
-          return obj;
-        } catch (error) {
-          console.log("ignore sling parse error", error);
-        }
-      }
+  // Try to parse data SLING frames if it starts with '{'.
+  if (clipboard.charAt(0) == "{") {
+    try {
+      let store = new Store();
+      let obj = await store.parse(clipboard);
+      return obj;
+    } catch (error) {
+      console.log("ignore sling parse error", error);
     }
   }
-  return null;
 }
 
 // Find topics matching search query.
@@ -233,12 +207,12 @@ class CaseEditor extends Component {
   }
 
   onkeydown(e) {
-    if (e.ctrlKey && (e.key === 's' || e.key === 'S')) {
+    if (e.ctrlKey && e.code === "KeyS") {
       e.preventDefault();
       this.onsave(e);
-    } else if (e.ctrlKey && (e.key === 'm' || e.key === 'M')) {
+    } else if (e.ctrlKey && e.code === "KeyM") {
       this.onmerge(e);
-    } else if (e.key === "Escape") {
+    } else if (e.code === "Escape") {
       this.find("#search").clear();
     }
   }
@@ -997,7 +971,7 @@ class CaseEditor extends Component {
     await this.navigate_to(topic);
   }
 
-  oncut(e) {
+  async oncut(e) {
     // Get selected topics.
     if (this.readonly) return;
     if (this.folder == this.scraps) return this.oncopy(e);
@@ -1007,13 +981,13 @@ class CaseEditor extends Component {
     console.log(`cut ${selected.length} topics to clipboard`);
 
     // Copy selected topics to clipboard.
-    write_to_clipboard(selected);
+    await write_to_clipboard(selected);
 
     // Delete selected topics.
     this.delete_topics(selected);
   }
 
-  oncopy(e) {
+  async oncopy(e) {
     // Allow copying of selected text.
     let s = window.getSelection();
     if (!s.isCollapsed) {
@@ -1030,7 +1004,7 @@ class CaseEditor extends Component {
     console.log(`copy ${selected.length} topics to clipboard`);
 
     // Copy selected topics to clipboard.
-    write_to_clipboard(selected);
+    await write_to_clipboard(selected);
   }
 
   async onpaste(e) {
