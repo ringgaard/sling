@@ -162,6 +162,7 @@ class CaseEditor extends Component {
     this.bind("md-menu #imgcache", "click", e => this.onimgcache(e));
     this.bind("md-menu #export", "click", e => this.onexport(e));
     this.bind("md-menu #upload", "click", e => this.onupload(e));
+    this.bind("md-menu #copyall", "click", e => this.oncopyall(e));
 
     this.bind(null, "cut", e => this.oncut(e));
     this.bind(null, "copy", e => this.oncopy(e));
@@ -207,10 +208,10 @@ class CaseEditor extends Component {
   }
 
   onkeydown(e) {
-    if (e.ctrlKey && e.code === "KeyS") {
+    if ((e.ctrlKey || e.metaKey) && e.code === "KeyS") {
       e.preventDefault();
       this.onsave(e);
-    } else if (e.ctrlKey && e.code === "KeyM") {
+    } else if ((e.ctrlKey || e.metaKey) && e.code === "KeyM") {
       this.onmerge(e);
     } else if (e.code === "Escape") {
       this.find("#search").clear();
@@ -1007,6 +1008,11 @@ class CaseEditor extends Component {
     await write_to_clipboard(selected);
   }
 
+  oncopyall(e) {
+    // Copy all topics to clipboard.
+    write_to_clipboard(this.topics);
+  }
+
   async onpaste(e) {
     // Allow pasting of text into text input.
     let focus = document.activeElement;
@@ -1527,6 +1533,7 @@ class CaseEditor extends Component {
             <md-menu-item id="upload">Upload files</md-menu-item>
             <md-menu-item id="imgcache">Cache images</md-menu-item>
             <md-menu-item id="export">Publish in Wikidata</md-menu-item>
+            <md-menu-item id="copyall">Copy all</md-menu-item>
           </md-menu>
         </md-toolbar>
 
@@ -1805,7 +1812,7 @@ export class CollaborateDialog extends MdDialog {
       <div id="content">
         <div>
           You can move the case from your local machine to a collaboration
-          server so you can collaborate with other participants on the case
+          server to collaborate with other participants on the case
           in real-time.
         </div>
         <md-text-field
@@ -1902,14 +1909,13 @@ export class InviteDialog extends MdDialog {
         <div id="search">
           <omni-box id="value"></omni-box>
         </div>
-        <fieldset>
-          <legend>Case collaboration</legend>
+        <div id="info">
           Server: ${collab.url}<br/>
           Status: ${status}<br/>
           Case #: ${editor.caseid()}<br/>
           Created: ${editor.casefile.get(n_modified)}<br/>
           Your participant id: ${userid}<br/>
-        </fieldset>
+        </div>
       </div>
       <md-dialog-bottom>
         <button id="cancel">Cancel</button>
@@ -1920,6 +1926,9 @@ export class InviteDialog extends MdDialog {
 
   static stylesheet() {
     return MdDialog.stylesheet() + `
+      $ {
+        width: 500px;
+      }
       $ #content {
         display: flex;
         flex-direction: column;
@@ -1937,10 +1946,11 @@ export class InviteDialog extends MdDialog {
         margin: 0px;
       }
       $ md-search-list {
-        max-height: 150px;
+        max-height: 200px;
       }
-      $ {
-        width: 500px;
+      $ #info {
+        border: 1px solid black;
+        padding: 8px;
       }
       $ .red {
         color: red;

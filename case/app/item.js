@@ -704,6 +704,14 @@ class SubtopicPanel extends Component {
   render() {
     return new TopicBar(this.state);
   }
+
+  static stylesheet() {
+    return `
+      $ {
+        display: block;
+      }
+    `;
+  }
 }
 
 Component.register(SubtopicPanel);
@@ -813,6 +821,10 @@ class ItemPanel extends Component {
 
   static stylesheet() {
     return `
+      $ {
+        display: block;
+      }
+
       $ #identifier {
         font-size: 13px;
         color: #808080;

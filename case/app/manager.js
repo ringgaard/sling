@@ -215,6 +215,7 @@ class CaseSearchBox extends Component {
 
   onitem(e) {
     let item = e.detail;
+    this.find("md-search").clear();
     if (item.caserec) {
       app.open_case(item.caserec.id);
     } else if (item.ref.startsWith("c/")) {
@@ -232,6 +233,7 @@ class CaseSearchBox extends Component {
 
   onenter(e) {
     let name = e.detail;
+    this.find("md-search").clear();
     let dialog = new NewCaseDialog({name});
     dialog.show().then(result => {
       if (result) {

@@ -603,9 +603,8 @@ class FactEditor extends Component {
   }
 
   searchbox(field, results) {
-    if (this.focused == field) {
-      this.list.update({items: results});
-    } else {
+    if (field != this.focused) {
+      // Place search list below field.
       let field_bbox = field.getBoundingClientRect();
       let panel_bbox = this.list.parentNode.getBoundingClientRect();
 
@@ -614,9 +613,11 @@ class FactEditor extends Component {
 
       this.list.style.top = top + "px";
       this.list.style.left = left + "px";
-      this.list.update({items: results});
       this.focused = field;
     }
+
+    // Update search results.
+    this.list.update({items: results});
   }
 
   searching() {

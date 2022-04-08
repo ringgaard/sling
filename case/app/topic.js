@@ -23,6 +23,15 @@ const n_not_safe_for_work = store.lookup("Q2716583");
 // Cross-reference configuration.
 var xrefs;
 
+// Get topic card containing element.
+function topic_card(e) {
+  while (e) {
+    if (e instanceof TopicCard) break;
+    e = e.parentNode;
+  }
+  return e;
+}
+
 class TopicList extends Component {
   onconnected() {
     this.bind(null, "keydown", e => this.onkeydown(e));
@@ -72,7 +81,7 @@ class TopicList extends Component {
           } else {
             this.select(prev, false);
           }
-        } else if (e.ctrlKey && e.code === "KeyA") {
+        } else if ((e.ctrlKey || e.metaKey) && e.code === "KeyA") {
           e.preventDefault();
           this.select_all();
         }
@@ -103,14 +112,8 @@ class TopicList extends Component {
       let a = s.anchorNode;
       let f = s.focusNode;
       if (a == f) a = f = document.activeElement;
-      while (a) {
-        if (a instanceof TopicCard) break;
-        a = a.parentNode;
-      }
-      while (focus) {
-        if (f instanceof TopicCard) break;
-        f = f.parentNode;
-      }
+      a = topic_card(a);
+      f = topic_card(f);
 
       // Focus new card.
       card.focus();
@@ -120,7 +123,7 @@ class TopicList extends Component {
       if (!extend) a = f;
 
       // Set new selection.
-      window.getSelection().setBaseAndExtent(a, 0, f, 0);
+      s.setBaseAndExtent(a, 0, f, 0);
     }
   }
 
@@ -212,6 +215,11 @@ class TopicList extends Component {
         display: block;
         padding-bottom: 500px;
       }
+
+      $::selection {
+        background-color: transparent;
+        user-select: none;
+      }
     `;
   }
 }
@@ -225,6 +233,13 @@ document.onselectionchange = () => {
   let anchor = selection.anchorNode;
   let focus = selection.focusNode;
   if (!focus || !anchor) return;
+
+  if (window.safari) {
+    // Safari does not allow topic selection.
+    anchor = topic_card(anchor);
+    focus = topic_card(focus);
+  }
+
   if (!(anchor instanceof TopicCard)) return;
   if (!(focus instanceof TopicCard)) return;
   if (focus.parentNode != anchor.parentNode) return;
@@ -525,7 +540,7 @@ class TopicCard extends Component {
     if (e.code === "Enter" && !this.editing) {
       e.preventDefault();
       this.onedit(e);
-    } else if (e.code === "KeyS" && e.ctrlKey && this.editing) {
+    } else if (e.code === "KeyS" && (e.ctrlKey || e.metaKey) && this.editing) {
       e.stopPropagation();
       e.preventDefault();
       this.onsave(e);
@@ -622,14 +637,8 @@ class TopicCard extends Component {
     let anchor = selection.anchorNode;
     let focus = selection.focusNode;
     let single = (anchor == focus);
-    while (anchor) {
-      if (anchor instanceof TopicCard) break;
-      anchor = anchor.parentNode;
-    }
-    while (focus) {
-      if (focus instanceof TopicCard) break;
-      focus = focus.parentNode;
-    }
+    anchor = topic_card(anchor);
+    focus = topic_card(focus);
     if (!single && anchor == focus) anchor = null;
     if (focus && focus.editing) focus = null;
     return {anchor, focus};
@@ -765,40 +774,14 @@ class TopicCard extends Component {
       $ md-icon-button {
         margin-left: -8px;
       }
-      $.selected div::selection {
-        background-color: inherit;
+
+      $.selected::selection {
+        background-color: transparent;
         user-select: none;
       }
-      $.selected span::selection {
-        background-color: inherit;
+      $.selected ::selection {
+        background-color: transparent;
         user-select: none;
-      }
-      $.selected a::selection {
-        background-color: inherit;
-      }
-      $.selected img::selection {
-        background-color: inherit;
-        user-select: none;
-      }
-      $.selected kb-link::selection {
-        background-color: inherit;
-      }
-      $.selected kb-ref::selection {
-        background-color: inherit;
-      }
-      $.selected md-text::selection {
-        background-color: inherit;
-        user-select: none;
-      }
-      $.selected md-image::selection {
-        background-color: inherit;
-        user-select: none;
-      }
-      $.selected md-icon::selection {
-        background-color: inherit;
-      }
-      $.selected md-toolbox::selection {
-        box-shadow: inherit;
       }
     `;
   }
@@ -812,7 +795,7 @@ class RawEditDialog extends MdDialog {
   }
 
   onkeydown(e) {
-    if (e.ctrlKey && e.code === "KeyS") {
+    if ((e.ctrlKey || e.metaKey) && e.code === "KeyS") {
       this.submit();
       e.preventDefault()
     }
