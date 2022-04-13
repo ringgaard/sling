@@ -185,7 +185,7 @@ class CaseEditor extends Component {
     }
   }
 
-  onnavigate(e) {
+  async onnavigate(e) {
     e.preventDefault();
     e.stopPropagation();
     let ref = e.detail.ref;
@@ -194,7 +194,8 @@ class CaseEditor extends Component {
     if (e.detail.event.ctrlKey) {
       let topic = this.find_topic(item);
       if (!topic) {
-        this.add_topic_link(item);
+        let link = await this.add_topic_link(item);
+        this.redirect(item, link);
         return;
       }
       item = topic;
@@ -659,6 +660,7 @@ class CaseEditor extends Component {
     let topics = this.topics;
     if (this.scraps.length > 0) topics = topics.concat(this.scraps);
     for (let topic of topics) {
+      if (topic === target) continue;
       let updated = false;
       for (let n = 0; n < topic.length; ++n) {
         let v = topic.value(n);
@@ -849,6 +851,7 @@ class CaseEditor extends Component {
     // Update topic list.
     await this.update_topics();
     await this.navigate_to(link);
+    return link;
   }
 
   async delete_topics(topics) {
@@ -915,14 +918,18 @@ class CaseEditor extends Component {
     return this.delete_topics([topic]);
   }
 
+  async purge_topic(topic) {
+    let target = topic.get(n_is);
+    if (!target) target = topic.get(n_name);
+    if (!target) target = topic.id;
+    this.redirect(topic, target);
+  }
+
   async purge_scraps() {
     if (this.scraps.length > 0) {
       // Remove all references to draft topics.
       for (let topic of this.scraps) {
-        let target = topic.get(n_is);
-        if (!target) target = topic.get(n_name);
-        if (!target) target = topic.id;
-        this.redirect(topic, target);
+        this.purge_topic(topic);
       }
 
       // Remove scraps.

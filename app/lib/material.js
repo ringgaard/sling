@@ -246,6 +246,7 @@ export class MdDialogTop extends Component {
         line-height: 2rem;
         font-weight: 500;
         letter-spacing: .0125em;
+        user-select: none;
       }
     `;
   }
@@ -279,6 +280,7 @@ export class MdDialogBottom extends Component {
         padding: 8px;
         margin-left: 4px;
         cursor: pointer;
+        user-select: none;
       }
       $ button:hover {
         background-color: #eeeeee;
@@ -1338,6 +1340,7 @@ class MdTextField extends Component {
     return `
       $ {
         display: flex;
+        position: relative;
       }
       $ label {
         display: block;
@@ -1487,7 +1490,7 @@ export class MdToolbox extends Component {
         right: 0;
         display: flex;
         flex-direction: row;
-        box-shadow: -20px 0px 20px #ffffff;
+        box-shadow: -20px 0px 20px transparent;
       }
     `;
   }

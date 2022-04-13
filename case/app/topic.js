@@ -2,7 +2,7 @@
 // Licensed under the Apache License, Version 2
 
 import {Component} from "/common/lib/component.js";
-import {StdDialog, MdIcon, MdDialog} from "/common/lib/material.js";
+import {StdDialog, MdIcon, MdDialog, inform} from "/common/lib/material.js";
 import {Frame, QString, Printer} from "/common/lib/frame.js";
 import {store, settings} from "./global.js";
 import {get_schema, inverse_property} from "./schema.js";
@@ -348,12 +348,14 @@ class TopicCard extends Component {
   }
 
   async refresh() {
-    if (!this.editing) {
-      let topic = this.state;
-      let labels = new LabelCollector(store);
-      labels.add(topic);
-      await labels.retrieve();
+    let topic = this.state;
+    let labels = new LabelCollector(store);
+    labels.add(topic);
+    await labels.retrieve();
 
+    if (this.editing) {
+      this.conflict = true;
+    } else {
       this.update_title();
       this.find("item-panel").update(topic);
     }
@@ -426,6 +428,12 @@ class TopicCard extends Component {
   async onsave(e) {
     e.stopPropagation();
 
+    // Check for update conflict.
+    if (this.conflict) {
+      inform("Update conflict. Topic was updated by another participant.");
+      return;
+    }
+
     // Save changes to topic.
     let topic = this.state;
     let edit = this.find("fact-panel");
@@ -495,6 +503,7 @@ class TopicCard extends Component {
         "Discard");
     }
     if (discard) {
+      this.conflict = false;
       this.update_mode(false);
       window.getSelection().collapse(this, 0);
       this.focus();

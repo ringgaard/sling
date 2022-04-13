@@ -25,7 +25,6 @@ const CCU_RENAME  = 5;
 export class Collaboration {
   // Connect to collaboration server.
   async connect(url) {
-    this.url = url;
     this.socket = new WebSocket(url);
     this.socket.addEventListener("message", e => this.onrecv(e));
     return new Promise((resolve, reject) => {
@@ -47,6 +46,11 @@ export class Collaboration {
   // Check if connected to collaboration server.
   connected() {
     return this.socket.readyState == 1;
+  }
+
+  // Return url for websocket.
+  get url() {
+    return this.socket.url;
   }
 
   // Message received from server.
