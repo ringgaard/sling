@@ -869,6 +869,7 @@ class CaseEditor extends Component {
       if (topic == this.casefile.get(n_main)) return;
 
       // Delete topic from current folder.
+      let is_scrap = this.scraps.includes(topic);
       let pos = this.folder.indexOf(topic);
       if (pos != -1) {
         this.folder.splice(pos, 1);
@@ -878,13 +879,10 @@ class CaseEditor extends Component {
 
       // Delete topic from case.
       if (this.refcount(topic) == 0) {
-        if (this.folder == this.scraps) {
+        if (is_scrap) {
           // Delete draft topic from case and redirect all references to it.
-          console.log("delete topic", topic.id);
-          let target = topic.get(n_is);
-          if (!target) target = topic.get(n_name);
-          if (!target) target = topic.id;
-          this.redirect(topic, target);
+          console.log("purge topic", topic.id);
+          this.purge_topic(topic);
         } else {
           // Move topic to scraps.
           let pos = this.topics.indexOf(topic);

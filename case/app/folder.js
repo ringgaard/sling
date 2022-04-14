@@ -141,8 +141,13 @@ class ScrapsFolder extends Component {
     this.match("#editor").show_folder(this.state.folder);
   }
 
-  onclear(e) {
-    this.match("#editor").delete_topics([...this.state.folder]);
+  async onclear(e) {
+    let scraps = this.state.folder;
+    let editor = this.match("#editor");
+    if (editor.folder != scraps) {
+      await editor.show_folder(scraps);
+    }
+    await editor.delete_topics([...scraps]);
   }
 
   render() {
