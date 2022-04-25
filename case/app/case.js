@@ -787,6 +787,10 @@ class CaseEditor extends Component {
   add_topic(topic) {
     // Add topic to current folder.
     if (this.readonly) return;
+    if (this.folder == this.scraps) {
+      inform("new topic cannot be added to scraps folder");
+      return;
+    }
     this.topic_updated(topic);
     if (!this.topics.includes(topic)) this.topics.push(topic);
     if (!this.folder.includes(topic)) {

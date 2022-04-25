@@ -442,6 +442,17 @@ class FactEditor extends Component {
     }
   }
 
+  onmeta(e) {
+    let s = this.selection();
+    if (s && s.field) {
+      if (this.searching()) {
+        s.field.collapse();
+      } else {
+        s.field.expand();
+      }
+    }
+  }
+
   onkeydown(e) {
     if (e.code === "ArrowUp") {
       if (this.searching()) {
@@ -494,6 +505,8 @@ class FactEditor extends Component {
       this.human(n_male);
       e.stopPropagation();
       e.preventDefault();
+    } else if (e.code == "MetaLeft") {
+      this.onmeta(e);
     } else if (e.code == " ") {
       this.onspace(e);
     }
@@ -665,7 +678,7 @@ class FactEditor extends Component {
       if (base instanceof FactEditor) {
         base = base.children.item(s.anchorOffset).firstChild;
       } else if (base instanceof FactStatement) {
-        base = base.firstChild;
+        base = base.firstChild || base;
       } else if (base.nodeType == Node.TEXT_NODE) {
         base = base.parentElement;
       }
@@ -1009,7 +1022,7 @@ class FactField extends Component {
       if (item.casefile) {
         // Create new topic with reference to topic in external case.
         let editor = this.match("#editor");
-        let link = editor.new_topic();
+        let link = await editor.new_topic();
         link.add(n_is, item.topic);
         let name = item.topic.get(n_name);
         if (name) link.add(n_name, name);
@@ -1079,6 +1092,11 @@ class FactField extends Component {
 
   collapse() {
     this.list.update();
+  }
+
+  expand() {
+    this.setAttribute("text", "");
+    this.onchanged();
   }
 
   render() {

@@ -48,6 +48,8 @@ n_owner_of = kb["P1830"]
 n_owned_by = kb["P127"]
 n_has_part = kb["P527"]
 n_part_of = kb["P361"]
+n_represented_by = kb["P1875"]
+n_represents = kb["P1268"]
 n_legal_form = kb["P1454"]
 n_dissolved = kb["P576"]
 n_merged_into = kb["P7888"]
@@ -68,6 +70,7 @@ city_types = factex.taxonomy([
 ])
 
 cover_addresses = [
+  "N/A",
   "C/O The Corporation Trust Company", # Delaware
   "C/O THE CORPORATION TRUST COMPANY", # Delaware
   "C/O Corporation Service Company", # Delaware
@@ -165,7 +168,6 @@ for item in kb:
 # XML tags.
 x_lang = kb["xml:lang"]
 x_content = kb["is"]
-x_type = kb["type"]
 
 x_record = kb["lei:LEIRecord"]
 x_lei = kb["lei:LEI"]
@@ -198,8 +200,6 @@ x_expiration_date = kb["lei:EntityExpirationDate"]
 x_expiration_reason = kb["lei:EntityExpirationReason"]
 x_successor = kb["lei:SuccessorEntity"]
 x_successor_lei = kb["lei:SuccessorLEI"]
-x_associated_entity = kb["lei:AssociatedEntity"]
-x_associated_lei = kb["lei:AssociatedLEI"]
 x_extension = kb["lei:Extension"]
 x_geocoding = kb["gleif:Geocoding"]
 x_original_address = kb["gleif:original_address"]
@@ -218,6 +218,15 @@ x_end_date = kb["rr:EndDate"]
 x_period_type = kb["rr:PeriodType"]
 
 kb.freeze()
+
+relation_mapping = {
+  "IS_ULTIMATELY_CONSOLIDATED_BY": {"rel": n_owner_of, "inv": n_owned_by},
+  "IS_DIRECTLY_CONSOLIDATED_BY": {"rel": n_subsidiary, "inv": n_parent},
+  "IS_INTERNATIONAL_BRANCH_OF": {"rel": n_subsidiary, "inv": n_parent},
+  "IS_FUND-MANAGED_BY": {"rel": n_represented_by, "inv": n_represents},
+  "IS_SUBFUND_OF": {"rel": n_part_of, "inv": n_has_part},
+  "IS_FEEDER_TO": {"rel": n_part_of, "inv": n_has_part},
+}
 
 def closure(item, property):
   store = item.store()
@@ -345,7 +354,6 @@ companies = []
 unknown_regauth = {}
 unknown_categories = {}
 unknown_forms = {}
-fund_families = []
 for line in leifile:
   if line.startswith(b"<lei:LEIRecord"):
     # Start new block.
@@ -458,15 +466,6 @@ for line in leifile:
           slots.append((n_legal_form, other_form))
           unknown_forms[key] = unknown_forms.get(key, 0) + 1
 
-  # Associations.
-  association = entity[x_associated_entity]
-  if association != None:
-    reltype = association[x_type]
-    if reltype == "FUND_FAMILY":
-      family_lei = association[x_associated_lei]
-      if family_lei != None and family_lei != lei_number:
-        fund_families.append((lei_number, family_lei))
-
   # Expiration and mergers.
   expiration_date = entity[x_expiration_date]
   if expiration_date != None:
@@ -508,6 +507,7 @@ lei.close()
 print(num_companies, "companies", num_redirects, "successors")
 
 # Read entity relationships (level 2).
+
 print("Reading GLEIF relationships")
 lines = []
 rr = zipfile.ZipFile("data/c/lei/rr.xml.zip", "r")
@@ -535,18 +535,7 @@ for line in rrfile:
   end_lei = end[x_node_id]
   reltype = relationship[x_relationship_type]
 
-  # Dertermine relationship type.
-  if reltype == "IS_ULTIMATELY_CONSOLIDATED_BY":
-    indirect = True
-  elif reltype == "IS_DIRECTLY_CONSOLIDATED_BY":
-    indirect = False
-  elif reltype == "IS_INTERNATIONAL_BRANCH_OF":
-    indirect = False
-  else:
-    print("Unknown relationship:", reltype)
-    continue
-
-  relations.append((end_lei, start_lei, indirect))
+  relations.append((end_lei, start_lei, reltype))
 
 rrfile.close()
 rr.close()
@@ -566,36 +555,21 @@ for rel in relations:
   if subsidiary is None:
     print("Missing subsidiary:", rel[1])
     continue
-  indirect = rel[2]
+  reltype = relation_mapping.get(rel[2])
+  if reltype is None:
+    print("Unknown relationship type:", rel[2])
+    continue
 
   # Only include either direct or indirect ownership.
   if parent == prev_parent and  subsidiary == prev_subsidiary: continue
 
   # Add relationship to both parent and subsidiary.
-  if indirect:
-    parent.append(n_owner_of, subsidiary)
-    subsidiary.append(n_owned_by, parent)
-  else:
-    parent.append(n_subsidiary, subsidiary)
-    subsidiary.append(n_parent, parent)
+  subsidiary.append(reltype["inv"], parent)
+  parent.append(reltype["rel"], subsidiary)
 
   prev_parent = parent
   prev_subsidiary = subsidiary
   num_relations += 1
-
-print("Adding", len(fund_families), "fund family relationships")
-for rel in fund_families:
-  fund = find_lei(rel[0])
-  if fund is None:
-    print("Missing fund:", rel[0])
-    continue
-  family = find_lei(rel[1])
-  if family is None:
-    print("Missing fund family:", rel[1])
-    continue
-
-  family.append(n_has_part, fund)
-  fund.append(n_part_of, family)
 
 print(num_relations, "relations")
 

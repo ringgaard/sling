@@ -31,10 +31,6 @@ flags.define("--type",
              default="xml",
              help="File type (xml, json, csv)")
 
-flags.define("--bicdate",
-             default="20190830",
-             help="Date of latest BIC-to-LEI mapping file")
-
 flags.parse()
 
 # Newest BIC-to-LEI mapping can be found here (updated monthly):
@@ -64,9 +60,10 @@ for dataset in ["lei2", "rr", "repex"]:
   download(url, fn)
 
 # Download BIC-to-LEI mapping file.
-bicurl = "https://www.gleif.org/content/4-lei-data/7-lei-mapping/" + \
-         "1-download-bic-to-lei-relationship-files/" + \
-         "bic_lei_gleif_v1_monthly_full_" + flags.arg.bicdate + ".csv"
+
+bicurl = "https://www.gleif.org/media/pages/lei-data/lei-mapping/" + \
+         "download-bic-to-lei-relationship-files/" + \
+         "7d52bd6bf8-1650881313/bic_lei_gleif_v1_monthly_full_20220325.csv"
 bicfn = flags.arg.dir + "/bic.csv"
 print("Download", bicurl)
 download(bicurl, bicfn)

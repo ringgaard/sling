@@ -1353,6 +1353,7 @@ class MdTextField extends Component {
         font-size: 16px;
         color: #757575;
         text-overflow: ellipsis;
+        user-select: none;
       }
       $ .above {
         padding-top: 6px;
