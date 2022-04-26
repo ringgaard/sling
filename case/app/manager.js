@@ -32,6 +32,7 @@ function date2str(date) {
 class CaseManager extends Component {
   oninit() {
     this.bind("#settings", "click", e => this.onsettings(e));
+    this.bind("#help", "click", e => this.onhelp(e));
     this.find("md-search input").focus();
   }
 
@@ -51,6 +52,10 @@ class CaseManager extends Component {
     }
   }
 
+  onhelp(e) {
+    window.open("https://ringgaard.com/knolcase", "_blank");
+  }
+
   prerender() {
     return `
       <md-column-layout>
@@ -59,6 +64,11 @@ class CaseManager extends Component {
           <div>Case</div>
           <case-search-box id="search"></case-search-box>
           <md-spacer></md-spacer>
+          <md-icon-button
+            id="help"
+            icon="info"
+            tooltip="Go to Guide">
+          </md-icon-button>
           <md-icon-button
             id="settings"
             icon="settings"

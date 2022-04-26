@@ -4,7 +4,8 @@
 // Knowledge base browser.
 
 import {Component} from "/common/lib/component.js";
-import {MdCard, MdModal, MdSearchResult} from "/common/lib/material.js";
+import {MdCard, MdModal, MdSearchResult, StdDialog}
+  from "/common/lib/material.js";
 import {PhotoGallery, imageurl, censor} from "/common/lib/gallery.js";
 
 var settings = JSON.parse(window.localStorage.getItem("settings") || "{}");
@@ -80,11 +81,14 @@ class KbApp extends Component {
   display(item) {
     this.find("#item").update(item);
     this.find("#document").update(item);
-    this.find("#picture").update(censor(item.gallery, settings.nsfw));
+    this.find("#picture").update({
+      itemid: item.ref,
+      images: censor(item.gallery, settings.nsfw),
+    });
     this.find("#properties").update(item);
     this.find("#categories").update(item);
     this.find("#xrefs").update(item);
-    window.document.title = item ? item.text : "SLING Knowledge base";
+    window.document.title = item ? item.text : "KnolBase";
   }
 
   onpopstate(e) {
@@ -716,7 +720,7 @@ class KbPictureCard extends MdCard {
   }
 
   onupdated() {
-    let images = this.state;
+    let images = this.state.images;
     if (images && images.length > 0) {
       let index = 0;
       for (let i = 0; i < images.length; ++i) {
@@ -744,12 +748,36 @@ class KbPictureCard extends MdCard {
   }
 
   visible() {
-    return this.state && this.state.length > 0;
+    return this.state && this.state.images.length > 0;
   }
 
   onopen(e) {
+    this.edits = [];
     let modal = new PhotoGallery();
-    modal.open(this.state);
+    for (let event of ["nsfw", "sfw", "delimage"]) {
+      modal.bind(null, event, e => {
+        let url = e.detail;
+        this.edits.push({event, url});
+      });
+    }
+    modal.bind(null, "picedit", e => this.onpicedit());
+    modal.open(this.state.images);
+  }
+
+  async onpicedit() {
+    let edits = this.edits;
+    this.edits = undefined;
+
+    let ok = await StdDialog.ask(
+      "Edit photo profile",
+      "Do you want to update the photo gallery for item?");
+    if (!ok) return;
+
+    let itemid = this.state.itemid;
+    fetch("/redreport/picedit", {
+      method: "POST",
+      body: JSON.stringify({itemid, edits}),
+    });
   }
 
   static stylesheet() {
@@ -853,7 +881,7 @@ const desktop_template = `
   <md-column-layout class="desktop">
     <md-toolbar>
       <md-toolbar-logo></md-toolbar-logo>
-      <div>Knowledge</div>
+      <div>KnolBase</div>
       <kb-search-box id="search"></kb-search-box>
       <md-icon-button id="websearch" icon="search"></md-icon-button>
     </md-toolbar>

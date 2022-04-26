@@ -475,7 +475,7 @@ def add_celeb(name, id):
 @app.route("/redreport/addmedia", method="POST")
 def add_media(request):
   # Get request.
-  r = request.json();
+  r = request.json()
   url = r.get("url")
   name = r.get("name")
   id = r.get("id")
@@ -498,7 +498,7 @@ def add_media(request):
 @app.route("/redreport/photos", method="POST")
 def photos(request):
   # Get request.
-  r = request.json();
+  r = request.json()
   url = r.get("url")
   nsfw = r.get("nsfw")
   if url is None or url == "": return 400
@@ -515,10 +515,59 @@ def photos(request):
         "url": media.resolve(),
         "nsfw": media[photo.n_has_quality] == photo.n_nsfw,
         "text": media[photo.n_legend],
-      });
+      })
     else:
       photos.append({"url": media})
   return {"photos": photos}
+
+@app.route("/redreport/picedit", method="POST")
+def picedit(request):
+  # Get request.
+  r = request.json()
+  itemid = r["itemid"]
+
+  # Get profile for item.
+  profile = photo.Profile(itemid)
+
+  # Collect edits.
+  nsfw = set()
+  sfw = set()
+  deleted = set()
+  for edit in r["edits"]:
+    event = edit["event"]
+    url = edit["url"]
+    if event == "nsfw":
+      sfw.discard(url)
+      nsfw.add(url)
+    elif event == "sfw":
+      nsfw.discard(url)
+      sfw.add(url)
+    elif event == "delimage":
+      deleted.add(url)
+    else:
+      log.info("invalid pictedit event:", edit)
+
+  # Apply changes to profile.
+  keep = []
+  for media in profile.media():
+    if type(media) is sling.Frame:
+      url = media.resolve()
+      if url in deleted: continue
+      if url in nsfw: media[photo.n_has_quality] = photo.n_nsfw
+      if url in sfw: del media[photo.n_has_quality]
+      if len(media) == 1: media = media.resolve()
+    else:
+      if media in deleted: continue
+      if media in nsfw:
+        media = photo.store.frame([
+          (photo.n_is, media),
+          (photo.n_has_quality, photo.n_nsfw),
+        ])
+
+    keep.append(media)
+
+  profile.replace(keep)
+  profile.write()
 
 # Run app until shutdown.
 log.info("running")
