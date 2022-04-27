@@ -374,10 +374,9 @@ class CaseList extends material.MdCard {
     h.push("<tbody>");
     for (let rec of this.state) {
       if (rec.nsfw && !settings.nsfw) continue;
+
       let icon = "";
-      if (rec.collaborate) {
-        icon = '<md-icon icon="people" outlined></md-icon>';
-      } else if (rec.link) {
+      if (rec.link) {
         if (rec.secret) {
           icon = '<md-icon icon="key" outlined></md-icon>';
         } else {
@@ -397,6 +396,10 @@ class CaseList extends material.MdCard {
           icon += "*";
         }
       }
+      if (rec.collaborate) {
+        icon += '<md-icon icon="people" outlined></md-icon>';
+      }
+
       h.push(`
         <tr case="${rec.id}" link="${rec.link}" collab="${rec.collaborate}">
           <td>${rec.id}</td>

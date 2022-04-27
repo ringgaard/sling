@@ -64,7 +64,7 @@ flags.parse()
 
 # Convert ISO 8601 time to unix epoch.
 def iso2ts(t):
-  if t is None: return None
+  if t is None: return 0
   if t.endswith("Z"): t = t[:-1] + "+00:00"
   return int(datetime.datetime.fromisoformat(t).timestamp())
 
@@ -171,7 +171,6 @@ def share_case(request):
   # Get modification time.
   modified = casefile[n_modified];
   ts = iso2ts(modified)
-  if ts is None: return 400;
 
   # Share or unshare.
   if casefile[n_share]:

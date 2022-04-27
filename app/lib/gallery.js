@@ -145,8 +145,8 @@ export class PhotoGallery extends MdModal {
     let photo = this.photos[this.current];
     this.dispatch("delimage", photo.url);
     this.photos.splice(this.current, 1);
-    this.move(0);
     this.edited = true;
+    this.move(0);
   }
 
   onprev(e) {

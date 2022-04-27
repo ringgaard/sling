@@ -341,30 +341,36 @@ class CaseEditor extends Component {
 
   async onshare(e) {
     if (this.readonly) return;
-    let share = this.casefile.get(n_share);
-    let publish = this.casefile.get(n_publish);
-    let secret = this.casefile.get(n_secret);
+    let casefile = this.localcase || this.casefile;
+    let share = casefile.get(n_share);
+    let publish = casefile.get(n_publish);
+    let secret = casefile.get(n_secret);
     let dialog = new SharingDialog({share, publish, secret});
     let result = await dialog.show();
     if (result) {
       // Update sharing information.
-      this.casefile.set(n_share, result.share);
-      this.casefile.set(n_publish, result.publish);
-      this.casefile.set(n_secret, result.secret);
+      casefile.set(n_share, result.share);
+      casefile.set(n_publish, result.publish);
+      casefile.set(n_secret, result.secret);
+      if (this.collab) {
+        this.casefile.set(n_share, result.share);
+        this.casefile.set(n_publish, result.publish);
+        this.casefile.set(n_secret, result.secret);
+      }
 
       // Update modification and sharing time.
       let ts = new Date().toJSON();
-      this.casefile.set(n_modified, ts);
+      casefile.set(n_modified, ts);
       if (result.share) {
-        this.casefile.set(n_shared, ts);
+        casefile.set(n_shared, ts);
       } else {
-        this.casefile.set(n_shared, null);
+        casefile.set(n_shared, null);
       }
 
       // Save case before sharing.
       this.purge_scraps();
-      this.match("#app").save_case(this.casefile);
       this.mark_clean();
+      this.match("#app").save_case(casefile);
 
       // Encode case file.
       var data;
@@ -372,12 +378,15 @@ class CaseEditor extends Component {
         // Share encrypted case.
         let encrypted = await encrypt(this.casefile);
         data = encrypted.encode();
-      } else if (!result.share) {
-        // Do not send case content when unsharing.
-        data = store.frame({n_caseid: this.caseid(), n_share: false}).encode();
-      } else {
+      } else if (result.share) {
         // Encode case for sharing.
         data = this.encoded();
+      } else {
+        // Do not send case content when unsharing.
+        let unshare = store.frame();
+        unshare.add(n_caseid, this.caseid());
+        unshare.add(n_share, false);
+        data = unshare.encode();
       }
 
       // Send case to server.
@@ -418,6 +427,7 @@ class CaseEditor extends Component {
       this.casefile.set(n_userid, this.main.get(n_author).id);
       this.casefile.set(n_credentials, credentials);
       this.casefile.remove(n_topics);
+      this.casefile.remove(n_main);
       this.casefile.remove(n_next);
 
       // Save and reload.
