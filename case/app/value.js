@@ -4,6 +4,7 @@
 import {Frame, QString} from "/common/lib/frame.js";
 import {store, settings} from "./global.js";
 
+const n_is = store.is;
 const n_isa = store.isa;
 const n_name = store.lookup("name");
 const n_target = store.lookup("target");
@@ -597,6 +598,9 @@ export function value_text(val, prop) {
         // Fallback.
         return [val.text(false, true), true];
       }
+    } else if (prop == n_is) {
+      // Redirect.
+      return [val.id, false];
     } else {
       // Link.
       let name = val.get(n_name);

@@ -117,12 +117,19 @@ pages = [
   ("Case open",            re.compile(r"^\/c\/\d+")),
   ("Case app",             re.compile(r"^\/(case|c)\/app\/(.+)$")),
   ("Case fetch",           re.compile(r"^\/case/fetch\/?\?(.+)$")),
-  ("Case service",         re.compile(r"^\/case/service\/?\?(.+)$")),
-  ("Case proxy",           re.compile(r"^\/case/proxy\/?\?(.+)$")),
+  ("Case share",           re.compile(r"^\/case/share$")),
+  ("Case service",         re.compile(r"^\/case/service\/")),
+  ("Case proxy",           re.compile(r"^\/case/proxy\?")),
+  ("Case plugin",          re.compile(r"^\/case/plugin\/")),
+  ("Case xrefs",           re.compile(r"^\/case/xrefs$")),
+  ("Case image caching",   re.compile(r"^\/case/imgcache$")),
   ("schema",               re.compile(r"^\/schema(.+)$")),
   ("collaboration",        re.compile(r"^\/collab\/")),
 
-  ("photo search",         re.compile(r"^\/photosearch\/(.+)$")),
+  ("photo search",         re.compile(r"^\/photosearch\/")),
+  ("redreport add media",  re.compile(r"^\/redreport\/addmedia\/")),
+  ("redreport",            re.compile(r"^\/redreport\/")),
+  ("reddit report",        re.compile(r"^\/reddit\/report\/")),
 ]
 
 browsers = [
@@ -254,6 +261,7 @@ worms = [
   ("jndi", re.compile(r"^\/\?x=\$\{jndi")),
   ("dns", re.compile(r"^\/\?dns\=")),
   ("dns", re.compile(r"^\/\?\=PHP")),
+  ("unix", re.compile(r"^\/\?unix:")),
 ]
 
 spammers = set([
@@ -340,7 +348,7 @@ for logfn in flags.arg.logfiles:
     ua = m.group(9)
 
     # Internal traffic.
-    if ipaddr.startswith("10.1."):
+    if ipaddr.startswith("10.1.") or ipaddr.startswith("77.241.128."):
       if ua.startswith("Monit/"):
         num_monitor += 1
       else:
@@ -436,7 +444,7 @@ for logfn in flags.arg.logfiles:
 
     # Downloads.
     if path.startswith("/data"):
-      download_hits[path] += 1
+      if not path.endswith("/"): download_hits[path] += 1
       if flags.arg.d: print(logline.strip())
     if ua.startswith("curl/"): num_curls += 1
 

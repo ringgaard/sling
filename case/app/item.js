@@ -610,6 +610,7 @@ class TopicExpander extends Component {
 
   async open() {
     let item = this.state;
+    if (typeof(item) === 'string') item = store.lookup(item);
 
     // Retrieve item if needed.
     if (!item.ispublic()) {
@@ -645,8 +646,9 @@ class TopicExpander extends Component {
   render() {
     let topic = this.state;
     if (!topic) return;
+    let itemid = topic.id || topic;
     return `
-      <div>${Component.escape(topic.id)}</div>
+      <div>${Component.escape(itemid)}</div>
       <md-icon icon="${this.expansion ? "expand_less" : "expand_more"}">
       </md-icon>
     `;

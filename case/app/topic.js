@@ -151,7 +151,7 @@ class TopicList extends Component {
     if (card) {
       return new Promise((resolve) => {
         setTimeout((card, resolve) => {
-          card.scrollIntoView({block: "start", behavior: "smooth"});
+          card.scrollIntoView();
           card.focus();
           window.getSelection().collapse(card, 0);
           resolve();

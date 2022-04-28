@@ -97,14 +97,34 @@ for rec in casedb.values():
   # Build topic items.
   num_new = 0
   for topic in topics:
+    # Do not publish main topic.
     if topic == main: continue
+
+    # Remove notes.
     del topic[None]
+
+    # Add case source to topic.
     topic.append(n_described_by_source, main)
-    recout.write(topic.id, topic.data(binary=True))
+
     num_topics += 1
     if topic.get(n_is) is None:
       num_new += 1
       num_new_topics += 1
+    else:
+      # Update string-based references.
+      redirs = []
+      update = False
+      for redir in topic(n_is):
+        if type(redir) is str:
+          update = True
+          redirs.append((n_is, store[redir]))
+        else:
+          redirs.append((n_is, redir))
+      if update:
+        del topic[n_is]
+        topic.extend(redirs)
+
+    recout.write(topic.id, topic.data(binary=True))
 
   print(f"Publish case #{caseid}: {main[n_name]}",
         f"({num_new}/{len(topics)} new topics)")

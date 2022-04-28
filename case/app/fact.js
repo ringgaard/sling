@@ -1029,8 +1029,12 @@ class FactField extends Component {
         await editor.update_topics();
         value = link.id;
         text = name;
+      } else if (this.state.property == n_is) {
+        value = null;
+        text = item.topic.id;
+        encoded = false;
       } else {
-        value = item.topic.id
+        value = item.refitem.topic.id
         text = item.topic.get(n_name);
       }
     } else if (item.value) {
@@ -1045,13 +1049,23 @@ class FactField extends Component {
         [text, encoded] = value_text(item.value, this.state.property);
       }
     } else if (item.ref) {
-      value = item.ref;
-      text = item.name;
+      if (this.state.property == n_is) {
+        value = null;
+        text = item.ref;
+        encoded = false;
+      } else {
+        value = item.ref;
+        text = item.name;
+      }
     }
 
     // Set field value.
     this.collapse();
-    this.setAttribute("value", value);
+    if (value) {
+      this.setAttribute("value", value);
+    } else {
+      this.removeAttribute("value");
+    }
     this.setAttribute("text", this.text());
     this.className = encoded ? "encoded" : "";
     this.innerHTML = Component.escape(text);
