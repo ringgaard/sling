@@ -289,7 +289,7 @@ export class SocialTopic {
 
         if (this.context) {
           let item = await this.context.idlookup(prop, identifier);
-          if (item) this.topic.put(n_is, item);
+          if (item) this.topic.put(n_is, item.id);
         }
         return true;
       }

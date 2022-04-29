@@ -521,7 +521,7 @@ class TopicCard extends Component {
   onimport(e) {
     let topic = this.state;
     let changed = false;
-    for (let ref of topic.all(n_is)) {
+    for (let ref of topic.links()) {
       for (let [name, value] of ref) {
         if (name == n_id || name == n_media) continue;
         if (topic.put(name, value)) {
@@ -593,7 +593,10 @@ class TopicCard extends Component {
     // Try to find xref property.
     let topic = this.state;
     var id;
-    if (!id && topic.has(n_is)) id = topic.get(n_is).id;
+    if (!id && topic.has(n_is)) {
+      let link = topic.link();
+      if (link) id = link.id;
+    }
     if (!id) {
       for (let prop of xrefs.get("properties")) {
         let val = topic.get(prop);

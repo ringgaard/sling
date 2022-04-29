@@ -526,7 +526,7 @@ class CaseEditor extends Component {
     this.links = [];
     for (let topic of this.topics) {
       if (topic != this.main && topic.get(n_instance_of) == n_case_file) {
-        let linkid = topic.get(n_is).id;
+        let linkid = topic.link().id;
         let caseid = parseInt(linkid.substring(2));
         let casefile = await this.match("#app").read_case(caseid);
         if (casefile) {
@@ -661,7 +661,11 @@ class CaseEditor extends Component {
 
   find_topic(item) {
     for (let topic of this.topics) {
-      if (topic == item || topic.has(n_is, item)) return topic;
+      if (topic == item ||
+          topic.has(n_is, item) ||
+          topic.has(n_is, item.id)) {
+        return topic;
+      }
     }
   }
 
@@ -825,7 +829,7 @@ class CaseEditor extends Component {
     // Create new topic.
     if (this.readonly) return;
     let topic = await this.new_topic();
-    if (itemid) topic.add(n_is, store.lookup(itemid));
+    if (itemid) topic.add(n_is, itemid);
     if (name) topic.add(n_name, name);
     this.topic_updated(topic);
 
@@ -856,7 +860,7 @@ class CaseEditor extends Component {
   async add_topic_link(topic) {
     // Create new topic with reference to topic in external case.
     let link = await this.new_topic();
-    link.add(n_is, topic);
+    link.add(n_is, topic.id);
     let name = topic.get(n_name);
     if (name) link.add(n_name, name);
     this.topic_updated(topic);
@@ -930,7 +934,7 @@ class CaseEditor extends Component {
   }
 
   async purge_topic(topic) {
-    let target = topic.get(n_is);
+    let target = topic.link();
     if (!target) target = topic.get(n_name);
     if (!target) target = topic.id;
     this.redirect(topic, target);

@@ -573,6 +573,21 @@ def handle_export(request):
   store = sling.Store(commons)
   export = request.frame(store)
 
+  # Resolve all redirects.
+  for item in store:
+    if n_is in item:
+      redirs = []
+      update = False
+      for redir in item(n_is):
+        if type(redir) is str:
+          update = True
+          redirs.append((n_is, store[redir]))
+        else:
+          redirs.append((n_is, redir))
+      if update:
+        del item[n_is]
+        item.extend(redirs)
+
   # Export topics to Wikidata.
   exporter = WikibaseExporter(client, export[n_topics])
   exporter.publish()

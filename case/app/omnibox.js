@@ -6,8 +6,6 @@ import {MdSearchResult} from "/common/lib/material.js";
 
 import {store, settings} from "./global.js";
 
-const n_is = store.is;
-
 export async function search(query, backends) {
   // Do full match if query ends with period.
   let full = false;
@@ -32,7 +30,7 @@ export async function search(query, backends) {
         seen.add(item.ref);
       }
       if (item.topic) {
-        for (let ref of item.topic.all(n_is)) seen.add(ref.id);
+        for (let ref of item.topic.links()) seen.add(ref.id);
       }
       results.push(new MdSearchResult(item));
     }

@@ -1023,7 +1023,7 @@ class FactField extends Component {
         // Create new topic with reference to topic in external case.
         let editor = this.match("#editor");
         let link = await editor.new_topic();
-        link.add(n_is, item.topic);
+        link.add(n_is, item.topic.id);
         let name = item.topic.get(n_name);
         if (name) link.add(n_name, name);
         await editor.update_topics();
@@ -1034,7 +1034,7 @@ class FactField extends Component {
         text = item.topic.id;
         encoded = false;
       } else {
-        value = item.refitem.topic.id
+        value = item.topic.id;
         text = item.topic.get(n_name);
       }
     } else if (item.value) {

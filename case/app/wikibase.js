@@ -83,7 +83,7 @@ export async function wikidata_export(topics, aux) {
   // Add QIDs to topics for newly created item.
   let dirty = false;
   for (let [topic, item] of reply.get(n_created)) {
-    topic.put(n_is, item);
+    topic.put(n_is, item.id);
     dirty = true;
   }
   let status = new Array();

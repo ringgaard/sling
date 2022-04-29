@@ -406,6 +406,27 @@ export class Frame {
   resolve() {
     return this.store.resolve(this);
   }
+
+  // Get resolved link.
+  link() {
+    let link = this.get(this.store.is);
+    if (typeof link === 'string') link = this.store.lookup(link);
+    return link;
+  }
+
+  // Get all resolved links.
+  links() {
+    let it = function* (store, slots) {
+      for (let pos = 0; pos < slots.length; pos += 2) {
+        if (slots[pos] === store.is) {
+          let link = slots[pos + 1];
+          if (typeof link === 'string') link = store.lookup(link);
+          yield link;
+        }
+      }
+    };
+    return it(this.store, this.slots);
+  }
 }
 
 // Qualified string.

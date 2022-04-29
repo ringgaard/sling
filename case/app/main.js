@@ -204,7 +204,7 @@ class CaseApp extends Component {
       let topic = store.frame(`t/${caseid}/${next++}`);
       topics.push(topic);
       main_topics.push(topic);
-      topic.add(n_is, store.lookup(topicid));
+      topic.add(n_is, topicid);
       if (topictype) topic.add(n_instance_of, topictype);
       if (name) topic.add(n_name, name);
       main.add(n_main_subject, topic);
