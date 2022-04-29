@@ -15,6 +15,7 @@
 """Fetch daily LEI files from gleif.org."""
 
 import json
+import re
 import requests
 import sling
 import sling.flags as flags
@@ -60,13 +61,13 @@ for dataset in ["lei2", "rr", "repex"]:
   download(url, fn)
 
 # Download BIC-to-LEI mapping file.
-
-bicurl = "https://www.gleif.org/media/pages/lei-data/lei-mapping/" + \
-         "download-bic-to-lei-relationship-files/" + \
-         "7d52bd6bf8-1650881313/bic_lei_gleif_v1_monthly_full_20220325.csv"
+r = requests.get("https://www.gleif.org/en/lei-data/lei-mapping/" +
+                 "download-bic-to-lei-relationship-files")
+m = re.search(r'<a download href="([^"]+)">', str(r.content))
+bicurl = m.group(1)
 bicfn = flags.arg.dir + "/bic.csv"
+
 print("Download", bicurl)
 download(bicurl, bicfn)
-
 print("Done.")
 
