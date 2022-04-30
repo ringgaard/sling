@@ -63,8 +63,13 @@ class AliasWorkflow:
                                      },
                                      format="message/alias",
                                      name="wikidata-alias-extractor")
-      wikipedia_aliases = self.wf.read(self.data.wikipedia_aliases(language),
-                                       name="wikipedia-alias-reader")
+
+      if flags.arg.wikidata_only:
+        wikipedia_aliases = None
+      else:
+        wikipedia_aliases = self.wf.read(self.data.wikipedia_aliases(language),
+                                         name="wikipedia-alias-reader")
+
       aliases = self.wf.collect(wikipedia_aliases, wikidata_aliases)
 
     with self.wf.namespace("select"):

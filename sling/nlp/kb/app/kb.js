@@ -770,7 +770,7 @@ class KbPictureCard extends MdCard {
 
     let ok = await StdDialog.ask(
       "Edit photo profile",
-      "Do you want to update the photo gallery for item?");
+      "Request update of the photo gallery for item?");
     if (!ok) return;
 
     let itemid = this.state.itemid;

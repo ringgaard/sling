@@ -23,6 +23,11 @@ flags.define("--extra_items",
              default=None,
              metavar="RECFILES")
 
+flags.define("--wikidata_only",
+             help="only use wikidata for building knowledge base and aliases",
+             default=False,
+             action='store_true')
+
 class Datasets:
   def __init__(self, wf):
     self.wf = wf
@@ -268,13 +273,14 @@ class Datasets:
       self.custom_properties())
 
   def standard_item_sources(self):
-    items = self.wf.bundle(
-              self.wikidata_items(),
-              self.wikilinks(),
-              self.popularity(),
-              self.fanin(),
-              self.wikipedia_items(),
-              self.wikipedia_members())
+    items = self.wf.bundle(self.wikidata_items(), self.fanin())
+
+    if not flags.arg.wikidata_only:
+      items = self.wf.bundle(items,
+        self.wikilinks(),
+        self.popularity(),
+        self.wikipedia_items(),
+        self.wikipedia_members())
 
     if flags.arg.extra_items:
       extra = self.wf.resource(flags.arg.extra_items, format="records/frame")
