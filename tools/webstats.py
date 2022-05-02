@@ -93,8 +93,8 @@ pages = [
   ("Home app",             re.compile(r"^\/home\/app\/")),
   ("Home image",           re.compile(r"^\/home\/image\/")),
 
-  ("JSON item fetch",      re.compile(r"^\/kb/item\?fmt=cjson&id=(.+)$")),
-  ("JSON name lookup",     re.compile(r"^\/kb/query\?fmt=cjson&q=(.+)$")),
+  ("API item fetch",       re.compile(r"^\/kb/item\?fmt=cjson&id=(.+)$")),
+  ("API name lookup",      re.compile(r"^\/kb/query\?fmt=cjson&q=(.+)$")),
 
   ("media file",           re.compile(r"^\/media\/.+")),
   ("thumbnail",            re.compile(r"^\/thumb\/.+")),
@@ -113,15 +113,15 @@ pages = [
 
   ("Wikidata auth",        re.compile(r"^\/case/wikibase\/(.+)$")),
   ("Case home",            re.compile(r"^\/c\/$")),
-  ("Case create",          re.compile(r"^\/case\/new$")),
   ("Case open",            re.compile(r"^\/c\/\d+")),
+  ("Case create API",      re.compile(r"^\/case\/new$")),
   ("Case app",             re.compile(r"^\/(case|c)\/app\/(.+)$")),
-  ("Case fetch",           re.compile(r"^\/case/fetch\/?\?(.+)$")),
-  ("Case share",           re.compile(r"^\/case/share$")),
-  ("Case service",         re.compile(r"^\/case/service\/")),
-  ("Case proxy",           re.compile(r"^\/case/proxy\?")),
-  ("Case plugin",          re.compile(r"^\/case/plugin\/")),
-  ("Case xrefs",           re.compile(r"^\/case/xrefs$")),
+  ("Case fetch API",       re.compile(r"^\/case/fetch\/?\?(.+)$")),
+  ("Case share API",       re.compile(r"^\/case/share$")),
+  ("Case service API",     re.compile(r"^\/case/service\/")),
+  ("Case proxy API",       re.compile(r"^\/case/proxy\?")),
+  ("Case plugin API",      re.compile(r"^\/case/plugin\/")),
+  ("Case xrefs API",       re.compile(r"^\/case/xrefs$")),
   ("Case image caching",   re.compile(r"^\/case/imgcache$")),
   ("schema",               re.compile(r"^\/schema(.+)$")),
   ("collaboration",        re.compile(r"^\/collab\/")),
@@ -262,6 +262,7 @@ worms = [
   ("dns", re.compile(r"^\/\?dns\=")),
   ("dns", re.compile(r"^\/\?\=PHP")),
   ("unix", re.compile(r"^\/\?unix:")),
+  ("version.js", re.compile(r"^\/c\/version\.js")),
 ]
 
 spammers = set([

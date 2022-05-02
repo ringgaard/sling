@@ -180,7 +180,8 @@ class KnowledgeBaseWorkflow:
                                mapper="item-reconciler",
                                reducer="item-merger",
                                format="message/frame",
-                               params={"indexed": True})
+                               params={"indexed": True},
+                               auxin={"config": self.recon_config()})
 
   def build_knowledge_base(self):
     """Task for building knowledge base store with items, and schemas."""

@@ -81,10 +81,10 @@ export async function wikidata_export(topics, aux) {
   console.log(reply.text());
 
   // Add QIDs to topics for newly created item.
-  let dirty = false;
+  let updated = new Array();
   for (let [topic, item] of reply.get(n_created)) {
     topic.put(n_is, item.id);
-    dirty = true;
+    updated.push(topic);
   }
   let status = new Array();
   for (let [metric, value] of reply.get(n_results)) {
@@ -93,6 +93,6 @@ export async function wikidata_export(topics, aux) {
     }
   }
 
-  return [dirty, status.join(", ")];
+  return [updated, status.join(", ")];
 }
 

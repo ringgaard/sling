@@ -168,6 +168,7 @@ var plugins = [
     /^https?:\/\/forum\.phun\.org\/threads\//,
     /^https?:\/\/.+\/gallery.html$/,
     /^https?:\/\/thekameraclub\.co\.uk\//,
+    /^https?:\/\/p..ncoven\.com\//,
   ],
 },
 

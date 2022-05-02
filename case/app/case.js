@@ -1327,10 +1327,13 @@ class CaseEditor extends Component {
     this.style.cursor = "wait";
     inform(`Publishing ${topics.length} topics to Wikidata`);
     try {
-      let [dirty, status] = await wikidata_export(topics, aux);
-      if (dirty) {
+      let [updated, status] = await wikidata_export(topics, aux);
+      if (updated.length > 0) {
+        for (let topic in updated) {
+          this.update_topic(topic);
+          this.topic_updated(topic);
+        }
         this.mark_dirty();
-        this.refresh_topics();
       }
       inform("Published in Wikidata: " + status);
     } catch (e) {

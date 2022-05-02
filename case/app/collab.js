@@ -212,7 +212,7 @@ export class Collaboration {
 
   // Send topic update.
   topic_updated(topic) {
-    console.log("send topic update", topic.id, topic);
+    console.log("send topic update", topic.id);
     let encoder = new Encoder(store, false);
     encoder.writeVarInt(COLLAB_UPDATE);
     encoder.writeVarInt(CCU_TOPIC);
