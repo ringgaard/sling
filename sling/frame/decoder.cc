@@ -16,7 +16,6 @@
 
 #include <string>
 
-#include "sling/base/logging.h"
 #include "sling/frame/object.h"
 #include "sling/frame/store.h"
 #include "sling/frame/wire.h"
@@ -38,7 +37,7 @@ Object Decoder::DecodeAll() {
   Handle handle = Handle::nil();
   while (!done()) {
     handle = DecodeObject();
-    if (handle.IsNil()) break;
+    if (handle.IsNil() || handle.IsError()) break;
   }
   return Object(store_, handle);
 }
@@ -48,7 +47,7 @@ Handle Decoder::DecodeObject() {
   // three bits are the tag and the upper bits are the argument.
   Handle handle;
   uint64 tag;
-  CHECK(input_->ReadVarint64(&tag));
+  if (!input_->ReadVarint64(&tag)) return Handle::error();
   uint64 arg = tag >> 3;
 
   // Decode different tag types.
@@ -98,23 +97,24 @@ Handle Decoder::DecodeObject() {
           break;
         case WIRE_INDEX: {
           uint32 index;
-          CHECK(input_->ReadVarint32(&index));
+          if (!input_->ReadVarint32(&index)) return Handle::error();
           handle = Handle::Index(index);
           break;
         }
         case WIRE_RESOLVE: {
           uint32 slots;
           uint32 replace;
-          CHECK(input_->ReadVarint32(&slots));
-          CHECK(input_->ReadVarint32(&replace));
-          DCHECK_LT(replace, references_.length());
+          if (!input_->ReadVarint32(&slots)) return Handle::error();
+          if (!input_->ReadVarint32(&replace)) return Handle::error();
+          if (replace >= references_.length()) return Handle::error();
           handle = DecodeFrame(slots, replace);
           break;
         }
         case WIRE_QSTRING:
           handle = DecodeQString();
           break;
-        default: LOG(FATAL) << "Invalid tag value: " << tag;
+        default:
+          handle = Handle::error();
       }
   }
 
@@ -132,6 +132,7 @@ Handle Decoder::DecodeFrame(int slots, int replace) {
     *references_.push() = handle;
   } else {
     handle = Reference(replace);
+    if (handle.IsError()) return Handle::error();
     index = replace;
   }
 
@@ -140,16 +141,18 @@ Handle Decoder::DecodeFrame(int slots, int replace) {
   for (int i = 0; i < slots; ++i) {
     // Read slot name and value.
     Handle name = DecodeObject();
+    if (name.IsError()) return Handle::error();
     Push(name);
     Handle value = DecodeObject();
+    if (value.IsError()) return Handle::error();
     Push(value);
 
     if (name.IsId() && replace == -1) {
       // The value of the id slot must be a symbol.
-      DCHECK(!value.IsNil());
-      DCHECK(value.IsRef());
+      if (value.IsNil()) return Handle::error();
+      if (!value.IsRef()) return Handle::error();
       Datum *id = store_->Deref(value);
-      DCHECK(id->IsSymbol());
+      if (!id->IsSymbol()) return Handle::error();
       SymbolDatum *symbol = id->AsSymbol();
 
       if (!store_->Owned(value)) {
@@ -218,7 +221,9 @@ Handle Decoder::DecodeString(int size) {
   Handle handle = store_->AllocateString(size);
 
   // Read string from input.
-  CHECK(input_->Read(store_->GetString(handle)->data(), size));
+  if (!input_->Read(store_->GetString(handle)->data(), size)) {
+    return Handle::error();
+  }
 
   return handle;
 }
@@ -227,20 +232,23 @@ Handle Decoder::DecodeQString() {
   // Get string length.
   Word mark = Mark();
   uint32 length;
-  CHECK(input_->ReadVarint32(&length));
+  if (!input_->ReadVarint32(&length)) return Handle::error();
 
   // Allocate string object.
   Handle str = store_->AllocateString(length, Handle::nil());
   Push(str);
 
   // Read string from input.
-  CHECK(input_->Read(store_->GetString(str)->data(), length));
+  if (!input_->Read(store_->GetString(str)->data(), length)) {
+    return Handle::error();
+  }
 
   // Add reference.
   *references_.push() = str;
 
   // Read qualifier from input.
   Handle qual = DecodeObject();
+  if (qual.IsError()) return Handle::error();
   store_->GetString(str)->set_qualifier(qual);
 
   Release(mark);
@@ -250,7 +258,7 @@ Handle Decoder::DecodeQString() {
 Handle Decoder::DecodeArray() {
   // Get array size.
   uint32 size;
-  CHECK(input_->ReadVarint32(&size));
+  if (!input_->ReadVarint32(&size)) return Handle::error();
 
   // Allocate array.
   Handle handle = store_->AllocateArray(size);
@@ -259,7 +267,9 @@ Handle Decoder::DecodeArray() {
   // Decode array elements and store them temporarily on the stack.
   Word mark = Mark();
   for (int i = 0; i < size; ++i) {
-    Push(DecodeObject());
+    Handle elem = DecodeObject();
+    if (elem.IsError()) return Handle::error();
+    Push(elem);
   }
 
   // Copy elements from stack to array.
@@ -284,7 +294,7 @@ Handle Decoder::DecodeSymbol(int name_size) {
   } else {
     // Slow case.
     string name;
-    CHECK(input_->ReadString(name_size, &name));
+    if (!input_->ReadString(name_size, &name)) return Handle::error();
     return store_->Symbol(name);
   }
 }
@@ -298,7 +308,7 @@ Handle Decoder::DecodeLink(int name_size) {
   } else {
     // Slow case.
     string name;
-    CHECK(input_->ReadString(name_size, &name));
+    if (!input_->ReadString(name_size, &name)) return Handle::error();
     return store_->Lookup(name);
   }
 }

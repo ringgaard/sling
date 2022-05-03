@@ -83,7 +83,7 @@ class Decoder {
   // Returns handle for reference.
   Handle Reference(uint32 index) {
     Handle *h = references_.base() + index;
-    CHECK(h < references_.end());
+    if (h >= references_.end()) return Handle::error();
     return *h;
   }
 

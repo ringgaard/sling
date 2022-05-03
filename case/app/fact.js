@@ -442,7 +442,7 @@ class FactEditor extends Component {
     }
   }
 
-  onmeta(e) {
+  onmenu(e) {
     let s = this.selection();
     if (s && s.field) {
       if (this.searching()) {
@@ -505,8 +505,9 @@ class FactEditor extends Component {
       this.human(n_male);
       e.stopPropagation();
       e.preventDefault();
-    } else if (e.code == "MetaLeft") {
-      this.onmeta(e);
+    } else if (e.code == "Space" && e.shiftKey) {
+      e.preventDefault();
+      this.onmenu(e);
     } else if (e.code == " ") {
       this.onspace(e);
     }

@@ -255,6 +255,9 @@ PyObject *PyStore::Parse(PyObject *args, PyObject *kw) {
     if (parser.error()) {
       PyErr_SetString(PyExc_IOError, parser.error_message().c_str());
       return nullptr;
+    } else if (result.IsError()) {
+      PyErr_SetString(PyExc_IOError, "Error decoding object");
+      return nullptr;
     }
     return PyValue(result.handle());
   }

@@ -231,6 +231,7 @@ class Object : public Root {
   bool IsTrue() const { return handle_.IsTrue(); }
   bool IsZero() const { return handle_.IsZero(); }
   bool IsOne() const { return handle_.IsOne(); }
+  bool IsError() const { return handle_.IsError(); }
 
   // Returns object as integer.
   int AsInt() const { return handle_.AsInt(); }
