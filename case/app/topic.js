@@ -151,7 +151,7 @@ class TopicList extends Component {
     if (card) {
       return new Promise((resolve) => {
         setTimeout((card, resolve) => {
-          card.scrollIntoView();
+          card.scrollIntoView({block: "center", behavior: "smooth"});
           card.focus();
           window.getSelection().collapse(card, 0);
           resolve();
@@ -557,6 +557,9 @@ class TopicCard extends Component {
       e.stopPropagation();
       e.preventDefault();
       this.ondiscard(e);
+    } else if (e.ctrlKey && e.shiftKey && e.code === "KeyC") {
+      e.preventDefault();
+      this.oncopyid(e);
     }
   }
 

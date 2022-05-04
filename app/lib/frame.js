@@ -807,15 +807,10 @@ export class Encoder {
       let value = slots[n + 1];
       this.encodeLink(name);
       if (name === this.id) {
-        let ref = this.refs.get(value);
-        if (ref && ref.status != Status.ENCODED) {
-          this.encodeRef(ref);
-        } else {
-          // Encode SYMBOL.
-          ref = {status: Status.ENCODED, index: this.next++};
-          this.refs.set(value, ref);
-          this.encodeString(value, 3);
-        }
+        // Skip symbol reference since the id value is just a string and not a
+        // separate symbol object in this implementation.
+        this.next++;
+        this.encodeString(value, 3);
       } else {
         this.encodeLink(value);
       }

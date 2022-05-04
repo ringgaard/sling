@@ -115,6 +115,7 @@ class FactEditor extends Component {
     this.bind(null, "keydown", e => this.onkeydown(e));
     this.bind(null, "click", e => this.onclick(e));
     this.bind(null, "cut", e => this.oncut(e));
+    this.bind(null, "copy", e => this.oncopy(e));
     this.bind(null, "paste", e => this.onpaste(e));
 
     this.bind(null, "input", e => this.oninput(e));
@@ -524,11 +525,26 @@ class FactEditor extends Component {
 
   oncut(e) {
     let s = this.selection();
-    if (!s) return;
-    if (s.field != s.base) {
+    if (s && s.field != s.base) {
       e.preventDefault();
       document.execCommand("copy");
       this.delete_selection(s);
+    }
+  }
+
+  oncopy(e) {
+    let s = this.selection();
+    if (s && s.field == s.base) {
+      if (s.selection.isCollapsed) {
+        let range = document.createRange();
+        if (s.field.className == "encoded") {
+          range.selectNode(s.field);
+        } else {
+          range.selectNodeContents(s.field);
+        }
+        s.selection.removeAllRanges();
+        s.selection.addRange(range);
+      }
     }
   }
 
@@ -544,7 +560,7 @@ class FactEditor extends Component {
       clip.innerText = text;
     }
 
-    if (clip.querySelector("fact-statement")) {
+    if (clip.querySelector("fact-statement,fact-property")) {
       // Clear select before paste.
       let s = this.selection();
       if (s.field != s.base) {
@@ -553,22 +569,33 @@ class FactEditor extends Component {
       }
 
       // Insert statements from clipboard.
-      let c = clip.firstChild;
-      while (c) {
-        let prop = c.firstChild;
-        let val = c.lastChild;
-        if ((c instanceof FactStatement) &&
-            (prop instanceof FactProperty) &&
-            (val instanceof FactValue)) {
-          // Add stub for pasted items.
-          if (val.className == "encoded") {
-            let v = store.parse(val.getAttribute("value"))
-            if ((v instanceof Frame) && v.isproxy()) {
-              v.add(n_name, val.getAttribute("text"));
-              v.markstub();
-            }
-          }
+      for (let c = clip.firstChild; c; c = c.nextSibling) {
+        // Get property and/or value.
+        let prop = null;
+        let val = null;
+        if (c instanceof FactStatement) {
+          if (c.firstChild instanceof FactProperty) prop = c.firstChild;
+          if (c.lastChild instanceof FactValue) val = c.lastChild;
+        } else if (c instanceof FactProperty) {
+          prop = c;
+        } else if (c instanceof FactValue) {
+          val = c;
+        } else {
+          continue;
+        }
 
+        // Add stub for pasted items.
+        let encoded = false;
+        if (val && val.className == "encoded") {
+          let v = store.parse(val.getAttribute("value"))
+          if ((v instanceof Frame) && v.isproxy()) {
+            v.add(n_name, val.getAttribute("text"));
+            v.markstub();
+          }
+          encoded = true;
+        }
+
+        if (prop && val) {
           // Add new statement.
           let stmt = new FactStatement({
             property: prop.value(),
@@ -576,20 +603,35 @@ class FactEditor extends Component {
             qualified: c.className == "qualified",
           });
           this.insertBefore(stmt, s.statement);
+          s.selection.collapse(s.statement);
+        } else if (prop || val) {
+          val = val || prop;
+          let selection = document.getSelection();
+          let focus = selection.focusNode;
+          if ((focus instanceof FactStatement) && focus.placeholder()) {
+            // Replace placeholder with new statement with value.
+            let p = new FactProperty({property: "", value: val.value()});
+            let v = new FactValue({property: "", value: ""});
+            focus.appendChild(p);
+            focus.appendChild(v);
+            selection.collapse(v);
+          } else if (focus instanceof FactField) {
+            // Insert pasted value into field.
+            focus.update_value(val.text(), val.value(), encoded);
+            selection.collapse(focus, 1);
+          }
         }
-        c = c.nextSibling;
       }
-      s.selection.collapse(s.statement);
     } else {
       // Add placeholder if needed before inserting text.
       let selection = document.getSelection();
       let focus = selection.focusNode;
       if ((focus instanceof FactStatement) && focus.placeholder()){
-        let prop = new FactProperty({property: "", value: ""});
-        let val = new FactValue({property: "", value: ""});
-        focus.appendChild(prop);
-        focus.appendChild(val);
-        selection.collapse(prop, 0);
+        let p = new FactProperty({property: "", value: ""});
+        let v = new FactValue({property: "", value: ""});
+        focus.appendChild(p);
+        focus.appendChild(v);
+        selection.collapse(p, 0);
       }
 
       // Paste as text.
@@ -614,6 +656,7 @@ class FactEditor extends Component {
     let g = new FactStatement({property: n_gender, value: gender});
     this.insertBefore(t, s.statement);
     this.insertBefore(g, s.statement);
+    this.dirty = true;
   }
 
   searchbox(field, results) {
@@ -711,7 +754,7 @@ class FactEditor extends Component {
     }
 
     // Add facts.
-    for(let e = this.firstChild; e; e = e.nextSibling) {
+    for (let e = this.firstChild; e; e = e.nextSibling) {
       if (!(e instanceof FactStatement)) continue;
       if (e.empty()) continue;
 
@@ -1062,15 +1105,9 @@ class FactField extends Component {
 
     // Set field value.
     this.collapse();
-    if (value) {
-      this.setAttribute("value", value);
-    } else {
-      this.removeAttribute("value");
-    }
-    this.setAttribute("text", this.text());
-    this.className = encoded ? "encoded" : "";
-    this.innerHTML = Component.escape(text);
+    this.update_value(text, value, encoded);
 
+    // Move to next field.
     let range = document.createRange();
     if (this.nextSibling) {
       // Move to next field.
@@ -1112,6 +1149,17 @@ class FactField extends Component {
   expand() {
     this.setAttribute("text", "");
     this.onchanged();
+  }
+
+  update_value(text, value, encoded) {
+    if (value) {
+      this.setAttribute("value", value);
+    } else {
+      this.removeAttribute("value");
+    }
+    this.setAttribute("text", this.text());
+    this.className = encoded ? "encoded" : "";
+    this.innerHTML = Component.escape(text);
   }
 
   render() {
