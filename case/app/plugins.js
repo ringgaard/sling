@@ -200,6 +200,16 @@ var plugins = [
   ],
 },
 
+// Gallery url.
+{
+  name: "gallery",
+  module: "gallery.js",
+  actions: [PASTEURL],
+  patterns: [
+    /^gallery:/,
+  ],
+},
+
 // Web articles.
 {
   name: "article",

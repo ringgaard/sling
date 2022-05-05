@@ -18,6 +18,7 @@ import sling
 import sling.flags as flags
 import sling.log as log
 import sling.net
+import sling.media.photo as photolib
 
 flags.define("--port",
              help="port number for the HTTP server",
@@ -57,7 +58,9 @@ app.page("/photosearch",
           type="search"
           placeholder="Search for photos on Reddit...">
         </md-input>
-        <md-icon-button id="search" icon="search">
+        <md-icon-button id="search" icon="search"></md-icon-button>
+        <md-spacer></md-spacer>
+        <md-icon-button id="copy" icon="content_copy"></md-icon-button>
         </md-icon-button>
       </md-toolbar>
 
@@ -79,7 +82,7 @@ app.page("/photosearch",
 app.js("/photosearch/app.js",
 """
 import {Component} from "/common/lib/component.js";
-import {MdCard} from "/common/lib/material.js";
+import {MdCard, inform} from "/common/lib/material.js";
 import {reddit_thumbnail} from "/common/lib/reddit.js";
 
 let nsfw = false;
@@ -90,6 +93,7 @@ class PhotoSearchApp extends Component {
       if (e.key === "Enter") this.onsearch();
     });
     this.bind("#search", "click", e => this.onsearch(e));
+    this.bind("#copy", "click", e => this.oncopy(e));
 
     let qs = new URLSearchParams(window.location.search);
     if (qs.get("nsfw") == "1") nsfw = true;
@@ -104,8 +108,28 @@ class PhotoSearchApp extends Component {
 
   onsearch() {
     let query = this.find("#query").value()
-    console.log("query", query)
     this.find("#results").update(query);
+  }
+
+  async oncopy() {
+    this.style.cursor = "wait";
+    let urls = new Array();
+    let results = this.querySelectorAll("search-result");
+    for (let i = 0; i < results.length; ++i) {
+      if (results[i].selected()) {
+        let url = results[i].posturl();
+        urls.push(url);
+      }
+    }
+
+    let r = await fetch("/photosearch/gallery", {
+      method: "POST",
+      body: urls.join("\\n"),
+    });
+    this.style.cursor = "";
+    let gallery = await r.text();
+    navigator.clipboard.writeText(gallery);
+    inform("Gallery URL coped to clipboard");
   }
 
   static stylesheet() {
@@ -165,12 +189,21 @@ class SearchResult extends Component {
             </a>
           </div>
           <div class="link">
+            <input id="select" type="checkbox">
             <md-icon icon="link"></md-icon>
             <a href="${p.url}" target="_blank">${p.url}</a>
           </div>
         </div>
       </div>
     `;
+  }
+
+  selected() {
+    return this.find("#select").checked;
+  }
+
+  posturl() {
+    return `https://www.reddit.com${this.state.permalink}`;
   }
 
   static stylesheet() {
@@ -198,11 +231,16 @@ class SearchResult extends Component {
       }
       $ .info {
         font-size: 13px;
-        margin-top: 6px;
-        margin-bottom: 6px;
+        margin-top: 3px;
+        margin-bottom: 3px;
       }
       $ .link {
         display: flex;
+        align-items: center;
+      }
+      $ .link input {
+        width: 16px;
+        height: 16px;
       }
       $ .link md-icon {
         font-size: 19px;
@@ -233,7 +271,6 @@ Component.register(SearchResult);
 class SearchResults extends MdCard {
   visible() {
     return this.query != null;
-    console.log("visible", this.query);
   }
 
   onconnected() {
@@ -263,7 +300,6 @@ class SearchResults extends MdCard {
     let url = `https://www.reddit.com/search.json?q=${q}&limit=100`;
     if (nsfw) url = url + "&include_over_18=on";
     if (this.after) url = url + `&after=${this.after}`;
-    console.log("url", url);
 
     document.body.style.cursor = "wait";
     fetch(url)
@@ -286,19 +322,12 @@ class SearchResults extends MdCard {
       let posting = hit.data;
       let url = posting.url;
 
-      if (!photo_pat.test(url)) {
-        console.log("bad", url);
-        continue;
-      }
+      if (!photo_pat.test(url)) continue;
+      if (this.urls.has(url)) continue;
 
-      if (this.urls.has(url)) {
-        console.log("dup", url);
-        continue;
-      }
       this.urls.add(url);
 
       let thumb = reddit_thumbnail(posting, 70);
-      console.log("thumb", url, thumb.url, thumb.width, thumb.height);
 
       let result = new SearchResult();
       result.update({
@@ -328,6 +357,32 @@ Component.register(SearchResults);
 
 document.body.style = null;
 """)
+
+@app.route("/photosearch/gallery", method="POST")
+def handle_albums(request):
+  # Get media urls.
+  urls = request.body.decode().split("\n")
+  print("urls", urls)
+
+  # Get photos from urls.
+  profile = photolib.Profile(None)
+  profile.captionless = True
+  for url in urls: profile.add_media(url)
+  profile.dedup()
+
+  # Return extracted photos.
+  photos = []
+  for media in profile.media():
+    if type(media) is sling.Frame:
+      url = media[photolib.n_is]
+      nsfw = media[photolib.n_has_quality] == photolib.n_nsfw
+      if nsfw: url = "!" + url
+    else:
+      url = media
+    photos.append(url)
+
+  # Return gallery url.
+  return sling.net.HTTPStatic("text/plain", "gallery:" + " ".join(photos))
 
 # Run app until shutdown.
 log.info("running")
