@@ -85,17 +85,24 @@ class CaseApp extends Component {
     if (m) {
       // Get case number from url.
       let caseid = parseInt(m[1]);
-
-      // Check for collaboration invite.
       let fragment = parse_url_fragment();
+
       let collab = fragment.get("collab");
       if (collab) {
+        // Collaboration invite
         let userid = fragment.get("as");
         let key = fragment.get("invite");
         this.join_case(caseid, collab, userid, key);
       } else {
-        // Open case specified in url.
-        this.open_case(caseid);
+        let topicid = fragment.get("t");
+        if (topicid) {
+          // Open case specified and navigate to topic.
+          await this.open_case(caseid);
+          this.editor.navigate_to(store.lookup(topicid));
+        } else {
+          // Open case specified in url.
+          this.open_case(caseid);
+        }
       }
 
       // Read case list in background.

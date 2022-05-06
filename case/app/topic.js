@@ -557,9 +557,12 @@ class TopicCard extends Component {
       e.stopPropagation();
       e.preventDefault();
       this.ondiscard(e);
-    } else if (e.ctrlKey && e.shiftKey && e.code === "KeyC") {
+    } else if (e.ctrlKey && e.code === "KeyD") {
       e.preventDefault();
       this.oncopyid(e);
+    } else if (e.ctrlKey && e.code === "KeyI") {
+      e.preventDefault();
+      this.onimport(e);
     }
   }
 
@@ -584,9 +587,6 @@ class TopicCard extends Component {
   }
 
   async oncopyid(e) {
-    // Mark active.
-    e.target.style.color = "black";
-
     // Fetch xrefs from server.
     if (!xrefs) {
       let r = await fetch("/case/xrefs");
@@ -610,14 +610,14 @@ class TopicCard extends Component {
       }
     }
     if (!id && topic.id) id = topic.id;
-    if (id) {
-      navigator.clipboard.writeText(store.resolve(id));
-    }
 
-    // Mark done.
-    setTimeout(() => {
-      e.target.style.color = "#808080";
-    }, 150);
+    // Add topic id to clipboard.
+    navigator.clipboard.writeText(store.resolve(id));
+
+    // Select id element in topic panel.
+    let selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.selectAllChildren(this.find("#identifier"));
   }
 
   ondown(e) {
@@ -713,12 +713,12 @@ class TopicCard extends Component {
             id="copyid"
             icon="numbers"
             class="ripple"
-            tooltip="Copy topic id to clipboard">
+            tooltip="Copy topic id to clipboard\n(Ctrl+D)">
           </md-icon-button>
           <md-icon-button
             id="import"
             icon="publish"
-            tooltip="Import existing topic">
+            tooltip="Import existing topic\n(Ctrl+I)">
           </md-icon-button>
           <md-icon-button
             id="moveup"
