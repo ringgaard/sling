@@ -560,7 +560,7 @@ class TopicCard extends Component {
     } else if (e.ctrlKey && e.code === "KeyD") {
       e.preventDefault();
       this.oncopyid(e);
-    } else if (e.ctrlKey && e.code === "KeyI") {
+    } else if (e.ctrlKey && !e.shiftKey && e.code === "KeyI") {
       e.preventDefault();
       this.onimport(e);
     }

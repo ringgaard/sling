@@ -373,8 +373,8 @@ class FactEditor extends Component {
       if (!s.statement.qualified) {
         s.statement.qualified = true;
         this.dirty = true;
+        e.preventDefault();
       }
-      e.preventDefault();
     }
   }
 
@@ -509,7 +509,7 @@ class FactEditor extends Component {
     } else if (e.code == "Space" && e.shiftKey) {
       e.preventDefault();
       this.onmenu(e);
-    } else if (e.code == " ") {
+    } else if (e.code == "Space") {
       this.onspace(e);
     }
   }
