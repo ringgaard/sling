@@ -545,7 +545,7 @@ class Profile:
       return self.add_reddit_gallery(galleryid, caption, nsfw)
 
     # Reddit posting.
-    m = re.match("https://(www\.)?reddit\.com/\w+/\w+/comments/(\w+)/", url)
+    m = re.match("https://(www\.)?reddit\.com/\w+/.+/comments/(\w+)/", url)
     if m != None:
       galleryid = m.group(2)
       return self.add_reddit_gallery(galleryid, caption, nsfw)

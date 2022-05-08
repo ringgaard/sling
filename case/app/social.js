@@ -113,6 +113,14 @@ let xrefs = [
     property: store.lookup("P4985"),
   },
   {
+    pattern: /^https?:\/\/filmpolski\.pl\/fp\/index\.php(?:\?osoba=|\/)(\d+)/i,
+    property: store.lookup("P3495"),
+  },
+  {
+    pattern: /^https?:\/\/(?:www\.)?filmweb\.pl\/person\/.+-(\d+)/i,
+    property: store.lookup("P5033"),
+  },
+  {
     pattern: /^https?:\/\/(?:www\.)?dfi\.dk\/viden-om-film\/filmdatabasen\/person\/(\w+)/i,
     property: store.lookup("P2626"),
   },
@@ -131,6 +139,10 @@ let xrefs = [
   {
     pattern: /^https?:\/\/medium\.com\/@([^\/\?]+)/i,
     property: store.lookup("P3899"),
+  },
+  {
+    pattern: /https?:\/\/muckrack\.com\/([^\/]+)\/?/i,
+    property: store.lookup("P6005"),
   },
   {
     pattern: /^https?:\/\/pinterest\.com\/([^\/\?]+)/i,
