@@ -1329,7 +1329,7 @@ class CaseEditor extends Component {
     try {
       let [updated, status] = await wikidata_export(topics, aux);
       if (updated.length > 0) {
-        for (let topic in updated) {
+        for (let topic of updated) {
           this.update_topic(topic);
           this.topic_updated(topic);
         }

@@ -494,7 +494,7 @@ class GettingStarted extends Component {
 
       <p>Click the <md-icon icon="add"></md-icon> button to open a new
       case. Type the name of the case you want to research and an optional
-      description and then click "Create". This opens the new case and you can
+      description. Then click "Create". This opens the new case and you can
       now start to add topics to the case.</p>
       </p>
       <p>You add new topics to the case by typing the name of the topic in the
@@ -513,15 +513,27 @@ class GettingStarted extends Component {
       <md-icon icon="save"></md-icon> button in the case toolbar to save your
       changes in your local case database.
       </p>
-      ${this.browser_supported() ? "" :
-      "<p><b>Your web browser is not supported by SLING, " +
-      "please use Google Chrome version 98+ for the best experience.</b></p>"}
+      ${this.browser_check()}
     `;
   }
 
   browser_supported() {
     if (typeof HTMLDialogElement !== 'function') return false;
     return true;
+  }
+
+  browser_check() {
+    if (navigator.userAgent.includes("Version/15.3 Safari")) {
+      return "<p><b>KnolCase does NOT work with Safari 15.3. " +
+             "Please upgrade to Safari 15.4+ to use KnolCase.</b></p>";
+    }
+
+    if (!this.browser_supported()) {
+      return "<p><b>Your web browser is not supported by KnolCase. " +
+             "Please use Google Chrome 98+ for the best experience.</b></p>";
+    }
+
+    return "";
   }
 
   static stylesheet() {
