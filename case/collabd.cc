@@ -318,13 +318,14 @@ class CollabCase {
   }
 
   // Update collaboration.
-  void Update(CollabReader *reader) {
+  bool Update(CollabReader *reader) {
     MutexLock lock(&mu_);
     int type = reader->ReadInt();
     switch (type) {
       case CCU_TOPIC: {
         // Get new topic.
         Frame topic = reader->ReadObjects(&store_).AsFrame();
+        if (!topic.valid()) return false;
 
         // Check for new topic.
         if (!topics_.Contains(topic.handle())) {
@@ -421,6 +422,8 @@ class CollabCase {
       default:
         LOG(ERROR) << "Invalid case update type " << type;
     }
+
+    return true;
   }
 
   // Broadcast packet to clients. Do not send packet to source.
@@ -910,7 +913,10 @@ class CollabClient : public WebSocket {
     }
 
     // Update collaboration.
-    collab_->Update(reader);
+    if (!collab_->Update(reader)) {
+      Error("invalid update");
+      return;
+    }
 
     // Broadcast update to all other clients.
     collab_->Broadcast(this, reader->packet());

@@ -37,7 +37,7 @@ Object Decoder::DecodeAll() {
   Handle handle = Handle::nil();
   while (!done()) {
     handle = DecodeObject();
-    if (handle.IsNil() || handle.IsError()) break;
+    if (handle.IsError()) break;
   }
   return Object(store_, handle);
 }
