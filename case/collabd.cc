@@ -71,8 +71,15 @@ enum CollabUpdate {
 const int CREDENTIAL_BITS = 128;
 const int CREDENTIAL_BYTES = CREDENTIAL_BITS / 8;
 
+class CollabCase;
+class CollabClient;
+class CollabService;
+
 // HTTP server.
 HTTPServer *httpd = nullptr;
+
+// Collaboration server.
+CollabService *collabd = nullptr;
 
 // Commons store with global symbols.
 Store *commons;
@@ -85,15 +92,6 @@ Name n_modified(names, "modified");
 Name n_next(names, "next");
 Name n_author(names, "P50");
 Name n_participant(names, "P710");
-
-// Termination handler.
-void terminate(int signum) {
-  VLOG(1) << "Shutdown requested";
-  if (httpd != nullptr) httpd->Shutdown();
-}
-
-class CollabCase;
-class CollabClient;
 
 // Return random key encoded as hex digits.
 string RandomKey() {
@@ -429,7 +427,7 @@ class CollabCase {
   // Broadcast packet to clients. Do not send packet to source.
   void Broadcast(CollabClient *source, const Slice &packet);
 
-  // Send pings to client to keep connection alive.
+  // Send pings to clients to keep connections alive.
   void SendKeepAlivePings();
 
   // Read case from file.
@@ -449,7 +447,7 @@ class CollabCase {
     Input input(&stream);
     Decoder decoder(&store_, &input);
     casefile_ = decoder.DecodeAll().AsFrame();
-    if (casefile_.IsNil()) return false;
+    if (casefile_.IsNil() || casefile_.IsError()) return false;
 
     // Get main author for case.
     Frame main = casefile_.GetFrame(n_main);
@@ -475,6 +473,7 @@ class CollabCase {
     if (!st) return false;
 
     // Parse users.
+    participants_.clear();
     for (Text &line : Text(content).split('\n')) {
       auto fields = line.split(' ');
       CHECK_EQ(fields.size(), 2);
@@ -659,6 +658,17 @@ class CollabService {
     // Add collaboration.
     collaborations_.push_back(collab);
     return collab;
+  }
+
+  // Re-read data from disk.
+  void Refresh() {
+    MutexLock lock(&mu_);
+    LOG(INFO) << "Refresh collaborations from disk";
+    for (auto *collab : collaborations_) {
+      if (!collab->ReadCase() || !collab->ReadParticipants()) {
+        LOG(ERROR) << "Unable to refresh case #" << collab->caseid();
+      }
+    }
   }
 
  private:
@@ -971,6 +981,18 @@ void CollabCase::SendKeepAlivePings() {
   }
 }
 
+// Termination handler.
+void terminate(int signum) {
+  VLOG(1) << "Shutdown requested";
+  if (httpd != nullptr) httpd->Shutdown();
+}
+
+// Refresh collaborations.
+void refresh(int signum) {
+  VLOG(1) << "Refresh collaboration";
+  if (collabd != nullptr) collabd->Refresh();
+}
+
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
 
@@ -980,11 +1002,12 @@ int main(int argc, char *argv[]) {
   commons->Freeze();
 
   // Initialize collaboration service.
-  CollabService *collabd = new CollabService();
+  collabd = new CollabService();
 
-  // Install signal handlers to handle termination.
+  // Install signal handlers to handle termination and refresh.
   signal(SIGTERM, terminate);
   signal(SIGINT, terminate);
+  signal(SIGHUP, refresh);
 
   // Start HTTP server.
   LOG(INFO) << "Start HTTP server on port " << FLAGS_port;
