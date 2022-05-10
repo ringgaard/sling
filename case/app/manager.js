@@ -513,6 +513,9 @@ class GettingStarted extends Component {
       <md-icon icon="save"></md-icon> button in the case toolbar to save your
       changes in your local case database.
       </p>
+
+      <p>For more information, see
+      <a href="https://ringgaard.com/knolcase">here</a>.</p>
       ${this.browser_check()}
     `;
   }
@@ -525,7 +528,7 @@ class GettingStarted extends Component {
   browser_check() {
     if (navigator.userAgent.includes("Version/15.3 Safari")) {
       return "<p><b>KnolCase does NOT work with Safari 15.3. " +
-             "Please upgrade to Safari 15.4+ to use KnolCase.</b></p>";
+             "Please upgrade to Safari 15.4+ (or use Chrome instead).</b></p>";
     }
 
     if (!this.browser_supported()) {

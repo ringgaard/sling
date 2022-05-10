@@ -36,15 +36,19 @@ class Workers : public Processor {
     // Start worker pool.
     pool_ = new ThreadPool(num_workers, queue_size);
     pool_->StartWorkers();
+
+    queue_length_ = task->GetCounter("worker_queue_length");
   }
 
   void Receive(Channel *channel, Message *message) override {
+    queue_length_->Increment(1);
     if (output_ == nullptr) {
       // No receiver.
       delete message;
     } else {
       // Send message to output in one of the worker threads.
       pool_->Schedule([this, message]() {
+        queue_length_->Increment(-1);
         output_->Send(message);
       });
     }
@@ -62,6 +66,9 @@ class Workers : public Processor {
 
   // Output channel.
   Channel *output_;
+
+  // Statictics.
+  Counter *queue_length_ = nullptr;
 };
 
 REGISTER_TASK_PROCESSOR("workers", Workers);

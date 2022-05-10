@@ -110,8 +110,9 @@ class WikidataWorkflow:
     redirects."""
     with self.wf.namespace("wikisnap"):
       # Read frames from database.
-      snapshot = self.wf.read(self.wikidatadb(), name="db-reader")
-      input = self.wf.parallel(snapshot, queue=1024)
+      snapshot = self.wf.read(self.wikidatadb(), name="db-reader",
+                              params={"db_read_batch": 256})
+      input = self.wf.parallel(snapshot, queue=16384)
 
       # Split snapshot into items, properties, and redirects.
       task = self.wf.task("wikidata-splitter")
