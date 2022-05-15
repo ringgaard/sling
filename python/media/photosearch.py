@@ -60,6 +60,8 @@ app.page("/photosearch",
         </md-input>
         <md-icon-button id="search" icon="search"></md-icon-button>
         <md-spacer></md-spacer>
+        <md-icon-button id="selectall" icon="select_all"></md-icon-button>
+        <md-icon-button id="deselect" icon="deselect"></md-icon-button>
         <md-icon-button id="copy" icon="content_copy"></md-icon-button>
         </md-icon-button>
       </md-toolbar>
@@ -94,6 +96,8 @@ class PhotoSearchApp extends Component {
     });
     this.bind("#search", "click", e => this.onsearch(e));
     this.bind("#copy", "click", e => this.oncopy(e));
+    this.bind("#selectall", "click", e => this.onselectall(e));
+    this.bind("#deselect", "click", e => this.ondeselect(e));
 
     let qs = new URLSearchParams(window.location.search);
     if (qs.get("nsfw") == "1") nsfw = true;
@@ -111,12 +115,26 @@ class PhotoSearchApp extends Component {
     this.find("#results").update(query);
   }
 
+  onselectall(e) {
+    let results = this.querySelectorAll("search-result");
+    for (let i = 0; i < results.length; ++i) {
+      results[i].selected = true;
+    }
+  }
+
+  ondeselect(e) {
+    let results = this.querySelectorAll("search-result");
+    for (let i = 0; i < results.length; ++i) {
+      results[i].selected = false;
+    }
+  }
+
   async oncopy() {
     this.style.cursor = "wait";
     let urls = new Array();
     let results = this.querySelectorAll("search-result");
     for (let i = 0; i < results.length; ++i) {
-      if (results[i].selected()) {
+      if (results[i].selected) {
         let url = results[i].posturl();
         urls.push(url);
       }
@@ -198,8 +216,12 @@ class SearchResult extends Component {
     `;
   }
 
-  selected() {
+  get selected() {
     return this.find("#select").checked;
+  }
+
+  set selected(v) {
+    this.find("#select").checked = v;
   }
 
   posturl() {
