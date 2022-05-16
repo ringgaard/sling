@@ -1448,6 +1448,11 @@ class CaseEditor extends Component {
     this.update_folders();
   }
 
+  remote_save(modtime) {
+    console.log("received save", modtime);
+    this.casefile.set(n_modified, modtime);
+  }
+
   async update_folders() {
     await this.find("folder-list").update({
       folders: this.folders,

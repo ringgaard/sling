@@ -56,7 +56,7 @@ const [units, unitname] = indexmaps({
 });
 
 // Convert geo coordinate from decimal to degrees, minutes and seconds.
-export function decimal2degree(coord, latitude) {
+export function decimal2degree(coord, latitude, ascii) {
   // Compute direction.
   var direction;
   if (coord < 0) {
@@ -73,14 +73,22 @@ export function decimal2degree(coord, latitude) {
   let minutes = Math.floor(coord * 60) % 60;
 
   // Compute seconds.
-  let seconds = Math.floor(coord * 3600) % 60;
+  let seconds = Math.round(coord * 3600) % 60;
 
   // Build coordinate string.
-  return degrees +  "°" + minutes + "′" + seconds + "″" + direction;
+  if (ascii) {
+    return degrees +  "°" + minutes + "%27" + seconds + "%22" + direction;
+  } else {
+    return degrees +  "°" + minutes + "′" + seconds + "″" + direction;
+  }
 }
 
-export function latlong(lat, lng) {
-  return decimal2degree(lat, true) + ", " + decimal2degree(lng, false);
+export function latlong(lat, lng, ascii) {
+  if (ascii) {
+    return decimal2degree(lat, true, true) + "%20" + decimal2degree(lng, false, true);
+  } else {
+    return decimal2degree(lat, true) + ", " + decimal2degree(lng, false);
+  }
 }
 
 // Granularity for time.
@@ -398,7 +406,7 @@ function add_date_result(results, year, month, day, precision) {
     results.push({
       value: t.value(),
       title: t.text(),
-      description: "time",
+      description: "point in time",
     });
   }
 }
@@ -413,7 +421,7 @@ export function value_parser(value, results) {
   }
 
   // Parse DD.MM.YYYY.
-  m = value.match(/^(\d+)[\-\.](\d+)[\-\.](\d+)$/);
+  m = value.match(/^(\d+)\s?[\-\.]\s?(\d+)[\-\.]\s?(\d+)$/);
   if (m) {
     add_date_result(results, m[3], m[2], m[1]);
   }

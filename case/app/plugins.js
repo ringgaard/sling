@@ -95,6 +95,16 @@ var plugins = [
   ],
 },
 
+// Google Maps.
+{
+  name: "gmaps",
+  module: "gmaps.js",
+  actions: [PASTEURL, SEARCHURL],
+  patterns: [
+    /^https:\/\/www\.google\.com\/maps\/place\//,
+  ],
+},
+
 // Babepedia profiles.
 {
   name: "babepedia",

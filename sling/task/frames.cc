@@ -78,7 +78,7 @@ void FrameProcessor::Receive(Channel *channel, Message *message) {
   CHECK(frame.valid());
 
   // Process frame.
-  Process(message->key(), frame);
+  Process(message->key(), message->serial(), frame);
 
   // Update statistics.
   MemoryUsage usage;
@@ -129,7 +129,6 @@ void FrameProcessor::OutputShallow(const Frame &value) {
 
 void FrameProcessor::InitCommons(Task *task) {}
 void FrameProcessor::Startup(Task *task) {}
-void FrameProcessor::Process(Slice key, const Frame &frame) {}
 void FrameProcessor::Flush(Task *task) {}
 
 Message *CreateMessage(Text key, const Object &object, bool shallow) {

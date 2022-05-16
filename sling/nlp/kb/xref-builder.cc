@@ -74,7 +74,7 @@ class XRefBuilder : public task::FrameProcessor {
     num_property_ids_ = task->GetCounter("property_ids");
   }
 
-  void Process(Slice key, const Frame &frame) override {
+  void Process(Slice key, uint64 serial, const Frame &frame) override {
     // Check if frame has any ids, redirects, or tracked properties. All
     // tracked properties are in the global store, so all local properties can
     // be skipped.

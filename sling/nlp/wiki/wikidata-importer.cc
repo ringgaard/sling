@@ -274,7 +274,7 @@ class WikipediaMapping : public task::FrameProcessor {
     num_infoboxes_ = task->GetCounter("infobox_pages_mapped");
   }
 
-  void Process(Slice key, const Frame &frame) override {
+  void Process(Slice key, uint64 serial, const Frame &frame) override {
     // Get Wikipedia id.
     Frame wikipedia = frame.GetFrame(n_wikipedia_);
     if (wikipedia.invalid()) {
@@ -389,7 +389,7 @@ class WikidataPruner : public task::FrameProcessor {
     num_aux_items_ = task->GetCounter("aux_items");
   }
 
-  void Process(Slice key, const Frame &frame) override {
+  void Process(Slice key, uint64 serial, const Frame &frame) override {
     // Check if item is an auxiliary item. This need to be checked before the
     // item is pruned.
     bool aux = filter_.IsAux(frame);

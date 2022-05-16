@@ -37,7 +37,7 @@ void DocumentProcessor::Start(Task *task) {
   num_spans_ = task->GetCounter("spans");
 }
 
-void DocumentProcessor::Process(Slice key, const Frame &frame) {
+void DocumentProcessor::Process(Slice key, uint64 serial, const Frame &frame) {
   // Create document from frame.
   nlp::Document document(frame, docnames_);
 

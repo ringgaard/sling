@@ -85,7 +85,7 @@ class ItemReconciler : public task::FrameProcessor {
     num_inverse_qualifiers_ = task->GetCounter("inverse_qualifiers");
   }
 
-  void Process(Slice key, const Frame &frame) override {
+  void Process(Slice key, uint64 serial, const Frame &frame) override {
     // Skip empty frames.
     if (frame.size() == 0) return;
 

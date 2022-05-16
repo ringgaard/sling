@@ -28,7 +28,7 @@ class ToxicAliasMapper : public FrameProcessor {
     accumulator_.Init(output());
   }
 
-  void Process(Slice key, const Frame &frame) override {
+  void Process(Slice key, uint64 serial, const Frame &frame) override {
     // Find all Wikidata aliases.
     for (const auto &s : frame) {
       if (s.name != n_profile_alias_) continue;

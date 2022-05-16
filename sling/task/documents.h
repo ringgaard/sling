@@ -27,7 +27,7 @@ class DocumentProcessor : public FrameProcessor {
  public:
   ~DocumentProcessor() { if (docnames_) docnames_->Release(); }
 
-  void Process(Slice key, const Frame &frame) override;
+  void Process(Slice key, uint64 serial, const Frame &frame) override;
 
   // Initialize commons store with document symbols.
   void InitCommons(Task *task) override;

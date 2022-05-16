@@ -237,7 +237,7 @@ class PropertyPanel extends Component {
     function render_coord(val) {
       let lat = val.get(n_lat);
       let lng = val.get(n_lng);
-      let url = `http://maps.google.com/maps?q=${lat},${lng}`;
+      let url = `https://www.google.com/maps?q=loc:${lat},${lng}`;
 
       h.push('<a href="');
       h.push(url);
@@ -294,7 +294,11 @@ class PropertyPanel extends Component {
           render_url(val);
           break;
         case n_geo_type:
-          render_coord(val);
+          if (val instanceof Frame) {
+            render_coord(val);
+          } else {
+            render_text(val);
+          }
           break;
         default:
           render_fallback(val);

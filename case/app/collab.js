@@ -21,6 +21,7 @@ const CCU_FOLDER  = 2;
 const CCU_FOLDERS = 3;
 const CCU_DELETE  = 4;
 const CCU_RENAME  = 5;
+const CCU_SAVE    = 6;
 
 export class Collaboration {
   // Connect to collaboration server.
@@ -88,6 +89,11 @@ export class Collaboration {
               let oldname = decoder.readVarString();
               let newname = decoder.readVarString();
               this.listener.remote_folder_rename(oldname, newname);
+              break;
+            }
+            case CCU_SAVE: {
+              let modtime = decoder.readVarString();
+              this.listener.remote_save(modtime);
               break;
             }
             default: {

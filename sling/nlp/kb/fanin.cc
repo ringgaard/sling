@@ -33,7 +33,7 @@ class ItemFaninMapper : public task::FrameProcessor {
     system_properties_.add(commons_->Lookup("description"));
   }
 
-  void Process(Slice key, const Frame &frame) override {
+  void Process(Slice key, uint64 serial, const Frame &frame) override {
     // Skip non-wikipedia items in wikipedia-only mode.
     if (only_wikipedia_ && !frame.Has(n_wikipedia_)) return;
 

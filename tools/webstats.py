@@ -90,6 +90,7 @@ pages = [
   ("About page",           re.compile(r"^\/about$")),
   ("Contact page",         re.compile(r"^\/contact$")),
   ("Privacy page",         re.compile(r"^\/privacy$")),
+  ("KnolCase page",        re.compile(r"^\/knolcase$")),
   ("Home app",             re.compile(r"^\/home\/app\/")),
   ("Home image",           re.compile(r"^\/home\/image\/")),
 
@@ -114,17 +115,17 @@ pages = [
   ("Wikidata auth",        re.compile(r"^\/case/wikibase\/(.+)$")),
   ("Case home",            re.compile(r"^\/c\/$")),
   ("Case open",            re.compile(r"^\/c\/\d+")),
-  ("Case create API",      re.compile(r"^\/case\/new$")),
   ("Case app",             re.compile(r"^\/(case|c)\/app\/(.+)$")),
-  ("Case fetch API",       re.compile(r"^\/case/fetch\/?\?(.+)$")),
-  ("Case share API",       re.compile(r"^\/case/share$")),
-  ("Case service API",     re.compile(r"^\/case/service\/")),
-  ("Case proxy API",       re.compile(r"^\/case/proxy\?")),
-  ("Case plugin API",      re.compile(r"^\/case/plugin\/")),
-  ("Case xrefs API",       re.compile(r"^\/case/xrefs$")),
-  ("Case image caching",   re.compile(r"^\/case/imgcache$")),
-  ("schema",               re.compile(r"^\/schema(.+)$")),
-  ("collaboration",        re.compile(r"^\/collab\/")),
+  ("API create case",      re.compile(r"^\/case\/new$")),
+  ("API fetch case",       re.compile(r"^\/case/fetch\/?\?(.+)$")),
+  ("API share case",       re.compile(r"^\/case/share$")),
+  ("API case service",     re.compile(r"^\/case/service\/")),
+  ("API case proxy",       re.compile(r"^\/case/proxy\?")),
+  ("API case plugin",      re.compile(r"^\/case/plugin\/")),
+  ("API case xrefs",       re.compile(r"^\/case/xrefs$")),
+  ("API image caching",    re.compile(r"^\/case/cacheimg$")),
+  ("API schema",           re.compile(r"^\/schema(.+)$")),
+  ("API collaboration",    re.compile(r"^\/collab\/")),
 
   ("photo search",         re.compile(r"^\/photosearch\/")),
   ("redreport add media",  re.compile(r"^\/redreport\/addmedia\/")),
@@ -263,6 +264,7 @@ worms = [
   ("dns", re.compile(r"^\/\?\=PHP")),
   ("unix", re.compile(r"^\/\?unix:")),
   ("version.js", re.compile(r"^\/c\/version\.js")),
+  ("root params", re.compile(r"^\/\?")),
 ]
 
 spammers = set([

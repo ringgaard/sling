@@ -134,7 +134,7 @@ class WikipediaDocumentBuilder : public task::FrameProcessor,
     }
   }
 
-  void Process(Slice key, const Frame &frame) override {
+  void Process(Slice key, uint64 serial, const Frame &frame) override {
     // Look up Wikidata page information in mapping.
     WikipediaMap::PageInfo page;
     if (!wikimap_.GetPageInfo(language_, key, &page) ||
@@ -490,7 +490,7 @@ REGISTER_TASK_PROCESSOR("wikipedia-alias-reducer", WikipediaAliasReducer);
 // Extract categories from Wikipedia documents.
 class CategoryItemExtractor : public task::FrameProcessor {
  public:
-  void Process(Slice key, const Frame &frame) override {
+  void Process(Slice key, uint64 serial, const Frame &frame) override {
     // Collect categories for page.
     Builder categories(frame.store());
     int num_categories = 0;
@@ -556,7 +556,7 @@ REGISTER_TASK_PROCESSOR("category-item-merger", CategoryItemMerger);
 // outputting pairs of (category, member).
 class CategoryInverter : public task::FrameProcessor {
  public:
-  void Process(Slice key, const Frame &frame) override {
+  void Process(Slice key, uint64 serial, const Frame &frame) override {
     for (const Slot &slot : frame) {
       if (slot.name == n_item_category_) {
         Frame category(frame.store(), slot.value);

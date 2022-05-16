@@ -39,7 +39,7 @@ class FrameProcessor : public Processor {
   virtual void Startup(Task *task);
 
   // Called for each frame received on input.
-  virtual void Process(Slice key, const Frame &frame);
+  virtual void Process(Slice key, uint64 serial, const Frame &frame) = 0;
 
   // Called when all frames have been received.
   virtual void Flush(Task *task);

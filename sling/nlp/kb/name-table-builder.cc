@@ -44,7 +44,7 @@ class NameTableBuilder : public task::FrameProcessor {
     num_instances_ = task->GetCounter("instances");
   }
 
-  void Process(Slice key, const Frame &frame) override {
+  void Process(Slice key, uint64 serial, const Frame &frame) override {
     MutexLock lock(&mu_);
     Store *store = frame.store();
 

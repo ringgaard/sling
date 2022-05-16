@@ -65,6 +65,7 @@ enum CollabUpdate {
   CCU_FOLDERS = 3,    // folder list updated
   CCU_DELETE  = 4,    // topic deleted
   CCU_RENAME  = 5,    // folder renamed
+  CCU_SAVE    = 6,    // case saved
 };
 
 // Credential key size.
@@ -173,6 +174,7 @@ class CollabWriter {
   }
 
   Output *output() { return &output_; }
+  Slice packet() { return stream_.data(); }
 
  private:
   // Packet output stream.
@@ -497,21 +499,29 @@ class CollabCase {
 
   // Flush changes to disk.
   void Flush() {
-    MutexLock lock(&mu_);
     if (!dirty_) return;
+    mu_.Lock();
 
     // Update modification timestamp in case.
     time_t now = time(nullptr);
-    char buf[128];
+    char modtime[128];
     struct tm tm;
     gmtime_r(&now, &tm);
-    strftime(buf, sizeof buf, "%Y-%m-%dT%H:%M:%SZ", &tm);
-    casefile_.Set(n_modified, buf);
+    strftime(modtime, sizeof modtime, "%Y-%m-%dT%H:%M:%SZ", &tm);
+    casefile_.Set(n_modified, modtime);
 
     // Write case to file.
     LOG(INFO) << "Save case #" << caseid_;
     WriteCase();
     dirty_ = false;
+
+    // Broadcast save.
+    CollabWriter writer;
+    writer.WriteInt(COLLAB_UPDATE);
+    writer.WriteInt(CCU_SAVE);
+    writer.WriteString(modtime);
+    mu_.Unlock();
+    Broadcast(nullptr, writer.packet());
   }
 
   // Check for existing case.

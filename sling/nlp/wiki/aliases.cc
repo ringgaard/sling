@@ -103,7 +103,7 @@ class AliasExtractor : public task::FrameProcessor {
     num_skipped_items_ = task->GetCounter("skipped_items");
   }
 
-  void Process(Slice key, const Frame &frame) override {
+  void Process(Slice key, uint64 serial, const Frame &frame) override {
     // Optionally skip aux items.
     if (skip_aux_ && filter_.IsAux(frame)) {
       num_aux_items_->Increment();

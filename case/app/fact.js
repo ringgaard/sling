@@ -1157,7 +1157,7 @@ class FactField extends Component {
     } else {
       this.removeAttribute("value");
     }
-    this.setAttribute("text", this.text());
+    this.setAttribute("text", text);
     this.className = encoded ? "encoded" : "";
     this.innerHTML = Component.escape(text);
   }

@@ -53,6 +53,8 @@
     P214,  ; VIAF ID
     P646,  ; Freebase MID
     P2671, ; Google Knowledge Graph ID
+    P8168, ; FactGrid
+    PCASE, ; SLING case number
   ]
 
   ; Mnemonics for cross-referenced properties.
@@ -89,6 +91,7 @@
     "viaf": "P214"      ; VIAF ID
     "mid": "P646"       ; Freebase MID
     "kg": "P2671"       ; Google Knowledge Graph ID
+    "fg": "P8168"       ; FactGrid ID
   }
 
   ; Pre-resolved reference mappings for ambiguous references.
