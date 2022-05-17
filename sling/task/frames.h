@@ -78,10 +78,12 @@ class FrameProcessor : public Processor {
 
 // Create message from object.
 Message *CreateMessage(Text key, const Object &Object, bool shallow = false);
-Message *CreateMessage(Text key, uint64 serial, const Object &Object);
+Message *CreateMessage(Text key, uint64 serial, const Object &Object,
+                       bool shallow = false);
 
 // Create message with encoded frame using frame id as key.
 Message *CreateMessage(const Frame &frame, bool shallow = false);
+Message *CreateMessage(const Frame &frame, uint64 serial, bool shallow = false);
 
 // Decode message as frame.
 Frame DecodeMessage(Store *store, Message *message);

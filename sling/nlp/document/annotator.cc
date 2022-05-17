@@ -119,14 +119,14 @@ void DocumentAnnotation::InitTaskFromConfig(const Frame &config) {
         File::Match(pattern, &files);
         Format format(input.GetString(n_format));
         if (files.empty()) {
-          Resource *r = new Resource(rid++, pattern,  Shard(), format);
+          Resource *r = new Resource(rid++, pattern,  Shard(), format, 0);
           resources_.push_back(r);
           task_.AttachInput(new Binding(name, r));
         } else {
           int parts = files.size();
           for (int i = 0; i < parts; ++i) {
             Shard shard =  parts == 1 ? Shard(i, parts) : Shard();
-            Resource *r = new Resource(rid++, files[i],  shard, format);
+            Resource *r = new Resource(rid++, files[i],  shard, format, 0);
             resources_.push_back(r);
             task_.AttachInput(new Binding(name, r));
           }

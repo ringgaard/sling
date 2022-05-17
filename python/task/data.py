@@ -40,56 +40,65 @@ class Datasets:
     """Resource for global catalog definitions."""
     return self.wf.resource("catalog.sling",
                             dir=corpora.repository("data/nlp/schemas"),
-                            format="store/frame")
+                            format="store/frame",
+                            serial=10)
 
   def meta_schema_defs(self):
     """Resource for meta schema definitions."""
     return self.wf.resource("meta-schema.sling",
                             dir=corpora.repository("data/nlp/schemas"),
-                            format="store/frame")
+                            format="store/frame",
+                            serial=10)
 
   def document_schema_defs(self):
     """Resource for document schema definitions."""
     return self.wf.resource("document-schema.sling",
                             dir=corpora.repository("data/nlp/schemas"),
-                            format="store/frame")
+                            format="store/frame",
+                            serial=10)
 
   def language_defs(self):
     """Resource for language definitions. This defines the /lang/<lang>
     symbols and has meta information for each language."""
     return self.wf.resource("languages.sling",
                             dir=corpora.repository("data/wiki"),
-                            format="store/frame")
+                            format="store/frame",
+                            serial=10)
 
   def calendar_defs(self):
     """Resource for calendar definitions."""
     return self.wf.resource("calendar.sling",
                             dir=corpora.repository("data/wiki"),
-                            format="store/frame")
+                            format="store/frame",
+                            serial=10)
 
   def country_defs(self):
     """Resource for country definitions."""
     return self.wf.resource("countries.sling",
                             dir=corpora.repository("data/wiki"),
-                            format="store/frame")
+                            format="store/frame",
+                            serial=10)
 
   def unit_defs(self):
     """Resource for calendar definitions."""
     return self.wf.resource("units.sling",
                             dir=corpora.repository("data/wiki"),
-                            format="store/frame")
+                            format="store/frame",
+                            serial=10)
 
   def wikidata_defs(self):
     """Resource for Wikidata schema definitions."""
     return self.wf.resource("wikidata.sling",
                             dir=corpora.repository("data/wiki"),
-                            format="store/frame")
+                            format="store/frame",
+                            serial=10)
 
   def wikipedia_defs(self):
     """Resource for Wikipedia schema definitions."""
     return self.wf.resource("wikipedia.sling",
                             dir=corpora.repository("data/wiki"),
-                            format="store/frame")
+                            format="store/frame",
+                            serial=10)
 
   def schema_defs(self):
     """Resources for schemas included in knowledge base."""
@@ -108,7 +117,8 @@ class Datasets:
     """Resource for custom SLING knowledge base properties."""
     return self.wf.resource("custom-properties.sling",
                             dir=corpora.repository("data/nlp/schemas"),
-                            format="store/frame")
+                            format="store/frame",
+                            serial=110)
 
   #---------------------------------------------------------------------------
   # Wikidata
@@ -140,7 +150,8 @@ class Datasets:
     """
     return self.wf.resource("wikidata-items@10.rec",
                             dir=corpora.wikidir(),
-                            format="records/frame")
+                            format="records/frame",
+                            serial=200)
 
   def wikidata_redirects(self):
     """Resource for Wikidata redirects. This is a set of record files where each
@@ -152,7 +163,8 @@ class Datasets:
     """
     return self.wf.resource("wikidata-redirects.rec",
                             dir=corpora.wikidir(),
-                            format="records/frame")
+                            format="records/frame",
+                            serial=210)
 
   def wikidata_properties(self):
     """Resource for Wikidata properties. This is a record file where each
@@ -168,14 +180,16 @@ class Datasets:
     """
     return self.wf.resource("properties.rec",
                             dir=corpora.wikidir(),
-                            format="records/frame")
+                            format="records/frame",
+                            serial=100)
 
   def fanin(self):
     """Resource for item fan-in, i.e. the number of times an item is a target
     in a relation."""
     return self.wf.resource("fanin.rec",
                             dir=corpora.wikidir(),
-                            format="records/frame")
+                            format="records/frame",
+                            serial=220)
 
   #---------------------------------------------------------------------------
   # Wikipedia
@@ -219,7 +233,8 @@ class Datasets:
     """Resource for Wikipedia document summaries."""
     return self.wf.resource("summaries.rec",
                             dir=corpora.wikidir(language),
-                            format="records/document")
+                            format="records/document",
+                            serial=320)
 
   def wikipedia_aliases(self, language=None):
     """Resource for wikipedia aliases. The aliases are extracted from the
@@ -242,25 +257,29 @@ class Datasets:
     """Resource for item data from Wikipedias."""
     return self.wf.resource("wikipedia-items.rec",
                             dir=corpora.wikidir(),
-                            format="records/frame")
+                            format="records/frame",
+                            serial=300)
 
   def wikipedia_members(self):
     """Resource for members of categories."""
     return self.wf.resource("wikipedia-members.rec",
                             dir=corpora.wikidir(),
-                            format="records/frame")
+                            format="records/frame",
+                            serial=310)
 
   def wikilinks(self):
     """Resource for link graph."""
     return self.wf.resource("links@10.rec",
                             dir=corpora.wikidir(),
-                            format="records/frame")
+                            format="records/frame",
+                            serial=330)
 
   def popularity(self):
     """Resource for item popularity."""
     return self.wf.resource("popularity.rec",
                             dir=corpora.wikidir(),
-                            format="records/frame")
+                            format="records/frame",
+                            serial=230)
 
   #---------------------------------------------------------------------------
   # Knowledge base

@@ -113,17 +113,20 @@ class Job : public Environment {
   // Create a new resource for the job.
   Resource *CreateResource(const string &filename,
                            const Format &format,
-                           const Shard &shard = Shard());
+                           const Shard &shard = Shard(),
+                           uint64 serial = 0);
 
   // Create new resources for the job. If the filename contains wild cards
   // or has a @n specifier, a set of sharded resources are returned.
   std::vector<Resource *> CreateResources(const string &filename,
-                                          const Format &format);
+                                          const Format &format,
+                                          uint64 serial = 0);
 
   // Create a set of sharded resources.
   std::vector<Resource *> CreateShardedResources(const string &basename,
                                                  int shards,
-                                                 const Format &format);
+                                                 const Format &format,
+                                                 uint64 serial = 0);
 
   // Create a new channel for the job.
   Channel *CreateChannel(const Format &format);

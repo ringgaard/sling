@@ -64,9 +64,6 @@ const char *property_order[] = {
   "P21",        // sex or gender
   "P91",        // sexual orientation
   "P172",       // ethnic group
-  "P27",        // country of citizenship
-  "P551",       // residence
-  "P937",       // work location
 
   // Birth and death.
   "P3150",      // birthday
@@ -81,16 +78,10 @@ const char *property_order[] = {
   "P509",       // cause of death
   "P157",       // killed by
 
-  // Physical attributes.
-  "P1884",      // hair color
-  "P1340",      // eye color
-  "P552",       // handedness
-  "P423",       // shooting handedness
-  "P741",       // playing hand
-  "P1853",      // blood type
-  "P1050",      // medical condition
-  "P3828",      // wears
-  "P1576",      // lifestyle
+  // Residence.
+  "P551",       // residence
+  "P937",       // work location
+  "P27",        // country of citizenship
 
   // Organization.
   "P122",       // basic form of government
@@ -209,14 +200,6 @@ const char *property_order[] = {
   "P1398",      // structure replaces
   "P167",       // structure replaced by
 
-  // Proportions.
-  "P2043",      // length
-  "P2049",      // width
-  "P2048",      // height
-  "P2386",      // diameter
-  "P2046",      // area
-  "P2067",      // mass
-
   // Family.
   "P53",        // family
   "P22",        // father
@@ -311,6 +294,25 @@ const char *property_order[] = {
   "P1356",      // number of losses
   "P1363",      // points/goal scored by
   "P1352",      // ranking
+
+  // Proportions.
+  "P2043",      // length
+  "P2049",      // width
+  "P2048",      // height
+  "P2386",      // diameter
+  "P2046",      // area
+  "P2067",      // mass
+
+  // Physical attributes.
+  "P1884",      // hair color
+  "P1340",      // eye color
+  "P552",       // handedness
+  "P423",       // shooting handedness
+  "P741",       // playing hand
+  "P1853",      // blood type
+  "P1050",      // medical condition
+  "P3828",      // wears
+  "P1576",      // lifestyle
 
   // Art.
   "P136",       // genre
@@ -463,9 +465,10 @@ const char *property_order[] = {
   "P697",       // ex taxon author
   "P6507",      // taxon author citation
 
-  // Low priority properties.
+  // Publicity.
   "P166",       // award received
   "P2522",      // victory
+  "P1441",      // present in work
 
   // Media.
   "P18",        // image

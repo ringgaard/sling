@@ -46,67 +46,123 @@ class KnowledgeBaseWorkflow:
     """Resource for public case topics."""
     return self.wf.resource("topics.rec",
                             dir=corpora.workdir("case"),
-                            format="records/frame")
+                            format="records/frame",
+                            serial=1000)
 
-  def media(self):
-    """Resource for media file items."""
-    return self.wf.resource("*-media.sling",
+  def wikipedia_media(self):
+    """Resource for media files from wikipedia."""
+    return self.wf.resource("??wiki-media.sling",
                             dir=corpora.workdir("media"),
-                            format="text/frame")
+                            format="text/frame",
+                            serial=400)
+
+  def twitter(self):
+    """Resource for twitter profiles."""
+    return self.wf.resource("twitter-media.sling",
+                            dir=corpora.workdir("media"),
+                            format="text/frame",
+                            serial=410)
 
   def photos(self):
     """Resource for photo database."""
-    return self.wf.resource(corpora.photodb(), format="db/frames")
+    return self.wf.resource(corpora.photodb(), format="db/frames", serial=9020)
 
   def imdb(self):
     """Resource for imdb profile database."""
-    return self.wf.resource(corpora.imdb(), format="db/frames")
+    return self.wf.resource(corpora.imdb(), format="db/frames", serial=420)
 
   def celebs(self):
     """Resource for celebrity profiles."""
-    return self.wf.resource(corpora.celebdb(), format="db/frames")
+    return self.wf.resource(corpora.celebdb(), format="db/frames", serial=9010)
 
   def forum(self):
     """Resource for forum profiles."""
-    return self.wf.resource(corpora.forumdb(), format="db/frames")
+    return self.wf.resource(corpora.forumdb(), format="db/frames", serial=9030)
 
   def elf(self):
     """Resource for ISO 20275 ELF items."""
     return self.wf.resource("elf.rec",
                             dir=corpora.workdir("org"),
-                            format="records/frame")
+                            format="records/frame",
+                            serial=500)
 
   def nace(self):
     """Resource for NACE items."""
     return self.wf.resource("nace.rec",
                             dir=corpora.workdir("org"),
-                            format="records/frame")
+                            format="records/frame",
+                            serial=510)
 
   def dknace(self):
     """Resource for Danish NACE items."""
     return self.wf.resource("dknace.rec",
                             dir=corpora.workdir("org"),
-                            format="records/frame")
+                            format="records/frame",
+                            serial=520)
   def gleif(self):
     """Resource for GLEIF items."""
     return self.wf.resource("gleif.rec",
                             dir=corpora.workdir("org"),
-                            format="records/frame")
+                            format="records/frame",
+                            serial=530)
 
   def cvr(self):
     """Resource for CVR items."""
     return self.wf.resource("cvr.rec",
                             dir=corpora.workdir("org"),
-                            format="records/frame")
+                            format="records/frame",
+                            serial=540)
+
+  def factgrid(self):
+    """Resources for FactGrid items and properties."""
+    return [
+      self.wf.resource("factgrid-properties.rec",
+                       dir=corpora.workdir("factgrid"),
+                       format="records/frame",
+                       serial=600),
+      self.wf.resource("factgrid-items.rec",
+                       dir=corpora.workdir("factgrid"),
+                       format="records/frame",
+                       serial=610),
+    ]
 
   def kbdb(self):
     """Resource for knowledge base database."""
     return self.wf.resource(corpora.kbdb(), format="db/frames")
 
+  # Item source priority:
+  #
+  #   10 schemas
+  #  100 wikidata properties
+  #  110 custom properties
+  #  200 wikidata items
+  #  210 wikidata redirects
+  #  220 fanin
+  #  230 popularity
+  #  300 wikipedia items
+  #  310 wikipedia members
+  #  320 wikipedia summaries
+  #  330 wikilinks
+  #  400 wikipedia media
+  #  410 twitter
+  #  420 imdb
+  #  500 elf
+  #  510 nace
+  #  520 dknace
+  #  530 gleif
+  #  540 cvr
+  #  600 factgrid properties
+  #  610 factgrid items
+  # 1000 case topics
+  # 9010 celebs
+  # 9020 photos
+  # 9030 forum
+
   def extended_item_sources(self):
     return self.wf.bundle(
       self.topics(),
-      self.media(),
+      self.wikipedia_media(),
+      self.twitter(),
       self.imdb(),
       self.celebs(),
       self.forum(),
@@ -116,7 +172,8 @@ class KnowledgeBaseWorkflow:
       self.nace(),
       self.dknace(),
       self.gleif(),
-      self.cvr())
+      self.cvr(),
+      self.factgrid())
 
   def collect_xrefs(self):
     """Collect and cluster item identifiers."""
@@ -129,6 +186,7 @@ class KnowledgeBaseWorkflow:
       self.dknace(),
       self.gleif(),
       self.cvr(),
+      self.factgrid(),
       self.celebs())
 
     with self.wf.namespace("xrefs"):

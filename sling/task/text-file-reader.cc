@@ -49,6 +49,7 @@ class TextFileReader : public Process {
     for (Binding *input : inputs) {
       // Open input file.
       FileInput file(input->resource()->name(), buffer_size);
+      uint64 serial = input->resource()->serial();
 
       // Read lines from file and output to output channel.
       string line;
@@ -58,7 +59,7 @@ class TextFileReader : public Process {
         bytes_read->Increment(line.size());
 
         // Send message with line to output channel.
-        output->Send(new Message(Slice(), Slice(line)));
+        output->Send(new Message(Slice(), serial, Slice(line)));
 
         // Stop when max lines reached.
         if (max_lines > 0 && ++num_lines == max_lines) break;

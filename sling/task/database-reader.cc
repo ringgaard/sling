@@ -50,6 +50,7 @@ class DatabaseReader : public Process {
       if (!st.ok()) {
         LOG(FATAL) << "Error connecting to database " << dbname << ": " << st;
       }
+      uint64 serial = input->resource()->serial();
 
       // Read records from database and output to output channel.
       DBIterator iterator;
@@ -70,7 +71,9 @@ class DatabaseReader : public Process {
           db_bytes_read->Increment(rec.key.size() + rec.value.size());
 
           // Send message with record to output channel.
-          Message *message = new Message(rec.key, rec.version, rec.value);
+          Message *message = new Message(rec.key,
+                                         serial ? serial : rec.version,
+                                         rec.value);
           output->Send(message);
         }
       }

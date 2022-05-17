@@ -54,6 +54,7 @@ class RecordFileReader : public Process {
     for (Binding *input : inputs) {
       // Open input file.
       RecordReader reader(input->resource()->name(), options);
+      uint64 serial = input->resource()->serial();
 
       // Read records from file and output to output channel.
       Record record;
@@ -69,7 +70,9 @@ class RecordFileReader : public Process {
         value_bytes_read->Increment(record.value.size());
 
         // Send message with record to output channel.
-        Message *message = new Message(record.key, record.version, record.value);
+        Message *message = new Message(record.key,
+                                       serial ? serial : record.version,
+                                       record.value);
         output->Send(message);
 
         // Check for early stopping.

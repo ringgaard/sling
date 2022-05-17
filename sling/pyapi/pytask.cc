@@ -68,12 +68,13 @@ int PyJob::Init(PyObject *args, PyObject *kwds) {
     PyObject *pyresource = PyList_GetItem(resources, i);
     PyObject *pyformat = PyAttr(pyresource, "format");
     PyObject *pyshard = PyAttr(pyresource, "shard");
+    int serial = PyIntAttr(pyresource, "serial");
 
     const char *name = PyStrAttr(pyresource, "name");
     Format format = PyGetFormat(pyformat);
     Shard shard = PyGetShard(pyshard);
 
-    Resource *resource = job->CreateResource(name, format, shard);
+    Resource *resource = job->CreateResource(name, format, shard, serial);
     resource_mapping[pyresource] = resource;
 
     Py_DECREF(pyformat);

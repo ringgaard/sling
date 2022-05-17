@@ -46,6 +46,7 @@ class FrameStoreReader : public Process {
       Resource *file = binding->resource();
       FileInputStream stream(file->name());
       Input input(&stream);
+      uint64 serial = file->serial();
 
       // Read frames from input and output to output channel.
       Store store;
@@ -54,9 +55,9 @@ class FrameStoreReader : public Process {
         while (!decoder.done()) {
           Object object = decoder.Decode();
           if (object.IsFrame()) {
-            output->Send(CreateMessage(object.AsFrame(), true));
+            output->Send(CreateMessage(object.AsFrame(), serial, true));
           } else {
-            output->Send(CreateMessage(Text(), object, true));
+            output->Send(CreateMessage(Text(), serial, object, true));
           }
         }
       } else {
@@ -65,9 +66,9 @@ class FrameStoreReader : public Process {
           Object object = reader.Read();
           CHECK(!reader.error()) << reader.GetErrorMessage(file->name());
           if (object.IsFrame()) {
-            output->Send(CreateMessage(object.AsFrame(), true));
+            output->Send(CreateMessage(object.AsFrame(), serial, true));
           } else {
-            output->Send(CreateMessage(Text(), object, true));
+            output->Send(CreateMessage(Text(), serial, object, true));
           }
         }
       }

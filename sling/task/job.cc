@@ -96,15 +96,18 @@ Job::~Job() {
 
 Resource *Job::CreateResource(const string &filename,
                               const Format &format,
-                              const Shard &shard) {
+                              const Shard &shard,
+                              uint64 serial) {
   MutexLock lock(&mu_);
-  Resource *r = new Resource(resources_.size(), filename, shard, format);
+  int id = resources_.size();
+  Resource *r = new Resource(id, filename, shard, format, serial);
   resources_.push_back(r);
   return r;
 }
 
 std::vector<Resource *> Job::CreateResources(const string &filename,
-                                             const Format &format) {
+                                             const Format &format,
+                                             uint64 serial) {
   std::vector<string> filenames;
   bool sharded = false;
   if (filename.find('?') != -1 || filename.find('*') != -1) {
@@ -141,7 +144,7 @@ std::vector<Resource *> Job::CreateResources(const string &filename,
   for (int i = 0; i < filenames.size(); ++i) {
     Shard shard = sharded ? Shard(i, filenames.size()) : Shard();
     int id = resources_.size();
-    Resource *r = new Resource(id, filenames[i],  shard, format);
+    Resource *r = new Resource(id, filenames[i],  shard, format, serial);
     resources_.push_back(r);
     resources.push_back(r);
   }
@@ -152,7 +155,8 @@ std::vector<Resource *> Job::CreateResources(const string &filename,
 std::vector<Resource *> Job::CreateShardedResources(
     const string &basename,
     int shards,
-    const Format &format) {
+    const Format &format,
+    uint64 serial) {
   // Create resources for files.
   MutexLock lock(&mu_);
   std::vector<Resource *> resources;
@@ -161,7 +165,7 @@ std::vector<Resource *> Job::CreateShardedResources(
     string fn =
         StringPrintf("%s-%05d-of-%05d", basename.c_str(), i, shards);
     int id = resources_.size();
-    Resource *r = new Resource(id, fn,  shard, format);
+    Resource *r = new Resource(id, fn,  shard, format, serial);
     resources_.push_back(r);
     resources.push_back(r);
   }

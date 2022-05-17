@@ -15,8 +15,6 @@
 """Get profile picture from Twitter profiles"""
 
 import json
-import requests
-import urllib
 
 import sling
 import sling.flags as flags
@@ -69,7 +67,6 @@ class TwitterExtract:
     fout = open(task.output("output").name, "w")
 
     # Find all items with twitter usernames.
-    dbsession = requests.session()
     for item in kb:
       # Find twitter username for item.
       task.increment("items")

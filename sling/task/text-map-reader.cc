@@ -46,6 +46,7 @@ class TextMapReader : public Process {
     for (Binding *input : inputs) {
       // Open input file.
       FileInput file(input->resource()->name(), buffer_size);
+      uint64 serial = input->resource()->serial();
 
       // Read lines from file and output to output channel.
       string line;
@@ -60,7 +61,7 @@ class TextMapReader : public Process {
           // Send message with split into key and value to output channel.
           Slice key(line.data(), split);
           Slice value(line.data() + split + 1, line.size() - split - 1);
-          output->Send(new Message(key, value));
+          output->Send(new Message(key, serial, value));
         }
       }
     }

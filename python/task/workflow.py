@@ -133,15 +133,17 @@ class Format:
 
 class Resource:
   """A resource is an external input or output, e.g. a file."""
-  def __init__(self, name, shard, format):
+  def __init__(self, name, shard, format, serial=0):
     self.name = name
     self.shard = shard
     self.format = format
+    self.serial = serial
 
   def __repr__(self):
     s = "Resource(" + self.name
     if self.shard != None: s += str(self.shard)
     if self.format != None: s += " as " + str(self.format)
+    if self.serial != 0: s += " serial " + str(self.serial)
     s += ")"
     return s
 
@@ -333,7 +335,8 @@ class Workflow(object):
     self.task_map[(name, shard)] = t
     return t
 
-  def resource(self, file, dir=None, shards=None, ext=None, format=None):
+  def resource(self, file, dir=None, shards=None, ext=None,
+               format=None, serial=0):
     """Adds one or more resources to workflow. The file parameter can be a file
     name pattern with wild-cards, in which case it is expanded to a list of
     matching resources. The optional dir and ext are prepended and appended to
@@ -344,7 +347,8 @@ class Workflow(object):
     if "," in file:
       resources = []
       for f in file.split(","):
-        r = self.resource(f, dir=dir, shards=shards, ext=ext, format=format)
+        r = self.resource(f, dir=dir, shards=shards, ext=ext,
+                          format=format, serial=serial)
         if isinstance(r, list):
           resources.extend(r)
         else:
@@ -387,7 +391,7 @@ class Workflow(object):
       key = (filenames[0], None, str(format))
       r = self.resource_map.get(key)
       if r == None:
-        r = Resource(filenames[0], None, format)
+        r = Resource(filenames[0], None, format, serial)
         self.resource_map[key] = r
         self.resources.append(r)
       return r
@@ -398,7 +402,7 @@ class Workflow(object):
         key = (filenames[shard], str(Shard(shard, n)), str(format))
         r = self.resource_map.get(key)
         if r == None:
-          r = Resource(filenames[shard], Shard(shard, n), format)
+          r = Resource(filenames[shard], Shard(shard, n), format, serial)
           self.resource_map[key] = r
           self.resources.append(r)
           resources.append(r)

@@ -141,10 +141,12 @@ Message *CreateMessage(Text key, const Object &object, bool shallow) {
   return new Message(Slice(key.data(), key.size()), stream.data());
 }
 
-Message *CreateMessage(Text key, uint64 serial, const Object &object) {
+Message *CreateMessage(Text key, uint64 serial, const Object &object,
+                       bool shallow) {
   ArrayOutputStream stream;
   Output output(&stream);
   Encoder encoder(object.store(), &output);
+  encoder.set_shallow(shallow);
   encoder.Encode(object);
   output.Flush();
   return new Message(Slice(key.data(), key.size()), serial, stream.data());
@@ -152,6 +154,10 @@ Message *CreateMessage(Text key, uint64 serial, const Object &object) {
 
 Message *CreateMessage(const Frame &frame, bool shallow) {
   return CreateMessage(frame.Id(), frame, shallow);
+}
+
+Message *CreateMessage(const Frame &frame, uint64 serial, bool shallow) {
+  return CreateMessage(frame.Id(), serial, frame, shallow);
 }
 
 Frame DecodeMessage(Store *store, Message *message) {

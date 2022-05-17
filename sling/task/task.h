@@ -107,16 +107,18 @@ class Shard {
 // sharded files.
 class Resource {
  public:
-  Resource(int id, const string &name, const Shard &shard, const Format &format)
-    : id_(id), name_(name), shard_(shard), format_(format) {}
+  Resource(int id, const string &name, const Shard &shard,
+           const Format &format, uint64 serial)
+    : id_(id), name_(name), shard_(shard), format_(format), serial_(serial) {}
 
-  Resource(int id, const string &name, const Format &format)
-    : id_(id), name_(name), shard_(), format_(format) {}
+  Resource(int id, const string &name, const Format &format, uint64 serial)
+    : id_(id), name_(name), shard_(), format_(format), serial_(serial) {}
 
   int id() const { return id_; }
   const string &name() const { return name_; }
   const Shard &shard() const { return shard_; }
   const Format &format() const { return format_; }
+  uint64 serial() const { return serial_; }
 
  private:
   // Resource id.
@@ -130,6 +132,9 @@ class Resource {
 
   // Format for resource.
   Format format_;
+
+  // Serial number for resource.
+  uint64 serial_;
 };
 
 // A binding connects a resource to a task input or output.
