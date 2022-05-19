@@ -31,6 +31,8 @@ n_qid = commons["/w/qid"]
 n_pid = commons["P343"]
 n_property = commons["/w/property"]
 n_fg_item_id = commons["P8168"]
+n_fg_author = commons["P21"]
+n_author_of = commons["Q65970010"]
 
 wikiconv = sling.WikiConverter(commons, "en")
 
@@ -42,6 +44,7 @@ fitem = sling.RecordWriter("data/e/factgrid/factgrid-items.rec")
 fprop = sling.RecordWriter("data/e/factgrid/factgrid-properties.rec")
 num_items = 0
 num_properties = 0
+num_authors = 0
 for line in fin:
   # Trim line.
   if len(line) < 3: continue
@@ -64,6 +67,18 @@ for line in fin:
       name = n_is
       value = store[value]
     else:
+      if name == n_fg_author:
+        # Invert author relation.
+        author = store.resolve(value)
+        if type(author) is sling.Frame and author.ispublic():
+          authorid = convert_id(author.id)
+          inverse = store.frame({
+            n_id: authorid,
+            n_author_of: store[convert_id(item.id)],
+          })
+          fitem.write(inverse.id, inverse.data(binary=True))
+          num_authors += 1
+
       # Map statements.
       name = store[convert_id(name.id)]
       if type(value) is sling.Frame:
@@ -112,5 +127,5 @@ fprop.write("P8168", fgprop.data(binary=True))
 fin.close()
 fitem.close()
 fprop.close()
-print(num_items, "items", num_properties, "properties")
+print(num_items, "items", num_properties, "properties", num_authors, "authors")
 
