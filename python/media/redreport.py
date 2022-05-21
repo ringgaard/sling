@@ -387,13 +387,19 @@ class SubredditCard extends MdCard {
     let h = []
 
     // Render header.
+    let gw = sr.total ? (sr.matches / sr.total) * 200 : 0;
+    let rw = sr.total ? (sr.total - sr.matches) / sr.total * 200 : 0;
     h.push(`
       <h1>
         <a href="https://www.reddit.com/r/${sr.name}/" target="_blank">
           ${sr.name}
         </a>
       </h1>
-      <p>${sr.matches} / ${sr.total} matched</p>
+      <table><tr>
+        <td style="background: green; width: ${gw}px;"> </td>
+        <td style="background: red; width: ${rw}px;"> </td>
+        <td>${sr.matches} / ${sr.total} matched</td>
+      </tr></table>
     `);
 
     // Render postings.

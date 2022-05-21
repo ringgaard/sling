@@ -72,7 +72,7 @@ export class OmniBox extends Component {
   render() {
     return `
       <md-search
-        placeholder="Search for topic or type topic name and press Enter for new topic"
+        placeholder="Search for topic, press Enter for new topic"
         min-length=2>
       </md-search>
     `;
