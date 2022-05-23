@@ -387,8 +387,9 @@ class SubredditCard extends MdCard {
     let h = []
 
     // Render header.
-    let gw = sr.total ? (sr.matches / sr.total) * 200 : 0;
-    let rw = sr.total ? (sr.total - sr.matches) / sr.total * 200 : 0;
+    let coverage = sr.total ? Math.round(sr.matches / sr.total * 100) : 0;
+    let gw = coverage * 2;
+    let rw = (100 - coverage) * 2;
     h.push(`
       <h1>
         <a href="https://www.reddit.com/r/${sr.name}/" target="_blank">
@@ -398,7 +399,7 @@ class SubredditCard extends MdCard {
       <table><tr>
         <td style="background: green; width: ${gw}px;"> </td>
         <td style="background: red; width: ${rw}px;"> </td>
-        <td>${sr.matches} / ${sr.total} matched</td>
+        <td>${coverage}%, ${sr.matches} / ${sr.total} matched</td>
       </tr></table>
     `);
 

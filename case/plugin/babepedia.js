@@ -54,6 +54,7 @@ const occupations = {
   "milf porn star": store.lookup("Q488111"),
   "tiktok star": store.lookup("Q94791573"),
   "escort": store.lookup("Q814356"),
+  "glamour model": store.lookup("Q3286043"),
 }
 
 function date2sling(d) {
