@@ -399,7 +399,7 @@ class SubredditCard extends MdCard {
       <table><tr>
         <td style="background: green; width: ${gw}px;"> </td>
         <td style="background: red; width: ${rw}px;"> </td>
-        <td>${coverage}%, ${sr.matches} / ${sr.total} matched</td>
+        <td>${sr.matches} / ${sr.total} matched (${coverage}%)</td>
       </tr></table>
     `);
 

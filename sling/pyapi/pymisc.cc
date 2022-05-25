@@ -21,6 +21,9 @@
 #include "sling/base/logging.h"
 #include "third_party/jit/cpu.h"
 
+DEFINE_int32(cpus, 0, "override number of CPUs");
+DEFINE_int32(cores, 0, "override number of CPU cores");
+
 namespace sling {
 
 PyObject *PyGetFlags() {
@@ -138,11 +141,11 @@ PyObject *PyCreatePIDFile() {
 }
 
 PyObject *PyCPUs() {
-  return PyLong_FromLong(jit::CPU::Processors());
+  return PyLong_FromLong(FLAGS_cpus ? FLAGS_cpus : jit::CPU::Processors());
 }
 
 PyObject *PyCores() {
-  return PyLong_FromLong(jit::CPU::Cores());
+  return PyLong_FromLong(FLAGS_cores ? FLAGS_cores : jit::CPU::Cores());
 }
 
 }  // namespace sling

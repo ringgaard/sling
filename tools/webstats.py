@@ -91,6 +91,7 @@ pages = [
   ("Contact page",         re.compile(r"^\/contact$")),
   ("Privacy page",         re.compile(r"^\/privacy$")),
   ("KnolCase page",        re.compile(r"^\/knolcase$")),
+  ("CotM page",            re.compile(r"^\/cotm$")),
   ("Home app",             re.compile(r"^\/home\/app\/")),
   ("Home image",           re.compile(r"^\/home\/image\/")),
 

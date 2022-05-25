@@ -60,6 +60,11 @@ template<typename T = char> class Arena {
     free_ = 0;
   }
 
+  // Number of bytes allocated by arena.
+  size_t size() {
+    return regions_.size() * chunk_ * sizeof(T);
+  }
+
  private:
   // Allocate a new region.
   void expand() {
@@ -101,6 +106,11 @@ class StringArena : public Arena<char> {
   // Allocate nul-terminated string from string object.
   char *dup(const std::string &str) {
     return dup(str.data(), str.size());
+  }
+
+  // Allocate nul-terminated string from slice object.
+  char *dup(const Slice &slice) {
+    return dup(slice.data(), slice.size());
   }
 
   // Allocate space for text object.

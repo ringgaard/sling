@@ -195,6 +195,12 @@ commands = [
     package="sling.task.alias",
   ),
 
+  # Search.
+  Command("build_search_terms",
+    help="Build search terms for items",
+    package="sling.task.search",
+  ),
+
   # Word embeddings.
   Command("extract_vocabulary",
     help="Extract vocabulary for word embeddings",
