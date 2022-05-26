@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "sling/nlp/search/item-terms.h"
-
 #include <unordered_set>
 
+#include "sling/file/repository.h"
+#include "sling/string/text.h"
 #include "sling/nlp/document/phrase-tokenizer.h"
 #include "sling/task/frames.h"
 #include "sling/task/task.h"
@@ -26,8 +26,8 @@
 namespace sling {
 namespace nlp {
 
-// Build search terms vector for each item.
-class SearchTermsBuilder : public task::FrameProcessor {
+// Build search dictionary with terms vector for each item.
+class SearchDictionaryBuilder : public task::FrameProcessor {
  public:
   void Startup(task::Task *task) override {
     // Get parameters.
@@ -93,16 +93,16 @@ class SearchTermsBuilder : public task::FrameProcessor {
     // Add normalization flags to repository.
     repository.AddBlock("normalization", normalization_);
 
-    // Write item term map.
-    LOG(INFO) << "Build item term map";
+    // Write seach dictionary map.
+    LOG(INFO) << "Build seach dictionary map";
     int num_items = item_table_.size();
     int num_buckets = (num_items + 32) / 32;
-    repository.WriteMap("Term", &item_table_, num_buckets);
+    repository.WriteMap("SearchDictionary", &item_table_, num_buckets);
 
     // Write repository to file.
     const string &filename = task->GetOutput("repository")->resource()->name();
     CHECK(!filename.empty());
-    LOG(INFO) << "Write item term repository to " << filename;
+    LOG(INFO) << "Write search dictionary repository to " << filename;
     repository.Write(filename);
     LOG(INFO) << "Repository done";
 
@@ -149,7 +149,7 @@ class SearchTermsBuilder : public task::FrameProcessor {
   // Term normalization.
   string normalization_;
 
-  // Phrase tokenizer for computing phrase fingerprints.
+  // Phrase tokenizer for computing term fingerprints.
   PhraseTokenizer tokenizer_;
 
   // Item table.
@@ -172,8 +172,7 @@ class SearchTermsBuilder : public task::FrameProcessor {
   task::Counter *num_terms_ = nullptr;
 };
 
-REGISTER_TASK_PROCESSOR("search-terms-builder", SearchTermsBuilder);
-
+REGISTER_TASK_PROCESSOR("search-dictionary-builder", SearchDictionaryBuilder);
 
 }  // namespace nlp
 }  // namespace sling

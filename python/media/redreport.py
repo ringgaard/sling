@@ -396,10 +396,10 @@ class SubredditCard extends MdCard {
           ${sr.name}
         </a>
       </h1>
-      <table><tr>
-        <td style="background: green; width: ${gw}px;"> </td>
-        <td style="background: red; width: ${rw}px;"> </td>
-        <td>${sr.matches} / ${sr.total} matched (${coverage}%)</td>
+      <table class="coverage"><tr>
+        <td class="hits" style="width: ${gw}px;"></td>
+        <td class="miss" style="width: ${rw}px;"></td>
+        <td class="stat">${sr.matches} / ${sr.total} matched (${coverage}%)</td>
       </tr></table>
     `);
 
@@ -432,6 +432,20 @@ class SubredditCard extends MdCard {
       }
       $ h1 {
         font-size: 24px;
+      }
+      $ .coverage {
+        border-collapse: collapse;
+      }
+      $ .hits {
+        background: green;
+        padding: 0;
+      }
+      $ .miss {
+        background: red;
+        padding: 0;
+      }
+      $ .stat {
+        padding-left: 8px;
       }
     `;
   }

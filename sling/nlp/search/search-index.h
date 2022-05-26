@@ -12,37 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SLING_NLP_SEARCH_ITEM_TERMS_H_
-#define SLING_NLP_SEARCH_ITEM_TERMS_H_
+#ifndef SLING_NLP_SEARCH_INDEX_H_
+#define SLING_NLP_SEARCH_INDEX_H_
+
+#include <string>
 
 #include "sling/base/types.h"
 #include "sling/file/repository.h"
-#include "sling/string/text.h"
 
 namespace sling {
 namespace nlp {
 
-// Item with name term fingerprints.
-class ItemTerms : public RepositoryObject {
+// Search index with item posting lists for each search term.
+class SearchIndex {
  public:
-  // Item id.
-  Text itemid() const { return Text(id_ptr(), *idlen_ptr()); }
-
-  // Length of term list.
-  int num_terms() const { return *termlen_ptr(); }
+  // Load search index from file.
+  void Load(const string &filename);
 
  private:
-  // Entity id.
-  REPOSITORY_FIELD(uint8, idlen, 1, 0);
-  REPOSITORY_FIELD(char, id, *idlen_ptr(), AFTER(idlen));
-
-  // Term list.
-  REPOSITORY_FIELD(uint32, termlen, 1, AFTER(id));
-  REPOSITORY_FIELD(uint64, term, num_terms(), AFTER(termlen));
+  // Repository with search index.
+  Repository repository_;
 };
 
 }  // namespace nlp
 }  // namespace sling
 
-#endif  // SLING_NLP_SEARCH_ITEM_TERMS_H_
+#endif  // SLING_NLP_SEARCH_INDEX_H_
 

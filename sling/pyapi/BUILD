@@ -107,7 +107,8 @@ cc_library(
     "//sling/nlp/kb:name-table-builder",
     "//sling/nlp/kb:phrase-table-builder",
 
-    "//sling/nlp/search:item-terms",
+    "//sling/nlp/search:search-dictionary-builder",
+    "//sling/nlp/search:search-index-builder",
 
     "//sling/nlp/embedding:fact-embeddings",
     "//sling/nlp/embedding:word-embeddings",

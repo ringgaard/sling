@@ -196,8 +196,12 @@ commands = [
   ),
 
   # Search.
-  Command("build_search_terms",
-    help="Build search terms for items",
+  Command("build_search_dictionary",
+    help="Build search dictionary",
+    package="sling.task.search",
+  ),
+  Command("build_search_index",
+    help="Build search index",
     package="sling.task.search",
   ),
 

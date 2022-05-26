@@ -24,34 +24,66 @@ class SearchWorkflow:
     self.wf = Workflow(name)
     self.data = data.Datasets(self.wf)
 
-  def item_terms(self, language=None):
-    """Resource for item term table."""
+  def search_dictionary(self, language=None):
+    """Resource for search dictionary repository."""
     if language == None: language = flags.arg.language
-    return self.wf.resource("item-terms.repo",
+    return self.wf.resource("search-dictionary.repo",
                             dir=corpora.workdir("search", language),
                             format="repository")
 
-  def build_search_terms(self, items=None, language=None):
-    "Task for building search terms for items."""
+  def search_index(self, language=None):
+    """Resource for search index repository."""
+    if language == None: language = flags.arg.language
+    return self.wf.resource("search-index.repo",
+                            dir=corpora.workdir("search", language),
+                            format="repository")
+
+  def build_search_dictionary(self, items=None, language=None):
+    """Task for building search dictionary."""
     if language == None: language = flags.arg.language
     if items == None: items = self.data.items()
 
     with self.wf.namespace("search"):
-      builder = self.wf.task("search-terms-builder", params={
+      builder = self.wf.task("search-dictionary-builder", params={
         "language": language,
         "normalization": "clnp",
       })
       self.wf.connect(self.wf.read(items, name="item-reader"), builder)
 
-      repo = self.item_terms(language)
+      repo = self.search_dictionary(language)
       builder.attach_output("repository", repo)
 
     return repo
 
-def build_search_terms():
+  def build_search_index(self, items=None, language=None):
+    """Task for building search dictionary."""
+    if language == None: language = flags.arg.language
+    if items == None: items = self.data.items()
+
+    with self.wf.namespace("search"):
+      builder = self.wf.task("search-index-builder", params={
+        "language": language,
+        "normalization": "clnp",
+      })
+      self.wf.connect(self.wf.read(items, name="item-reader"), builder)
+
+      builder.attach_input("dictionary", self.search_dictionary(language))
+      repo = self.search_index(language)
+      builder.attach_output("repository", repo)
+
+    return repo
+
+def build_search_dictionary():
   for language in flags.arg.languages:
-    log.info("Build " + language + " search terms")
+    log.info("Build " + language + " search dictionary")
     wf = SearchWorkflow(language + "-search")
-    wf.build_search_terms(language=language)
+    wf.build_search_dictionary(language=language)
+    run(wf.wf)
+
+def build_search_index():
+  for language in flags.arg.languages:
+    log.info("Build " + language + " search index")
+    wf = SearchWorkflow(language + "-search")
+    wf.build_search_index(language=language)
     run(wf.wf)
 

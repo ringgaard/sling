@@ -1,0 +1,137 @@
+{
+  ; Indexed properties.
+  properties: [
+    P31,        ; instance of
+    P279,       ; subclass of
+
+    P2561,      ; name
+    P4970,      ; alternate names
+    P1705,      ; native label
+    P97,        ; noble title
+    P1813,      ; short name
+    P735,       ; given name
+    P734,       ; family name
+    P511,       ; honorific prefix
+    P1035,      ; honorific suffix
+    P1559,      ; name in native language
+    P1477,      ; birth name
+    P2562,      ; married name
+    P742,       ; pseudonym
+    P1786,      ; posthumous name
+    P1449,      ; nickname
+    P1476,      ; title
+    P1680,      ; subtitle
+    P1448,      ; official name
+    P1549,      ; demonym
+    P172,       ; ethnic group
+
+    P3150,      ; birthday
+    P569,       ; date of birth
+    P19,        ; place of birth
+    P570,       ; date of death
+    P20,        ; place of death
+    P509,       ; cause of death
+    P157,       ; killed by
+
+    P551,       ; residence
+    P937,       ; work location
+    P27,        ; country of citizenship
+
+    P1454,      ; legal form
+    P452,       ; industry
+    P740,       ; location of formation
+    P571,       ; inception
+    P576,       ; dissolved, abolished or demolished
+    P159,       ; headquarters location
+    P577,       ; publication date
+    P291,       ; place of publication
+    P115,       ; home venue
+    P1001,      ; applies to jurisdiction
+    P2541,      ; operating area
+
+    P749,       ; parent organization
+    P355,       ; subsidiary
+    P199,       ; business division
+    P127,       ; owned by
+    P1830,      ; owner of
+    P361,       ; part of
+    P527,       ; has part
+    P155,       ; follows
+    P156,       ; followed by
+    P1365,      ; replaces
+    P1366,      ; replaced by
+    P807,       ; separated from
+    P7888,      ; merged into
+    P272,       ; production company
+    P449,       ; original network
+    P123,       ; publisher
+    P137,       ; operator
+    P750,       ; distributor
+    P2652,      ; partnership with
+    P1327,      ; partner in business or sport
+    P664,       ; organizer
+
+    P53,        ; family
+    P22,        ; father
+    P25,        ; mother
+    P3373,      ; sibling
+    P3448,      ; stepparent
+    P26,        ; spouse
+    P451,       ; partner
+    P40,        ; child
+    P1038,      ; relative
+    P1290,      ; godparent
+
+    P106,       ; occupation
+    P101,       ; field of work
+    P69,        ; educated at
+    P512,       ; academic degree
+    P812,       ; academic major
+    P811,       ; academic minor
+    P184,       ; doctoral advisor
+    P1066,      ; student of
+    P802,       ; student
+    P185,       ; doctoral student
+    P108,       ; employer
+    P1416,      ; affiliation
+    P6424,      ; affiliation string
+    P39,        ; position held
+    P463,       ; member of
+    P1344,      ; participant of
+
+    P2031,      ; work period (start)
+    P2032,      ; work period (end)
+    P1317,      ; floruit
+
+    P800,       ; notable work
+
+    P102,       ; member of political party
+    P1387,      ; political alignment
+    P1142,      ; political ideology
+    P737,       ; influenced by
+    P140,       ; religion
+
+    P641,       ; sport
+    P1532,      ; country for sport
+    P118,       ; league
+    P413,       ; position played on team / speciality
+
+    P136,       ; genre
+    P921,       ; main subject
+    P1303,      ; instrument
+    P135,       ; movement
+
+    P50,        ; author
+    P2093,      ; author name string
+    P179,       ; part of the series
+
+    P276,       ; location
+    P17,        ; country
+    P131,       ; located in the administrative territorial entity
+
+    P166,       ; award received
+    P2522,      ; victory
+    P1441,      ; present in work
+  ]
+}
+
