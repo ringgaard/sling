@@ -23,6 +23,7 @@ class SearchWorkflow:
   def __init__(self, name=None):
     self.wf = Workflow(name)
     self.data = data.Datasets(self.wf)
+    self.normalization = "clnp"
 
   def search_dictionary(self, language=None):
     """Resource for search dictionary repository."""
@@ -46,7 +47,7 @@ class SearchWorkflow:
     with self.wf.namespace("search"):
       builder = self.wf.task("search-dictionary-builder", params={
         "language": language,
-        "normalization": "clnp",
+        "normalization": self.normalization,
       })
       self.wf.connect(self.wf.read(items, name="item-reader"), builder)
 
@@ -61,13 +62,26 @@ class SearchWorkflow:
     if items == None: items = self.data.items()
 
     with self.wf.namespace("search"):
+      # Map input items and output entities and terms.
+      mapper = self.wf.task("search-index-mapper", params={
+        "language": language,
+        "normalization": self.normalization,
+      })
+      self.wf.connect(self.wf.read(items, name="item-reader"), mapper)
+      mapper.attach_input("dictionary", self.search_dictionary(language))
+      entities = self.wf.channel(mapper, "entities", format="message/entity")
+      terms = self.wf.channel(mapper, "terms", format="message/term")
+
+      # Shuffle terms in bucket order (bucket, termid, entityid).
+      postings = self.wf.shuffle(terms)
+
+      # Collect entities and terms and build search indes.
       builder = self.wf.task("search-index-builder", params={
         "language": language,
-        "normalization": "clnp",
+        "normalization": self.normalization,
       })
-      self.wf.connect(self.wf.read(items, name="item-reader"), builder)
-
-      builder.attach_input("dictionary", self.search_dictionary(language))
+      self.wf.connect(entities, builder, name="entities")
+      self.wf.connect(postings, builder, name="terms")
       repo = self.search_index(language)
       builder.attach_output("repository", repo)
 

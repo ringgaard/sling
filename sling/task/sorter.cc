@@ -76,7 +76,7 @@ class Sorter : public Processor {
 
     // Add message to buffer.
     messages_.push_back(message);
-    buffer_bytes_ += message->key().size() + message->value().size();
+    buffer_bytes_ += message->size();
 
     // Sort and write buffer when buffer is full.
     if (buffer_bytes_ > max_buffer_size_) {

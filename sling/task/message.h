@@ -132,6 +132,11 @@ class Message {
     value_.swap(&other->value_);
   }
 
+  // Combined size of key and value.
+  size_t size() const {
+    return key_.size() + value_.size() + (serial_ ? sizeof(uint64) : 0);
+  }
+
   // Return key buffer.
   Buffer *key_buffer() { return &key_; }
 

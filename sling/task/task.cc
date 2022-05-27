@@ -128,6 +128,7 @@ void Channel::Send(Message *message) {
 
   // Update statistics.
   size_t keylen = message->key().size();
+  if (message->serial()) keylen += sizeof(uint64);
   size_t vallen = message->value().size();
   input_messages_->Increment();
   output_messages_->Increment();
