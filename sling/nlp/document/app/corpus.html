@@ -10,20 +10,16 @@
 </head>
 <body>
   <corpus-app id="app">
-    <md-column-layout>
+    <md-toolbar>
+      <md-toolbar-logo></md-toolbar-logo>
+      <div>Corpus Browser</div>
+      <md-spacer></md-spacer>
+      <corpus-navigation></corpus-navigation>
+    </md-toolbar>
 
-      <md-toolbar>
-        <md-toolbar-logo></md-toolbar-logo>
-        <div>Corpus Browser</div>
-        <md-spacer></md-spacer>
-        <corpus-navigation></corpus-navigation>
-      </md-toolbar>
-
-      <md-content>
-        <document-viewer></document-viewer>
-      </md-content>
-
-    </md-column-layout>
+    <md-content>
+      <document-viewer></document-viewer>
+    </md-content>
   </corpus-app>
 </body>
 </html>

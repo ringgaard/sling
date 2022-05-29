@@ -407,70 +407,66 @@ app.page("/",
 </head>
 <body style="display: none">
   <scheduler-app id="app">
-    <md-column-layout>
+    <md-toolbar>
+      <md-toolbar-logo></md-toolbar-logo>
+      <div id="title">
+        SLING Job Scheduler on <md-text id="host"></md-text>
+      </div>
+      <md-spacer></md-spacer>
+      <md-icon-button id="refresh" icon="refresh"></md-icon-button>
+    </md-toolbar>
 
-      <md-toolbar>
-        <md-toolbar-logo></md-toolbar-logo>
-        <div id="title">
-          SLING Job Scheduler on <md-text id="host"></md-text>
-        </div>
-        <md-spacer></md-spacer>
-        <md-icon-button id="refresh" icon="refresh"></md-icon-button>
-      </md-toolbar>
+    <md-content>
 
-      <md-content>
+      <md-card id="running">
+        <md-card-toolbar>
+          <div>Running jobs</div>
+        </md-card-toolbar>
 
-        <md-card id="running">
-          <md-card-toolbar>
-            <div>Running jobs</div>
-          </md-card-toolbar>
+        <md-data-table id="running-jobs">
+          <md-data-field field="job">Job</md-data-field>
+          <md-data-field field="task">Task</md-data-field>
+          <md-data-field field="command">Command</md-data-field>
+          <md-data-field field="queue">Queue</md-data-field>
+          <md-data-field field="started">Started</md-data-field>
+          <md-data-field field="time">Time</md-data-field>
+          <md-data-field field="status" html=1>Status</md-data-field>
+        </md-data-table>
+      </md-card>
 
-          <md-data-table id="running-jobs">
-            <md-data-field field="job">Job</md-data-field>
-            <md-data-field field="task">Task</md-data-field>
-            <md-data-field field="command">Command</md-data-field>
-            <md-data-field field="queue">Queue</md-data-field>
-            <md-data-field field="started">Started</md-data-field>
-            <md-data-field field="time">Time</md-data-field>
-            <md-data-field field="status" html=1>Status</md-data-field>
-          </md-data-table>
-        </md-card>
+      <md-card id="pending">
+        <md-card-toolbar>
+          <div>Pending jobs</div>
+        </md-card-toolbar>
 
-        <md-card id="pending">
-          <md-card-toolbar>
-            <div>Pending jobs</div>
-          </md-card-toolbar>
+        <md-data-table id="pending-jobs">
+          <md-data-field field="job">Job</md-data-field>
+          <md-data-field field="task">Task</md-data-field>
+          <md-data-field field="command">Command</md-data-field>
+          <md-data-field field="queue">Queue</md-data-field>
+          <md-data-field field="submitted">Submitted</md-data-field>
+          <md-data-field field="time">Time</md-data-field>
+        </md-data-table>
+      </md-card>
 
-          <md-data-table id="pending-jobs">
-            <md-data-field field="job">Job</md-data-field>
-            <md-data-field field="task">Task</md-data-field>
-            <md-data-field field="command">Command</md-data-field>
-            <md-data-field field="queue">Queue</md-data-field>
-            <md-data-field field="submitted">Submitted</md-data-field>
-            <md-data-field field="time">Time</md-data-field>
-          </md-data-table>
-        </md-card>
+      <md-card id="terminated">
+        <md-card-toolbar>
+          <div>Terminated jobs</div>
+        </md-card-toolbar>
 
-        <md-card id="terminated">
-          <md-card-toolbar>
-            <div>Terminated jobs</div>
-          </md-card-toolbar>
+        <md-data-table id="terminated-jobs">
+          <md-data-field field="job">Job</md-data-field>
+          <md-data-field field="task">Task</md-data-field>
+          <md-data-field field="command">Command</md-data-field>
+          <md-data-field field="queue">Queue</md-data-field>
+          <md-data-field field="started">Started</md-data-field>
+          <md-data-field field="ended">Ended</md-data-field>
+          <md-data-field field="time" style="text-align: right">Time</md-data-field>
+          <md-data-field field="status" html=1>Status</md-data-field>
+        </md-data-table>
+      </md-card>
 
-          <md-data-table id="terminated-jobs">
-            <md-data-field field="job">Job</md-data-field>
-            <md-data-field field="task">Task</md-data-field>
-            <md-data-field field="command">Command</md-data-field>
-            <md-data-field field="queue">Queue</md-data-field>
-            <md-data-field field="started">Started</md-data-field>
-            <md-data-field field="ended">Ended</md-data-field>
-            <md-data-field field="time" style="text-align: right">Time</md-data-field>
-            <md-data-field field="status" html=1>Status</md-data-field>
-          </md-data-table>
-        </md-card>
-
-      </md-content>
-
-    </md-column-layout>
+    </md-content>
   </scheduler-app>
 </body>
 </html>
@@ -479,8 +475,9 @@ app.page("/",
 app.js("/scheduler.js",
 """
 import {Component} from "/common/lib/component.js";
+import {MdApp} from "/common/lib/material.js";
 
-class SchedulerApp extends Component {
+class SchedulerApp extends MdApp {
   onconnected() {
     this.bind("#refresh", "click", (e) => this.onrefresh(e));
     window.document.title = `${this.host()} - SLING Job Scheduler`;

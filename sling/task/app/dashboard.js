@@ -4,6 +4,7 @@
 // Workflow dashboard app.
 
 import {Component} from "/common/lib/component.js";
+import {MdApp} from "/common/lib/material.js";
 
 function pad(num, width) {
   return ("0000" + num).slice(-width);
@@ -28,7 +29,7 @@ function sort(array, key) {
   });
 }
 
-class DashboardApp extends Component {
+class DashboardApp extends MdApp {
   constructor() {
     super();
     this.auto = false;

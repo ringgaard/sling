@@ -14,9 +14,6 @@ const htmlmap = {
   '/': '&#x2F;'
 }
 
-// Registered style sheet functions.
-var stylesheets = [];
-
 // Defer showing page until loaded.
 window.addEventListener('load', (e) => {
   document.body.style.display = "";
@@ -160,18 +157,6 @@ export class Component extends HTMLElement {
     }
   }
 
-  // Generate HTML for template.
-  html(strings, ...values) {
-    let parts = [];
-    for (let i = 0; i < strings.length; ++i) {
-      parts.push(strings[i]);
-      if (i >= values.length) continue;
-      let value = values[i];
-      parts.push(value);
-    }
-    return parts.join("");
-  }
-
   // Find matching child element.
   find(selector) {
     if (selector == null || this.matches(selector)) return this;
@@ -217,13 +202,16 @@ export class Component extends HTMLElement {
     // Register custom element.
     window.customElements.define(tagname, cls);
 
-    // Register style sheet for web component.
-    if (cls.stylesheet) {
-      if (!stylesheets.includes(cls.stylesheet)) {
-        stylesheets.push(cls.stylesheet);
-        let css = cls.stylesheet().replace(/\$/g, tagname);
-        stylesheet(css);
-      }
+    // Register style sheet for web component including super classes.
+    let styles = new Array();
+    let c = cls;
+    while (c && c != Component) {
+      if (c.stylesheet) styles.push(c.stylesheet());
+      c = Object.getPrototypeOf(c);
+    }
+    if (styles.length > 0) {
+      let css = styles.reverse().join(" ").replace(/\$/g, tagname);
+      stylesheet(css);
     }
   }
 }

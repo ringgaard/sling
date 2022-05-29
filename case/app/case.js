@@ -2,7 +2,7 @@
 // Licensed under the Apache License, Version 2
 
 import {Component} from "/common/lib/component.js";
-import {MdDialog, StdDialog, MdIcon, MdSearchResult, inform}
+import {MdApp, MdDialog, StdDialog, MdIcon, MdSearchResult, inform}
        from "/common/lib/material.js";
 import {Store, Frame, Encoder, Printer} from "/common/lib/frame.js";
 
@@ -138,7 +138,7 @@ function search_topics(query, full, topics) {
   return results;
 }
 
-class CaseEditor extends Component {
+class CaseEditor extends MdApp {
   oninit() {
     this.bind("omni-box md-search", "item", e => this.onitem(e));
     this.bind("omni-box md-search", "enter", e => this.onenter(e));
@@ -613,6 +613,7 @@ class CaseEditor extends Component {
       this.collab.close();
       this.collab = undefined;
       this.localcase = undefined;
+      app.show_manager();
     } else if (this.dirty) {
       let msg = `Changes to case #${this.caseid()} has not been saved.`;
       let buttons = {
@@ -1500,92 +1501,90 @@ class CaseEditor extends Component {
 
   prerender() {
     return `
-      <md-column-layout>
-        <md-toolbar>
-          <md-icon-button id="drawer" icon="menu"></md-icon-button>
-          <md-toolbar-logo></md-toolbar-logo>
-          <div id="title">Case #<md-text id="caseid"></md-text></div>
-          <omni-box id="search"></omni-box>
-          <md-spacer></md-spacer>
-          <md-icon-button
-            id="merge"
-            class="tool"
-            icon="merge"
-            tooltip="Merge topics\n(Ctrl+M)">
-          </md-icon-button>
-          <md-icon-button
-            id="export"
-            class="tool"
-            icon="wikidata"
-            tooltip="Export to Wikidata">
-          </md-icon-button>
-          <md-icon-button
-            id="script"
-            class="tool"
-            icon="play_circle_outline"
-            tooltip="Execute script">
-          </md-icon-button>
-          <md-icon-button
-            id="addlink"
-            class="tool"
-            icon="playlist_add"
-            tooltip="Open new linked case">
-          </md-icon-button>
-          <md-icon-button
-            id="save"
-            class="tool"
-            icon="save"
-            tooltip="Save case\n(Ctrl+S)">
-          </md-icon-button>
-          <md-icon-button
-            id="invite"
-            class="tool"
-            icon="people"
-            tooltip="Invite participant">
-          </md-icon-button>
-          <md-icon-button
-            id="share"
-            class="tool"
-            icon="share"
-            tooltip="Share case">
-          </md-icon-button>
-          <md-icon-button
-            id="home"
-            class="tool"
-            icon="home"
-            tooltip="Go to case list"
-            tooltip-align="right">
-          </md-icon-button>
-          <md-menu id="menu">
-            <md-menu-item id="save">Save</md-menu-item>
-            <md-menu-item id="share">Share</md-menu-item>
-            <md-menu-item id="collaborate">Collaborate</md-menu-item>
-            <md-menu-item id="upload">Upload files</md-menu-item>
-            <md-menu-item id="imgcache">Cache images</md-menu-item>
-            <md-menu-item id="export">Publish in Wikidata</md-menu-item>
-            <md-menu-item id="copyall">Copy all</md-menu-item>
-          </md-menu>
-        </md-toolbar>
+      <md-toolbar>
+        <md-icon-button id="drawer" icon="menu"></md-icon-button>
+        <md-toolbar-logo></md-toolbar-logo>
+        <div id="title">Case #<md-text id="caseid"></md-text></div>
+        <omni-box id="search"></omni-box>
+        <md-spacer></md-spacer>
+        <md-icon-button
+          id="merge"
+          class="tool"
+          icon="merge"
+          tooltip="Merge topics\n(Ctrl+M)">
+        </md-icon-button>
+        <md-icon-button
+          id="export"
+          class="tool"
+          icon="wikidata"
+          tooltip="Export to Wikidata">
+        </md-icon-button>
+        <md-icon-button
+          id="script"
+          class="tool"
+          icon="play_circle_outline"
+          tooltip="Execute script">
+        </md-icon-button>
+        <md-icon-button
+          id="addlink"
+          class="tool"
+          icon="playlist_add"
+          tooltip="Open new linked case">
+        </md-icon-button>
+        <md-icon-button
+          id="save"
+          class="tool"
+          icon="save"
+          tooltip="Save case\n(Ctrl+S)">
+        </md-icon-button>
+        <md-icon-button
+          id="invite"
+          class="tool"
+          icon="people"
+          tooltip="Invite participant">
+        </md-icon-button>
+        <md-icon-button
+          id="share"
+          class="tool"
+          icon="share"
+          tooltip="Share case">
+        </md-icon-button>
+        <md-icon-button
+          id="home"
+          class="tool"
+          icon="home"
+          tooltip="Go to case list"
+          tooltip-align="right">
+        </md-icon-button>
+        <md-menu id="menu">
+          <md-menu-item id="save">Save</md-menu-item>
+          <md-menu-item id="share">Share</md-menu-item>
+          <md-menu-item id="collaborate">Collaborate</md-menu-item>
+          <md-menu-item id="upload">Upload files</md-menu-item>
+          <md-menu-item id="imgcache">Cache images</md-menu-item>
+          <md-menu-item id="export">Publish in Wikidata</md-menu-item>
+          <md-menu-item id="copyall">Copy all</md-menu-item>
+        </md-menu>
+      </md-toolbar>
 
-        <md-row-layout>
-          <md-drawer>
-            <div id="folders-top">
-              Folders
-              <md-spacer></md-spacer>
-              <md-icon-button
-                id="newfolder"
-                icon="create_new_folder"
-                tooltip="Create new folder"
-                tooltip-align="right">
-              </md-icon-button>
-            </div>
-            <folder-list></folder-list>
-          </md-drawer>
-          <md-content>
-            <topic-list></topic-list>
-          </md-content>
-        </md-row-layout>
-      </md-column-layout>
+      <md-row-layout>
+        <md-drawer>
+          <div id="folders-top">
+            Folders
+            <md-spacer></md-spacer>
+            <md-icon-button
+              id="newfolder"
+              icon="create_new_folder"
+              tooltip="Create new folder"
+              tooltip-align="right">
+            </md-icon-button>
+          </div>
+          <folder-list></folder-list>
+        </md-drawer>
+        <md-content>
+          <topic-list></topic-list>
+        </md-content>
+      </md-row-layout>
     `;
   }
   static stylesheet() {
@@ -1732,7 +1731,7 @@ class SharingDialog extends MdDialog {
   }
 
   static stylesheet() {
-    return MdDialog.stylesheet() + `
+    return `
       $ #content {
         display: flex;
         flex-direction: column;
@@ -1785,7 +1784,7 @@ class ScriptDialog extends MdDialog {
   }
 
   static stylesheet() {
-    return MdDialog.stylesheet() + `
+    return `
       $ #content {
         display: flex;
         flex-direction: column;
@@ -1818,7 +1817,7 @@ class UploadDialog extends MdDialog {
   }
 
   static stylesheet() {
-    return MdDialog.stylesheet() + `
+    return `
       $ #content {
         display: flex;
         flex-direction: column;
@@ -1859,7 +1858,7 @@ export class CollaborateDialog extends MdDialog {
   }
 
   static stylesheet() {
-    return MdDialog.stylesheet() + `
+    return `
       $ #content {
         display: flex;
         flex-direction: column;
@@ -1955,7 +1954,7 @@ export class InviteDialog extends MdDialog {
   }
 
   static stylesheet() {
-    return MdDialog.stylesheet() + `
+    return `
       $ {
         width: 500px;
       }

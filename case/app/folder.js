@@ -161,10 +161,6 @@ class ScrapsFolder extends Component {
       </md-menu>
     `;
   }
-
-  static stylesheet() {
-    return CaseFolder.stylesheet();
-  }
 }
 
 Component.register(ScrapsFolder);
@@ -193,7 +189,7 @@ export class NewFolderDialog extends MdDialog {
   }
 
   static stylesheet() {
-    return MdDialog.stylesheet() + `
+    return `
       $ #content {
         display: flex;
         flex-direction: column;
@@ -232,7 +228,7 @@ class RenameFolderDialog extends MdDialog {
   }
 
   static stylesheet() {
-    return MdDialog.stylesheet() + `
+    return `
       $ #content {
         display: flex;
         flex-direction: column;

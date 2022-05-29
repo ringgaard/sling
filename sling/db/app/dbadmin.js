@@ -4,7 +4,7 @@
 // SLINGDB admin app.
 
 import {Component} from "/common/lib/component.js";
-import {MdCard} from "/common/lib/material.js";
+import {MdApp, MdCard} from "/common/lib/material.js";
 
 function int(num) {
   if (!isFinite(num)) return "---";
@@ -29,7 +29,7 @@ function host() {
   }
 }
 
-class DbApp extends Component {
+class DbApp extends MdApp {
   onconnected() {
     this.bind("#refresh", "click", (e) => this.refresh());
     this.bind("#tabs", "click", (e) => this.onselect(e));
@@ -94,8 +94,6 @@ class DbDatabasesCard extends MdCard {
       console.log('Error fetching status', err);
     });
   }
-
-  static stylesheet() { return MdCard.stylesheet(); }
 }
 
 Component.register(DbDatabasesCard);
@@ -134,8 +132,6 @@ class DbConnectionsCard extends MdCard {
       console.log('Error fetching status', err);
     });
   }
-
-  static stylesheet() { return MdCard.stylesheet(); }
 }
 
 Component.register(DbConnectionsCard);
@@ -172,8 +168,6 @@ class DbStatisticsCard extends MdCard {
       console.log('Error fetching status', err);
     });
   }
-
-  static stylesheet() { return MdCard.stylesheet(); }
 }
 
 Component.register(DbStatisticsCard);

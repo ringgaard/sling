@@ -493,7 +493,7 @@ Component.register(PropertyPanel);
 
 class XrefPanel extends PropertyPanel {
   static stylesheet() {
-    return PropertyPanel.stylesheet() + `
+    return `
       $ .prop-name {
         font-size: 13px;
         font-weight: normal;

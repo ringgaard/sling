@@ -49,6 +49,49 @@ body {
 `);
 
 //-----------------------------------------------------------------------------
+// App
+//-----------------------------------------------------------------------------
+
+export class MdApp extends Component {
+  static stylesheet() {
+    return `
+      $ {
+        display: flex;
+        flex-direction: column;
+        margin: 0;
+        height: 100%;
+        min-height: 100%;
+      }
+    `;
+  }
+}
+
+Component.register(MdApp);
+
+export class MdContent extends Component {
+  static stylesheet() {
+    return `
+      $ {
+        flex: 1;
+        padding: 8px;
+        display: block;
+        overflow: auto;
+        color: rgb(0,0,0);
+        background-color: #eeeeee;
+
+        position: relative;
+
+        flex-basis: 0%;
+        flex-grow: 1;
+        flex-shrink: 1;
+      }
+    `;
+  }
+}
+
+Component.register(MdContent);
+
+//-----------------------------------------------------------------------------
 // Layout
 //-----------------------------------------------------------------------------
 
@@ -83,29 +126,6 @@ export class MdRowLayout extends Component {
 }
 
 Component.register(MdRowLayout);
-
-export class MdContent extends Component {
-  static stylesheet() {
-    return `
-      $ {
-        flex: 1;
-        padding: 8px;
-        display: block;
-        overflow: auto;
-        color: rgb(0,0,0);
-        background-color: #eeeeee;
-
-        position: relative;
-
-        flex-basis: 0%;
-        flex-grow: 1;
-        flex-shrink: 1;
-      }
-    `;
-  }
-}
-
-Component.register(MdContent);
 
 export class MdSpacer extends Component {
   static stylesheet() {
@@ -367,7 +387,7 @@ export class StdDialog extends MdDialog {
   }
 
   static stylesheet() {
-    return MdDialog.stylesheet() + `
+    return `
       $ {
         font-size: 16px;
         min-width: 200px;
@@ -1830,7 +1850,7 @@ export class MdSearchResult extends MdSearchItem {
   }
 
   static stylesheet() {
-    return MdSearchItem.stylesheet() + `
+    return `
       $ .item-title {
         font-weight: bold;
         display: block;

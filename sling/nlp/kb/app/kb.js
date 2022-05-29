@@ -3,8 +3,8 @@
 
 // Knowledge base browser.
 
-import {Component} from "/common/lib/component.js";
-import {MdCard, MdModal, MdSearchResult, StdDialog}
+import {Component, stylesheet} from "/common/lib/component.js";
+import {MdApp, MdCard, MdModal, MdSearchResult, StdDialog}
   from "/common/lib/material.js";
 import {PhotoGallery, imageurl, censor} from "/common/lib/gallery.js";
 
@@ -38,11 +38,15 @@ function wikiurl(id) {
   }
 }
 
+stylesheet(`
+@import url('https://fonts.googleapis.com/css?family=Lato|Lora:400,400i,700,700i');
+`);
+
 //-----------------------------------------------------------------------------
 // App
 //-----------------------------------------------------------------------------
 
-class KbApp extends Component {
+class KbApp extends MdApp {
   onconnected() {
     if (this.find("#websearch")) {
       this.bind("#websearch", "click", e => this.onwebsearch(e));
@@ -570,7 +574,7 @@ class KbItemCard extends MdCard {
   }
 
   static stylesheet() {
-    return MdCard.stylesheet() + `
+    return `
       $ #title {
         display: block;
         font-size: 28px;
@@ -635,10 +639,6 @@ class KbDocumentCard extends MdCard {
 
   static stylesheet() {
     return `
-      @import url('https://fonts.googleapis.com/css?family=Lato|Lora:400,400i,700,700i');
-
-      ${MdCard.stylesheet()}
-
       $ #url {
         display: block;
         overflow: hidden;
@@ -683,8 +683,6 @@ class KbPropertyCard extends MdCard {
     let item = this.state;
     this.find("#property-table").update(item.properties);
   }
-
-  static stylesheet() { return MdCard.stylesheet(); }
 }
 
 Component.register(KbPropertyCard);
@@ -704,8 +702,6 @@ class KbCategoryCard extends MdCard {
     let categories = item.categories;
     this.find("#category-list").update(categories);
   }
-
-  static stylesheet() { return MdCard.stylesheet(); }
 }
 
 Component.register(KbCategoryCard);
@@ -781,7 +777,7 @@ class KbPictureCard extends MdCard {
   }
 
   static stylesheet() {
-    return MdCard.stylesheet() + `
+    return `
       $ {
         text-align: center;
         cursor: pointer;
@@ -821,7 +817,7 @@ class KbXrefCard extends MdCard {
   }
 
   static stylesheet() {
-    return MdCard.stylesheet() + `
+    return `
       $ .prop-name {
         font-size: 13px;
         font-weight: normal;
@@ -877,97 +873,17 @@ Component.register(KbXrefCard);
 //-----------------------------------------------------------------------------
 
 const desktop_template = `
-<kb-app id="app">
-  <md-column-layout class="desktop">
-    <md-toolbar>
-      <md-toolbar-logo></md-toolbar-logo>
-      <div>KnolBase</div>
-      <kb-search-box id="search"></kb-search-box>
-      <md-icon-button id="websearch" icon="search"></md-icon-button>
-    </md-toolbar>
+<kb-app id="app" class="desktop">
+  <md-toolbar>
+    <md-toolbar-logo></md-toolbar-logo>
+    <div>KnolBase</div>
+    <kb-search-box id="search"></kb-search-box>
+    <md-icon-button id="websearch" icon="search"></md-icon-button>
+  </md-toolbar>
 
-    <md-content>
-      <md-row-layout>
-        <md-column-layout style="flex: 1 1 66%;">
-
-          <!-- Item card -->
-          <kb-item-card id="item">
-            <md-card-toolbar>
-              <div>
-                <md-text id="title"></md-text>
-                <md-link id="ref" notab="1" newtab="1" external="1"></md-link>
-              </div>
-              <md-spacer></md-spacer>
-              <md-icon-button id="imgsearch" icon="image_search">
-              </md-icon-button>
-              <md-icon-button id="code" icon="code">
-              </md-icon-button>
-            </md-card-toolbar>
-            <div><md-text id="description"></md-text></div>
-            <div><md-text id="datatype"></md-text></div>
-          </kb-item-card>
-
-          <!-- Document card -->
-          <kb-document-card id="document">
-            <md-link id="url" notab="1" newtab="1" external="1"></md-link>
-            <div id="text"></div>
-          </kb-document-card>
-
-          <!-- Item properties card -->
-          <kb-property-card id="properties">
-            <kb-property-table id="property-table">
-            </kb-property-table>
-          </kb-property-card>
-
-        </md-column-layout>
-
-        <md-column-layout style="flex: 1 1 33%;">
-
-          <!-- Item picture card -->
-          <kb-picture-card id="picture">
-            <md-image class="photo"></md-image>
-            <md-text class="caption"></md-text>
-          </kb-picture-card>
-
-          <!-- Item references card -->
-          <kb-xref-card id="xrefs">
-            <md-card-toolbar>
-              <div>References</div>
-            </md-card-toolbar>
-            <kb-property-table id="xref-table">
-            </kb-property-table>
-          </kb-xref-card>
-
-          <!-- Item categories card -->
-          <kb-category-card id="categories">
-            <md-card-toolbar>
-              <div>Categories</div>
-            </md-card-toolbar>
-
-            <kb-item-list id="category-list">
-            </kb-item-list>
-          </kb-category-card>
-        </md-column-layout>
-
-      </md-row-layout>
-    </md-content>
-  </md-column-layout>
-</kb-app>`;
-
-//-----------------------------------------------------------------------------
-// Mobile HTML template
-//-----------------------------------------------------------------------------
-
-const mobile_template = `
-<kb-app id="app">
-  <md-column-layout class="mobile">
-    <md-toolbar>
-      <md-toolbar-logo></md-toolbar-logo>
-      <kb-search-box id="search"></kb-search-box>
-    </md-toolbar>
-
-    <md-content>
-      <md-column-layout>
+  <md-content>
+    <md-row-layout>
+      <md-column-layout style="flex: 1 1 66%;">
 
         <!-- Item card -->
         <kb-item-card id="item">
@@ -976,6 +892,11 @@ const mobile_template = `
               <md-text id="title"></md-text>
               <md-link id="ref" notab="1" newtab="1" external="1"></md-link>
             </div>
+            <md-spacer></md-spacer>
+            <md-icon-button id="imgsearch" icon="image_search">
+            </md-icon-button>
+            <md-icon-button id="code" icon="code">
+            </md-icon-button>
           </md-card-toolbar>
           <div><md-text id="description"></md-text></div>
           <div><md-text id="datatype"></md-text></div>
@@ -987,17 +908,21 @@ const mobile_template = `
           <div id="text"></div>
         </kb-document-card>
 
-        <!-- Item picture card -->
-        <kb-picture-card id="picture">
-          <md-image class="photo"></md-image>
-          <md-text class="caption"></md-text>
-        </kb-picture-card>
-
         <!-- Item properties card -->
         <kb-property-card id="properties">
           <kb-property-table id="property-table">
           </kb-property-table>
         </kb-property-card>
+
+      </md-column-layout>
+
+      <md-column-layout style="flex: 1 1 33%;">
+
+        <!-- Item picture card -->
+        <kb-picture-card id="picture">
+          <md-image class="photo"></md-image>
+          <md-text class="caption"></md-text>
+        </kb-picture-card>
 
         <!-- Item references card -->
         <kb-xref-card id="xrefs">
@@ -1017,10 +942,77 @@ const mobile_template = `
           <kb-item-list id="category-list">
           </kb-item-list>
         </kb-category-card>
-
       </md-column-layout>
-    </md-content>
-  </md-column-layout>
+
+    </md-row-layout>
+  </md-content>
+</kb-app>`;
+
+//-----------------------------------------------------------------------------
+// Mobile HTML template
+//-----------------------------------------------------------------------------
+
+const mobile_template = `
+<kb-app id="app" class="mobile">
+  <md-toolbar>
+    <md-toolbar-logo></md-toolbar-logo>
+    <kb-search-box id="search"></kb-search-box>
+  </md-toolbar>
+
+  <md-content>
+    <md-column-layout>
+
+      <!-- Item card -->
+      <kb-item-card id="item">
+        <md-card-toolbar>
+          <div>
+            <md-text id="title"></md-text>
+            <md-link id="ref" notab="1" newtab="1" external="1"></md-link>
+          </div>
+        </md-card-toolbar>
+        <div><md-text id="description"></md-text></div>
+        <div><md-text id="datatype"></md-text></div>
+      </kb-item-card>
+
+      <!-- Document card -->
+      <kb-document-card id="document">
+        <md-link id="url" notab="1" newtab="1" external="1"></md-link>
+        <div id="text"></div>
+      </kb-document-card>
+
+      <!-- Item picture card -->
+      <kb-picture-card id="picture">
+        <md-image class="photo"></md-image>
+        <md-text class="caption"></md-text>
+      </kb-picture-card>
+
+      <!-- Item properties card -->
+      <kb-property-card id="properties">
+        <kb-property-table id="property-table">
+        </kb-property-table>
+      </kb-property-card>
+
+      <!-- Item references card -->
+      <kb-xref-card id="xrefs">
+        <md-card-toolbar>
+          <div>References</div>
+        </md-card-toolbar>
+        <kb-property-table id="xref-table">
+        </kb-property-table>
+      </kb-xref-card>
+
+      <!-- Item categories card -->
+      <kb-category-card id="categories">
+        <md-card-toolbar>
+          <div>Categories</div>
+        </md-card-toolbar>
+
+        <kb-item-list id="category-list">
+        </kb-item-list>
+      </kb-category-card>
+
+    </md-column-layout>
+  </md-content>
 </kb-app>
 `;
 

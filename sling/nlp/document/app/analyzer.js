@@ -4,6 +4,7 @@
 // Document analyzer app.
 
 import {Component} from "/common/lib/component.js";
+import {MdApp} from "/common/lib/material.js";
 import {Document} from "/common/lib/docview.js";
 
 class DocumentEditor extends Component {
@@ -35,7 +36,7 @@ class DocumentEditor extends Component {
 
 Component.register(DocumentEditor);
 
-class AnalyzerApp extends Component {
+class AnalyzerApp extends MdApp {
   constructor() {
     super();
     this.document = null;

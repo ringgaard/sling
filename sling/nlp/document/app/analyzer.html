@@ -10,26 +10,22 @@
 </head>
 <body>
   <analyzer-app id="app">
-    <md-column-layout>
+    <md-toolbar>
+      <md-toolbar-logo></md-toolbar-logo>
+      <div>Document Analyzer</div>
+      <md-spacer></md-spacer>
+      <one-of id="action" selected="#analyze">
+        <md-icon-button id="edit" icon="edit" shortcut="g"></md-icon-button>
+        <md-icon-button id="analyze" icon="send" shortcut="g"></md-icon-button>
+      </one-of>
+    </md-toolbar>
 
-      <md-toolbar>
-        <md-toolbar-logo></md-toolbar-logo>
-        <div>Document Analyzer</div>
-        <md-spacer></md-spacer>
-        <one-of id="action" selected="#analyze">
-          <md-icon-button id="edit" icon="edit" shortcut="g"></md-icon-button>
-          <md-icon-button id="analyze" icon="send" shortcut="g"></md-icon-button>
-        </one-of>
-      </md-toolbar>
-
-      <md-content>
-        <one-of id="main" selected="#editor">
-          <document-editor id="editor"></document-editor>
-          <document-viewer id="viewer"></document-viewer>
-        </one-of>
-      </md-content>
-
-    </md-column-layout>
+    <md-content>
+      <one-of id="main" selected="#editor">
+        <document-editor id="editor"></document-editor>
+        <document-viewer id="viewer"></document-viewer>
+      </one-of>
+    </md-content>
   </analyzer-app>
 </body>
 </html>

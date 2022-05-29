@@ -77,63 +77,59 @@ app.page("/",
 </head>
 <body style="display: none">
   <monitor-app id="app">
-    <md-column-layout>
+    <md-toolbar>
+      <md-toolbar-logo></md-toolbar-logo>
+      <div id="title">SLING System Monitor</div>
+      <md-spacer></md-spacer>
+      <md-icon-button id="refresh" icon="refresh"></md-icon-button>
+    </md-toolbar>
 
-      <md-toolbar>
-        <md-toolbar-logo></md-toolbar-logo>
-        <div id="title">SLING System Monitor</div>
-        <md-spacer></md-spacer>
-        <md-icon-button id="refresh" icon="refresh"></md-icon-button>
-      </md-toolbar>
+    <md-content>
 
-      <md-content>
+      <md-card id="alerts">
+        <md-text id="status"></md-text>
+        <md-data-table id="alert-table">
+          <md-data-field field="time">Time</md-data-field>
+          <md-data-field field="source" html=1>Source</md-data-field>
+          <md-data-field field="alert" html=1>Alert</md-data-field>
+          <md-data-field field="ack" class="ack" html=1>Ack</md-data-field>
+        </md-data-table>
+      </md-card>
 
-        <md-card id="alerts">
-          <md-text id="status"></md-text>
-          <md-data-table id="alert-table">
-            <md-data-field field="time">Time</md-data-field>
-            <md-data-field field="source" html=1>Source</md-data-field>
-            <md-data-field field="alert" html=1>Alert</md-data-field>
-            <md-data-field field="ack" class="ack" html=1>Ack</md-data-field>
-          </md-data-table>
-        </md-card>
+      <md-card id="schedulers">
+        <md-card-toolbar>
+          <div>Jobs</div>
+        </md-card-toolbar>
 
-        <md-card id="schedulers">
-          <md-card-toolbar>
-            <div>Jobs</div>
-          </md-card-toolbar>
+        <md-data-table id="scheduler-table">
+          <md-data-field field="link" html=1>Machine</md-data-field>
+          <md-data-field field="status">Status</md-data-field>
+          <md-data-field field="running" class="right">Running</md-data-field>
+          <md-data-field field="pending" class="right">Pending</md-data-field>
+          <md-data-field field="done" class="right">Done</md-data-field>
+          <md-data-field field="confirmed" class="right">Confirmed</md-data-field>
+          <md-data-field field="failed" class="right">Failed</md-data-field>
+        </md-data-table>
+      </md-card>
 
-          <md-data-table id="scheduler-table">
-            <md-data-field field="link" html=1>Machine</md-data-field>
-            <md-data-field field="status">Status</md-data-field>
-            <md-data-field field="running" class="right">Running</md-data-field>
-            <md-data-field field="pending" class="right">Pending</md-data-field>
-            <md-data-field field="done" class="right">Done</md-data-field>
-            <md-data-field field="confirmed" class="right">Confirmed</md-data-field>
-            <md-data-field field="failed" class="right">Failed</md-data-field>
-          </md-data-table>
-        </md-card>
+      <md-card id="monitors">
+        <md-card-toolbar>
+          <div>Monitors</div>
+        </md-card-toolbar>
 
-        <md-card id="monitors">
-          <md-card-toolbar>
-            <div>Monitors</div>
-          </md-card-toolbar>
+        <md-data-table id="monitor-table">
+          <md-data-field field="link" html=1>Machine</md-data-field>
+          <md-data-field field="status">Status</md-data-field>
+          <md-data-field field="os">OS</md-data-field>
+          <md-data-field field="arch">Arch</md-data-field>
+          <md-data-field field="cpus" class="right">CPUs</md-data-field>
+          <md-data-field field="ram" class="right">RAM</md-data-field>
+          <md-data-field field="probes" class="right">Probes</md-data-field>
+          <md-data-field field="failures" class="right">Failures</md-data-field>
+        </md-data-table>
+      </md-card>
 
-          <md-data-table id="monitor-table">
-            <md-data-field field="link" html=1>Machine</md-data-field>
-            <md-data-field field="status">Status</md-data-field>
-            <md-data-field field="os">OS</md-data-field>
-            <md-data-field field="arch">Arch</md-data-field>
-            <md-data-field field="cpus" class="right">CPUs</md-data-field>
-            <md-data-field field="ram" class="right">RAM</md-data-field>
-            <md-data-field field="probes" class="right">Probes</md-data-field>
-            <md-data-field field="failures" class="right">Failures</md-data-field>
-          </md-data-table>
-        </md-card>
-
-      </md-content>
-
-    </md-column-layout>
+    </md-content>
   </monitor-app>
 </body>
 </html>
@@ -142,8 +138,9 @@ app.page("/",
 app.js("/sysmon.js",
 """
 import {Component} from "/common/lib/component.js";
+import {MdApp} from "/common/lib/material.js";
 
-class MonitorApp extends Component {
+class MonitorApp extends MdApp {
   onconnected() {
     this.bind("#refresh", "click", (e) => this.onrefresh(e));
     this.bind("#alerts", "click", (e) => this.onack(e));

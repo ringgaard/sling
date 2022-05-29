@@ -288,7 +288,7 @@ export class PhotoGallery extends MdModal {
   }
 
   static stylesheet() {
-    return MdModal.stylesheet() + `
+    return `
       $ {
         background-color: #0E0E0E;
         user-select: none;

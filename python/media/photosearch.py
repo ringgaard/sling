@@ -49,33 +49,31 @@ app.page("/photosearch",
 </head>
 <body style="display: none">
   <photo-search-app id="app">
-    <md-column-layout>
-      <md-toolbar>
-        <md-toolbar-logo></md-toolbar-logo>
-        <div id="title">Reddit photo search</div>
-        <md-input
-          id="query"
-          type="search"
-          placeholder="Search for photos on Reddit...">
-        </md-input>
-        <md-icon-button id="search" icon="search"></md-icon-button>
-        <md-spacer></md-spacer>
-        <md-icon-button id="selectall" icon="select_all"></md-icon-button>
-        <md-icon-button id="deselect" icon="deselect"></md-icon-button>
-        <md-icon-button id="copy" icon="content_copy"></md-icon-button>
-        </md-icon-button>
-      </md-toolbar>
+    <md-toolbar>
+      <md-toolbar-logo></md-toolbar-logo>
+      <div id="title">Reddit photo search</div>
+      <md-input
+        id="query"
+        type="search"
+        placeholder="Search for photos on Reddit...">
+      </md-input>
+      <md-icon-button id="search" icon="search"></md-icon-button>
+      <md-spacer></md-spacer>
+      <md-icon-button id="selectall" icon="select_all"></md-icon-button>
+      <md-icon-button id="deselect" icon="deselect"></md-icon-button>
+      <md-icon-button id="copy" icon="content_copy"></md-icon-button>
+      </md-icon-button>
+    </md-toolbar>
 
-      <md-content>
-        <search-results id="results">
-          <md-card-toolbar>
-            <div>Results</div>
-          </md-card-toolbar>
-          <div id="hits"></div>
-          <md-icon-button id="more" icon="more_horiz">
-        </search-results>
-      </md-content>
-    </md-column-layout>
+    <md-content>
+      <search-results id="results">
+        <md-card-toolbar>
+          <div>Results</div>
+        </md-card-toolbar>
+        <div id="hits"></div>
+        <md-icon-button id="more" icon="more_horiz">
+      </search-results>
+    </md-content>
   </photo-search-app>
 </body>
 </html>
@@ -84,12 +82,12 @@ app.page("/photosearch",
 app.js("/photosearch/app.js",
 """
 import {Component} from "/common/lib/component.js";
-import {MdCard, inform} from "/common/lib/material.js";
+import {MdApp, MdCard, inform} from "/common/lib/material.js";
 import {reddit_thumbnail} from "/common/lib/reddit.js";
 
 let nsfw = false;
 
-class PhotoSearchApp extends Component {
+class PhotoSearchApp extends MdApp {
   onconnected() {
     this.bind("#query", "keyup", e => {
       if (e.key === "Enter") this.onsearch();
@@ -367,11 +365,6 @@ class SearchResults extends MdCard {
       });
       hitlist.appendChild(result);
     }
-  }
-
-  static stylesheet() {
-    return super.stylesheet() + `
-    `;
   }
 }
 

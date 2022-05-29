@@ -56,18 +56,16 @@ app.page("/redreport",
 </head>
 <body style="display: none">
   <photo-report-app id="app">
-    <md-column-layout>
-      <md-toolbar>
-        <md-toolbar-logo></md-toolbar-logo>
-        <md-text id="title">Reddit photo report</md-text>
-        <md-spacer></md-spacer>
-        <md-icon-button id="imgsearch" icon="image_search"></<md-icon-button>
-      </md-toolbar>
+    <md-toolbar>
+      <md-toolbar-logo></md-toolbar-logo>
+      <md-text id="title">Reddit photo report</md-text>
+      <md-spacer></md-spacer>
+      <md-icon-button id="imgsearch" icon="image_search"></<md-icon-button>
+    </md-toolbar>
 
-      <md-content>
-        <subreddit-list></subreddit-list>
-      </md-content>
-    </md-column-layout>
+    <md-content>
+      <subreddit-list></subreddit-list>
+    </md-content>
   </photo-report-app>
 </body>
 </html>
@@ -76,7 +74,7 @@ app.page("/redreport",
 app.js("/redreport/app.js",
 """
 import {Component} from "/common/lib/component.js";
-import {MdCard, MdDialog} from "/common/lib/material.js";
+import {MdApp, MdCard, MdDialog} from "/common/lib/material.js";
 import {PhotoGallery, imageurl, mediadb} from "/common/lib/gallery.js";
 import {reddit_thumbnail} from "/common/lib/reddit.js";
 
@@ -89,7 +87,7 @@ function current_date() {
   return new Date().toISOString().split('T')[0];
 }
 
-class PhotoReportApp extends Component {
+class PhotoReportApp extends MdApp {
   onconnected() {
     // Image search.
     this.bind("#imgsearch", "click", e => this.onsearch(e));
@@ -160,7 +158,7 @@ class PhotoDialog extends MdDialog {
   }
 
   static stylesheet() {
-    return MdDialog.stylesheet() + `
+    return `
       #content {
         display: flex;
         flex-direction: column;
@@ -418,7 +416,7 @@ class SubredditCard extends MdCard {
   }
 
   static stylesheet() {
-    return super.stylesheet() + `
+    return `
       $ {
         font-family: verdana, arial, helvetica;
       }

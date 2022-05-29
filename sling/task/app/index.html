@@ -10,70 +10,66 @@
 </head>
 <body>
   <dashboard-app id="app">
-    <md-column-layout>
+    <md-toolbar>
+      <md-toolbar-logo></md-toolbar-logo>
+      <div id="title">Job Status</div>
+      <md-spacer></md-spacer>
 
-      <md-toolbar>
-        <md-toolbar-logo></md-toolbar-logo>
-        <div id="title">Job Status</div>
+      <md-icon id="done" icon="done"></md-icon>
+      <md-icon id="error" icon="error"></md-icon>
+
+      <md-icon-button id="play5" icon="forward_5"></md-icon-button>
+      <md-icon-button id="play10" icon="forward_10"></md-icon-button>
+      <md-icon-button id="play30" icon="forward_30"></md-icon-button>
+      <md-icon-button id="pause" icon="pause" disabled="true"></md-icon-button>
+      <md-icon-button id="refresh" icon="refresh"></md-icon-button>
+    </md-toolbar>
+
+    <md-content>
+      <md-row-layout>
+
+        <dashboard-jobs id="jobs">
+          <md-card>
+            <md-data-table id="job-table">
+              <md-data-field field="select" html=true style="padding: 0"></md-data-field>
+              <md-data-field field="job">Job</md-data-field>
+              <md-data-field field="name">Name</md-data-field>
+              <md-data-field field="time" style="text-align: right">Time</md-data-field>
+              <md-data-field field="status" style="word-break: break-all; white-space: normal">Status</md-data-field>
+            </md-data-table>
+          </md-card>
+        </dashboard-jobs>
         <md-spacer></md-spacer>
+        <dashboard-perf id="perf">
+        </dashboard-perf>
 
-        <md-icon id="done" icon="done"></md-icon>
-        <md-icon id="error" icon="error"></md-icon>
+      </md-row-layout>
 
-        <md-icon-button id="play5" icon="forward_5"></md-icon-button>
-        <md-icon-button id="play10" icon="forward_10"></md-icon-button>
-        <md-icon-button id="play30" icon="forward_30"></md-icon-button>
-        <md-icon-button id="pause" icon="pause" disabled="true"></md-icon-button>
-        <md-icon-button id="refresh" icon="refresh"></md-icon-button>
-      </md-toolbar>
+      <dashboard-counters id="counters">
+        <md-card>
+          <md-data-table id="counter-table">
+            <md-data-field field="counter">Counter</md-data-field>
+            <md-data-field field="value" style="text-align: right">Value</md-data-field>
+            <md-data-field field="rate" style="text-align: right">Rate (/s)</md-data-field>
+          </md-data-table>
+        </md-card>
+      </dashboard-counters>
 
-      <md-content>
-        <md-row-layout>
-
-          <dashboard-jobs id="jobs">
-            <md-card>
-              <md-data-table id="job-table">
-                <md-data-field field="select" html=true style="padding: 0"></md-data-field>
-                <md-data-field field="job">Job</md-data-field>
-                <md-data-field field="name">Name</md-data-field>
-                <md-data-field field="time" style="text-align: right">Time</md-data-field>
-                <md-data-field field="status" style="word-break: break-all; white-space: normal">Status</md-data-field>
-              </md-data-table>
-            </md-card>
-          </dashboard-jobs>
-          <md-spacer></md-spacer>
-          <dashboard-perf id="perf">
-          </dashboard-perf>
-
-        </md-row-layout>
-
-        <dashboard-counters id="counters">
-          <md-card>
-            <md-data-table id="counter-table">
-              <md-data-field field="counter">Counter</md-data-field>
-              <md-data-field field="value" style="text-align: right">Value</md-data-field>
-              <md-data-field field="rate" style="text-align: right">Rate (/s)</md-data-field>
-            </md-data-table>
-          </md-card>
-        </dashboard-counters>
-
-        <dashboard-channels id="channels">
-          <md-card>
-            <md-data-table id="channel-table">
-              <md-data-field field="channel">Channel</md-data-field>
-              <md-data-field field="direction">Direction</md-data-field>
-              <md-data-field field="key_bytes" style="text-align: right">Key bytes</md-data-field>
-              <md-data-field field="value_bytes" style="text-align: right">Value bytes</md-data-field>
-              <md-data-field field="bandwidth" style="text-align: right">Bandwidth</md-data-field>
-              <md-data-field field="messages" style="text-align: right">Messages</md-data-field>
-              <md-data-field field="throughput" style="text-align: right">Throughput</md-data-field>
-              <md-data-field field="shards" style="text-align: right">Shards</md-data-field>
-            </md-data-table>
-          </md-card>
-        </dashboard-channels>
-      </md-content>
-
-    </md-column-layout>
+      <dashboard-channels id="channels">
+        <md-card>
+          <md-data-table id="channel-table">
+            <md-data-field field="channel">Channel</md-data-field>
+            <md-data-field field="direction">Direction</md-data-field>
+            <md-data-field field="key_bytes" style="text-align: right">Key bytes</md-data-field>
+            <md-data-field field="value_bytes" style="text-align: right">Value bytes</md-data-field>
+            <md-data-field field="bandwidth" style="text-align: right">Bandwidth</md-data-field>
+            <md-data-field field="messages" style="text-align: right">Messages</md-data-field>
+            <md-data-field field="throughput" style="text-align: right">Throughput</md-data-field>
+            <md-data-field field="shards" style="text-align: right">Shards</md-data-field>
+          </md-data-table>
+        </md-card>
+      </dashboard-channels>
+    </md-content>
   </dashboard-app>
 </body>
 </html>

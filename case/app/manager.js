@@ -29,7 +29,7 @@ function date2str(date) {
 // Case Manager
 //-----------------------------------------------------------------------------
 
-class CaseManager extends Component {
+class CaseManager extends material.MdApp {
   oninit() {
     this.bind("#settings", "click", e => this.onsettings(e));
     this.bind("#help", "click", e => this.onhelp(e));
@@ -58,36 +58,33 @@ class CaseManager extends Component {
 
   prerender() {
     return `
-      <md-column-layout>
-        <md-toolbar>
-          <md-toolbar-logo></md-toolbar-logo>
-          <div>Case</div>
-          <case-search-box id="search"></case-search-box>
-          <md-spacer></md-spacer>
-          <md-icon-button
-            id="help"
-            icon="info"
-            tooltip="Go to Guide">
-          </md-icon-button>
-          <md-icon-button
-            id="settings"
-            icon="settings"
-            tooltip="Change settings"
-            tooltip-align="right">
-          </md-icon-button>
-        </md-toolbar>
+      <md-toolbar>
+        <md-toolbar-logo></md-toolbar-logo>
+        <div>Case</div>
+        <case-search-box id="search"></case-search-box>
+        <md-spacer></md-spacer>
+        <md-icon-button
+          id="help"
+          icon="info"
+          tooltip="Go to Guide">
+        </md-icon-button>
+        <md-icon-button
+          id="settings"
+          icon="settings"
+          tooltip="Change settings"
+          tooltip-align="right">
+        </md-icon-button>
+      </md-toolbar>
 
-        <md-row-layout>
-          <md-content>
-            <case-list></case-list>
-          </md-content>
-          <md-drawer id="settings">
-            <settings-panel></settings-panel>
-          </md-drawer>
-        </md-row-layout>
-      </md-column-layout>
-
-      </md-column-layout>
+      <md-row-layout>
+        <md-content>
+          <case-list></case-list>
+        </md-content>
+        <md-drawer id="settings">
+          <settings-panel></settings-panel>
+        </md-drawer>
+      </md-row-layout>
+    </md-column-layout>
     `;
   }
 
@@ -142,7 +139,7 @@ class NewCaseDialog extends material.MdDialog {
   }
 
   static stylesheet() {
-    return material.MdDialog.stylesheet() + `
+    return `
       $ #content {
         display: flex;
         flex-direction: column;
@@ -418,7 +415,7 @@ class CaseList extends material.MdCard {
   }
 
   static stylesheet() {
-    return material.MdCard.stylesheet() + `
+    return `
       $ table {
         border: 0;
         white-space: nowrap;

@@ -4,9 +4,10 @@
 // Corpus browser app.
 
 import {Component} from "/common/lib/component.js";
+import {MdApp} from "/common/lib/material.js";
 import {Document} from "/common/lib/docview.js";
 
-class CorpusApp extends Component {
+class CorpusApp extends MdApp {
   display(url) {
     fetch(url)
       .then(response => {
