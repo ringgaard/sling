@@ -210,7 +210,7 @@ export class Component extends HTMLElement {
       c = Object.getPrototypeOf(c);
     }
     if (styles.length > 0) {
-      let css = styles.reverse().join(" ").replace(/\$/g, tagname);
+      let css = styles.reverse().join("\n").replace(/\$/g, tagname);
       stylesheet(css);
     }
   }

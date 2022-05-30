@@ -707,7 +707,7 @@ export class MdLogo extends Component {
         width: 100%;
       }
       $ path {
-        fill: #00A0D6; }
+        fill: #00A0D6;
       }
     `;
   }
@@ -726,7 +726,7 @@ export class MdToolbarLogo extends MdLogo {
         width: 50px;
       }
       $ path {
-        fill: #FFFFFF; }
+        fill: #FFFFFF;
       }
     `;
   }

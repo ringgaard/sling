@@ -153,7 +153,7 @@ let xrefs = [
     property: store.lookup("P6908"),
   },
   {
-    pattern: /^https?:\/\/([^\s\/]+)\.tumblr\.com\/?/i,
+    pattern: /^https?:\/\/([^\s\/]+)\.tumblr\.com\/?$/i,
     property: store.lookup("P3943"),
   },
   {
@@ -191,6 +191,14 @@ let xrefs = [
   {
     pattern: /^https?:\/\/(?:www\.)?playboyplus\.com\/profile\/(.+)/,
     property: store.lookup("P5346"),
+  },
+  {
+    pattern: /^http:\/\/(?:www\.)?vintage-erotica-forum\.com\/showthread\.php\?t=(\d+)/,
+    property: store.lookup("PVEF"),
+  },
+  {
+    pattern: /^http:\/\/(?:www\.)?vintage-erotica-forum\.com\/t(\d+)-/,
+    property: store.lookup("PVEF"),
   },
   {
     pattern: /^https?:\/\/(?:www\.)?models\.com\/models\/(.+)/,

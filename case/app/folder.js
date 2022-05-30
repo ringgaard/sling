@@ -131,14 +131,10 @@ class CaseFolder extends Component {
 
 Component.register(CaseFolder);
 
-class ScrapsFolder extends Component {
+class ScrapsFolder extends CaseFolder {
   onconnected() {
     this.bind(null, "click", e => this.onclick(e));
     this.bind("#clear", "select", e => this.onclear(e));
-  }
-
-  onclick(e) {
-    this.match("#editor").show_folder(this.state.folder);
   }
 
   async onclear(e) {

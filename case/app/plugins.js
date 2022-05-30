@@ -51,7 +51,7 @@ var plugins = [
   module: "viaf.js",
   actions: [PASTEURL, SEARCHURL],
   patterns: [
-    /^https:\/\/viaf\.org\/viaf\/\d+/,
+    /^https?:\/\/viaf\.org\/viaf\/\d+/,
   ],
 },
 
