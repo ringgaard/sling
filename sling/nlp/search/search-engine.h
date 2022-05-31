@@ -16,14 +16,30 @@
 #define SLING_NLP_SEARCH_ENGINE_H_
 
 #include "sling/base/types.h"
+#include "sling/nlp/document/phrase-tokenizer.h"
+#include "sling/nlp/search/search-index.h"
+#include "sling/util/top.h"
 
 namespace sling {
 namespace nlp {
 
 class SearchEngine {
  public:
+  typedef SearchIndex::Entity Entity;
+  typedef Top<const Entity *> Results;
+
+  // Load search engine index.
+  void Load(const string &filename);
+
+  // Search for matches in search index.
+  void Search(Text query, Results *results);
 
  private:
+  // Search index.
+  SearchIndex index_;
+
+  // Tokenizer for tokenizing query.
+  PhraseTokenizer tokenizer_;
 };
 
 }  // namespace nlp

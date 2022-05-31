@@ -24,7 +24,7 @@ const n_hair_color = store.lookup("P1884");
 const n_eye_color = store.lookup("P1340");
 const n_work_peroid_start = store.lookup("P2031");
 const n_work_peroid_end = store.lookup("P2032");
-const n_babepdia_id = store.lookup("PBABE");
+const n_babepedia_id = store.lookup("PBABE");
 const n_female = store.lookup("Q6581072");
 const n_cm = store.lookup("Q174728");
 const n_kg = store.lookup("Q11570");
@@ -228,7 +228,7 @@ export default class BabepediaPlugin {
     // Add reference to babepedia.
     let m = new URL(url).pathname.match(/^\/babe\/([^\/]+)/);
     let username = decodeURIComponent(m[1]);
-    topic.put(n_babepedia_id, decodeURI(url));
+    topic.put(n_babepedia_id, decodeURIComponent(username));
 
     // Add profile photo.
     let profimg = doc.getElementById("profimg");

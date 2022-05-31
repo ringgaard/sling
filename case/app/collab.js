@@ -28,6 +28,8 @@ export class Collaboration {
   async connect(url) {
     this.socket = new WebSocket(url);
     this.socket.addEventListener("message", e => this.onrecv(e));
+    this.socket.addEventListener("error", e => this.onerror(e));
+    this.socket.addEventListener("close", e => this.onclose(e));
     return new Promise((resolve, reject) => {
       this.socket.addEventListener("open", e => {
         resolve(this);
@@ -38,10 +40,23 @@ export class Collaboration {
     });
   }
 
+  onerror(e) {
+    if (this.socket) {
+      if (this.listener) this.listener.remote_error("Collab websocket error");
+    }
+  }
+
+  onclose(e) {
+    if (this.socket) {
+      console.log("Collab closed", e);
+      if (this.listener) this.listener.remote_closed(this);
+    }
+  }
+
   // Close connection to collaboration server.
   close() {
-    this.connected = false;
     this.socket.close();
+    this.socket = undefined;
   }
 
   // Check if connected to collaboration server.
@@ -141,6 +156,9 @@ export class Collaboration {
 
   // Send message to server.
   send(msg) {
+    if (!this.connected()) {
+      this.listener.remote_error("No connection to collaboration server")
+    }
     this.socket.send(msg);
   }
 

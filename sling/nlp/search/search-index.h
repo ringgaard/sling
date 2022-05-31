@@ -19,6 +19,7 @@
 
 #include "sling/base/types.h"
 #include "sling/file/repository.h"
+#include "sling/string/text.h"
 
 namespace sling {
 namespace nlp {
@@ -26,12 +27,109 @@ namespace nlp {
 // Search index with item posting lists for each search term.
 class SearchIndex {
  public:
+  // Entity item in repository.
+  class Entity : public RepositoryObject {
+   public:
+    // Entity id.
+    Text id() const { return Text(id_ptr(), *idlen_ptr()); }
+
+    // Entity frequency.
+    uint32 count() const { return *count_ptr(); }
+
+    // Entity comparison operator.
+    bool operator >(const Entity &other) const {
+      return count() > other.count();
+    }
+
+   private:
+    // Entity frequency.
+    REPOSITORY_FIELD(uint32, count, 1, 0);
+
+    // Entity id.
+    REPOSITORY_FIELD(uint8, idlen, 1, AFTER(count));
+    REPOSITORY_FIELD(char, id, *idlen_ptr(), AFTER(idlen));
+  };
+
+  // Term with posting list in repository.
+  class Term : public RepositoryObject {
+   public:
+    // Return fingerprint.
+    uint64 fingerprint() const { return *fingerprint_ptr(); }
+
+    // Return number of entities matching term.
+    int num_entities() const { return *entlen_ptr(); }
+
+    // Return array of entities matching term.
+    const uint32 *entities() const { return entities_ptr(); }
+
+    // Return next term in list.
+    const Term *next() const {
+      int size = sizeof(uint64) + sizeof(uint32) +
+                 num_entities() * sizeof(uint32);
+      const char *self = reinterpret_cast<const char *>(this);
+      return reinterpret_cast<const Term *>(self + size);
+    }
+
+   private:
+    // Term fingerprint.
+    REPOSITORY_FIELD(uint64, fingerprint, 1, 0);
+
+    // Entity list.
+    REPOSITORY_FIELD(uint32, entlen, 1, AFTER(fingerprint));
+    REPOSITORY_FIELD(uint32, entities, num_entities(), AFTER(entlen));
+  };
+
   // Load search index from file.
   void Load(const string &filename);
 
+  // Find matching term in term table. Return null if term is not found.
+  const Term *Find(uint64 fp) const;
+
+  // Get entity from entity index.
+  const Entity *GetEntity(int index) const {
+    return entity_index_.GetEntity(index);
+  }
+
+  // Search query normalization.
+  string normalization() const {
+    return repository_.GetBlockString("normalization");
+  }
+
  private:
+  // Entity index in repository.
+  class EntityIndex : public RepositoryIndex<uint32, Entity> {
+   public:
+    // Initialize name index.
+    void Initialize(const Repository &repository) {
+      Init(repository, "EntityIndex", "EntityItems", false);
+    }
+
+    // Return entity from entity index.
+    const Entity *GetEntity(int index) const {
+      return GetObject(index);
+    }
+  };
+
+  // Term index in repository.
+  class TermIndex : public RepositoryMap<Term> {
+   public:
+    // Initialize phrase index.
+    void Initialize(const Repository &repository) {
+      Init(repository, "Phrase");
+    }
+
+    // Return first element in bucket.
+    const Term *GetBucket(int bucket) const { return GetObject(bucket); }
+  };
+
   // Repository with search index.
   Repository repository_;
+
+  // Entity index.
+  EntityIndex entity_index_;
+
+  // Term index.
+  TermIndex term_index_;
 };
 
 }  // namespace nlp

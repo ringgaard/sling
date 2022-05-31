@@ -1454,6 +1454,17 @@ class CaseEditor extends MdApp {
     this.casefile.set(n_modified, modtime);
   }
 
+  async remote_closed(collab) {
+    inform("Connection to collaboration server lost");
+    let reconnect = await StdDialog.ask("Connection lost",
+                                        "Reconnect to collaboration server?");
+    if (reconnect) location.reload();
+  }
+
+  remote_error(collab) {
+    inform("Error communicating with collaboration server");
+  }
+
   async update_folders() {
     await this.find("folder-list").update({
       folders: this.folders,

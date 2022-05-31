@@ -54,6 +54,7 @@ cc_library(
   deps = [
     "//sling/base",
     "//sling/file:repository",
+    "//sling/string:text",
   ],
 )
 
@@ -62,7 +63,11 @@ cc_library(
   srcs = ["search-engine.cc"],
   hdrs = ["search-engine.h"],
   deps = [
+    ":search-index",
     "//sling/base",
+    "//sling/nlp/document:phrase-tokenizer",
+    "//sling/util:unicode",
+    "//sling/util:top",
   ],
 )
 

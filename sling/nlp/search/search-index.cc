@@ -20,6 +20,23 @@ namespace nlp {
 void SearchIndex::Load(const string &filename) {
   // Load search index repository.
   repository_.Read(filename);
+
+  // Initialize entity table.
+  entity_index_.Initialize(repository_);
+
+  // Initialize term index.
+  term_index_.Initialize(repository_);
+}
+
+const SearchIndex::Term *SearchIndex::Find(uint64 fp) const {
+  int bucket = fp % term_index_.num_buckets();
+  const Term *term = term_index_.GetBucket(bucket);
+  const Term *end = term_index_.GetBucket(bucket + 1);
+  while (term < end) {
+    if (term->fingerprint() == fp) return term;
+    term = term->next();
+  }
+  return nullptr;
 }
 
 }  // namespace nlp
