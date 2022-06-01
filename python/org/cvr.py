@@ -589,6 +589,7 @@ def convert_address(rec, addr):
     text = text.replace(" ,\n", "\n")
     text = text.replace(",\n", "\n")
     text = text.replace("  ", "\n")
+    text = re.sub(" +", " ", text)
     addrlines = text.split("\n")
   elif municipality is not None:
     # Municipality.
@@ -826,6 +827,7 @@ for key, rec in cvrdb.items():
     if newestname is not None:
       name = newestname.get("navn")
       if name is not None:
+        name = re.sub(" +", " ", name)
         entity.add(n_name, name)
         name_found = True
 
@@ -833,7 +835,7 @@ for key, rec in cvrdb.items():
   for n in data["navne"]:
     name = n.get("navn")
     if name is None or name == "Ukendt": continue
-    name = " ".join(name.split())
+    name = re.sub(" +", " ", name)
     period = n.get("periode")
     start = get_date(period.get("gyldigFra"))
     end = get_date(period.get("gyldigTil"))

@@ -416,6 +416,10 @@ class CaseList extends material.MdCard {
 
   static stylesheet() {
     return `
+      $ {
+        overflow: hidden;
+      }
+
       $ table {
         border: 0;
         white-space: nowrap;

@@ -45,6 +45,7 @@ body {
   height: 100%;
   min-height: 100%;
   position: relative;
+  overflow: hidden;
 }
 `);
 
@@ -1939,7 +1940,7 @@ export class MdDataTable extends Component {
 
   static stylesheet() {
     return `
-      $ {
+      $ table {
         border: 0;
         white-space: nowrap;
         font-size: 14px;
