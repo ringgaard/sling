@@ -36,11 +36,6 @@ class SearchIndex {
     // Entity frequency.
     uint32 count() const { return *count_ptr(); }
 
-    // Entity comparison operator.
-    bool operator >(const Entity &other) const {
-      return count() > other.count();
-    }
-
    private:
     // Entity frequency.
     REPOSITORY_FIELD(uint32, count, 1, 0);
@@ -95,6 +90,9 @@ class SearchIndex {
     return repository_.GetBlockString("normalization");
   }
 
+  // Check if search index has been loaded.
+  bool loaded() const { return repository_.loaded(); }
+
  private:
   // Entity index in repository.
   class EntityIndex : public RepositoryIndex<uint32, Entity> {
@@ -115,7 +113,7 @@ class SearchIndex {
    public:
     // Initialize phrase index.
     void Initialize(const Repository &repository) {
-      Init(repository, "Phrase");
+      Init(repository, "Term");
     }
 
     // Return first element in bucket.
@@ -130,6 +128,9 @@ class SearchIndex {
 
   // Term index.
   TermIndex term_index_;
+
+  // Number of term buckets.
+  int num_buckets_ = 0;
 };
 
 }  // namespace nlp

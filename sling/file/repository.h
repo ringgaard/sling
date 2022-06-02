@@ -103,6 +103,9 @@ class Repository {
                 std::vector<RepositoryMapItem *> *items,
                 int num_buckets);
 
+  // Check if repository has been loaded.
+  bool loaded() const { return !blocks_.empty(); }
+
  private:
   // Data block in repository.
   struct Block {

@@ -26,16 +26,18 @@ void SearchIndex::Load(const string &filename) {
 
   // Initialize term index.
   term_index_.Initialize(repository_);
+  num_buckets_ = term_index_.num_buckets();
 }
 
 const SearchIndex::Term *SearchIndex::Find(uint64 fp) const {
-  int bucket = fp % term_index_.num_buckets();
+  int bucket = fp % num_buckets_;
   const Term *term = term_index_.GetBucket(bucket);
   const Term *end = term_index_.GetBucket(bucket + 1);
   while (term < end) {
     if (term->fingerprint() == fp) return term;
     term = term->next();
   }
+
   return nullptr;
 }
 

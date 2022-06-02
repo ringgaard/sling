@@ -218,21 +218,16 @@ class SearchIndexBuilder : public task::Processor {
     int bucket = term % num_buckets_;
     uint32 entityid = *reinterpret_cast<const uint32 *>(entity.data());
 
-    // Check for new bucket.
-    if (bucket != current_bucket_) {
-      CHECK_GT(bucket, current_bucket_);
-
-      // Update bucket table.
-      while (current_bucket_ < bucket) {
-       term_buckets_->Write(&term_offset_, sizeof(uint64));
-        current_bucket_++;
-      }
-    }
-
     // Check for new term.
     if (term != current_term_) {
       FlushTerm();
       current_term_ = term;
+    }
+
+    // Update bucket table.
+    while (next_bucket_ <= bucket) {
+      term_buckets_->Write(&term_offset_, sizeof(uint64));
+      next_bucket_++;
     }
 
     // Add new posting to term posting list.
@@ -245,9 +240,9 @@ class SearchIndexBuilder : public task::Processor {
 
     // Flush buckets. We allocate one extra bucket to mark the end of the
     // term items.
-    while (current_bucket_ <= num_buckets_) {
+    while (next_bucket_ <= num_buckets_) {
       term_buckets_->Write(&term_offset_, sizeof(uint64));
-      current_bucket_++;
+      next_bucket_++;
     }
 
     // Flush repository streams.
@@ -311,7 +306,7 @@ class SearchIndexBuilder : public task::Processor {
   int num_buckets_ = 1 << 20;
 
   // Current bucket and term.
-  int current_bucket_ = -1;
+  int next_bucket_ = 0;
   uint64 current_term_ = 0;
 
   // Entities for current term.

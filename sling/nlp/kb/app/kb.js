@@ -169,14 +169,18 @@ class KbSearchBox extends Component {
   onquery(e) {
     let detail = e.detail
     let target = e.target;
+    let path = "/kb/query";
     let params = "fmt=cjson";
     let query = detail.trim();
     if (query.endsWith(".")) {
       params += "&fullmatch=1";
       query = query.slice(0, -1);
+    } else  if (query.endsWith("?")) {
+      path = "/kb/search";
+      query = query.slice(0, -1);
     }
 
-    fetch("/kb/query?" + params + "&q=" + encodeURIComponent(query))
+    fetch(`${path}?${params}&q=${encodeURIComponent(query)}`)
       .then(response => response.json())
       .then((data) => {
         let items = [];

@@ -217,6 +217,7 @@ cc_library(
     "//sling/nlp/document",
     "//sling/nlp/document:document-tokenizer",
     "//sling/nlp/document:lex",
+    "//sling/nlp/search:search-engine",
     "//sling/util:md5",
     "//sling/util:mutex",
     "//sling/util:sortmap",

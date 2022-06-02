@@ -30,6 +30,7 @@
 #include "sling/nlp/kb/calendar.h"
 #include "sling/nlp/kb/name-table.h"
 #include "sling/nlp/kb/xref.h"
+#include "sling/nlp/search/search-engine.h"
 #include "sling/util/mutex.h"
 
 namespace sling {
@@ -65,6 +66,9 @@ class KnowledgeService {
   // Load cross-reference table.
   void LoadXref(const string &xref_table);
 
+  // Load search index.
+  void LoadSearchIndex(const string &search_index);
+
   // Open item record set for offline items.
   void OpenItems(const string &filename);
 
@@ -79,6 +83,9 @@ class KnowledgeService {
 
   // Handle KB name queries.
   void HandleQuery(HTTPRequest *request, HTTPResponse *response);
+
+  // Handle KB search queries.
+  void HandleSearch(HTTPRequest *request, HTTPResponse *response);
 
   // Handle KB item requests.
   void HandleGetItem(HTTPRequest *request, HTTPResponse *response);
@@ -172,6 +179,9 @@ class KnowledgeService {
   // Identifier cross-reference.
   XRefMapping xref_;
 
+  // Search engine.
+  SearchEngine search_;
+
   // Record database for looking up items that are not in the knowledge base.
   RecordDatabase *items_ = nullptr;
   DBClient *itemdb_ = nullptr;
@@ -207,6 +217,8 @@ class KnowledgeService {
   Name n_lex_{names_, "lex"};
   Name n_document_{names_, "document"};
   Name n_matches_{names_, "matches"};
+  Name n_count_{names_, "count"};
+  Name n_hits_{names_, "hits"};
   Name n_lang_{names_, "lang"};
   Name n_nsfw_{names_, "nsfw"};
   Name n_age_{names_, "age"};

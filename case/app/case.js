@@ -268,10 +268,16 @@ class CaseEditor extends MdApp {
 
     // Search knowledge base.
     try {
+      let path = "/kb/query";
+      if (query.endsWith("?")) {
+        path = "/kb/search";
+        query = query.slice(0, -1);
+      }
       let params = "fmt=cjson";
       if (full) params += "&fullmatch=1";
       params += `&q=${encodeURIComponent(query)}`;
-      let response = await fetch(`${settings.kbservice}/kb/query?${params}`);
+
+      let response = await fetch(`${settings.kbservice}${path}?${params}`);
       let data = await response.json();
       for (let item of data.matches) {
         results.push({

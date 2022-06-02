@@ -25,14 +25,26 @@ namespace nlp {
 
 class SearchEngine {
  public:
+  // Entity comparison operator.
   typedef SearchIndex::Entity Entity;
-  typedef Top<const Entity *> Results;
+  struct EntityCompare {
+    bool operator()(const Entity *a, const Entity *b) {
+      return a->count() > b->count();
+    }
+  };
+
+  // Search results for selecting top-k results.
+  typedef Top<const Entity *, EntityCompare> Results;
 
   // Load search engine index.
   void Load(const string &filename);
 
-  // Search for matches in search index.
-  void Search(Text query, Results *results);
+  // Search for matches in search index and put the k-best matches into the
+  // result list. Returns the total number of matches.
+  int Search(Text query, Results *results);
+
+  // Check if search index has been loaded.
+  bool loaded() const { return index_.loaded(); }
 
  private:
   // Search index.

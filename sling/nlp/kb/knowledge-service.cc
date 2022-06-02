@@ -265,6 +265,10 @@ void KnowledgeService::LoadXref(const string &xref_table) {
   xref_.Load(xref_table);
 }
 
+void KnowledgeService::LoadSearchIndex(const string &search_index) {
+  search_.Load(search_index);
+}
+
 void KnowledgeService::OpenItems(const string &filename) {
   delete items_;
   RecordFileOptions options;
@@ -280,6 +284,7 @@ void KnowledgeService::OpenItemDatabase(const string &db) {
 void KnowledgeService::Register(HTTPServer *http) {
   http->Register("/kb", this, &KnowledgeService::HandleLandingPage);
   http->Register("/kb/query", this, &KnowledgeService::HandleQuery);
+  http->Register("/kb/search", this, &KnowledgeService::HandleSearch);
   http->Register("/kb/item", this, &KnowledgeService::HandleGetItem);
   http->Register("/kb/frame", this, &KnowledgeService::HandleGetFrame);
   http->Register("/kb/topic", this, &KnowledgeService::HandleGetTopic);
@@ -468,6 +473,38 @@ void KnowledgeService::HandleQuery(HTTPRequest *request,
     results.push_back(match.Create().handle());
   }
   b.Add(n_matches_,  Array(ws.store(), results));
+
+  // Return response.
+  ws.set_output(b.Create());
+}
+
+void KnowledgeService::HandleSearch(HTTPRequest *request,
+                                    HTTPResponse *response) {
+  WebService ws(kb_, request, response);
+
+  // Get query
+  Text query = ws.Get("q");
+  int limit = ws.Get("limit", 50);
+  VLOG(1) << "Search query: " << query;
+
+  // Search index.
+  SearchEngine::Results results(limit);
+  int hits = search_.Search(query, &results);
+
+  // Generate response.
+  Handles matches(ws.store());
+  Builder b(ws.store());
+  b.Add(n_hits_, hits);
+  for (auto *result : results) {
+    Frame item(ws.store(), RetrieveItem(ws.store(), result->id()));
+    if (item.invalid()) continue;
+    Builder match(ws.store());
+    GetStandardProperties(item, &match, true);
+    int count = result->count();
+    match.Add(n_count_, count);
+    matches.push_back(match.Create().handle());
+  }
+  b.Add(n_matches_,  Array(ws.store(), matches));
 
   // Return response.
   ws.set_output(b.Create());

@@ -25,50 +25,46 @@ class SearchWorkflow:
     self.data = data.Datasets(self.wf)
     self.normalization = "clnp"
 
-  def search_dictionary(self, language=None):
+  def search_dictionary(self):
     """Resource for search dictionary repository."""
-    if language == None: language = flags.arg.language
     return self.wf.resource("search-dictionary.repo",
-                            dir=corpora.workdir("search", language),
+                            dir=corpora.kbdir(),
                             format="repository")
 
-  def search_index(self, language=None):
+  def search_index(self):
     """Resource for search index repository."""
-    if language == None: language = flags.arg.language
     return self.wf.resource("search-index.repo",
-                            dir=corpora.workdir("search", language),
+                            dir=corpora.kbdir(),
                             format="repository")
 
-  def build_search_dictionary(self, items=None, language=None):
+  def build_search_dictionary(self, items=None, languages=None):
     """Task for building search dictionary."""
-    if language == None: language = flags.arg.language
     if items == None: items = self.data.items()
 
     with self.wf.namespace("search"):
       builder = self.wf.task("search-dictionary-builder", params={
-        "language": language,
+        "languages": ",".join(languages),
         "normalization": self.normalization,
       })
       self.wf.connect(self.wf.read(items, name="item-reader"), builder)
 
-      repo = self.search_dictionary(language)
+      repo = self.search_dictionary()
       builder.attach_output("repository", repo)
 
     return repo
 
-  def build_search_index(self, items=None, language=None):
+  def build_search_index(self, items=None, languages=None):
     """Task for building search dictionary."""
-    if language == None: language = flags.arg.language
     if items == None: items = self.data.items()
 
     with self.wf.namespace("search"):
       # Map input items and output entities and terms.
       mapper = self.wf.task("search-index-mapper", params={
-        "language": language,
+        "languages": ",".join(languages),
         "normalization": self.normalization,
       })
       self.wf.connect(self.wf.read(items, name="item-reader"), mapper)
-      mapper.attach_input("dictionary", self.search_dictionary(language))
+      mapper.attach_input("dictionary", self.search_dictionary())
       entities = self.wf.channel(mapper, "entities", format="message/entity")
       terms = self.wf.channel(mapper, "terms", format="message/term")
 
@@ -77,27 +73,25 @@ class SearchWorkflow:
 
       # Collect entities and terms and build search indes.
       builder = self.wf.task("search-index-builder", params={
-        "language": language,
+        "languages": ",".join(languages),
         "normalization": self.normalization,
       })
       self.wf.connect(entities, builder, name="entities")
       self.wf.connect(postings, builder, name="terms")
-      repo = self.search_index(language)
+      repo = self.search_index()
       builder.attach_output("repository", repo)
 
     return repo
 
 def build_search_dictionary():
-  for language in flags.arg.languages:
-    log.info("Build " + language + " search dictionary")
-    wf = SearchWorkflow(language + "-search")
-    wf.build_search_dictionary(language=language)
-    run(wf.wf)
+  log.info("Build search dictionary")
+  wf = SearchWorkflow("search")
+  wf.build_search_dictionary(languages=flags.arg.languages)
+  run(wf.wf)
 
 def build_search_index():
-  for language in flags.arg.languages:
-    log.info("Build " + language + " search index")
-    wf = SearchWorkflow(language + "-search")
-    wf.build_search_index(language=language)
-    run(wf.wf)
+  log.info("Build search index")
+  wf = SearchWorkflow("search")
+  wf.build_search_index(languages=flags.arg.languages)
+  run(wf.wf)
 
