@@ -6,6 +6,7 @@ cc_library(
   deps = [
     "//sling/base",
     "//sling/file:repository",
+    "//sling/frame:serialization",
     "//sling/nlp/document:phrase-tokenizer",
     "//sling/task",
     "//sling/task:frames",
@@ -36,6 +37,7 @@ cc_library(
     ":search-dictionary",
     "//sling/base",
     "//sling/file:repository",
+    "//sling/frame:serialization",
     "//sling/nlp/document:phrase-tokenizer",
     "//sling/task",
     "//sling/task:frames",

@@ -18,11 +18,12 @@
 #include <unordered_set>
 #include <vector>
 
-#include "sling/string/text.h"
+#include "sling/frame/serialization.h"
 #include "sling/nlp/document/phrase-tokenizer.h"
 #include "sling/nlp/search/search-dictionary.h"
 #include "sling/task/frames.h"
 #include "sling/task/task.h"
+#include "sling/string/text.h"
 #include "sling/util/arena.h"
 #include "sling/util/mutex.h"
 #include "sling/util/unicode.h"
@@ -36,17 +37,32 @@ class SearchIndexMapper : public task::FrameProcessor {
   typedef std::unordered_set<uint64> Terms;
 
   void Startup(task::Task *task) override {
-    // Get parameters.
-    string lang = task->Get("language", "en");
-    language_ = commons_->Lookup("/lang/" + lang);
-    normalization_ = task->Get("normalization", "cln");
-    task->Fetch("buckets", &num_buckets_);
+    // Read search index configuration.
+    FileReader reader(commons_, task->GetInputFile("config"));
+    Frame config = reader.Read().AsFrame();
+    CHECK(config.valid());
+    num_buckets_ = config.GetInt("buckets", num_buckets_);
+
+    // Get languages for indexing.
+    Array langs = config.Get("languages").AsArray();
+    CHECK(langs.valid());
+    for (int i = 0; i < langs.length(); ++i) {
+      languages_.add(langs.get(i));
+    }
+
+    // Get indexed properties.
+    Frame indexed = config.GetFrame("indexed");
+    CHECK(indexed.valid());
+    for (const Slot &s : indexed) {
+      properties_[s.name] = s.value;
+    }
 
     // Get output channels.
     entities_ = task->GetSink("entities");
     terms_ = task->GetSink("terms");
 
     // Set up phrase normalization.
+    normalization_ = config.GetString("normalization");
     Normalization norm = ParseNormalization(normalization_);
     tokenizer_.set_normalization(norm);
 
@@ -75,16 +91,21 @@ class SearchIndexMapper : public task::FrameProcessor {
     Store *store = frame.store();
     Terms terms;
     for (const Slot &s : frame) {
-        if (s.name == n_name_ || s.name == n_alias_) {
-        // Skip names and aliases in foreign languages.
-        Handle value = store->Resolve(s.value);
-        if (!store->IsString(value)) continue;
-        Handle lang = store->GetString(value)->qualifier();
-        bool foreign = !lang.IsNil() && lang != language_;
+      // Check properties should be indexed.
+      auto f = properties_.find(s.name);
+      if (f == properties_.end()) continue;
+      Handle type = f->second;
 
-        if (!foreign) {
-          Text name = store->GetString(value)->str();
-          Collect(&terms, name);
+      if (type == n_name_ || type == n_text_) {
+        // Skip names in foreign languages.
+        Handle value = store->Resolve(s.value);
+        if (store->IsString(value)) {
+          Handle lang = store->GetString(value)->qualifier();
+          bool foreign = !lang.IsNil() && languages_.count(lang) == 0;
+          if (!foreign) {
+            Text name = store->GetString(value)->str();
+            Collect(&terms, name);
+          }
         }
       }
     }
@@ -119,8 +140,8 @@ class SearchIndexMapper : public task::FrameProcessor {
   }
 
  private:
-  // Language for search terms.
-  Handle language_;
+  // Languages for search terms.
+  HandleSet languages_;
 
   // Term normalization.
   string normalization_;
@@ -141,9 +162,14 @@ class SearchIndexMapper : public task::FrameProcessor {
   // Next entity id.
   uint32 next_entityid_ = 0;
 
+  // Indexed properties.
+  HandleMap<Handle> properties_;
+
   // Symbols.
   Name n_name_{names_, "name"};
-  Name n_alias_{names_, "alias"};
+  Name n_text_{names_, "text"};
+  Name n_item_{names_, "item"};
+  Name n_date_{names_, "date"};
   Name n_popularity_{names_, "/w/item/popularity"};
   Name n_fanin_{names_, "/w/item/fanin"};
 
@@ -165,8 +191,15 @@ class SearchIndexBuilder : public task::Processor {
   }
 
   void Start(task::Task *task) override {
+    // Read search index configuration.
+    Store store;
+    FileReader reader(&store, task->GetInputFile("config"));
+    Frame config = reader.Read().AsFrame();
+    CHECK(config.valid());
+    num_buckets_ = config.GetInt("buckets", num_buckets_);
+
     // Add normalization flags to repository.
-    repository_.AddBlock("normalization", task->Get("normalization", "cln"));
+    repository_.AddBlock("normalization", config.GetString("normalization"));
 
     // Get parameters.
     task->Fetch("buckets", &num_buckets_);

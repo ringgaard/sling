@@ -15,8 +15,9 @@
 #include <unordered_set>
 
 #include "sling/file/repository.h"
-#include "sling/string/text.h"
+#include "sling/frame/serialization.h"
 #include "sling/nlp/document/phrase-tokenizer.h"
+#include "sling/string/text.h"
 #include "sling/task/frames.h"
 #include "sling/task/task.h"
 #include "sling/util/arena.h"
@@ -26,16 +27,24 @@
 namespace sling {
 namespace nlp {
 
-// Build search dictionary with terms vector for each item.
+// Build search dictionary with a term vector for each item.
 class SearchDictionaryBuilder : public task::FrameProcessor {
  public:
   void Startup(task::Task *task) override {
-    // Get parameters.
-    string lang = task->Get("language", "en");
-    language_ = commons_->Lookup("/lang/" + lang);
-    normalization_ = task->Get("normalization", "cln");
+    // Read search index configuration.
+    FileReader reader(commons_, task->GetInputFile("config"));
+    Frame config = reader.Read().AsFrame();
+    CHECK(config.valid());
+
+    // Get languages for indexing.
+    Array langs = config.Get("languages").AsArray();
+    CHECK(langs.valid());
+    for (int i = 0; i < langs.length(); ++i) {
+      languages_.add(langs.get(i));
+    }
 
     // Set up phrase normalization.
+    normalization_ = config.GetString("normalization");
     Normalization norm = ParseNormalization(normalization_);
     tokenizer_.set_normalization(norm);
 
@@ -60,7 +69,7 @@ class SearchDictionaryBuilder : public task::FrameProcessor {
       Handle value = store->Resolve(s.value);
       if (!store->IsString(value)) continue;
       Handle lang = store->GetString(value)->qualifier();
-      bool foreign = !lang.IsNil() && lang != language_;
+      bool foreign = !lang.IsNil() && languages_.count(lang) == 0;
       if (foreign) continue;
 
       // Get term fingerprints for name.
@@ -143,8 +152,8 @@ class SearchDictionaryBuilder : public task::FrameProcessor {
     uint32 num_terms;
   };
 
-  // Language for search terms.
-  Handle language_;
+  // Languages for search terms.
+  HandleSet languages_;
 
   // Term normalization.
   string normalization_;

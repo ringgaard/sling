@@ -1,28 +1,51 @@
 {
+  ; Term normalization.
+  normalization: "clnp"
+
+  ; Languages for selecting names and dictionary terms.
+  languages: [
+    /lang/en ; English
+    /lang/da ; Danish
+  ]
+
+  ; Stopwords that are not indexed.
+  stopwords: [
+    "and",
+    "by",
+    "for",
+    "of",
+    "the",
+    "in",
+    "to",
+  ]
+
   ; Indexed properties.
-  properties: [
+  indexed: {
+    name: name,
+    alias: name,
+    description: text,
+
+    P2561: name,      ; name
+    P4970: name,      ; alternate names
+    P1705: name,      ; native label
+    P97: name,        ; noble title
+    P1813: name,      ; short name
+    P735: name,       ; given name
+    P734: name,       ; family name
+    P1559: name,      ; name in native language
+    P1477: name,      ; birth name
+    P2562: name,      ; married name
+    P742: name,       ; pseudonym
+    P1786: name,      ; posthumous name
+    P1449: name,      ; nickname
+    P1448: name,      ; official name
+    P1549: name,      ; demonym
+  }
+
+  unused: [
     P31,        ; instance of
     P279,       ; subclass of
 
-    P2561,      ; name
-    P4970,      ; alternate names
-    P1705,      ; native label
-    P97,        ; noble title
-    P1813,      ; short name
-    P735,       ; given name
-    P734,       ; family name
-    P511,       ; honorific prefix
-    P1035,      ; honorific suffix
-    P1559,      ; name in native language
-    P1477,      ; birth name
-    P2562,      ; married name
-    P742,       ; pseudonym
-    P1786,      ; posthumous name
-    P1449,      ; nickname
-    P1476,      ; title
-    P1680,      ; subtitle
-    P1448,      ; official name
-    P1549,      ; demonym
     P172,       ; ethnic group
 
     P3150,      ; birthday
