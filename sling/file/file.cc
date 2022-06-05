@@ -331,7 +331,7 @@ size_t File::PageSize() {
   return sysconf(_SC_PAGESIZE);
 }
 
-void *File::MapMemory(uint64 pos, size_t size, bool writable) {
+void *File::MapMemory(uint64 pos, size_t size, bool writable, bool preload) {
   return nullptr;
 }
 

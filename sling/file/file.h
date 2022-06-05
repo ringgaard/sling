@@ -73,7 +73,9 @@ class File {
   Status WriteLine(const string &line);
 
   // Map file region into memory. Return null on error or if not supported.
-  virtual void *MapMemory(uint64 pos, size_t size, bool writable = false);
+  virtual void *MapMemory(uint64 pos, size_t size,
+                          bool writable = false,
+                          bool preload = true);
 
   // Resize file.
   virtual Status Resize(uint64 size) = 0;

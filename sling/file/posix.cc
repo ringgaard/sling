@@ -113,9 +113,11 @@ class PosixFile : public File {
     return Status::OK;
   }
 
-  void *MapMemory(uint64 pos, size_t size, bool writable) override {
+  void *MapMemory(uint64 pos, size_t size,
+                  bool writable, bool preload) override {
     void *mapping = mmap(nullptr, size, PROT_READ | PROT_WRITE,
-                         (writable ? MAP_SHARED : MAP_PRIVATE) | MAP_POPULATE,
+                         (writable ? MAP_SHARED : MAP_PRIVATE) |
+                         (preload ? MAP_POPULATE : 0),
                          fd_, pos);
     return mapping == MAP_FAILED ? nullptr : mapping;
   }

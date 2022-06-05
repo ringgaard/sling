@@ -65,7 +65,7 @@ class Repository {
   void LoadAll();
 
   // Load a data block from file into the repository.
-  bool LoadBlock(const string &name);
+  bool LoadBlock(const string &name, bool preload = true);
 
   // Read repository from file.
   void Read(const string &filename);

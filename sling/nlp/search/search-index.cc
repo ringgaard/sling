@@ -18,8 +18,11 @@ namespace sling {
 namespace nlp {
 
 void SearchIndex::Load(const string &filename) {
-  // Load search index repository.
-  repository_.Read(filename);
+  // Load search index repository. Do not preload posting lists.
+  repository_.Open(filename);
+  repository_.LoadBlock("TermItems", false);
+  repository_.LoadAll();
+  repository_.Close();
 
   // Initialize entity table.
   entity_index_.Initialize(repository_);

@@ -102,7 +102,7 @@ void Repository::LoadAll() {
   for (const Block &block : blocks_) LoadBlock(block.name);
 }
 
-bool Repository::LoadBlock(const string &name) {
+bool Repository::LoadBlock(const string &name, bool preload) {
   // Find block.
   int block_index = -1;
   for (int i = 0; i < blocks_.size(); ++i) {
@@ -120,7 +120,7 @@ bool Repository::LoadBlock(const string &name) {
   if (block.data != nullptr) return true;
 
   // Try to memory-map block.
-  void *mapping = file_->MapMemory(block.position, block.size);
+  void *mapping = file_->MapMemory(block.position, block.size, false, preload);
   if (mapping != nullptr) {
     VLOG(3) << "Mapped block " << name << " (" << block.size << " bytes)";
     block.data = static_cast<char *>(mapping);
