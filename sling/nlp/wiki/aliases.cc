@@ -81,26 +81,6 @@ class AliasExtractor : public task::FrameProcessor {
     if (skip_aux_) filter_.Init(commons_);
     num_aux_items_ = task->GetCounter("aux_items");
     num_non_entity_items_ = task->GetCounter("non-entity_items");
-
-    // Initialize skipped item types.
-    const char *skipped_item_types[] = {
-      "Q273057",     // discography
-      "Q1371849",    // filmography
-      "Q17438413",   // videography
-      "Q1631107",    // bibliography
-      "Q1075660",    // artist discography
-      "Q59248059",   // singles discography
-      "Q20054355",   // career statistics
-      "Q59191021",   // Wikimedia albums discography
-      "Q104635718",  // Wikimedia artist discography
-      "Q59248072",   // Wikimedia EPs discography
-      "Q17362920",   // Wikimedia duplicated page
-      nullptr,
-    };
-    for (const char **type = skipped_item_types; *type; ++type) {
-      skipped_types_.insert(commons_->Lookup(*type));
-    }
-    num_skipped_items_ = task->GetCounter("skipped_items");
   }
 
   void Process(Slice key, uint64 serial, const Frame &frame) override {
@@ -123,17 +103,13 @@ class AliasExtractor : public task::FrameProcessor {
       // Do not extract aliases from non-entity items.
       if (property == n_instance_of_) {
         // Discard alias for non-entity items.
-        if (wikitypes_.IsCategory(value) ||
-            wikitypes_.IsDisambiguation(value) ||
-            wikitypes_.IsInfobox(value) ||
-            wikitypes_.IsTemplate(value) ||
-            wikitypes_.IsDuplicate(value)) {
+        if (wikitypes_.IsNonEntity(value)) {
           num_non_entity_items_->Increment();
           return;
         }
 
         // Check if all aliases for this item should be skipped.
-        if (skipped_types_.count(value) > 0) skip = true;
+        if (wikitypes_.IsBiographic(value)) skip = true;
       }
 
       if (!store->IsString(value)) continue;
@@ -204,10 +180,7 @@ class AliasExtractor : public task::FrameProcessor {
 
     // Add skip type to frame if it all aliases for the item should be skipped.
     // This will filter out all aliases for the item in the alias selector.
-    if (skip) {
-      a.AddIsA(n_skip_);
-      num_skipped_items_->Increment();
-    }
+    if (skip) a.AddIsA(n_skip_);
 
     // Output aliases matching language.
     Frame aliases = a.Create();
@@ -240,10 +213,6 @@ class AliasExtractor : public task::FrameProcessor {
   AuxFilter filter_;
   task::Counter *num_aux_items_;
   task::Counter *num_non_entity_items_;
-
-  // Item types that are skipped in the alias extraction.
-  HandleSet skipped_types_;
-  task::Counter *num_skipped_items_;
 
   // Symbols.
   Name n_name_{names_, "name"};

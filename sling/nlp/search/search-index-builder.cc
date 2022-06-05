@@ -21,6 +21,7 @@
 #include "sling/frame/serialization.h"
 #include "sling/nlp/document/phrase-tokenizer.h"
 #include "sling/nlp/search/search-dictionary.h"
+#include "sling/nlp/wiki/wiki.h"
 #include "sling/task/frames.h"
 #include "sling/task/task.h"
 #include "sling/string/text.h"
@@ -66,6 +67,9 @@ class SearchIndexMapper : public task::FrameProcessor {
     Normalization norm = ParseNormalization(normalization_);
     tokenizer_.set_normalization(norm);
 
+    // Initialize wiki types.
+    wikitypes_.Init(commons_);
+
     // Load search dictionary.
     LOG(INFO) << "Load search dictionary";
     const string &dictfn = task->GetInput("dictionary")->resource()->name();
@@ -78,6 +82,17 @@ class SearchIndexMapper : public task::FrameProcessor {
   }
 
   void Process(Slice key, uint64 serial, const Frame &frame) override {
+    // Skip non-entity items.
+    Store *store = frame.store();
+    for (const Slot &s : frame) {
+      if (s.name == n_instance_of_) {
+        Handle type = store->Resolve(s.value);
+        if (wikitypes_.IsNonEntity(type) || wikitypes_.IsBiographic(type)) {
+          return;
+        }
+      }
+    }
+
     // Compute frequency count for item.
     int popularity = frame.GetInt(n_popularity_);
     int fanin = frame.GetInt(n_fanin_);
@@ -88,10 +103,9 @@ class SearchIndexMapper : public task::FrameProcessor {
     CHECK(entityid >= 0);
 
     // Collect search terms for item.
-    Store *store = frame.store();
     Terms terms;
     for (const Slot &s : frame) {
-      // Check properties should be indexed.
+      // Check if properties should be indexed.
       auto f = properties_.find(s.name);
       if (f == properties_.end()) continue;
       Handle type = f->second;
@@ -149,6 +163,9 @@ class SearchIndexMapper : public task::FrameProcessor {
   // Phrase tokenizer for computing term fingerprints.
   PhraseTokenizer tokenizer_;
 
+  // Wiki page types.
+  WikimediaTypes wikitypes_;
+
   // Search dictionary with search terms for items.
   SearchDictionary dictionary_;
 
@@ -172,6 +189,7 @@ class SearchIndexMapper : public task::FrameProcessor {
   Name n_date_{names_, "date"};
   Name n_popularity_{names_, "/w/item/popularity"};
   Name n_fanin_{names_, "/w/item/fanin"};
+  Name n_instance_of_{names_, "P31"};
 
   // Statistics.
   task::Counter *num_items_ = nullptr;

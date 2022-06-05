@@ -111,9 +111,18 @@ class WikimediaTypes {
   // Check if item is a duplicate.
   bool IsDuplicate(Handle type) const;
 
+  // Check if item is a non-entity.
+  bool IsNonEntity(Handle type) const;
+
+  // Check if item is biographical.
+  bool IsBiographic(Handle type) const;
+
  private:
   // Category types.
   HandleSet category_types_;
+
+  // Biographic types.
+  HandleSet biographic_types_;
 
   // Names.
   Names names_;

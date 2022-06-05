@@ -17,6 +17,7 @@
 #include "sling/file/repository.h"
 #include "sling/frame/serialization.h"
 #include "sling/nlp/document/phrase-tokenizer.h"
+#include "sling/nlp/wiki/wiki.h"
 #include "sling/string/text.h"
 #include "sling/task/frames.h"
 #include "sling/task/task.h"
@@ -48,6 +49,9 @@ class SearchDictionaryBuilder : public task::FrameProcessor {
     Normalization norm = ParseNormalization(normalization_);
     tokenizer_.set_normalization(norm);
 
+    // Initialize wiki types.
+    wikitypes_.Init(commons_);
+
     // Statistics.
     num_items_ = task->GetCounter("items");
     num_tokens_ = task->GetCounter("tokens");
@@ -63,25 +67,32 @@ class SearchDictionaryBuilder : public task::FrameProcessor {
     std::unordered_set<uint64> terms;
     std::vector<uint64> tokens;
     for (const Slot &s : frame) {
-      if (s.name != n_name_ && s.name != n_alias_) continue;
+      // Skip non-entity items.
+      if (s.name == n_instance_of_) {
+        Handle type = store->Resolve(s.value);
+        if (wikitypes_.IsNonEntity(type) || wikitypes_.IsBiographic(type)) {
+          return;
+        }
+      } else if (s.name == n_name_ || s.name == n_alias_) {
+        // Add names and aliases in the selected languages.
+        Handle value = store->Resolve(s.value);
+        if (store->IsString(value)) {
+          Handle lang = store->GetString(value)->qualifier();
+          if (!lang.IsNil() || languages_.count(lang) > 0) {
+            // Get term fingerprints for name.
+            Text name = store->GetString(value)->str();
+            if (UTF8::Valid(name.data(), name.size())) {
+              tokenizer_.TokenFingerprints(name, &tokens);
 
-      // Skip names and aliases in foreign languages.
-      Handle value = store->Resolve(s.value);
-      if (!store->IsString(value)) continue;
-      Handle lang = store->GetString(value)->qualifier();
-      bool foreign = !lang.IsNil() && languages_.count(lang) == 0;
-      if (foreign) continue;
-
-      // Get term fingerprints for name.
-      Text name = store->GetString(value)->str();
-      if (!UTF8::Valid(name.data(), name.size())) continue;
-      tokenizer_.TokenFingerprints(name, &tokens);
-
-      // Add token fingerprints to term vector.
-      for (uint64 token : tokens) {
-        if (token != 1) terms.insert(token);
+              // Add token fingerprints to term vector.
+              for (uint64 token : tokens) {
+                if (token != 1) terms.insert(token);
+              }
+              num_tokens_->Increment(tokens.size());
+            }
+          }
+        }
       }
-      num_tokens_->Increment(tokens.size());
     }
     num_items_->Increment();
     num_terms_->Increment(terms.size());
@@ -168,9 +179,13 @@ class SearchDictionaryBuilder : public task::FrameProcessor {
   Arena<uint64> term_arena_;
   StringArena string_arena_;
 
+  // Wiki page types.
+  WikimediaTypes wikitypes_;
+
   // Symbols.
   Name n_name_{names_, "name"};
   Name n_alias_{names_, "alias"};
+  Name n_instance_of_{names_, "P31"};
 
   // Mutex for serializing access to repository.
   Mutex mu_;

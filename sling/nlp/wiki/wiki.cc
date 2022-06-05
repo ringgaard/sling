@@ -139,6 +139,26 @@ void WikimediaTypes::Init(Store *store) {
     category_types_.insert(type);
   }
 
+  // Initialize biographic item types.
+  const char *biographic_item_types[] = {
+    "Q273057",     // discography
+    "Q1371849",    // filmography
+    "Q17438413",   // videography
+    "Q1631107",    // bibliography
+    "Q1075660",    // artist discography
+    "Q59248059",   // singles discography
+    "Q20054355",   // career statistics
+    "Q59191021",   // Wikimedia albums discography
+    "Q104635718",  // Wikimedia artist discography
+    "Q59248072",   // Wikimedia EPs discography
+    nullptr,
+  };
+
+  for (const char **b = biographic_item_types; *b; ++b) {
+    Handle type = store->Lookup(*b);
+    biographic_types_.insert(type);
+  }
+
   CHECK(names_.Bind(store));
 }
 
@@ -164,6 +184,19 @@ bool WikimediaTypes::IsInfobox(Handle type) const {
 
 bool WikimediaTypes::IsDuplicate(Handle type) const {
   return type == n_permanent_duplicate_item_;
+}
+
+bool WikimediaTypes::IsNonEntity(Handle type) const {
+  return IsCategory(type) ||
+         IsDisambiguation(type) ||
+         IsList(type) ||
+         IsTemplate(type) ||
+         IsInfobox(type) ||
+         IsDuplicate(type);
+}
+
+bool WikimediaTypes::IsBiographic(Handle type) const {
+  return biographic_types_.count(type) > 0;
 }
 
 void AuxFilter::Init(Store *store) {
