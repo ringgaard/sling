@@ -109,10 +109,10 @@ class SearchIndexMapper : public task::FrameProcessor {
       auto f = properties_.find(s.name);
       if (f == properties_.end()) continue;
       Handle type = f->second;
+      Handle value = store->Resolve(s.value);
 
       if (type == n_name_ || type == n_text_) {
         // Skip names in foreign languages.
-        Handle value = store->Resolve(s.value);
         if (store->IsString(value)) {
           Handle lang = store->GetString(value)->qualifier();
           bool foreign = !lang.IsNil() && languages_.count(lang) == 0;
@@ -120,6 +120,15 @@ class SearchIndexMapper : public task::FrameProcessor {
             Text name = store->GetString(value)->str();
             Collect(&terms, name);
           }
+        }
+      } else if (type == n_item_) {
+        if (store->IsFrame(value)) {
+          Text id = store->FrameId(value);
+          const SearchDictionary::Item *item = dictionary_.Find(id);
+          Collect(&terms, item);
+        } else if (store->IsString(value)) {
+          Text str = store->GetString(value)->str();
+          Collect(&terms, str);
         }
       }
     }
@@ -150,6 +159,14 @@ class SearchIndexMapper : public task::FrameProcessor {
     tokenizer_.TokenFingerprints(text, &tokens);
     for (uint64 token : tokens) {
       if (token != 1) terms->insert(token);
+    }
+  }
+
+  void Collect(Terms *terms, const SearchDictionary::Item *item) {
+    if (item == nullptr) return;
+    const uint64 *t = item->terms();
+    for (int i = 0; i < item->num_terms(); ++i) {
+      terms->insert(*t++);
     }
   }
 

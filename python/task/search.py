@@ -70,7 +70,7 @@ class SearchWorkflow:
       terms = self.wf.channel(mapper, "terms", format="message/term")
 
       # Shuffle terms in bucket order (bucket, termid, entityid).
-      postings = self.wf.shuffle(terms)
+      postings = self.wf.shuffle(terms, bufsize=256 * 1024 * 1024)
 
       # Collect entities and terms and build search indes.
       builder = self.wf.task("search-index-builder")

@@ -1,6 +1,7 @@
 {
   ; Term normalization.
   normalization: "clnp"
+  aliases: false
 
   ; Languages for selecting names and dictionary terms.
   languages: [
@@ -40,6 +41,12 @@
     P1449: name,      ; nickname
     P1448: name,      ; official name
     P1549: name,      ; demonym
+
+    ;P31: item,        ; instance of
+    ;P19: item,        ; place of birth
+    ;P551: item,       ; residence
+    ;P27: item,        ; country of citizenship
+    P106: item,       ; occupation
   }
 
   unused: [
@@ -50,15 +57,12 @@
 
     P3150,      ; birthday
     P569,       ; date of birth
-    P19,        ; place of birth
     P570,       ; date of death
     P20,        ; place of death
     P509,       ; cause of death
     P157,       ; killed by
 
-    P551,       ; residence
     P937,       ; work location
-    P27,        ; country of citizenship
 
     P1454,      ; legal form
     P452,       ; industry
@@ -105,7 +109,6 @@
     P1038,      ; relative
     P1290,      ; godparent
 
-    P106,       ; occupation
     P101,       ; field of work
     P69,        ; educated at
     P512,       ; academic degree

@@ -36,6 +36,7 @@ class SearchDictionaryBuilder : public task::FrameProcessor {
     FileReader reader(commons_, task->GetInputFile("config"));
     Frame config = reader.Read().AsFrame();
     CHECK(config.valid());
+    aliases_ = config.GetBool("aliases");
 
     // Get languages for indexing.
     Array langs = config.Get("languages").AsArray();
@@ -73,7 +74,7 @@ class SearchDictionaryBuilder : public task::FrameProcessor {
         if (wikitypes_.IsNonEntity(type) || wikitypes_.IsBiographic(type)) {
           return;
         }
-      } else if (s.name == n_name_ || s.name == n_alias_) {
+      } else if (s.name == n_name_ || (aliases_ && s.name == n_alias_)) {
         // Add names and aliases in the selected languages.
         Handle value = store->Resolve(s.value);
         if (store->IsString(value)) {
@@ -168,6 +169,9 @@ class SearchDictionaryBuilder : public task::FrameProcessor {
 
   // Term normalization.
   string normalization_;
+
+  // Include aliases in dicionary.
+  bool aliases_ = false;
 
   // Phrase tokenizer for computing term fingerprints.
   PhraseTokenizer tokenizer_;
