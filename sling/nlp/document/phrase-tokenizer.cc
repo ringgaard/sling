@@ -38,6 +38,19 @@ void PhraseTokenizer::Tokenize(Text text, std::vector<string> *tokens) const {
   );
 }
 
+void PhraseTokenizer::TokenizeNormalized(Text text,
+                                         std::vector<string> *tokens) const {
+  tokens->clear();
+  Normalization normalization = normalization_;
+  tokenizer_.Tokenize(text,
+    [tokens, normalization](const Tokenizer::Token &t) {
+      string normalized;
+      UTF8::Normalize(t.text, normalization, &normalized);
+      if (!normalized.empty()) tokens->push_back(normalized);
+    }
+  );
+}
+
 uint64 PhraseTokenizer::TokenFingerprints(Text text,
                                           std::vector<uint64> *tokens) const {
   tokens->clear();

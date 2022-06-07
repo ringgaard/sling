@@ -204,6 +204,10 @@ commands = [
     help="Build search index",
     package="sling.task.search",
   ),
+  Command("build_search_vocabulary",
+    help="Build search vocabulary",
+    package="sling.task.search",
+  ),
 
   # Word embeddings.
   Command("extract_vocabulary",

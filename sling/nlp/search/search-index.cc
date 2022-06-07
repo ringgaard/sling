@@ -30,6 +30,14 @@ void SearchIndex::Load(const string &filename) {
   // Initialize term index.
   term_index_.Initialize(repository_);
   num_buckets_ = term_index_.num_buckets();
+
+  // Initialize stopwords.
+  const uint64 *stopwords;
+  repository_.FetchBlock("stopwords", &stopwords);
+  int num_stopwords = repository_.GetBlockSize("stopwords") / sizeof(uint64);
+  for (int i = 0; i < num_stopwords; ++i) {
+    stopwords_.insert(stopwords[i]);
+  }
 }
 
 const SearchIndex::Term *SearchIndex::Find(uint64 fp) const {

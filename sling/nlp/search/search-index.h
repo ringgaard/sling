@@ -16,6 +16,7 @@
 #define SLING_NLP_SEARCH_INDEX_H_
 
 #include <string>
+#include <unordered_set>
 
 #include "sling/base/types.h"
 #include "sling/file/repository.h"
@@ -90,6 +91,11 @@ class SearchIndex {
     return repository_.GetBlockString("normalization");
   }
 
+  // Check if term is a stopword.
+  bool stopword(uint64 fp) const {
+    return fp != 1 && stopwords_.count(fp) == 0;
+  }
+
   // Check if search index has been loaded.
   bool loaded() const { return repository_.loaded(); }
 
@@ -131,6 +137,9 @@ class SearchIndex {
 
   // Number of term buckets.
   int num_buckets_ = 0;
+
+  // Stopwords.
+  std::unordered_set<uint64> stopwords_;
 };
 
 }  // namespace nlp

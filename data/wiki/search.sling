@@ -11,13 +11,34 @@
 
   ; Stopwords that are not indexed.
   stopwords: [
+    "+",
+    "a",
+    "after",
+    "an",
     "and",
+    "aps",
+    "are",
+    "as",
+    "at",
+    "be",
     "by",
+    "de",
     "for",
-    "of",
-    "the",
+    "from",
+    "human",
     "in",
+    "is",
+    "it",
+    "of",
+    "on",
+    "or",
+    "s",
+    "that",
+    "the",
     "to",
+    "we",
+    "what",
+    "with",
   ]
 
   ; Indexed properties.

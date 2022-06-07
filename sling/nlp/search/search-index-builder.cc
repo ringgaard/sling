@@ -18,10 +18,9 @@
 #include <unordered_set>
 #include <vector>
 
-#include "sling/frame/serialization.h"
 #include "sling/nlp/document/phrase-tokenizer.h"
 #include "sling/nlp/search/search-dictionary.h"
-#include "sling/nlp/wiki/wiki.h"
+#include "sling/nlp/search/search-config.h"
 #include "sling/task/frames.h"
 #include "sling/task/task.h"
 #include "sling/string/text.h"
@@ -39,36 +38,11 @@ class SearchIndexMapper : public task::FrameProcessor {
 
   void Startup(task::Task *task) override {
     // Read search index configuration.
-    FileReader reader(commons_, task->GetInputFile("config"));
-    Frame config = reader.Read().AsFrame();
-    CHECK(config.valid());
-    num_buckets_ = config.GetInt("buckets", num_buckets_);
-
-    // Get languages for indexing.
-    Array langs = config.Get("languages").AsArray();
-    CHECK(langs.valid());
-    for (int i = 0; i < langs.length(); ++i) {
-      languages_.add(langs.get(i));
-    }
-
-    // Get indexed properties.
-    Frame indexed = config.GetFrame("indexed");
-    CHECK(indexed.valid());
-    for (const Slot &s : indexed) {
-      properties_[s.name] = s.value;
-    }
+    config_.Load(commons_, task->GetInputFile("config"));
 
     // Get output channels.
     entities_ = task->GetSink("entities");
     terms_ = task->GetSink("terms");
-
-    // Set up phrase normalization.
-    normalization_ = config.GetString("normalization");
-    Normalization norm = ParseNormalization(normalization_);
-    tokenizer_.set_normalization(norm);
-
-    // Initialize wiki types.
-    wikitypes_.Init(commons_);
 
     // Load search dictionary.
     LOG(INFO) << "Load search dictionary";
@@ -79,6 +53,7 @@ class SearchIndexMapper : public task::FrameProcessor {
     // Statistics.
     num_items_ = task->GetCounter("items");
     num_terms_ = task->GetCounter("terms");
+    num_stopwords_ = task->GetCounter("stopwords");
   }
 
   void Process(Slice key, uint64 serial, const Frame &frame) override {
@@ -87,9 +62,7 @@ class SearchIndexMapper : public task::FrameProcessor {
     for (const Slot &s : frame) {
       if (s.name == n_instance_of_) {
         Handle type = store->Resolve(s.value);
-        if (wikitypes_.IsNonEntity(type) || wikitypes_.IsBiographic(type)) {
-          return;
-        }
+        if (config_.skipped(type)) return;
       }
     }
 
@@ -106,17 +79,15 @@ class SearchIndexMapper : public task::FrameProcessor {
     Terms terms;
     for (const Slot &s : frame) {
       // Check if properties should be indexed.
-      auto f = properties_.find(s.name);
-      if (f == properties_.end()) continue;
-      Handle type = f->second;
+      Handle type = config_.index(s.name);
+      if (type.IsNil()) continue;
       Handle value = store->Resolve(s.value);
 
       if (type == n_name_ || type == n_text_) {
         // Skip names in foreign languages.
         if (store->IsString(value)) {
           Handle lang = store->GetString(value)->qualifier();
-          bool foreign = !lang.IsNil() && languages_.count(lang) == 0;
-          if (!foreign) {
+          if (!config_.foreign(lang)) {
             Text name = store->GetString(value)->str();
             Collect(&terms, name);
           }
@@ -146,7 +117,7 @@ class SearchIndexMapper : public task::FrameProcessor {
   }
 
   void OutputTerm(uint32 entityid, uint64 term) {
-    uint32 b = htonl(term % num_buckets_);
+    uint32 b = htonl(term % config_.buckets());
     terms_->Send(new task::Message(
       Slice(&b, sizeof(uint32)),
       term,
@@ -156,9 +127,13 @@ class SearchIndexMapper : public task::FrameProcessor {
   void Collect(Terms *terms, Text text) {
     if (!UTF8::Valid(text.data(), text.size())) return;
     std::vector<uint64> tokens;
-    tokenizer_.TokenFingerprints(text, &tokens);
+    config_.tokenizer().TokenFingerprints(text, &tokens);
     for (uint64 token : tokens) {
-      if (token != 1) terms->insert(token);
+      if (config_.stopword(token)) {
+        num_stopwords_->Increment();
+      } else {
+        terms->insert(token);
+      }
     }
   }
 
@@ -171,17 +146,8 @@ class SearchIndexMapper : public task::FrameProcessor {
   }
 
  private:
-  // Languages for search terms.
-  HandleSet languages_;
-
-  // Term normalization.
-  string normalization_;
-
-  // Phrase tokenizer for computing term fingerprints.
-  PhraseTokenizer tokenizer_;
-
-  // Wiki page types.
-  WikimediaTypes wikitypes_;
+  // Search engine configuration.
+  SearchConfiguration config_;
 
   // Search dictionary with search terms for items.
   SearchDictionary dictionary_;
@@ -190,14 +156,8 @@ class SearchIndexMapper : public task::FrameProcessor {
   task::Channel *entities_ = nullptr;
   task::Channel *terms_ = nullptr;
 
-  // Number of term buckets.
-  int num_buckets_ = 1 << 20;
-
   // Next entity id.
   uint32 next_entityid_ = 0;
-
-  // Indexed properties.
-  HandleMap<Handle> properties_;
 
   // Symbols.
   Name n_name_{names_, "name"};
@@ -211,6 +171,7 @@ class SearchIndexMapper : public task::FrameProcessor {
   // Statistics.
   task::Counter *num_items_ = nullptr;
   task::Counter *num_terms_ = nullptr;
+  task::Counter *num_stopwords_ = nullptr;
 
   // Mutex for serializing access to entity ids.
   Mutex mu_;
@@ -228,16 +189,21 @@ class SearchIndexBuilder : public task::Processor {
   void Start(task::Task *task) override {
     // Read search index configuration.
     Store store;
-    FileReader reader(&store, task->GetInputFile("config"));
-    Frame config = reader.Read().AsFrame();
-    CHECK(config.valid());
-    num_buckets_ = config.GetInt("buckets", num_buckets_);
+    SearchConfiguration config;
+    config.Load(&store, task->GetInputFile("config"));
+    num_buckets_ = config.buckets();
 
     // Add normalization flags to repository.
-    repository_.AddBlock("normalization", config.GetString("normalization"));
+    repository_.AddBlock("normalization", config.normalization());
 
-    // Get parameters.
-    task->Fetch("buckets", &num_buckets_);
+    // Add stopwords to repository.
+    std::vector<uint64> stopwords;
+    for (uint64 fp : config.stopwords()) {
+      stopwords.push_back(fp);
+    }
+    repository_.AddBlock("stopwords",
+                         stopwords.data(),
+                         stopwords.size() * sizeof(uint64));
 
     // Repository streams.
     entity_index_ = AddStream("EntityIndex");

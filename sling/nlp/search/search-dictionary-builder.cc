@@ -15,10 +15,9 @@
 #include <unordered_set>
 
 #include "sling/file/repository.h"
-#include "sling/frame/serialization.h"
-#include "sling/nlp/document/phrase-tokenizer.h"
-#include "sling/nlp/wiki/wiki.h"
+#include "sling/nlp/search/search-config.h"
 #include "sling/string/text.h"
+#include "sling/task/accumulator.h"
 #include "sling/task/frames.h"
 #include "sling/task/task.h"
 #include "sling/util/arena.h"
@@ -28,30 +27,76 @@
 namespace sling {
 namespace nlp {
 
+// Output search vocabulary.
+class SearchVocabulary : public task::FrameProcessor {
+ public:
+  void Startup(task::Task *task) override {
+    // Read search index configuration.
+    config_.Load(commons_, task->GetInputFile("config"));
+
+    // Initialize accumulator.
+    accumulator_.Init(output(), 1 << 20);
+  }
+
+  void Process(Slice key, uint64 serial, const Frame &frame) override {
+    // Skip non-entity items.
+    Store *store = frame.store();
+    for (const Slot &s : frame) {
+      if (s.name == n_instance_of_) {
+        Handle type = store->Resolve(s.value);
+        if (config_.skipped(type)) return;
+      }
+    }
+
+    // Find all item names.
+    std::vector<string> tokens;
+    for (const Slot &s : frame) {
+      if (s.name == n_name_ ||
+          (config_.aliases() && s.name == n_alias_)) {
+        // Add names and aliases in the selected languages.
+        Handle value = store->Resolve(s.value);
+        if (store->IsString(value)) {
+          Handle lang = store->GetString(value)->qualifier();
+          if (!config_.foreign(lang)) {
+            // Get terms for name.
+            Text name = store->GetString(value)->str();
+            if (UTF8::Valid(name.data(), name.size())) {
+              config_.tokenizer().TokenizeNormalized(name, &tokens);
+              for (const string &token : tokens) {
+                accumulator_.Increment(token);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  void Flush(task::Task *task) override {
+    accumulator_.Flush();
+  }
+
+ private:
+  // Search engine configuration.
+  SearchConfiguration config_;
+
+  // Accumulator for word counts.
+  task::Accumulator accumulator_;
+
+  // Symbols.
+  Name n_name_{names_, "name"};
+  Name n_alias_{names_, "alias"};
+  Name n_instance_of_{names_, "P31"};
+};
+
+REGISTER_TASK_PROCESSOR("search-vocabulary", SearchVocabulary);
+
 // Build search dictionary with a term vector for each item.
 class SearchDictionaryBuilder : public task::FrameProcessor {
  public:
   void Startup(task::Task *task) override {
     // Read search index configuration.
-    FileReader reader(commons_, task->GetInputFile("config"));
-    Frame config = reader.Read().AsFrame();
-    CHECK(config.valid());
-    aliases_ = config.GetBool("aliases");
-
-    // Get languages for indexing.
-    Array langs = config.Get("languages").AsArray();
-    CHECK(langs.valid());
-    for (int i = 0; i < langs.length(); ++i) {
-      languages_.add(langs.get(i));
-    }
-
-    // Set up phrase normalization.
-    normalization_ = config.GetString("normalization");
-    Normalization norm = ParseNormalization(normalization_);
-    tokenizer_.set_normalization(norm);
-
-    // Initialize wiki types.
-    wikitypes_.Init(commons_);
+    config_.Load(commons_, task->GetInputFile("config"));
 
     // Statistics.
     num_items_ = task->GetCounter("items");
@@ -71,23 +116,22 @@ class SearchDictionaryBuilder : public task::FrameProcessor {
       // Skip non-entity items.
       if (s.name == n_instance_of_) {
         Handle type = store->Resolve(s.value);
-        if (wikitypes_.IsNonEntity(type) || wikitypes_.IsBiographic(type)) {
-          return;
-        }
-      } else if (s.name == n_name_ || (aliases_ && s.name == n_alias_)) {
+        if (config_.skipped(type)) return;
+      } else if (s.name == n_name_ ||
+                 (config_.aliases() && s.name == n_alias_)) {
         // Add names and aliases in the selected languages.
         Handle value = store->Resolve(s.value);
         if (store->IsString(value)) {
           Handle lang = store->GetString(value)->qualifier();
-          if (!lang.IsNil() || languages_.count(lang) > 0) {
+          if (!config_.foreign(lang)) {
             // Get term fingerprints for name.
             Text name = store->GetString(value)->str();
             if (UTF8::Valid(name.data(), name.size())) {
-              tokenizer_.TokenFingerprints(name, &tokens);
+              config_.tokenizer().TokenFingerprints(name, &tokens);
 
               // Add token fingerprints to term vector.
               for (uint64 token : tokens) {
-                if (token != 1) terms.insert(token);
+                if (!config_.stopword(token)) terms.insert(token);
               }
               num_tokens_->Increment(tokens.size());
             }
@@ -112,7 +156,7 @@ class SearchDictionaryBuilder : public task::FrameProcessor {
     Repository repository;
 
     // Add normalization flags to repository.
-    repository.AddBlock("normalization", normalization_);
+    repository.AddBlock("normalization", config_.normalization());
 
     // Write seach dictionary map.
     LOG(INFO) << "Build seach dictionary map";
@@ -164,17 +208,8 @@ class SearchDictionaryBuilder : public task::FrameProcessor {
     uint32 num_terms;
   };
 
-  // Languages for search terms.
-  HandleSet languages_;
-
-  // Term normalization.
-  string normalization_;
-
-  // Include aliases in dicionary.
-  bool aliases_ = false;
-
-  // Phrase tokenizer for computing term fingerprints.
-  PhraseTokenizer tokenizer_;
+  // Search engine configuration.
+  SearchConfiguration config_;
 
   // Item table.
   std::vector<RepositoryMapItem *> item_table_;
@@ -182,9 +217,6 @@ class SearchDictionaryBuilder : public task::FrameProcessor {
   // Memory arenas.
   Arena<uint64> term_arena_;
   StringArena string_arena_;
-
-  // Wiki page types.
-  WikimediaTypes wikitypes_;
 
   // Symbols.
   Name n_name_{names_, "name"};

@@ -31,6 +31,9 @@ class PhraseTokenizer {
   // Tokenize phrase into tokens.
   void Tokenize(Text text, std::vector<string> *tokens) const;
 
+  // Tokenize phrase into normalized tokens.
+  void TokenizeNormalized(Text text, std::vector<string> *tokens) const;
+
   // Tokenize phrase and return token fingerprints for each token.
   uint64 TokenFingerprints(Text text, std::vector<uint64> *tokens) const;
 

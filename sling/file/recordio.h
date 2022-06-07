@@ -126,7 +126,7 @@ class RecordFile {
 // Configuration options for record file.
 struct RecordFileOptions {
   // Input/output buffer size.
-  int buffer_size = 4096;
+  int buffer_size = 65536;
 
   // Chunk size. Records never overlap chunk boundaries.
   int chunk_size = 64 * (1 << 20);

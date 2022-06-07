@@ -1,20 +1,34 @@
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
+  name = "search-config",
+  srcs = ["search-config.cc"],
+  hdrs = ["search-config.h"],
+  deps = [
+    "//sling/base",
+    "//sling/frame:object",
+    "//sling/frame:serialization",
+    "//sling/frame:store",
+    "//sling/nlp/document:phrase-tokenizer",
+    "//sling/nlp/wiki:wiki",
+    "//sling/util:unicode",
+  ],
+)
+
+cc_library(
   name = "search-dictionary-builder",
   srcs = ["search-dictionary-builder.cc"],
   deps = [
+    ":search-config",
     "//sling/base",
     "//sling/file:repository",
-    "//sling/frame:serialization",
-    "//sling/nlp/document:phrase-tokenizer",
     "//sling/nlp/wiki:wiki",
     "//sling/task",
+    "//sling/task:accumulator",
     "//sling/task:frames",
     "//sling/string:text",
     "//sling/util:arena",
     "//sling/util:mutex",
-    "//sling/util:unicode",
   ],
   alwayslink = 1,
 )
@@ -35,18 +49,15 @@ cc_library(
   name = "search-index-builder",
   srcs = ["search-index-builder.cc"],
   deps = [
+    ":search-config",
     ":search-dictionary",
     "//sling/base",
     "//sling/file:repository",
-    "//sling/frame:serialization",
-    "//sling/nlp/document:phrase-tokenizer",
-    "//sling/nlp/wiki:wiki",
     "//sling/task",
     "//sling/task:frames",
     "//sling/string:text",
     "//sling/util:arena",
     "//sling/util:mutex",
-    "//sling/util:unicode",
   ],
   alwayslink = 1,
 )

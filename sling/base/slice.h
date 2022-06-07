@@ -63,6 +63,14 @@ class Slice {
     return data_[i];
   }
 
+  // Return typed pointer to data.
+  template<typename T> T *as() {
+    return reinterpret_cast<T *>(data_);
+  }
+  template<typename T> const T *as() const {
+    return reinterpret_cast<const T *>(data_);
+  }
+
   // Change this slice to refer to an empty array.
   void clear() { data_ = nullptr; size_ = 0; }
 

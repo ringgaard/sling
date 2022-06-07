@@ -42,6 +42,12 @@ class SearchWorkflow:
                             dir=corpora.kbdir(),
                             format="repository")
 
+  def search_vocabulary(self):
+    """Resource for search vocabulary."""
+    return self.wf.resource("search-vocabulary.map",
+                            dir=corpora.kbdir(),
+                            format="textmap/term")
+
   def build_search_dictionary(self, items=None):
     """Task for building search dictionary."""
     if items == None: items = self.data.items()
@@ -82,6 +88,18 @@ class SearchWorkflow:
 
     return repo
 
+  def build_search_vocabulary(self, items=None):
+    """Task for building search vocabulary."""
+    if items == None: items = self.data.items()
+
+    with self.wf.namespace("search"):
+      return self.wf.mapreduce(input=items,
+                               output=self.search_vocabulary(),
+                               mapper="search-vocabulary",
+                               reducer="sum-reducer",
+                               format="message/term:count",
+                               auxin={"config": self.search_config()})
+
 def build_search_dictionary():
   log.info("Build search dictionary")
   wf = SearchWorkflow("search")
@@ -92,5 +110,11 @@ def build_search_index():
   log.info("Build search index")
   wf = SearchWorkflow("search")
   wf.build_search_index()
+  run(wf.wf)
+
+def build_search_vocabulary():
+  log.info("Build search vocabulary")
+  wf = SearchWorkflow("search")
+  wf.build_search_vocabulary()
   run(wf.wf)
 
