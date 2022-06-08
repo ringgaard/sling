@@ -93,7 +93,7 @@ class SearchIndex {
 
   // Check if term is a stopword.
   bool stopword(uint64 fp) const {
-    return fp != 1 && stopwords_.count(fp) == 0;
+    return fp == 1 || stopwords_.count(fp) > 0;
   }
 
   // Check if search index has been loaded.

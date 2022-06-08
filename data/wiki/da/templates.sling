@@ -20,6 +20,8 @@
 "\\":     {type: "text" text: "&nbsp;/"}
 "=":      {type: "text" text: "="}
 
+"spaced ndash": {type: "text" text: " – "}
+
 "dato og alder": {type: "date" year: 1 month: 2 day: 3 format: /w/dates/da}
 "dato og alder2": {type: "date" year: 1 month: 2 day: 3 format: /w/dates/da}
 "fødselsdato":  {type: "date" year: 1 month: 2 day: 3 format: /w/dates/da}

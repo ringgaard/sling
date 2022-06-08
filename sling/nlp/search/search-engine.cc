@@ -43,11 +43,12 @@ int SearchEngine::Search(Text query, Results *results) {
   // Look up posting lists for tokens in search index.
   std::vector<const SearchIndex::Term *> terms;
   for (uint64 token : tokens) {
-    if (!index_.stopword(token)) {
-      const SearchIndex::Term *term = index_.Find(token);
-      if (term == nullptr) return 0;
-      terms.push_back(term);
-    }
+    if (index_.stopword(token)) continue;
+
+    const SearchIndex::Term *term = index_.Find(token);
+    if (term == nullptr) return 0;
+
+    terms.push_back(term);
   }
   if (terms.empty()) return 0;
 
