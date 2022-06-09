@@ -498,6 +498,7 @@ export class MdMenu extends Component {
         position: absolute;
         padding: 8px 0px 8px 0px;
         font-size: 15px;
+        color: black;
         background-color: #f9f9f9;
         box-shadow: 0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22);
         z-index: 1;

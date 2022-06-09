@@ -13,7 +13,7 @@ function pad4(num) {
   return ("000" + num).toString().slice(-4)
 }
 
-function date2str(date) {
+function date2str(date, full=true) {
   if (!date) return "";
   if (typeof(date) === 'string') date = new Date(date);
   let year = pad4(date.getFullYear());
@@ -21,8 +21,11 @@ function date2str(date) {
   let day = pad2(date.getDate());
   let hours = pad2(date.getHours());
   let mins = pad2(date.getMinutes());
-
-  return `${year}-${month}-${day} ${hours}:${mins}`;
+  if (full) {
+    return `${year}-${month}-${day} ${hours}:${mins}`;
+  } else {
+    return `${year}-${month}-${day}`;
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -33,6 +36,10 @@ class CaseManager extends material.MdApp {
   oninit() {
     this.bind("#settings", "click", e => this.onsettings(e));
     this.bind("#help", "click", e => this.onhelp(e));
+    this.bind("md-menu #backup", "click", e => this.onbackup(e));
+    this.bind("md-menu #restore", "click", e => this.onrestore(e));
+    this.bind("md-menu #settings", "click", e => this.onsettings(e));
+    this.bind("md-menu #help", "click", e => this.onhelp(e));
     this.find("md-search input").focus();
   }
 
@@ -42,14 +49,34 @@ class CaseManager extends material.MdApp {
     this.find("md-search input").focus();
   }
 
-  onsettings(e) {
-    let s = this.find("settings-panel");
-    if (this.find("md-drawer").toogle()) {
-      s.onopen();
-    } else {
-      s.onclose();
-      location.reload();
+  async onbackup(e) {
+    try {
+      // Get file for saving backup.
+      let fh = await window.showSaveFilePicker({
+        suggestedName: `cases-${date2str(new Date(), false)}.json`,
+      });
+
+      // Read data from local case store.
+      let backup = await app.backup();
+      let data = JSON.stringify(backup);
+
+      // Write backup to file.
+      let fw = await fh.createWritable();
+      await fw.write(data);
+      await fw.close();
+    } catch (error) {
+      material.inform("Unable to backup data: " + error);
     }
+  }
+
+  async onrestore(e) {
+    material.inform("Case restore not yet implemented");
+  }
+
+  async onsettings(e) {
+    let dialog = new SettingsDialog();
+    let ok = await dialog.show();
+    if (ok) location.reload();
   }
 
   onhelp(e) {
@@ -74,16 +101,17 @@ class CaseManager extends material.MdApp {
           tooltip="Change settings"
           tooltip-align="right">
         </md-icon-button>
+        <md-menu id="menu">
+          <md-menu-item id="backup">Backup</md-menu-item>
+          <md-menu-item id="restore">Restore</md-menu-item>
+          <md-menu-item id="settings">Settings</md-menu-item>
+          <md-menu-item id="help">Help</md-menu-item>
+        </md-menu>
       </md-toolbar>
 
-      <md-row-layout>
-        <md-content>
-          <case-list></case-list>
-        </md-content>
-        <md-drawer id="settings">
-          <settings-panel></settings-panel>
-        </md-drawer>
-      </md-row-layout>
+      <md-content>
+        <case-list></case-list>
+      </md-content>
     </md-column-layout>
     `;
   }
@@ -563,13 +591,8 @@ Component.register(GettingStarted);
 // Settings panel
 //-----------------------------------------------------------------------------
 
-class SettingsPanel extends Component {
-  visible() {
-    return this.state;
-  }
-
+class SettingsDialog extends material.MdDialog {
   onopen() {
-    this.update(true);
     this.find("#authorid").value = settings.authorid;
     this.find("#picturesize").value = settings.picturesize;
     this.find("#kbservice").value = settings.kbservice;
@@ -584,7 +607,7 @@ class SettingsPanel extends Component {
     });
   }
 
-  onclose() {
+  submit() {
     settings.authorid = this.find("#authorid").value;
     settings.picturesize = this.find("#picturesize").value;
     settings.kbservice = this.find("#kbservice").value;
@@ -593,13 +616,12 @@ class SettingsPanel extends Component {
     settings.imagesearch = this.find("#imagesearch").checked;
     settings.nsfw = this.find("#nsfw").checked;
     save_settings();
-    this.update(false);
+    this.close(true);
   }
 
   render() {
     return `
-      <div id="settings-title">Settings</div>
-      <hr>
+      <md-dialog-top>Settings</md-dialog-top>
       <div id="content">
         <md-text-field
           id="authorid"
@@ -620,19 +642,21 @@ class SettingsPanel extends Component {
         <md-switch id="userscripts" label="Enable user scripts"></md-switch>
         <md-switch id="imagesearch" label="Enable image search"></md-switch>
         <md-switch id="nsfw" label="Show adult content (NSFW)"></md-switch>
-        <md-button id="clearwd" label="Clear Wikidata keys"></md-button>
       </div>
+      </div>
+      <md-dialog-bottom>
+        <button id="cancel">Cancel</button>
+        <button id="clearwd">Clear Wikidata keys</button>
+        <button id="submit">Save settings</button>
+      </md-dialog-bottom>
     `;
   }
 
   static stylesheet() {
     return `
-      $ {
-        padding: 10px;
-      }
-      $ #settings-title {
-        font-size: 20px;
-        font-weight: bold;
+      $  {
+        max-height: 75vh;
+        overflow: auto;
       }
       $ #content {
         display: flex;
@@ -643,5 +667,5 @@ class SettingsPanel extends Component {
   }
 }
 
-Component.register(SettingsPanel);
+Component.register(SettingsDialog);
 

@@ -309,6 +309,16 @@ class CaseApp extends Component {
     await this.manager.update(this.caselist);
   }
 
+  async backup() {
+   let casedir = await casedb.readdir();
+   let casedata = await casedb.readdata();
+   for (let c of casedata) {
+     c.data =  Array.from(c.data);
+   }
+
+   return {casedir, casedata};
+  }
+
   search(query, full) {
     query = query.toLowerCase();
     let results = [];

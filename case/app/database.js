@@ -169,23 +169,31 @@ class CaseDatabase {
     }
   }
 
-  readdir() {
+  readall(name) {
     return new Promise((resolve, reject) => {
       // Read case directory and add to list.
-      let caselist = new Array();
-      let casedir = this.db.transaction("casedir").objectStore("casedir");
-      casedir.openCursor().onsuccess = e => {
+      let list = new Array();
+      let objstore = this.db.transaction(name).objectStore(name);
+      objstore.openCursor().onsuccess = e => {
         var cursor = e.target.result;
         if (cursor) {
-          caselist.push(cursor.value);
+          list.push(cursor.value);
           cursor.continue();
         } else {
-          resolve(caselist);
+          resolve(list);
         }
       };
     });
   }
-};
+
+  readdir() {
+    return this.readall("casedir");
+  }
+
+  readdata() {
+    return this.readall("casedata");
+  }
+}
 
 export var casedb = new CaseDatabase();
 
