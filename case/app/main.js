@@ -310,13 +310,25 @@ class CaseApp extends Component {
   }
 
   async backup() {
-   let casedir = await casedb.readdir();
-   let casedata = await casedb.readdata();
-   for (let c of casedata) {
-     c.data =  Array.from(c.data);
-   }
+    let casedir = await casedb.readall("casedir");
+    let casedata = await casedb.readall("casedata");
+    for (let c of casedata) {
+      c.data =  Array.from(c.data);
+    }
 
-   return {casedir, casedata};
+    return {casedir, casedata};
+  }
+
+  async restore(data) {
+    let casedir = data.casedir;
+    let casedata = data.casedata;
+    for (let c of casedata) {
+      c.data =  Uint8Array.from(c.data);
+    }
+    await casedb.writeall("casedir", casedir);
+    await casedb.writeall("casedata", casedata);
+    this.caselist = await casedb.readdir();
+    await this.refresh_manager();
   }
 
   search(query, full) {

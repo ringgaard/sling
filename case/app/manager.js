@@ -70,7 +70,31 @@ class CaseManager extends material.MdApp {
   }
 
   async onrestore(e) {
-    material.inform("Case restore not yet implemented");
+    try {
+      // Get file for restoring backup.
+      let [fh] = await window.showOpenFilePicker({
+        types: [{
+          description: 'Backup file',
+          accept: {'text/json': ['.json']}
+        }],
+        multiple: false,
+      });
+
+      // Read JSON data from file.
+      let file = await fh.getFile();
+      let data = JSON.parse(await file.text());
+
+      // Ask before overwriting any existing cases.
+      let ok = await material.StdDialog.ask("Restore cases",
+        `Are you sure you want to restore ${data.casedir.length} cases? ` +
+        "This will overwrite any existing data for the restored cases.");
+      if (ok) {
+        // Restore cases from backup.
+        app.restore(data);
+      }
+    } catch (error) {
+      material.inform("Unable to restore data: " + error);
+    }
   }
 
   async onsettings(e) {

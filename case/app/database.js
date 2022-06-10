@@ -87,7 +87,7 @@ class CaseDatabase {
     });
   }
 
-  writemeta(casefile) {
+  async writemeta(casefile) {
     function date(ts) {
       return ts ? new Date(ts) : null;
     }
@@ -111,17 +111,12 @@ class CaseDatabase {
     };
 
     // Write record to database.
-    let tx = this.db.transaction(["casedir"], "readwrite");
-    let casedir = tx.objectStore("casedir");
-    let dirrequest = casedir.put(rec);
-    dirrequest.onsuccess = e => {
-      console.log("Wrote record", e.target.result, "to case directory");
-    }
+    await this.writerec("casedir", rec);
 
     return rec;
   }
 
-  write(casefile) {
+  async write(casefile) {
     // Encode case data.
     let encoder = new Encoder(store);
     if (casefile.has(n_topics)) {
@@ -133,47 +128,31 @@ class CaseDatabase {
     let data = {id: casefile.get(n_caseid), data: encoder.output()};
 
     // Write case data.
-    let tx = this.db.transaction(["casedata"], "readwrite");
-    let casedata = tx.objectStore("casedata");
-    let datarequest = casedata.put(data);
-    datarequest.onsuccess = e => {
-      console.log("Wrote record", e.target.result, "to case store");
-    }
-    datarequest.onerror = e => {
-      console.log("Error writing to case store", e.target.result);
-    }
+    await this.writerec("casedata", data);
 
     // Write case metadata to case directory.
-    return this.writemeta(casefile);
+    return await this.writemeta(casefile);
   }
 
-  remove(caseid, link) {
+  async remove(caseid, link) {
     // Remove case from directory.
-    let tx = this.db.transaction(["casedir", "casedata"], "readwrite");
-    let casedir = tx.objectStore("casedir");
-    let dirrequest = casedir.delete(caseid);
-    dirrequest.onsuccess = e => {
-      console.log("Removed record", caseid, "from case directory");
-    }
+    await this.removerec("casedir", caseid);
 
     if (!link) {
       // Remove case from data store.
-      let casedata = tx.objectStore("casedata");
-      let datarequest = casedata.delete(caseid);
-      datarequest.onsuccess = e => {
-        console.log("Removed record", caseid, "from case store");
-      }
-      datarequest.onerror = e => {
-        console.log("Error removing data from case store", e.target.result);
-      }
+      await this.removerec("casedata", caseid);
     }
   }
 
-  readall(name) {
+  readdir() {
+    return this.readall("casedir");
+  }
+
+  readall(table) {
     return new Promise((resolve, reject) => {
       // Read case directory and add to list.
       let list = new Array();
-      let objstore = this.db.transaction(name).objectStore(name);
+      let objstore = this.db.transaction(table).objectStore(table);
       objstore.openCursor().onsuccess = e => {
         var cursor = e.target.result;
         if (cursor) {
@@ -186,12 +165,28 @@ class CaseDatabase {
     });
   }
 
-  readdir() {
-    return this.readall("casedir");
+  writerec(table, rec) {
+    return new Promise((resolve, reject) => {
+      let objstore = this.db.transaction(table, "readwrite").objectStore(table);
+      let req = objstore.put(rec);
+      req.onsuccess = e => { resolve(e); };
+      req.onerror = e => { reject(e); };
+    });
   }
 
-  readdata() {
-    return this.readall("casedata");
+  async writeall(table, data) {
+    for (let rec of data) {
+      await this.writerec(table, rec);
+    }
+  }
+
+  removerec(table, id) {
+    return new Promise((resolve, reject) => {
+      let objstore = this.db.transaction(table, "readwrite").objectStore(table);
+      let req = objstore.delete(id);
+      req.onsuccess = e => { resolve(e); };
+      req.onerror = e => { reject(e); };
+    });
   }
 }
 

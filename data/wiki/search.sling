@@ -63,7 +63,7 @@
     P1448: name,      ; official name
     P1549: name,      ; demonym
 
-    ;P31: item,        ; instance of
+    P31: item,        ; instance of
     P19: item,        ; place of birth
     ;P551: item,       ; residence
     P27: item,        ; country of citizenship
@@ -71,7 +71,6 @@
   }
 
   unused: [
-    P31,        ; instance of
     P279,       ; subclass of
 
     P172,       ; ethnic group
