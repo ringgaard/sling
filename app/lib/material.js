@@ -740,6 +740,63 @@ Component.register(MdToolbarLogo);
 // Button
 //-----------------------------------------------------------------------------
 
+class MdRipple extends Component {
+  static stylesheet() {
+    return `
+      $ {
+        position: absolute;
+        border-radius: 50%;
+        transform: scale(0);
+        animation: ripple 250ms linear;
+        background-color: rgba(255, 255, 255, 0.7);
+      }
+
+      @keyframes ripple {
+        to {
+          transform: scale(4);
+          opacity: 0;
+        }
+      }
+    `;
+  }
+};
+
+Component.register(MdRipple);
+
+class MdRippleButton extends Component {
+  onrendered() {
+    this.bind("button", "click", e => this.onanimate(e));
+  }
+
+  onanimate(e) {
+    let button = this.find("button");
+    let diameter = Math.max(button.clientWidth, button.clientHeight);
+    let radius = diameter / 2;
+
+    let existing = this.find("md-ripple");
+    if (existing) existing.remove();
+
+    let ripple = new MdRipple();
+    let s = ripple.style;
+    let r = button.getBoundingClientRect();
+    s.width = s.height = `${diameter}px`;
+    s.left = `${e.clientX - (r.left + radius)}px`;
+    s.top = `${e.clientY - (r.top + radius)}px`;
+    button.appendChild(ripple);
+  }
+
+  static stylesheet() {
+    return `
+      $ button {
+        position: relative;
+        overflow: hidden;
+      }
+    `;
+  }
+};
+
+Component.register(MdRippleButton);
+
 export class MdButton extends Component {
   constructor(state) {
     super(state);
@@ -805,7 +862,7 @@ export class MdButton extends Component {
 
 Component.register(MdButton);
 
-export class MdIconButton extends Component {
+export class MdIconButton extends MdRippleButton {
   constructor(state) {
     super(state);
     if (this.state == undefined) this.state = true;
@@ -815,6 +872,7 @@ export class MdIconButton extends Component {
     this.bind(null, "mousedown", e => e.preventDefault());
     this.bind("button", "mouseenter", e => this.onenter(e));
     this.bind("button", "mouseleave", e => this.onleave(e));
+    super.onrendered();
   }
 
   visible() {

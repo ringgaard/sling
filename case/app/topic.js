@@ -560,6 +560,9 @@ class TopicCard extends Component {
     } else if (e.ctrlKey && e.code === "KeyD") {
       e.preventDefault();
       this.oncopyid(e);
+    } else if (e.ctrlKey && e.code === "KeyE") {
+      e.preventDefault();
+      this.oncopyname(e);
     } else if (e.ctrlKey && !e.shiftKey && e.code === "KeyI") {
       e.preventDefault();
       this.onimport(e);
@@ -618,6 +621,20 @@ class TopicCard extends Component {
     let selection = window.getSelection();
     selection.removeAllRanges();
     selection.selectAllChildren(this.find("#identifier"));
+  }
+
+  async oncopyname(e) {
+    let topic = this.state;
+    let name = topic.get(n_name);
+    if (name) {
+      // Add topic name to clipboard.
+      navigator.clipboard.writeText(name.toString());
+
+      // Select id element in topic panel.
+      let selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.selectAllChildren(this.find("#name"));
+    }
   }
 
   ondown(e) {

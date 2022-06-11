@@ -202,6 +202,19 @@ const images_services = [
 },
 
 {
+  pattern: /https?:\/\/imageupper\.com\//,
+  fetch: async (url, context) => {
+    let r = await fetch(context.proxy(url));
+    let html = await r.text();
+    let doc = new DOMParser().parseFromString(html, "text/html");
+    let img = doc.querySelector("img.img");
+    if (!img) return null;
+    return img.getAttribute("src");
+  },
+  nsfw: true,
+},
+
+{
   pattern: /https?\:\/\/[A-Za-z0-9\.\-]+\/(uploads|galleries)\//,
   fetch: (url, context) => url,
   nsfw: true,
