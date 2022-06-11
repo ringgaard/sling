@@ -175,7 +175,7 @@ class CaseApp extends Component {
 
       // Add linked case to directory.
       casefile.add(n_link, true);
-      let rec = casedb.writemeta(casefile);
+      let rec = await casedb.writemeta(casefile);
 
       // Update case list.
       if (this.caselist) {
@@ -262,9 +262,9 @@ class CaseApp extends Component {
     }
   }
 
-  save_case(casefile) {
+  async save_case(casefile) {
     // Write case to database.
-    let rec = casedb.write(casefile);
+    let rec = await casedb.write(casefile);
 
     // Update case list.
     if (this.caselist) {

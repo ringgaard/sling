@@ -148,7 +148,7 @@ for fn in flags.arg.subreddits.split(","):
       else:
         person_subreddits[sr] = itemid
 
-# Read regex patterns for mathing posting titles.
+# Read regex patterns for matching posting titles.
 patterns = []
 for fn in flags.arg.patterns.split(","):
   with open(fn, "r") as f:
