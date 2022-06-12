@@ -1058,7 +1058,7 @@ Component.register(MdLink);
 
 export class MdCopyableText extends Component {
   onrendered() {
-    this.bind("md-icon", "click", e => this.oncopy(e));
+    this.bind("button", "click", e => this.oncopy(e));
   }
 
   oncopy(e) {
@@ -1069,7 +1069,11 @@ export class MdCopyableText extends Component {
   render() {
     return `
       <span>${Component.escape(this.state)}</span>
-      <md-icon icon="content_copy"></md-icon>
+      <md-ripple-button>
+        <button>
+          <md-icon icon="content_copy"></md-icon>
+        </button>
+      </md-ripple-button>
     `;
   }
 
@@ -1089,16 +1093,16 @@ export class MdCopyableText extends Component {
       $ span::-webkit-scrollbar {
         height: 0;
       }
+      $ button {
+        background-color: #ffffff;
+        border: 0;
+      }
+      $ button:hover {
+        background-color: #eeeeee;
+      }
       $ md-icon {
         font-size: 18px;
         margin: 5px;
-        transition: 0.2s all;
-      }
-      $ md-icon:hover {
-        background-color: rgba(0,0,0,10%);
-      }
-      $ md-icon:active {
-        background-color: white;
       }
     `;
   }

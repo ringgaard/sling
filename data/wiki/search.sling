@@ -67,7 +67,22 @@
     P19: item,        ; place of birth
     P551: item,       ; residence
     P27: item,        ; country of citizenship
+
     P106: item,       ; occupation
+    P641: item,       ; sport
+    ;P39: item,       ; position held
+
+    ;P101,       ; field of work
+    ;P69,        ; educated at
+    ;P108,       ; employer
+    ;P1416,      ; affiliation
+    ;P6424,      ; affiliation string
+
+    ;P50,        ; author
+    ;P2093,      ; author name string
+
+    ;P463,       ; member of
+    ;P1344,      ; participant of
   }
 
   unused: [
@@ -157,7 +172,6 @@
     P737,       ; influenced by
     P140,       ; religion
 
-    P641,       ; sport
     P1532,      ; country for sport
     P118,       ; league
     P413,       ; position played on team / speciality
@@ -167,8 +181,6 @@
     P1303,      ; instrument
     P135,       ; movement
 
-    P50,        ; author
-    P2093,      ; author name string
     P179,       ; part of the series
 
     P276,       ; location
