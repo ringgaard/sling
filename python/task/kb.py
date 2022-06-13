@@ -220,7 +220,8 @@ class KnowledgeBaseWorkflow:
                                auxin={
                                  "commons": self.xrefs(),
                                  "config": self.recon_config(),
-                               })
+                               },
+                               bufsize=1073741824)
 
   def fuse_items(self, items=None, extras=None, output=None):
     """Fuse items."""

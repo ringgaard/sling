@@ -718,7 +718,7 @@ class Workflow(object):
     return reducer
 
   def mapreduce(self, input, output, mapper=None, reducer=None, params=None,
-                auxin=None, format=None):
+                auxin=None, bufsize=None, format=None):
     """Map input files, shuffle, sort, reduce, and output to files."""
     # Determine the number of output shards.
     shards = length_of(output)
@@ -727,7 +727,7 @@ class Workflow(object):
     mapping = self.map(input, mapper, params=params, auxin=auxin, format=format)
 
     # Shuffling of map output.
-    shuffle = self.shuffle(mapping, shards=shards)
+    shuffle = self.shuffle(mapping, shards=shards, bufsize=bufsize)
 
     # Reduction of shuffled map output.
     self.reduce(shuffle, output, reducer, params=params, auxin=auxin)

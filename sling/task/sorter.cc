@@ -69,6 +69,7 @@ class Sorter : public Processor {
     output_ = task->GetSink("output");
     CHECK(output_ != nullptr) << "Output channel missing";
     task->Fetch("sort_buffer_size", &max_buffer_size_);
+    num_merge_files_ = task->GetCounter("merge_files");
   }
 
   void Receive(Channel *channel, Message *message) override {
@@ -148,6 +149,7 @@ class Sorter : public Processor {
       delete message;
     }
     CHECK(writer.Close());
+    num_merge_files_->Increment();
 
     // Clear sort buffer.
     messages_.clear();
@@ -241,6 +243,9 @@ class Sorter : public Processor {
 
   // Output channel.
   Channel *output_;
+
+  // Statistics.
+  Counter *num_merge_files_ = nullptr;
 
   // Mutex for serializing access.
   Mutex mu_;
