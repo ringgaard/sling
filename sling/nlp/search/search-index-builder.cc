@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "sling/nlp/document/phrase-tokenizer.h"
+#include "sling/nlp/kb/calendar.h"
 #include "sling/nlp/search/search-dictionary.h"
 #include "sling/nlp/search/search-config.h"
 #include "sling/task/frames.h"
@@ -49,6 +50,12 @@ class SearchIndexMapper : public task::FrameProcessor {
     const string &dictfn = task->GetInput("dictionary")->resource()->name();
     dictionary_.Load(dictfn);
     LOG(INFO) << "Dictionary loaded";
+
+    // Initialize year terms.
+    for (int y = 0; y < MAX_YEAR; ++y) {
+      string year = std::to_string(y);
+      year_terms_[y] = Fingerprint(year.data(), year.size());
+    }
 
     // Statistics.
     num_items_ = task->GetCounter("items");
@@ -101,6 +108,13 @@ class SearchIndexMapper : public task::FrameProcessor {
           Text str = store->GetString(value)->str();
           Collect(&terms, str);
         }
+      } else if (type == n_date_) {
+        Date date(Object(store, value));
+        if (date.precision >= Date::YEAR) {
+          if (date.year > 0 && date.year < MAX_YEAR) {
+            terms.insert(year_terms_[date.year]);
+          }
+        }
       }
     }
     num_items_->Increment();
@@ -146,6 +160,9 @@ class SearchIndexMapper : public task::FrameProcessor {
   }
 
  private:
+  // Maximum year for date indexing.
+  static const int MAX_YEAR = 3000;
+
   // Search engine configuration.
   SearchConfiguration config_;
 
@@ -158,6 +175,9 @@ class SearchIndexMapper : public task::FrameProcessor {
 
   // Next entity id.
   uint32 next_entityid_ = 0;
+
+  // Fingerprints for years.
+  uint64 year_terms_[MAX_YEAR];
 
   // Symbols.
   Name n_name_{names_, "name"};

@@ -26,9 +26,7 @@ export class Component extends HTMLElement {
     super();
     this.state = state;
     this.initialized = false;
-    this.props = {};
-    this.elements = [...this.children];
-    this.nodes = [...this.childNodes];
+    this.attrs = {};
   }
 
   // Initialize component.
@@ -40,7 +38,7 @@ export class Component extends HTMLElement {
 
   // Connect web component to DOM.
   async connectedCallback() {
-    // Add attributes to properties.
+    // Get element attributes.
     for (const attr of this.attributes) {
       let name = attr.name.replace(/-/g, "_");
       let value = attr.value;
@@ -56,7 +54,7 @@ export class Component extends HTMLElement {
         if (!isNaN(n) && isFinite(n)) value = n;
       }
 
-      this.props[name] = value;
+      this.attrs[name] = value;
     }
 
     // Render component.

@@ -135,9 +135,9 @@ class KbLink extends Component {
 
   onclick(e) {
     if (e.ctrlKey) {
-      window.open("/kb/" + this.props.ref, "_blank");
+      window.open("/kb/" + this.attrs.ref, "_blank");
     } else {
-      this.match("#app").navigate(this.props.ref);
+      this.match("#app").navigate(this.attrs.ref);
     }
   }
 

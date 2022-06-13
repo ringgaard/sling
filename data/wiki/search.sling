@@ -83,6 +83,8 @@
 
     ;P463,       ; member of
     ;P1344,      ; participant of
+
+    P569: date,       ; date of birth
   }
 
   unused: [
@@ -91,7 +93,6 @@
     P172,       ; ethnic group
 
     P3150,      ; birthday
-    P569,       ; date of birth
     P570,       ; date of death
     P20,        ; place of death
     P509,       ; cause of death

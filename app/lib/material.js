@@ -444,6 +444,11 @@ window.onclick = e => {
 }
 
 export class MdMenu extends Component {
+  constructor(state) {
+    super(state);
+    this.items = [...this.children];
+  }
+
   onconnected() {
     this.bind("#open", "click", e => this.onmenu(e));
   }
@@ -478,7 +483,7 @@ export class MdMenu extends Component {
     h.push('<md-icon-button id="open" icon="more_vert"></md-icon-button>');
     let content = document.createElement("div");
     content.className = "menu-content";
-    for (let item of this.elements) {
+    for (let item of this.items) {
       content.appendChild(item);
     }
     h.push(content);
@@ -813,21 +818,21 @@ export class MdButton extends Component {
 
   render() {
     return `
-      <button${this.props.disabled ? " disabled" : ""}>
-        ${Component.escape(this.props.label)}
+      <button${this.attrs.disabled ? " disabled" : ""}>
+        ${Component.escape(this.attrs.label)}
       </button>`;
   }
 
   disable() {
-    if (!this.props.disabled) {
-      this.props.disabled = true;
+    if (!this.attrs.disabled) {
+      this.attrs.disabled = true;
       this.update(this.state);
     }
   }
 
   enable() {
-    if (this.props.disabled) {
-      this.props.disabled = false;
+    if (this.attrs.disabled) {
+      this.attrs.disabled = false;
       this.update(this.state);
     }
   }
@@ -891,16 +896,16 @@ export class MdIconButton extends MdRippleButton {
 
   render() {
     let attrs = [];
-    if (this.props.disabled) attrs.push('disabled');
-    if (this.props.shortcut) attrs.push(`accesskey="${this.props.shortcut}"`);
-    if (this.props.type) attrs.push(`type="${this.props.type}"`);
+    if (this.attrs.disabled) attrs.push('disabled');
+    if (this.attrs.shortcut) attrs.push(`accesskey="${this.attrs.shortcut}"`);
+    if (this.attrs.type) attrs.push(`type="${this.attrs.type}"`);
     let iattrs = [];
-    iattrs.push(`icon="${this.props.icon}"`);
-    if (this.props.outlined != undefined) iattrs.push(`class="outlined"`);
+    iattrs.push(`icon="${this.attrs.icon}"`);
+    if (this.attrs.outlined != undefined) iattrs.push(`class="outlined"`);
     let tooltip = "";
-    if (this.props.tooltip) {
+    if (this.attrs.tooltip) {
       tooltip =
-        `<div class="tooltip">${Component.escape(this.props.tooltip)}</div>`;
+        `<div class="tooltip">${Component.escape(this.attrs.tooltip)}</div>`;
     }
     return `
       <button ${attrs.join(" ")}>
@@ -910,15 +915,15 @@ export class MdIconButton extends MdRippleButton {
   }
 
   disable() {
-    if (!this.props.disabled) {
-      this.props.disabled = true;
+    if (!this.attrs.disabled) {
+      this.attrs.disabled = true;
       this.update(this.state);
     }
   }
 
   enable() {
-    if (this.props.disabled) {
-      this.props.disabled = false;
+    if (this.attrs.disabled) {
+      this.attrs.disabled = false;
       this.update(this.state);
     }
   }
@@ -1033,13 +1038,13 @@ export class MdLink extends Component {
     let url = this.state.url;
     let text = this.state.text;
     let attrs = [];
-    if (this.props.newtab || this.state.newtab) {
+    if (this.attrs.newtab || this.state.newtab) {
       attrs.push('target="_blank"');
     }
-    if (this.props.external || this.state.external) {
+    if (this.attrs.external || this.state.external) {
       attrs.push('rel="noreferrer"');
     }
-    if (this.props.notab || this.state.notab) {
+    if (this.attrs.notab || this.state.notab) {
       attrs.push('tabindex="-1"');
     }
     if (url == null) {
@@ -1139,7 +1144,7 @@ export class MdIcon extends Component {
   }
 
   onconnected() {
-    if (this.props.outlined != undefined) this.className = "outlined";
+    if (this.attrs.outlined != undefined) this.className = "outlined";
   }
 
   visible() {
@@ -1147,8 +1152,8 @@ export class MdIcon extends Component {
   }
 
   render() {
-    let icon = custom_icons[this.props.icon]
-    if (!icon) icon = this.props.icon;
+    let icon = custom_icons[this.attrs.icon]
+    if (!icon) icon = this.attrs.icon;
     if (!icon && typeof this.state === "string") icon = this.state;
     return icon;
   }
@@ -1190,13 +1195,13 @@ Component.register(MdIcon);
 
 export class MdRadioButton extends Component {
   render() {
-    let label = this.props.label ? Component.escape(this.props.label) : "";
+    let label = this.attrs.label ? Component.escape(this.attrs.label) : "";
     return `
       <label>
         <input type="radio"
-               name="${this.props.name}"
-               value="${this.props.value}"
-               ${this.props.selected || this.state ? "checked" : ""}>
+               name="${this.attrs.name}"
+               value="${this.attrs.value}"
+               ${this.attrs.selected || this.state ? "checked" : ""}>
         <div>${label}</div>
       </label>
     `;
@@ -1237,7 +1242,7 @@ Component.register(MdRadioButton);
 export class MdCheckbox extends Component {
   onconnect() {
     if (this.state == undefined || this.state == null) {
-      this.state = this.props["checked"];
+      this.state = this.attrs["checked"];
     }
   }
 
@@ -1261,7 +1266,7 @@ export class MdCheckbox extends Component {
   }
 
   render() {
-    let label = this.props.label ? Component.escape(this.props.label) : "";
+    let label = this.attrs.label ? Component.escape(this.attrs.label) : "";
     return `
       <label ${this.state ? 'class="checked"' : ''}>
         <input type="checkbox" ${this.state ? "checked" : ""}>
@@ -1373,7 +1378,7 @@ Component.register(MdSwitch);
 
 class MdTextField extends Component {
   onconnect() {
-    if (!this.state) this.state = this.props["value"];
+    if (!this.state) this.state = this.attrs["value"];
   }
 
   onconnected() {
@@ -1410,7 +1415,7 @@ class MdTextField extends Component {
 
   render() {
     let value = this.state ? Component.escape(this.state) : "";
-    let label = this.props.label ? Component.escape(this.props.label) : "";
+    let label = this.attrs.label ? Component.escape(this.attrs.label) : "";
 
     return `
       <label>
@@ -1491,14 +1496,14 @@ export class MdInput extends Component {
 
   render() {
     let attrs = [];
-    if (this.props.type) {
-      attrs.push(` type="${this.props.type}"`);
+    if (this.attrs.type) {
+      attrs.push(` type="${this.attrs.type}"`);
     }
-    if (this.props.placeholder) {
-      attrs.push(` placeholder="${this.props.placeholder}"`);
+    if (this.attrs.placeholder) {
+      attrs.push(` placeholder="${this.attrs.placeholder}"`);
     }
     attrs.push(' spellcheck="false"');
-    if (this.props.autofocus != undefined) {
+    if (this.attrs.autofocus != undefined) {
       attrs.push(' autofocus');
     }
 
@@ -1543,7 +1548,7 @@ export class MdToolbox extends Component {
   }
 
   visible() {
-    return this.state && (this.props.sticky || this.hover);
+    return this.state && (this.attrs.sticky || this.hover);
   }
 
   onconnected() {
@@ -1655,7 +1660,7 @@ export class MdSearch extends Component {
         list.prev();
       } else if (e.keyCode == 13) {
         e.preventDefault();
-        if (this.props.autoselect && !list.active) list.next();
+        if (this.attrs.autoselect && !list.active) list.next();
         if (list.active) {
           this.select(list.active, e.ctrlKey);
         } else {
@@ -1668,7 +1673,7 @@ export class MdSearch extends Component {
 
   oninput(e) {
     let query = e.target.value;
-    let min_length = this.props.min_length;
+    let min_length = this.attrs.min_length;
     if (min_length && query.length < min_length) {
       this.populate(null, null);
     } else {
@@ -1728,11 +1733,11 @@ export class MdSearch extends Component {
 
   render() {
     let attrs = [];
-    if (this.props.placeholder) {
-      attrs.push(` placeholder="${this.props.placeholder}"`);
+    if (this.attrs.placeholder) {
+      attrs.push(` placeholder="${this.attrs.placeholder}"`);
     }
     attrs.push(' spellcheck="false"');
-    if (this.props.autofocus != undefined) {
+    if (this.attrs.autofocus != undefined) {
       attrs.push(' autofocus');
     }
 
@@ -1943,7 +1948,7 @@ export class MdDataTable extends Component {
   constructor() {
     super();
     this.fields = [];
-    for (const e of this.elements) {
+    for (const e of this.children) {
       this.fields.push({
         name: e.getAttribute("field"),
         header: e.innerHTML,

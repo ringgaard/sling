@@ -53,6 +53,7 @@ cc_library(
     ":search-dictionary",
     "//sling/base",
     "//sling/file:repository",
+    "//sling/nlp/kb:calendar",
     "//sling/task",
     "//sling/task:frames",
     "//sling/string:text",

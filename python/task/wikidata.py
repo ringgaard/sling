@@ -102,7 +102,8 @@ class WikidataWorkflow:
       input = self.wikidata_input(dump)
       items, properties = self.wikidata_convert(input)
       db = self.wikidatadb()
-      self.wf.write([items, properties], db, name="db-writer")
+      self.wf.write([items, properties], db, name="db-writer",
+                    params={"db_write_mode": 3})
       return db
 
   def wikidata_snapshot(self):
