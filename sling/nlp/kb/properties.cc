@@ -204,11 +204,10 @@ const char *property_order[] = {
   "P53",        // family
   "P22",        // father
   "P25",        // mother
-  "P3373",      // sibling
   "P3448",      // stepparent
+  "P3373",      // sibling
+  "P451",       // unmarried partner
   "P26",        // spouse
-  "P2842",      // place of marriage
-  "P451",       // partner
   "P1971",      // number of children
   "P40",        // child
   "P1038",      // relative
@@ -469,6 +468,7 @@ const char *property_order[] = {
   "P166",       // award received
   "P2522",      // victory
   "P1441",      // present in work
+  "FEIN",       // featured in
 
   // Media.
   "P18",        // image

@@ -78,8 +78,8 @@
     ;P1416,      ; affiliation
     ;P6424,      ; affiliation string
 
-    ;P50,        ; author
-    ;P2093,      ; author name string
+    P50: item,        ; author
+    P2093: item,      ; author name string
 
     ;P463,       ; member of
     ;P1344,      ; participant of

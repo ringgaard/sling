@@ -309,7 +309,7 @@ export class SocialTopic {
 
     if (prop) {
       if (!this.topic.has(prop, identifier)) {
-        this.topic.add(prop, identifier);
+        this.topic.put(prop, identifier);
 
         if (this.context) {
           let item = await this.context.idlookup(prop, identifier);
@@ -321,11 +321,11 @@ export class SocialTopic {
       if (!this.topic.has(n_homepage, url)) {
         if (title) {
           let q = store.frame();
-          q.add(n_is, url);
-          q.add(n_title, title);
-          this.topic.add(n_homepage, q);
+          q.put(n_is, url);
+          q.put(n_title, title);
+          this.topic.put(n_homepage, q);
         } else {
-          this.topic.add(n_homepage, url);
+          this.topic.put(n_homepage, url);
         }
         return true;
       }
