@@ -70,9 +70,8 @@
 
     P106: item,       ; occupation
     P641: item,       ; sport
-    ;P39: item,       ; position held
 
-    ;P101,       ; field of work
+    P101: item,       ; field of work
     ;P69,        ; educated at
     ;P108,       ; employer
     ;P1416,      ; affiliation

@@ -65,6 +65,16 @@ var plugins = [
   ],
 },
 
+// OpenCorporates companies.
+{
+  name: "opencorp",
+  module: "opencorp.js",
+  actions: [PASTEURL, SEARCHURL],
+  patterns: [
+    /^https:\/\/opencorporates\.com\/companies\//,
+  ],
+},
+
 // E-mail address.
 {
   name: "email",

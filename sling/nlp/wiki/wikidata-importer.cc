@@ -246,10 +246,6 @@ class WikidataSplitter : public task::Processor {
   Store commons_;
   Names names_;
   Name n_property_{names_, "/w/property"};
-
-#if 1
-  Name n_wikipedia_{names_, "/w/item/wikipedia"};
-#endif
 };
 
 REGISTER_TASK_PROCESSOR("wikidata-splitter", WikidataSplitter);

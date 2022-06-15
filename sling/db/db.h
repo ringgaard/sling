@@ -125,7 +125,9 @@ class Database {
   uint64 size() const { return size_ + tail_size(); }
 
   // Return the current epoch for the database.
-  uint64 epoch() const { return RecordID(CurrentShard(), tail_size()); }
+  uint64 epoch() const {
+    return readers_.empty() ? 0 : RecordID(CurrentShard(), tail_size());
+  }
 
   // Check if database has unflushed changed.
   bool dirty() const { return dirty_; }

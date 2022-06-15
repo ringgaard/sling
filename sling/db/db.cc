@@ -76,12 +76,9 @@ Status Database::Open(const string &dbdir, bool recover) {
     }
     datadir_ = partition;
   }
-  if (readers_.empty()) {
-    return Status(E_NO_DATA_FILES, "No data files for database: ", dbdir);
-  }
 
   // The last shard also has a writer for adding records to the database.
-  if (!config_.read_only) {
+  if (!last.empty() && !config_.read_only) {
     config_.record.append = true;
     writer_ = new RecordWriter(last, config_.record);
     size_ -= writer_->Tell();
@@ -89,16 +86,25 @@ Status Database::Open(const string &dbdir, bool recover) {
 
   // Open database index.
   index_ = new DatabaseIndex();
-  Status st = index_->Open(IndexFile());
-  if (!st.ok()) {
-    if (recover) {
-      LOG(INFO) << "Recover database index for " << dbdir << " due to: " << st;
-      uint64 capacity = index_->capacity();
-      delete index_;
-      index_ = nullptr;
-      st = Recover(capacity);
+  if (File::Exists(IndexFile())) {
+    Status st = index_->Open(IndexFile());
+    if (!st.ok()) {
+      if (recover) {
+        LOG(INFO) << "Recover database index for " << dbdir << " due to: " << st;
+        uint64 capacity = index_->capacity();
+        delete index_;
+        index_ = nullptr;
+        st = Recover(capacity);
+      }
+      if (!st.ok()) return st;
     }
+  } else {
+    // Index missing, recreate.
+    uint64 capacity = config_.initial_index_capacity;
+    uint64 limit = capacity * config_.index_load_factor;
+    Status st = index_->Create(IndexFile(), capacity, limit);
     if (!st.ok()) return st;
+    dirty_ = true;
   }
 
   // Check that index is up-to-date.
@@ -108,7 +114,7 @@ Status Database::Open(const string &dbdir, bool recover) {
       uint64 capacity = index_->capacity();
       delete index_;
       index_ = nullptr;
-      st = Recover(capacity);
+      Status st = Recover(capacity);
       if (!st.ok()) return st;
     } else {
       return Status(E_STALE_INDEX, "Database index is not up-to-date");
@@ -148,10 +154,6 @@ Status Database::Create(const string &dbdir, const string &config) {
     st = File::WriteContents(dbdir + "/config", config);
     if (!st.ok()) return st;
   }
-
-  // Add initial data shard.
-  st = AddDataShard();
-  if (!st.ok()) return st;
 
   // Create database index.
   index_ = new DatabaseIndex();
@@ -511,6 +513,9 @@ Status Database::AddDataShard() {
   // Create new empty shard.
   LOG(INFO) << "Add shard " << readers_.size() << " to db " << dbdir_;
   string datafn = DataFile(readers_.size());
+  if (File::Exists(datafn)) {
+    return Status(EEXIST, "Shard already exists: ", datafn);
+  }
   config_.record.append = false;
   writer_ = new RecordWriter(datafn, config_.record);
   Status st = writer_->Flush();
@@ -556,7 +561,7 @@ Status Database::ExpandIndex(uint64 capacity) {
 
 Status Database::Expand() {
   // Check for data shard overflow.
-  if (writer_->Tell() >= config_.data_shard_size) {
+  if (writer_ == nullptr || writer_->Tell() >= config_.data_shard_size) {
     // Add new data shard.
     Status st = AddDataShard();
     if (!st.ok()) return st;

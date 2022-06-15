@@ -264,6 +264,7 @@ export class Frame {
 
   // Add slot if it is not already in frame. Return true if new slot was added.
   put(name, value) {
+    if (value === undefined) return false;
     if (this.has(name, value)) return false;
     this.add(name, value);
     return true;
