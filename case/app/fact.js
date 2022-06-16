@@ -898,7 +898,7 @@ Component.register(FactStatement);
 function parse_date(date) {
   let results = new Array();
   value_parser(date, results);
-  if (results.length > 0 && results[0].description == "time") {
+  if (results.length > 0 && results[0].isdate) {
     return results[0].value;
   }
 }
@@ -943,16 +943,24 @@ class FactField extends Component {
           // Split time interval.
           modifiers = {};
           query = m[1];
-          let delim = m[2].indexOf("--");
-          if (delim == -1) delim = m[2].indexOf(" - ");
-          if (delim == -1) delim = m[2].indexOf(":");
-          if (delim == -1) {
-            modifiers.time = parse_date(m[2].trim());
-          } else {
-            let start = m[2].slice(0, delim).trim();
-            let end = m[2].slice(delim + 2).trim();
+          let mod = m[2].trim();
+          let dstart = undefined;
+          let dend = undefined;
+          for (let delim of ["--", " - ", ":"]) {
+            let p = mod.indexOf(delim);
+            if (p != -1) {
+              dstart = p;
+              dend = p + delim.length;
+              break;
+            }
+          }
+          if (dstart && dend) {
+            let start = mod.slice(0, dstart).trim();
+            let end = mod.slice(dend).trim();
             if (start) modifiers.start = parse_date(start);
             if (end) modifiers.end = parse_date(end);
+          } else {
+            modifiers.time = parse_date(mod);
           }
         }
 

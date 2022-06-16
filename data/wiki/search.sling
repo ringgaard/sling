@@ -73,7 +73,7 @@
 
     P101: item,       ; field of work
     ;P69,        ; educated at
-    ;P108,       ; employer
+    P108: item,       ; employer
     ;P1416,      ; affiliation
     ;P6424,      ; affiliation string
 

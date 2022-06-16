@@ -407,6 +407,7 @@ function add_date_result(results, year, month, day, precision) {
       value: t.value(),
       title: t.text(),
       description: "point in time",
+      isdate: true,
     });
   }
 }

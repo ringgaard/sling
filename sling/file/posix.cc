@@ -115,7 +115,8 @@ class PosixFile : public File {
 
   void *MapMemory(uint64 pos, size_t size,
                   bool writable, bool preload) override {
-    void *mapping = mmap(nullptr, size, PROT_READ | PROT_WRITE,
+    void *mapping = mmap(nullptr, size,
+                         PROT_READ | (writable ? PROT_WRITE : 0),
                          (writable ? MAP_SHARED : MAP_PRIVATE) |
                          (preload ? MAP_POPULATE : 0),
                          fd_, pos);
