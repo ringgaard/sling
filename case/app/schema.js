@@ -180,31 +180,41 @@ export function qualified(v) {
 }
 
 export function inverse_property(property, source) {
-  if (!(property instanceof Frame)) return;
-  let inverse = property.get(n_inverse_property);
-  if (!inverse) return;
-  if (qualified(inverse)) {
-    // Find inverse property which matches the target, e.g. gendered properties.
-    var fallback;
-    for (let p of property.all(n_inverse_property)) {
-      if (qualified(p)) {
-        let match = true;
-        inverse = null;
-        for (let [n, v] of p) {
-          if (n == n_is) {
-            inverse = v;
-          } else if (!source.has(n, v)) {
-            match = false;
+  if (source) {
+    if (!(property instanceof Frame)) return;
+    let inverse = property.get(n_inverse_property);
+    if (!inverse) return;
+    if (qualified(inverse)) {
+      // Find inverse property which matches the target, e.g. gendered
+      // properties.
+      var fallback;
+      for (let p of property.all(n_inverse_property)) {
+        if (qualified(p)) {
+          let match = true;
+          inverse = null;
+          for (let [n, v] of p) {
+            if (n == n_is) {
+              inverse = v;
+            } else if (!source.has(n, v)) {
+              match = false;
+            }
           }
+          if (match && inverse) return inverse;
+        } else {
+          fallback = p;
         }
-        if (match && inverse) return inverse;
-      } else {
-        fallback = p;
       }
+      return fallback;
+    } else {
+      return inverse;
     }
-    return fallback;
   } else {
-    return inverse;
+    let props = new Array();
+    for (let p of property.all(n_inverse_property)) {
+      if (qualified(p)) p = p.get(n_is);
+      props.push(p);
+    }
+    return props;
   }
 }
 

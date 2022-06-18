@@ -262,10 +262,31 @@ export class Frame {
     this.slots.push(value);
   }
 
-  // Add slot if it is not already in frame. Return true if new slot was added.
+  // Insert slot at position.
+  insert(pos, name, value) {
+    if (!this.slots) this.slots = new Array();
+    this.slots.splice(pos * 2, 0, name, value);
+  }
+
+  // Add slot if it is not already in frame. Return true if a new slot was
+  // added. If there is already a slot with the same name, the new slot is
+  // inserted right after the last slot with this name.
   put(name, value) {
     if (value === undefined) return false;
-    if (this.has(name, value)) return false;
+    if (this.slots) {
+      let pos = 0;
+      for (let n = 0; n < this.slots.length; n += 2) {
+        if (this.slots[n] === name) {
+          if (value === undefined) return true;
+          if (this.store.resolve(this.slots[n + 1]) == value) return false;
+          pos = n + 2;
+        }
+      }
+      if (pos) {
+        this.slots.splice(pos, 0, name, value);
+        return true;
+      }
+    }
     this.add(name, value);
     return true;
   }

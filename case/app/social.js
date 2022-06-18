@@ -269,6 +269,10 @@ let xrefs = [
     property: store.lookup("P535"),
   },
   {
+    pattern: /^https?:\/\/(?:www\.)?geni\.com\/people\/.+\/(\d+)/,
+    property: store.lookup("P2600"),
+  },
+  {
     pattern: /^(https?:\/\/honeydrip\.com\/model\/.+)/,
     property: store.lookup("P973"),
   },

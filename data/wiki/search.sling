@@ -72,10 +72,10 @@
     P641: item,       ; sport
 
     P101: item,       ; field of work
-    ;P69,        ; educated at
+    P69: item,        ; educated at
     P108: item,       ; employer
-    ;P1416,      ; affiliation
-    ;P6424,      ; affiliation string
+    ;P1416: item,      ; affiliation
+    ;P6424: text,      ; affiliation string
 
     P50: item,        ; author
     P2093: item,      ; author name string

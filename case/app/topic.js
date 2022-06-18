@@ -449,7 +449,7 @@ class TopicCard extends Component {
     let editor = this.match("#editor");
     for (let [prop, value] of topic) {
       // Get inverse property.
-      if (!(prop instanceof Frame)) continue
+      if (!(prop instanceof Frame)) continue;
       let inverse = inverse_property(prop, topic);
       if (!inverse) continue;
 
@@ -459,7 +459,11 @@ class TopicCard extends Component {
       if (!editor.topics.includes(target)) continue;
 
       // Skip if target already has the inverse relation.
-      if (target.has(inverse, topic)) continue;
+      let exists = false;
+      for (let rel of inverse_property(prop)) {
+        if (target.has(rel, topic)) exists = true;
+      }
+      if (exists) continue;
 
       // Add inverse property, including qualifiers.
       if (target != value) {

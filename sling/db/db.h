@@ -119,14 +119,18 @@ class Database {
   bool Valid(uint64 recid);
 
   // Return size of last shard.
-  uint64 tail_size() const { return writer_ != nullptr ? writer_->Tell() : 0; }
+  uint64 tail_size() const {
+    return writer_ != nullptr ? writer_->Tell() : 0;
+  }
 
   // Return total size of data shards.
   uint64 size() const { return size_ + tail_size(); }
 
-  // Return the current epoch for the database.
+  // Return the current epoch for the database. It is important to never return
+  // zero since this is a reserved index value.
   uint64 epoch() const {
-    return readers_.empty() ? 0 : RecordID(CurrentShard(), tail_size());
+    if (readers_.empty()) return sizeof(RecordFile::Header);
+    return RecordID(CurrentShard(), tail_size());
   }
 
   // Check if database has unflushed changed.
