@@ -46,6 +46,11 @@ class PhraseTokenizer {
   // Normalize phrase.
   string Normalize(Text text) const;
 
+  // Compute normalized token fingerprint.
+  uint64 TokenFingerprint(Text word) const {
+    return Fingerprinter::Fingerprint(word, normalization_);
+  }
+
   // Set/get phrase normalization flags.
   Normalization normalization() const { return normalization_; }
   void set_normalization(Normalization normalization) {

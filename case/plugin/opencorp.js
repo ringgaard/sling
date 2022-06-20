@@ -8,6 +8,7 @@ import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 
 const n_is = store.is;
 const n_name = store.lookup("name");
+const n_alias = store.lookup("alias");
 const n_description = store.lookup("description");
 const n_instance_of = store.lookup("P31");
 const n_business = store.lookup("Q4830453");
@@ -21,6 +22,19 @@ const n_headquarters_location = store.lookup("P159")
 const n_located_at_street_address = store.lookup("P6375");
 const n_postal_code = store.lookup("P281");
 const n_country = store.lookup("P17");
+const n_position_held = store.lookup("P39");
+const n_corporate_officer = store.lookup("P2828");
+
+const positions = {
+  "director": store.lookup("P1037"),
+  "adm. dir.": store.lookup("P169"),
+  "reel ejer": store.lookup("P127"),
+  "stiftere": store.lookup("P112"),
+  "formand": store.lookup("P488"),
+  "bestyrelsesmedlem": store.lookup("P3320"),
+  "direktør": store.lookup("P1037"),
+
+};
 
 /*
 n_founded_by = kb["P112"]
@@ -35,7 +49,6 @@ n_replaces = kb["P1365"]
 n_replaced_by = kb["P1366"]
 n_merged_into = kb["P7888"]
 n_separated_from = kb["P807"]
-n_corporate_officer = kb["P2828"]
 n_employer = kb["P108"]
 n_industry = kb["P452"]
 n_chief_executive_officer = kb["P169"]
@@ -69,7 +82,7 @@ function date2sling(date) {
 export default class OpenCorpPlugin {
   async process(action, query, context) {
     let url = new URL(query);
-    let m = url.pathname.match(/^\/companies\/(\w+\/\w+)/);
+    let m = url.pathname.match(/^\/companies\/(\w+\/.+)/);
     if (!m) return;
     let ocid = m[1];
     if (!ocid) return;
@@ -101,6 +114,7 @@ export default class OpenCorpPlugin {
     // Fetch company information from OpenCorporates.
     let url = `https://api.opencorporates.com/companies/${ocid}?format=json`;
     let r = await fetch(context.proxy(url));
+    if (!r.ok) throw "Company not found";
     let json = await r.json();
     let company = json.results.company;
     console.log(company);
@@ -116,6 +130,10 @@ export default class OpenCorpPlugin {
       name.put(n_end_time, date2sling(n.end_date));
       topic.add(n_other_name, name);
     }
+    for (let n of company.alternative_names) {
+      topic.put(n_alias, n.company_name);
+    }
+
 
     // Company life cycle.
     topic.put(n_legal_form, company.company_type);
@@ -131,9 +149,27 @@ export default class OpenCorpPlugin {
         let street = addr.street_address.replace("\n", ", ");
         a.put(n_located_at_street_address, street);
       }
-      a.put(n_postal_code, addr.postal_code);
+      if (addr.postal_code) a.put(n_postal_code, addr.postal_code);
       topic.put(n_headquarters_location, a);
-      topic.put(n_country, addr.country);
+      if (addr.country) topic.put(n_country, addr.country);
+    }
+
+    // Officers.
+    for (let o of company.officers) {
+      if (o.officer) {
+        let prop = null;
+        let p = store.frame();
+        p.add(n_is, o.officer.name);
+        if (o.officer.position) {
+          prop = positions[o.officer.position.toLowerCase()];
+          if (!prop) {
+            p.add(n_position_held, o.officer.position);
+          }
+        }
+        p.put(n_start_time, date2sling(o.officer.start_date));
+        p.put(n_end_time, date2sling(o.officer.end_date));
+        topic.put(prop || n_corporate_officer, p);
+      }
     }
 
     // Add OpenCorporates xref.

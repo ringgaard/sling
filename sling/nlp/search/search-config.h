@@ -81,6 +81,11 @@ class SearchConfiguration {
     return term == 1 || stopwords_.count(term) > 0;
   }
 
+  // Compute term fingerprint.
+  uint64 fingerprint(Text word) {
+    return tokenizer_.TokenFingerprint(word);
+  }
+
  private:
   // Include aliases in dictionary.
   bool aliases_ = false;

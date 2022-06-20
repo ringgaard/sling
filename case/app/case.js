@@ -1160,6 +1160,13 @@ class CaseEditor extends MdApp {
     if (this.readonly) return;
     let list = this.find("topic-list");
     let selected = list.selection();
+    if (selected.length == 1) {
+      for (let redirect of selected[0].links()) {
+        if (this.topics.includes(redirect)) {
+          selected.unshift(redirect);
+        }
+      }
+    }
     if (selected.length < 2) return;
 
     // Merge the rest of the topics into the first topic.
@@ -1168,9 +1175,13 @@ class CaseEditor extends MdApp {
     for (let topic of sources) {
       // Add properties from topic to target.
       for (let [name, value] of topic) {
-        if (name != store.id) {
-          target.put(name, value);
+        if (name == store.id) continue;
+        if (name == store.is) {
+          let link = value;
+          if (typeof link === 'string') link = store.lookup(link);
+          if (selected.includes(link)) continue;
         }
+        target.put(name, value);
       }
 
       // Redirect reference to topic to target.

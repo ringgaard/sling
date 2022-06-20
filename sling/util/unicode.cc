@@ -51,6 +51,7 @@ Normalization ParseNormalization(const string &spec) {
       case 'w': flags |= NORMALIZE_WHITESPACE; break;
       case 'n': flags |= NORMALIZE_NAME; break;
       case 'P': flags |= NORMALIZE_PHRASE; break;
+      case 'D': flags |= NORMALIZE_DOUBLES; break;
       default:
         LOG(FATAL) << "Unknown normalization specifier: " << spec;
     }
@@ -67,6 +68,7 @@ string NormalizationString(Normalization normalization) {
   if (normalization & NORMALIZE_WHITESPACE) str.push_back('w');
   if (normalization & NORMALIZE_NAME) str.push_back('n');
   if (normalization & NORMALIZE_PHRASE) str.push_back('P');
+  if (normalization & NORMALIZE_DOUBLES) str.push_back('D');
   return str;
 }
 
@@ -444,10 +446,16 @@ void UTF8::Normalize(const char *s, int len, int flags, string *normalized) {
   // below 128 are normalized to one byte codes.
   bool brk = false;
   const char *end = s + len;
+  int last = 0;
   while (s < end) {
     uint8 c = *reinterpret_cast<const uint8 *>(s);
     if (c & 0x80) break;
     int ch = Unicode::Normalize(c, flags);
+    if (ch == last && (flags & NORMALIZE_DOUBLES)) {
+      s++;
+      continue;
+    }
+    last = ch;
     if (ch > 0) {
       if (ch == ' ') {
         brk = true;
@@ -470,6 +478,11 @@ void UTF8::Normalize(const char *s, int len, int flags, string *normalized) {
   // characters.
   while (s < end) {
     int ch = Unicode::Normalize(Decode(s), flags);
+    if (ch == last && (flags & NORMALIZE_DOUBLES)) {
+      s = Next(s);
+      continue;
+    }
+    last = ch;
     if (ch > 0) {
       if (ch == ' ') {
         brk = true;

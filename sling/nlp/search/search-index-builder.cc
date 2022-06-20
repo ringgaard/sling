@@ -18,6 +18,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "sling/nlp/document/lex.h"
 #include "sling/nlp/document/phrase-tokenizer.h"
 #include "sling/nlp/kb/calendar.h"
 #include "sling/nlp/search/search-dictionary.h"
@@ -115,6 +116,17 @@ class SearchIndexMapper : public task::FrameProcessor {
             terms.insert(year_terms_[date.year]);
           }
         }
+      } else if (type == n_lex_) {
+        if (store->IsString(value)) {
+          Handle lang = store->GetString(value)->qualifier();
+          if (!config_.foreign(lang)) {
+            Text lex = store->GetString(value)->str();
+            Document document(store);
+            if (lexer_.Lex(&document, lex)) {
+              Collect(&terms, document);
+            }
+          }
+        }
       }
     }
     num_items_->Increment();
@@ -159,6 +171,24 @@ class SearchIndexMapper : public task::FrameProcessor {
     }
   }
 
+  void Collect(Terms *terms, const Document &document) {
+    // Add text to terms.
+    for (const Token &token : document.tokens()) {
+      uint64 term = config_.fingerprint(token.word());
+      if (!config_.stopword(term)) terms->insert(term);
+    }
+
+    // Add links to terms.
+    Store *store = document.store();
+    for (const Span *span : document.spans()) {
+      Handle link = span->evoked();
+      if (link.IsNil()) continue;
+      Text id = store->FrameId(link);
+      const SearchDictionary::Item *item = dictionary_.Find(id);
+      Collect(terms, item);
+    }
+  }
+
  private:
   // Maximum year for date indexing.
   static const int MAX_YEAR = 3000;
@@ -168,6 +198,10 @@ class SearchIndexMapper : public task::FrameProcessor {
 
   // Search dictionary with search terms for items.
   SearchDictionary dictionary_;
+
+  // Document lexer.
+  DocumentTokenizer tokenizer_;
+  DocumentLexer lexer_{&tokenizer_};
 
   // Output channels.
   task::Channel *entities_ = nullptr;
@@ -184,6 +218,7 @@ class SearchIndexMapper : public task::FrameProcessor {
   Name n_text_{names_, "text"};
   Name n_item_{names_, "item"};
   Name n_date_{names_, "date"};
+  Name n_lex_{names_, "lex"};
   Name n_popularity_{names_, "/w/item/popularity"};
   Name n_fanin_{names_, "/w/item/fanin"};
   Name n_instance_of_{names_, "P31"};

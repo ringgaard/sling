@@ -217,6 +217,10 @@ let xrefs = [
     property: store.lookup("P8767"),
   },
   {
+    pattern: /^https?:\/\/(?:www\.)?boobpedia\.com\/boobs\/(.+)/,
+    property: store.lookup("PBOOB"),
+  },
+  {
     pattern: /^https?:\/\/scholar\.google\.com\/citations\/?\?user=(\w+)/,
     property: store.lookup("P1960"),
   },

@@ -7,6 +7,7 @@
   languages: [
     /lang/en ; English
     /lang/da ; Danish
+    /lang/de ; German
   ]
 
   ; Stopwords that are not indexed.
@@ -46,6 +47,7 @@
     name: name,
     alias: name,
     description: text,
+    lex: lex,
 
     P2561: name,      ; name
     P4970: name,      ; alternate names
@@ -68,22 +70,22 @@
     P551: item,       ; residence
     P27: item,        ; country of citizenship
 
+    P569: date,       ; date of birth
+
     P106: item,       ; occupation
     P641: item,       ; sport
 
     P101: item,       ; field of work
     P69: item,        ; educated at
     P108: item,       ; employer
-    ;P1416: item,      ; affiliation
-    ;P6424: text,      ; affiliation string
+    P1416: item,      ; affiliation
+    P6424: text,      ; affiliation string
+    P463: item,       ; member of
+    P1344: item,      ; participant of
 
-    P50: item,        ; author
-    P2093: item,      ; author name string
-
-    ;P463,       ; member of
-    ;P1344,      ; participant of
-
-    P569: date,       ; date of birth
+    ; Author names creates to many matches for articles
+    ;P50: item,        ; author
+    ;P2093: item,      ; author name string
   }
 
   unused: [
