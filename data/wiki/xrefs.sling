@@ -48,6 +48,9 @@
     P3984, ; subreddit
     P2397, ; YouTube channel ID
     P4015, ; Vimeo identifier
+    PBABE, ; Babepedia ID
+    ;PVEF,  ; VEF thread ID
+
     P3869, ; IAFD female performer ID
 
     P214,  ; VIAF ID
@@ -77,7 +80,7 @@
     "lei": "P1278"      ; Legal Entity Identifier
 
     "imdb": "P345"      ; IMDB ID
-    "twitter": "P2002"  ; Twitter username
+    "tw": "P2002"       ; Twitter username
     "fb": "P2013"       ; Facebook ID
     "ig": "P2003"       ; Instagram username
     "sr": "P3984"       ; subreddit
@@ -86,6 +89,8 @@
     "vimeo": "P4015"    ; Vimeo identifier
     "pb": "P5346"       ; Playmate ID
     "ph": "P6290"       ; Penthouse ID
+    "babe": "PBABE"     ; Babepedia ID
+    ;"vef": "PVEF"       ; VEF thread ID
     "iafd": "P3869"     ; IAFD female performer ID
 
     "viaf": "P214"      ; VIAF ID

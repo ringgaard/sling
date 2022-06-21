@@ -35,6 +35,7 @@ services = {
   "twitter": Service("twitter", "TwitterService"),
   "wikidata": Service("wikidata", "WikidataService"),
   "viaf": Service("viaf", "VIAFService"),
+  "biz": Service("biz", "BizService"),
 }
 
 def load():

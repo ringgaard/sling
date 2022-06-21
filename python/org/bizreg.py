@@ -46,10 +46,14 @@ class BusinessRegistries:
 
     self.registers = store.load("data/org/bizreg.sling")
     self.regauth = {}
+    self.opencorp = {}
     for register in self.registers:
       regcode = register[self.n_registration_authority_code]
       if regcode in self.regauth: print("Duplicate RA:", regcode)
       self.regauth[regcode] = register
+      jurisdiction = register[self.n_opencorporates_jurisdiction]
+      if jurisdiction is not None and jurisdiction not in self.opencorp:
+        self.opencorp[jurisdiction] = register
 
   def get_regauth(self, ra):
     return self.regauth.get(ra)

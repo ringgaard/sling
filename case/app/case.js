@@ -301,7 +301,13 @@ class CaseEditor extends MdApp {
   async onitem(e) {
     let item = e.detail;
     if (item.onitem) {
-      await item.onitem(item);
+      this.style.cursor = "wait";
+      try {
+        await item.onitem(item);
+      } catch(e) {
+        inform("Plug-in error: " + e);
+      }
+      this.style.cursor = "";
       if (item.context) await item.context.refresh();
     } else if (item.topic) {
       if (item.casefile) {

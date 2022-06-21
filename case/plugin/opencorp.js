@@ -22,16 +22,20 @@ const n_headquarters_location = store.lookup("P159")
 const n_located_at_street_address = store.lookup("P6375");
 const n_postal_code = store.lookup("P281");
 const n_country = store.lookup("P17");
+const n_location = store.lookup("P276");
 const n_position_held = store.lookup("P39");
 const n_corporate_officer = store.lookup("P2828");
 
 const positions = {
   "director": store.lookup("P1037"),
+  "owner": store.lookup("P127"),
   "adm. dir.": store.lookup("P169"),
+  "adm. dir": store.lookup("P169"),
   "reel ejer": store.lookup("P127"),
   "stiftere": store.lookup("P112"),
   "formand": store.lookup("P488"),
   "bestyrelsesmedlem": store.lookup("P3320"),
+  "bestyrelse": store.lookup("P3320"),
   "direktør": store.lookup("P1037"),
 
 };
@@ -67,6 +71,11 @@ n_association = kb["Q48204"]
 n_human = kb["Q5"]
 n_family_name = kb["Q101352"]
 */
+
+const n_company = store.lookup("company");
+const n_regauth = store.lookup("regauth");
+const n_country_id = store.lookup("country");
+const n_jurisdiction_id = store.lookup("jurisdiction");
 
 const n_opencorporates_id = store.lookup("P1320");
 const n_described_by_source = store.lookup("P1343");
@@ -150,8 +159,8 @@ export default class OpenCorpPlugin {
         a.put(n_located_at_street_address, street);
       }
       if (addr.postal_code) a.put(n_postal_code, addr.postal_code);
+      if (addr.country) a.put(n_country, addr.country);
       topic.put(n_headquarters_location, a);
-      if (addr.country) topic.put(n_country, addr.country);
     }
 
     // Officers.
@@ -172,11 +181,31 @@ export default class OpenCorpPlugin {
       }
     }
 
-    // Add OpenCorporates xref.
+    // Add OpenCorporates company id.
     topic.put(n_opencorporates_id, ocid);
-    topic.put(n_described_by_source, n_opencorp);
     let item = await context.idlookup(n_opencorporates_id, ocid);
     if (item) topic.put(n_is, item.id);
+
+    // Get company ids.
+    r = await fetch(context.service("biz", {ocid}));
+    if (r.ok) {
+      let reply = await store.parse(r);
+      for (let [prop, value] of reply.get(n_company)) {
+        if (!topic.has(prop, value)) {
+          topic.put(prop, value);
+          let item = await context.idlookup(prop, value);
+          if (item) topic.put(n_is, item.id);
+        }
+      }
+      let regauth = reply.get(n_regauth);
+      let country = regauth.get(n_country_id);
+      let region = regauth.get(n_jurisdiction_id);
+      if (region && region != country) topic.put(n_location, region);
+      if (country) topic.put(n_country, country);
+    }
+
+    // Add OpenCorporates as source.
+    topic.put(n_described_by_source, n_opencorp);
 
     context.updated(topic);
   }
