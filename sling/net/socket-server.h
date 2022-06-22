@@ -92,6 +92,9 @@ class SocketServer {
   // Output connection information as HTML.
   void OutputSocketZ(IOBuffer *out) const;
 
+  // Check if server has been started.
+  bool started() const { return pollfd_ != -1; }
+
  private:
   // Endpoint for listening for new connections for protocol.
   struct Endpoint {

@@ -65,7 +65,7 @@ for line in fin:
     elif name == n_qid or name == n_pid:
       # Add Wikidata redirects for mapped items and properties.
       name = n_is
-      value = store[value]
+      value = store[store.resolve(value)]
     else:
       if name == n_fg_author:
         # Invert author relation.

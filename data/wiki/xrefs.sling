@@ -49,7 +49,7 @@
     P2397, ; YouTube channel ID
     P4015, ; Vimeo identifier
     PBABE, ; Babepedia ID
-    ;PVEF,  ; VEF thread ID
+    PVEF,  ; VEF thread ID
 
     P3869, ; IAFD female performer ID
 
@@ -90,7 +90,7 @@
     "pb": "P5346"       ; Playmate ID
     "ph": "P6290"       ; Penthouse ID
     "babe": "PBABE"     ; Babepedia ID
-    ;"vef": "PVEF"       ; VEF thread ID
+    "vef": "PVEF"       ; VEF thread ID
     "iafd": "P3869"     ; IAFD female performer ID
 
     "viaf": "P214"      ; VIAF ID

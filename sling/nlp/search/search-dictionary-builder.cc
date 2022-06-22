@@ -32,7 +32,7 @@ class SearchVocabulary : public task::FrameProcessor {
  public:
   void Startup(task::Task *task) override {
     // Read search index configuration.
-    config_.Load(commons_, task->GetInputFile("config"));
+    config_.Load(commons_, task->GetInputFile("config"), true);
 
     // Initialize accumulator.
     accumulator_.Init(output(), 1 << 20);
@@ -52,7 +52,7 @@ class SearchVocabulary : public task::FrameProcessor {
     std::vector<string> tokens;
     for (const Slot &s : frame) {
       if (s.name == n_name_ ||
-          (config_.aliases() && s.name == n_alias_)) {
+          (config_.dictionary_aliases() && s.name == n_alias_)) {
         // Add names and aliases in the selected languages.
         Handle value = store->Resolve(s.value);
         if (store->IsString(value)) {
@@ -96,7 +96,7 @@ class SearchDictionaryBuilder : public task::FrameProcessor {
  public:
   void Startup(task::Task *task) override {
     // Read search index configuration.
-    config_.Load(commons_, task->GetInputFile("config"));
+    config_.Load(commons_, task->GetInputFile("config"), true);
 
     // Statistics.
     num_items_ = task->GetCounter("items");
@@ -118,7 +118,7 @@ class SearchDictionaryBuilder : public task::FrameProcessor {
         Handle type = store->Resolve(s.value);
         if (config_.skipped(type)) return;
       } else if (s.name == n_name_ ||
-                 (config_.aliases() && s.name == n_alias_)) {
+                 (config_.dictionary_aliases() && s.name == n_alias_)) {
         // Add names and aliases in the selected languages.
         Handle value = store->Resolve(s.value);
         if (store->IsString(value)) {

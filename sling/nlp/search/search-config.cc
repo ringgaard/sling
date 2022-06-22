@@ -21,14 +21,17 @@
 namespace sling {
 namespace nlp {
 
-void SearchConfiguration::Load(Store *store, const string &filename) {
+void SearchConfiguration::Load(Store *store,
+                               const string &filename,
+                               bool dictionary) {
   FileReader reader(store, filename);
   Frame config = reader.Read().AsFrame();
   CHECK(config.valid());
-  aliases_ = config.GetBool("aliases");
+  dictionary_aliases_ = config.GetBool("dictionary_aliases");
 
   // Get languages for indexing.
-  Array langs = config.Get("languages").AsArray();
+  const char *lang = dictionary ? "dictionary_languages" : "index_languages";
+  Array langs = config.Get(lang).AsArray();
   CHECK(langs.valid());
   for (int i = 0; i < langs.length(); ++i) {
     languages_.add(langs.get(i));

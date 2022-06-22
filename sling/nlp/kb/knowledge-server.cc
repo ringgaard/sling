@@ -44,6 +44,7 @@ int main(int argc, char *argv[]) {
   LOG(INFO) << "Start HTTP server on port " << FLAGS_port;
   SocketServerOptions options;
   HTTPServer http(options, FLAGS_host.c_str(), FLAGS_port);
+  CHECK(http.Start(false));
 
   KnowledgeService kb;
   kb.Load(&commons, FLAGS_names);
@@ -80,7 +81,7 @@ int main(int argc, char *argv[]) {
     rsp->TempRedirectTo("/kb");
   });
 
-  CHECK(http.Start());
+  CHECK(http.Start(true));
 
   LOG(INFO) << "HTTP server running";
   http.Wait();

@@ -58,6 +58,18 @@ static void Handle404(HTTPRequest *request, HTTPResponse *response) {
   response->Append("</body></html>\n");
 }
 
+// Return 503 error.
+static void Handle503(HTTPRequest *request, HTTPResponse *response) {
+  response->set_content_type("text/html");
+  response->set_status(503);
+  response->Append("<html><head>\n");
+  response->Append("<title>404 Service Unavailable</title>\n");
+  response->Append("</head><body>\n");
+  response->Append("<h1>Service Unavailable</h1>\n");
+  response->Append("<p>The system is down for maintenance</p>");
+  response->Append("</body></html>\n");
+}
+
 // Read HTTP header line.
 static char *ReadLine(IOBuffer *hdr) {
   char *line = hdr->begin();
@@ -114,6 +126,9 @@ SocketSession *HTTPProtocol::NewSession(SocketConnection *conn) {
 
 HTTPProtocol::Handler HTTPProtocol::FindHandler(HTTPRequest *request) const {
   MutexLock lock(&mu_);
+
+  // Return 503 if service not available.
+  if (!available_) return &Handle503;
 
   // Find context with longest matching prefix.
   const char *path = request->path();

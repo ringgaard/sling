@@ -406,8 +406,10 @@ export class Frame {
   // Iterator over all slots.
   [Symbol.iterator]() {
     let it = function* (slots, name) {
-      for (let pos = 0; pos < slots.length; pos += 2) {
-        yield [slots[pos], slots[pos + 1]];
+      if (slots) {
+        for (let pos = 0; pos < slots.length; pos += 2) {
+          yield [slots[pos], slots[pos + 1]];
+        }
       }
     };
     return it(this.slots);
@@ -417,8 +419,10 @@ export class Frame {
   all(name) {
     if (typeof name === 'string') name = this.store.lookup(name);
     let it = function* (slots, name) {
-      for (let pos = 0; pos < slots.length; pos += 2) {
-        if (slots[pos] === name) yield slots[pos + 1];
+      if (slots) {
+        for (let pos = 0; pos < slots.length; pos += 2) {
+          if (slots[pos] === name) yield slots[pos + 1];
+        }
       }
     };
     return it(this.slots, name);
@@ -439,11 +443,13 @@ export class Frame {
   // Get all resolved links.
   links() {
     let it = function* (store, slots) {
-      for (let pos = 0; pos < slots.length; pos += 2) {
-        if (slots[pos] === store.is) {
-          let link = slots[pos + 1];
-          if (typeof link === 'string') link = store.lookup(link);
-          yield link;
+      if (slots) {
+        for (let pos = 0; pos < slots.length; pos += 2) {
+          if (slots[pos] === store.is) {
+            let link = slots[pos + 1];
+            if (typeof link === 'string') link = store.lookup(link);
+            yield link;
+          }
         }
       }
     };

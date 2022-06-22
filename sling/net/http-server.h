@@ -56,6 +56,10 @@ class HTTPProtocol : public SocketProtocol {
   // Find handler for request.
   Handler FindHandler(HTTPRequest *request) const;
 
+  // Service availability.
+  bool available() const { return available_; }
+  void set_available(bool available) { available_ = available; }
+
  private:
   // HTTP context for serving requests under an URI.
   struct Context {
@@ -77,6 +81,9 @@ class HTTPProtocol : public SocketProtocol {
 
   // Registered HTTP handlers.
   std::vector<Context> contexts_;
+
+  // Return 503 if service not currently available.
+  bool available_ = true;
 
   // Mutex for serializing access to contexts.
   mutable Mutex mu_;
@@ -102,6 +109,13 @@ class HTTPServer : public SocketServer {
       const string &uri, T *object,
       void (T::*method)(HTTPRequest *, HTTPResponse *)) {
     http_.Register(uri, object, method);
+  }
+
+  // Start server.
+  Status Start(bool available = true) {
+    http_.set_available(available);
+    if (started()) return Status::OK;
+    return SocketServer::Start();
   }
 
  private:

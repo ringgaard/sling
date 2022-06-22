@@ -32,10 +32,10 @@ namespace nlp {
 class SearchConfiguration {
  public:
   // Load search index configuration.
-  void Load(Store *store, const string &filename);
+  void Load(Store *store, const string &filename, bool dictionary = false);
 
   // Include aliases in dictionary.
-  bool aliases() const { return aliases_; }
+  bool dictionary_aliases() const { return dictionary_aliases_; }
 
   // Languages for search terms.
   const HandleSet &languages() const { return languages_; }
@@ -88,7 +88,7 @@ class SearchConfiguration {
 
  private:
   // Include aliases in dictionary.
-  bool aliases_ = false;
+  bool dictionary_aliases_ = false;
 
   // Languages for search terms.
   HandleSet languages_;
