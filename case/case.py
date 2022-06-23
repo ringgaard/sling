@@ -20,6 +20,7 @@ import requests
 import socket
 import time
 import urllib.parse
+import urllib3
 
 import sling
 import sling.net
@@ -57,6 +58,10 @@ flags.define("--casedb",
              default="case",
              metavar="DB")
 
+flags.define("--urllib3_proxy",
+             help="Use urllib3 for proxy requests",
+             default=True,
+             action="store_true")
 
 # Load services before parsing flags to allow services to define flags.
 services.load()
@@ -208,6 +213,10 @@ non_proxy_headers = set([
 ])
 
 checked_hostnames = set()
+if flags.arg.urllib3_proxy:
+  proxy_pool = urllib3.PoolManager()
+else:
+  proxy_pool = requests.Session()
 
 @app.route("/case/proxy")
 def service_request(request):
@@ -234,21 +243,37 @@ def service_request(request):
     if delim != -1:
       cookies = {cookie[:delim]: cookie[delim + 1:]}
 
-  # Forward request.
   log.info("Proxy request for", url, headers, cookies)
-  r = requests.get(url, headers=headers, cookies=cookies, timeout=30)
+  if flags.arg.urllib3_proxy:
+    # Forward request.
+    r = proxy_pool.request("GET", url, headers=headers, timeout=30)
 
-  # Relay back response.
-  response = sling.net.HTTPResponse()
-  response.status = r.status_code
-  response.body = r.content
-  response.headers = []
-  for key, value in r.headers.items():
-    if key.lower() in non_proxy_headers: continue
-    if key == "Set-Cookie": key = "XSet-Cookie"
-    response.headers.append((key, value))
+    # Relay back response.
+    response = sling.net.HTTPResponse()
+    response.status = r.status
+    response.headers = []
+    for key, value in r.headers.items():
+      if key.lower() in non_proxy_headers: continue
+      if key == "Set-Cookie": key = "XSet-Cookie"
+      response.headers.append((key, value))
+    response.body = r.data
+
+  else:
+    # Forward request.
+    r = proxy_pool.get(url, headers=headers, cookies=cookies, timeout=30)
+
+    # Relay back response.
+    response = sling.net.HTTPResponse()
+    response.status = r.status_code
+    response.headers = []
+    for key, value in r.headers.items():
+      if key.lower() in non_proxy_headers: continue
+      if key == "Set-Cookie": key = "XSet-Cookie"
+      response.headers.append((key, value))
+    response.body = r.content
+    log.info("Return", len(response.body), "bytes")
+
   log.info("Return", len(response.body), "bytes")
-
   return response
 
 @app.route("/case/xrefs")

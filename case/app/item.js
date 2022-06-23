@@ -178,13 +178,11 @@ class PropertyPanel extends Component {
         }
         if (!name) name = val.id;
       }
-      if (name) {
-        h.push(`<kb-link ref="${val.id}">`);
-        h.push(Component.escape(name));
-        h.push('</kb-link>');
-      } else {
-        render_fallback(val);
-      }
+      if (!name) name = "???";
+
+      h.push(`<kb-link ref="${val.id}">`);
+      h.push(Component.escape(name));
+      h.push('</kb-link>');
     }
 
     function render_text(val) {

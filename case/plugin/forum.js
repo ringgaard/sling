@@ -249,6 +249,7 @@ export default class AlbumPlugin {
     let r = await fetch(context.proxy(url), {headers: {
       "XUser-Agent": navigator.userAgent,
     }});
+    if (!r.ok) throw "Error fetching photos from " + url;
     let html = await r.text();
 
     // Parse HTML.

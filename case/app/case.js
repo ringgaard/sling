@@ -1140,7 +1140,13 @@ class CaseEditor extends MdApp {
     if (clip) {
       this.style.cursor = "wait";
       let context = new plugins.Context(topic, this.casefile, this);
-      let result = await plugins.process(plugins.PASTE, clip, context);
+      var result;
+      try {
+        result = await plugins.process(plugins.PASTE, clip, context);
+      } catch (e) {
+        inform("Paste error: " + e.toString());
+        return;
+      }
       this.style.cursor = "";
       if (result) {
         await context.refresh();
