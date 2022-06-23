@@ -236,14 +236,10 @@ def service_request(request):
   headers = {}
   ua = request["XUser-Agent"]
   if ua: headers["User-Agent"] = ua
-  cookies = None
   cookie = request["XCookie"]
-  if cookie:
-    delim = cookie.find("=")
-    if delim != -1:
-      cookies = {cookie[:delim]: cookie[delim + 1:]}
+  if cookie: headers["Cookie"] = cookie
 
-  log.info("Proxy request for", url, headers, cookies)
+  log.info("Proxy request for", url, headers)
   if flags.arg.urllib3_proxy:
     # Forward request.
     r = proxy_pool.request("GET", url, headers=headers, timeout=30)
@@ -257,9 +253,13 @@ def service_request(request):
       if key == "Set-Cookie": key = "XSet-Cookie"
       response.headers.append((key, value))
     response.body = r.data
-
   else:
     # Forward request.
+    cookies = None
+    if cookie:
+      delim = cookie.find("=")
+      if delim != -1:
+        cookies = {cookie[:delim]: cookie[delim + 1:]}
     r = proxy_pool.get(url, headers=headers, cookies=cookies, timeout=30)
 
     # Relay back response.
