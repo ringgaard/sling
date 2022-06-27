@@ -493,16 +493,32 @@ void KnowledgeService::HandleSearch(HTTPRequest *request,
 
   // Generate response.
   Handles matches(ws.store());
+  std::vector<std::pair<int, Handle>> ranking;
   Builder b(ws.store());
   b.Add(n_hits_, hits);
-  for (auto *result : results) {
+  for (auto *result : results.hits()) {
     Frame item(ws.store(), RetrieveItem(ws.store(), result->id()));
     if (item.invalid()) continue;
     Builder match(ws.store());
     GetStandardProperties(item, &match, true);
     int count = result->count();
+    Text name = item.GetText(n_name_);
+    int score = results.Score(name, count);
     match.Add(n_count_, count);
-    matches.push_back(match.Create().handle());
+    match.Add(n_score_, score);
+    Handle h = match.Create().handle();
+    matches.push_back(h);
+    ranking.emplace_back(score, h);
+  }
+
+  // Sort results by score.
+  std::sort(ranking.begin(), ranking.end(),
+    [](const std::pair<int, Handle> &a, const std::pair<int, Handle> &b) {
+      return a.first > b.first;
+    }
+  );
+  for (int i = 0; i < ranking.size(); ++i) {
+    matches[i] = ranking[i].second;
   }
   b.Add(n_matches_,  Array(ws.store(), matches));
 

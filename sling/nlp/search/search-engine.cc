@@ -33,16 +33,15 @@ void SearchEngine::Load(const string &filename) {
 
 int SearchEngine::Search(Text query, Results *results) {
   // Return empty result if index has not been loaded.
-  results->clear();
+  results->Reset(this);
   if (!loaded()) return 0;
 
   // Tokenize query.
-  std::vector<uint64> tokens;
-  tokenizer_.TokenFingerprints(query, &tokens);
+  tokenize(query, &results->query_terms_);
 
   // Look up posting lists for tokens in search index.
   std::vector<const SearchIndex::Term *> terms;
-  for (uint64 token : tokens) {
+  for (uint64 token : results->query_terms_) {
     if (index_.stopword(token)) continue;
 
     const SearchIndex::Term *term = index_.Find(token);
@@ -102,12 +101,51 @@ int SearchEngine::Search(Text query, Results *results) {
 
   // Output results.
   int hits = candidates_end - candidates_begin;
+  results->total_hits_ = hits;
   for (const uint32 *c = candidates_begin; c != candidates_end; ++c) {
     const Entity *entity = index_.GetEntity(*c);
-    results->push(entity);
+    results->hits_.push(entity);
   }
-  results->sort();
+  results->hits_.sort();
   return hits;
+}
+
+void SearchEngine::Results::Reset(const SearchEngine *search) {
+  search_ = search;
+  query_terms_.clear();
+  hits_.clear();
+}
+
+int SearchEngine::Results::Score(Text text, int popularity) const {
+  std::vector<uint64> tokens;
+  search_->tokenize(text, &tokens);
+  int unigrams = 0;
+  int bigrams = 0;
+  uint64 prev = 0;
+  for (uint64 token : tokens) {
+    if (Unigram(token)) {
+      unigrams++;
+      if (prev != 0 && Bigram(prev, token)) bigrams++;
+    }
+    prev = token;
+  }
+  int boost = 100 * bigrams + 10 * unigrams + 1;
+  if (unigrams == tokens.size()) boost++;
+  return (popularity + 1) * boost;
+}
+
+bool SearchEngine::Results::Unigram(uint64 term) const {
+  for (int i = 0; i < query_terms_.size(); ++i) {
+    if (query_terms_[i] == term) return true;
+  }
+  return false;
+}
+
+bool SearchEngine::Results::Bigram(uint64 term1, uint64 term2) const {
+  for (int i = 0; i < query_terms_.size() - 1; ++i) {
+    if (query_terms_[i] == term1 && query_terms_[i + 1] == term2) return true;
+  }
+  return false;
 }
 
 }  // namespace nlp

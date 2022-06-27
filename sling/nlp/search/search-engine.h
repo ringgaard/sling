@@ -34,7 +34,43 @@ class SearchEngine {
   };
 
   // Search results for selecting top-k results.
-  typedef Top<const Entity *, EntityCompare> Results;
+  typedef Top<const Entity *, EntityCompare> Hits;
+
+  // Search results.
+  class Results {
+   public:
+    Results(int limit) : hits_(limit) {}
+
+    // Clear search results.
+    void Reset(const SearchEngine *search);
+
+    // Return search matches.
+    const Hits hits() const { return hits_; }
+
+    // Score result against query.
+    int Score(Text text, int popularity) const;
+
+   private:
+    // Check for unigram query match.
+    bool Unigram(uint64 term) const;
+
+    // Check for bigram query match.
+    bool Bigram(uint64 term1, uint64 term2) const;
+
+    // Search terms.
+    std::vector<uint64> query_terms_;
+
+    // Search hits.
+    Hits hits_;
+
+    // Total number of matches.
+    int total_hits_ = 0;
+
+    // Seach engine.
+    const SearchEngine *search_ = nullptr;
+
+    friend class SearchEngine;
+  };
 
   // Load search engine index.
   void Load(const string &filename);
@@ -45,6 +81,11 @@ class SearchEngine {
 
   // Check if search index has been loaded.
   bool loaded() const { return index_.loaded(); }
+
+  // Tokenize text.
+  void tokenize(Text text, std::vector<uint64> *tokens) const {
+    tokenizer_.TokenFingerprints(text, tokens);
+  }
 
  private:
   // Search index.
