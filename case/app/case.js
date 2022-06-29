@@ -1145,6 +1145,8 @@ class CaseEditor extends MdApp {
         result = await plugins.process(plugins.PASTE, clip, context);
       } catch (e) {
         inform("Paste error: " + e.toString());
+        console.log(e);
+        this.style.cursor = "";
         return;
       }
       this.style.cursor = "";

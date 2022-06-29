@@ -51,6 +51,11 @@ flags.define("-b",
              default=False,
              action="store_true")
 
+flags.define("-v",
+             help="Output detailed statistics",
+             default=False,
+             action="store_true")
+
 flags.define("logfiles",
              nargs="*",
              help="NCSA log files in NCSA Combined format",
@@ -497,7 +502,7 @@ for logfn in flags.arg.logfiles:
     else:
       num_unknown += 1
       page_hits[path] += 1
-      if flags.arg.v: print(logline.strip())
+      if flags.arg.e: print(logline.strip())
     num_hits += 1
     num_bytes += int(bytes)
 
@@ -553,13 +558,15 @@ print_table("VISITS PER DAY", "date", visits_per_day, chron=True)
 print_table("BROWSERS", "browser", browser_hits)
 print_table("PLATFORMS", "platform", platform_hits)
 print_table("DOWNLOADS", "file", download_hits)
-print_table("MEDIA", "file", media_hits)
-print_table("ITEMS", "item", item_hits)
-print_table("QUERIES", "query", query_hits)
+if flags.arg.v:
+  print_table("MEDIA", "file", media_hits)
+  print_table("ITEMS", "item", item_hits)
+  print_table("QUERIES", "query", query_hits)
 print_table("REFFERING DOMAINS", "domain", referring_domains)
 print_table("REFERRERS", "referrer", referrers)
-print_table("HTTP ERRORS", "HTTP status", http_codes)
-print_table("BOTS", "bot", bot_hits)
-print_table("WORMS", "worm", worm_hits)
-print_table("SPAM", "spam", spam_hits)
+if flags.arg.v:
+  print_table("HTTP ERRORS", "HTTP status", http_codes)
+  print_table("BOTS", "bot", bot_hits)
+  print_table("WORMS", "worm", worm_hits)
+  print_table("SPAM", "spam", spam_hits)
 

@@ -240,6 +240,19 @@ var plugins = [
   ],
 },
 
+// Data tables.
+{
+  name: "table",
+  module: "table.js",
+  actions: [PASTE],
+  patterns: [
+    /^([\w\s#]+)(\t[\w\s#]+)+\n/,
+    /^([\w\s#]+)(,[\w\s#]+)+\n/,
+    /^([\w\s#]+)(;[\w\s#]+)+\n/,
+    /^([\w\s#]+)(|[\w\s#]+)+\n/,
+  ],
+},
+
 ];
 
 function parse_url(url) {

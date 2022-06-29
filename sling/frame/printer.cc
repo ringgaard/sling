@@ -224,8 +224,6 @@ void Printer::PrintFrame(const FrameDatum *frame) {
     } else if (slot->name.IsIs()) {
       WriteChar('+');
       PrintLink(slot->value);
-    } else if (slot->name.IsNil()) {
-      PrintLink(slot->value);
     } else {
       PrintLink(slot->name);
       WriteChars(':', ' ');

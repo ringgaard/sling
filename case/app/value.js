@@ -412,7 +412,7 @@ function add_date_result(results, year, month, day, precision) {
   }
 }
 
-export function value_parser(value, results) {
+export function date_parser(value, results) {
   var m;
 
   // Parse YYYY-MM-DD.
@@ -471,6 +471,10 @@ export function value_parser(value, results) {
     let month = monthnum(m[1]);
     if (month) add_date_result(results, m[2], month, null);
   }
+}
+
+export function quantity_parser(value, results) {
+  var m;
 
   // Number parsing.
   if (value.match(/^[-+]?[0-9.e]+$/)) {
@@ -539,9 +543,11 @@ export function value_parser(value, results) {
       description: "converted quantity",
     });
   }
+}
 
+export function text_parser(value, results) {
   // Parse localized strings.
-  m = value.match(/^(.+)@([a-z][a-z])$/);
+  let m = value.match(/^(.+)@([a-z][a-z])$/);
   if (m) {
     let lang = store.find(`/lang/${m[2]}`);
     if (lang) {
@@ -554,9 +560,11 @@ export function value_parser(value, results) {
       });
     }
   }
+}
 
+export function geo_parser(value, results) {
   // Parse geo-location.
-  m = value.match(/^([+\-]?\d+\.\d+)\s*,\s*([+\-]?\d+\.\d+)$/);
+  let m = value.match(/^([+\-]?\d+\.\d+)\s*,\s*([+\-]?\d+\.\d+)$/);
   if (m) {
     let lat = parseFloat(m[1]);
     let lng = parseFloat(m[2]);
@@ -572,6 +580,13 @@ export function value_parser(value, results) {
       });
     }
   }
+}
+
+export function value_parser(value, results) {
+  date_parser(value, results);
+  quantity_parser(value, results);
+  text_parser(value, results);
+  geo_parser(value, results);
 }
 
 export function value_text(val, prop) {
