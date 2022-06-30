@@ -159,7 +159,7 @@ Handle Decoder::DecodeFrame(int slots, int replace) {
         // The symbol is not owned, so we replace it by a local symbol.
         SymbolDatum *local = store_->LocalSymbol(symbol);
         ReplaceTop(local->self);
-      } else {
+      } else if (symbol->bound()) {
         // Check if there is already a proxy for the id. In that case we have to
         // replace the proxy with the new frame.
         Datum *existing = store_->Deref(symbol->value);
@@ -173,7 +173,7 @@ Handle Decoder::DecodeFrame(int slots, int replace) {
           *(references_.base() + index) = handle;
 
           // Unbind the symbol. It will be bound to the frame later.
-          symbol->value = symbol->self;
+          symbol->value = Handle::nil();
         }
       }
     }

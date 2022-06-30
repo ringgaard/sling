@@ -57,7 +57,8 @@ class JSONWriter {
   }
 
   // Writes quoted string with escapes.
-  void WriteString(const StringDatum *str);
+  void WriteString(Text str);
+  void WriteString(const StringDatum *str) { WriteString(str->str()); }
 
   // Writes frame.
   void WriteFrame(const FrameDatum *frame);

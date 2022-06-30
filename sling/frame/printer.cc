@@ -258,9 +258,8 @@ void Printer::PrintArray(const ArrayDatum *array) {
 void Printer::PrintSymbol(const SymbolDatum *symbol, bool reference) {
   if (!reference && symbol->bound()) WriteChar('\'');
 
-  const StringDatum *name = store_->GetString(symbol->name);
-  const char *p = name->data();
-  const char *end = p + name->length();
+  const char *p = symbol->data();
+  const char *end = p + symbol->length();
   DCHECK(p != end);
   if (utf8_) {
     if (*p & 0x80) {

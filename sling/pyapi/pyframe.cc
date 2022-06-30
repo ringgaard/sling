@@ -351,8 +351,7 @@ PyObject *PyFrame::Repr() {
     // Return frame id.
     Handle id = f->get(Handle::id());
     SymbolDatum *symbol = pystore->store->Deref(id)->AsSymbol();
-    StringDatum *name = pystore->store->GetString(symbol->name);
-    return PyUnicode_FromStringAndSize(name->data(), name->size());
+    return PyUnicode_FromStringAndSize(symbol->data(), symbol->length());
   } else {
     // Return frame as text.
     StringPrinter printer(pystore->store);

@@ -732,27 +732,61 @@ struct FrameDatum : public Datum {
 // A symbol links a name to a value. Symbols are usually stored in maps which
 // can be used for symbol lookup. The symbol also contains a hash value for the
 // name for fast symbol lookup and a next pointer for linking the symbols in
-// the map buckets. A symbol can either be bound or unbound. An unbound symbol
-// has itself as the value and is just a symbolic name. A bound symbol can
-// either be resolved or unresolved. A resolved symbol references another
-// object, but an unresolved symbol points to a proxy object, which can later
-// be replaced when the symbol is resolved, so this gives three kinds of
-// symbols:
-//   1) if the symbol is unbound the value is the symbol itself.
-//   2) if the symbol is bound and resolved, the value is the bound object.
-//   3) if the symbol is bound and unresolved, the value is the proxy.
+// the map buckets. The symbol name is store after the fixed fields. Symbols
+// are used as values for frame id slots.
+//
+//   +--------------------------------+
+//   | preamble (8 bytes)             |
+//   +--------------------------------+
+//   | next (4 bytes)                 |
+//   +--------------------------------+
+//   | value (4 bytes)                |
+//   +--------------------------------+
+//   | hash (4 bytes)                 |
+//   +--------------------------------+
+//   | name string ('length' bytes)   |
+//   +--------------------------------+
+//   | padding (0-7 bytes)            |
+//   +--------------------------------+
+//
 struct SymbolDatum : public Datum {
-  // A symbol is unbound if its value is the symbol itself.
-  bool unbound() const { return value == self; }
-  bool bound() const { return value != self; }
+  // Payload size of symbol excluding name.
+  static const int SIZE = 3 * sizeof(Handle);
 
-  // Size of payload of symbol object.
-  static const int kSize = 4 * sizeof(Handle);
+  // Returns address of the symbol name.
+  const char *data() const {
+    return reinterpret_cast<const char *>(payload()) + SIZE;
+  }
+  char *data() {
+    return reinterpret_cast<char *>(payload()) +  SIZE;
+  }
 
-  Handle hash;   // hash value for name encoded as a tagged integer
+  // Returns the length of the symbol name.
+  int length() const { return Datum::size() - SIZE; }
+
+  // Returns symbol name.
+  Text name() const { return Text(data(), length()); }
+
+  // Compares this symbol name to a string buffer.
+  bool equals(Text other) const {
+    if (length() != other.size()) return false;
+    return memcmp(data(), other.data(), other.size()) == 0;
+  }
+
+  // Check if symbol is (not) bound to a value.
+  bool bound() const { return !value.IsNil(); }
+  bool unbound() const { return value.IsNil(); }
+
+  // Return range for GC. The hash value is always an integer handle, so this
+  // does not need to be traversed by the GC.
+  void range(Range *r) {
+    r->begin = &next;
+    r->end = &hash;
+  }
+
   Handle next;   // pointer to next symbol in map bucket
-  Handle name;   // symbol name; a string object with the name of the symbol
-  Handle value;  // symbol value; either a frame, a proxy, or the symbol itself
+  Handle value;  // symbol value; either a frame, a proxy, or nil
+  Handle hash;   // hash value for name encoded as a tagged integer
 };
 
 // A proxy object is used as a stand-in for the value of an unresolved frame.
@@ -760,7 +794,7 @@ struct SymbolDatum : public Datum {
 // with the symbol for the proxy.
 struct ProxyDatum : public FrameDatum {
   // Size of payload of symbol object.
-  static const int kSize = 2 * sizeof(Handle);
+  static const int SIZE = 2 * sizeof(Handle);
 
   Handle id;      // constant id handle
   Handle symbol;  // symbol that has this as a proxy
@@ -1030,22 +1064,18 @@ class Store {
   // Looks up symbol. A new unbound symbol is created if the symbol does not
   // already exist.
   Handle Symbol(Text name);
-  Handle Symbol(Handle name);
 
   // Looks up symbol. Returns nil if the symbol does not exist.
   Handle ExistingSymbol(Text name) const;
-  Handle ExistingSymbol(Handle name) const;
 
   // Looks up symbol and returns its value. A new symbol is created if the
   // symbol does not already exist. Also, if the symbol is not already bound, a
   // proxy is created.
   Handle Lookup(Text name);
-  Handle Lookup(Handle name);
 
   // Looks up symbol and returns its value. Returns nil if the symbol does not
   // exist or it is not bound.
   Handle LookupExisting(Text name) const;
-  Handle LookupExisting(Handle name) const;
 
   // Sets value for slot in  frame. If the frame has an existing slot with this
   // name, its value is updated. Otherwise a new slot is added to the frame. It
@@ -1408,10 +1438,7 @@ class Store {
   // Allocates proxy object for symbol.
   Handle AllocateProxy(Handle symbol);
 
-  // Allocates symbol object using existing name string object.
-  Handle AllocateSymbol(Handle name, Handle hash);
-
-  // Allocates symbol object and name string object.
+  // Allocates symbol.
   Handle AllocateSymbol(Text name, Handle hash);
 
   // Looks up a symbol in symbol table. Returns handle for symbol or nil if

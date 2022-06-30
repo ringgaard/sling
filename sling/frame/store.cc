@@ -28,6 +28,9 @@ namespace sling {
 // NB: This table depends on internal object layout, heap alignment, symbol
 // hashing and pre-defined handle values. Please take this into consideration
 // when making changes to this table.
+
+#define CHARS(c1, c2, c3, c4) (c1 | (c2 << 8) | (c3 << 16) | (c4 << 24))
+
 static const Word kInitialHeap[] = {
   // id frame
   FRAME | PUBLIC |  8, 0x04, 0x04, 0x10,
@@ -35,23 +38,20 @@ static const Word kInitialHeap[] = {
   FRAME | PUBLIC |  8, 0x08, 0x04, 0x14,
   // is frame
   FRAME | PUBLIC |  8, 0x0C, 0x04, 0x18,
+
   // id symbol
-  SYMBOL         | 16, 0x10, 0x307A1C66, 0, 0x1C, 0x04,
+  SYMBOL         | 14, 0x10, 0, 0x04, 0x307A1C66, CHARS('i', 'd', 0, 0),
   // isa symbol
-  SYMBOL         | 16, 0x14, 0x6966506A, 0, 0x20, 0x08,
+  SYMBOL         | 15, 0x14, 0, 0x08, 0x6966506A, CHARS('i', 's', 'a', 0),
   // is symbol
-  SYMBOL         | 16, 0x18, 0xC089FC02, 0, 0x24, 0x0C,
-  // "id" string
-  STRING         |  2, 0x1C, 'i' | ('d' << 8), 0,
-  // "isa" string
-  STRING         |  3, 0x20, 'i' | ('s' << 8) | ('a' << 16), 0,
-  // "is" string
-  STRING         |  2, 0x24, 'i' | ('s' << 8), 0,
+  SYMBOL         | 14, 0x18, 0, 0x0C, 0xC089FC02, CHARS('i', 's', 0, 0),
 };
+
+#undef CHARS
 
 // Size of pristine store.
 static const int kPristineSymbols = 3;
-static const int kPristineHandles = 11;
+static const int kPristineHandles = 8;
 
 // Default store options.
 const Store::Options Store::kDefaultOptions;
@@ -340,7 +340,7 @@ Handle Store::AllocateFrame(Slot *begin, Slot *end, Handle original) {
         DCHECK(id->IsSymbol());
         SymbolDatum *symbol = id->AsSymbol();
         DCHECK_EQ(symbol->value.raw(), handle.raw());
-        symbol->value = symbol->self;
+        symbol->value = Handle::nil();
       }
     }
     Replace(handle, frame);
@@ -654,7 +654,7 @@ Handle Store::AllocateProxy(Handle symbol) {
   CHECK(!sym->bound());
 
   // Allocate proxy object.
-  Datum *datum = AllocateDatum(FRAME, ProxyDatum::kSize);
+  Datum *datum = AllocateDatum(FRAME, ProxyDatum::SIZE);
   datum->info |= PROXY;
   ProxyDatum *proxy = datum->AsProxy();
 
@@ -667,29 +667,18 @@ Handle Store::AllocateProxy(Handle symbol) {
   return AllocateHandle(proxy);
 }
 
-Handle Store::AllocateSymbol(Handle name, Handle hash) {
+Handle Store::AllocateSymbol(Text name, Handle hash) {
   // Allocate symbol object.
-  SymbolDatum *symbol = AllocateDatum(SYMBOL, SymbolDatum::kSize)->AsSymbol();
-  symbol->hash = hash;
+  Word size = SymbolDatum::SIZE + name.size();
+  SymbolDatum *symbol = AllocateDatum(SYMBOL, size)->AsSymbol();
   symbol->next = Handle::nil();
-  symbol->name = name;
+  symbol->value = Handle::nil();
+  symbol->hash = hash;
+  memcpy(symbol->data(), name.data(), name.size());
   Handle sym = AllocateHandle(symbol);
-  symbol->value = sym;
 
   // Add symbol to symbol table.
   InsertSymbol(symbol);
-
-  return sym;
-}
-
-Handle Store::AllocateSymbol(Text name, Handle hash) {
-  // Allocate symbol initializing the name to nil.
-  CHECK(!name.empty());
-  Handle sym = AllocateSymbol(Handle::nil(), hash);
-
-  // Allocate string object for symbol name.
-  Handle str = AllocateString(name);
-  GetSymbol(sym)->name = str;
 
   return sym;
 }
@@ -785,10 +774,7 @@ Handle Store::FindSymbol(Text name, Handle hash) const {
     Handle h = *symbols->bucket(hash);
     while (!h.IsNil()) {
       const SymbolDatum *symbol = GetSymbol(h);
-      if (symbol->hash == hash) {
-        const Datum *symname = GetObject(symbol->name);
-        if (symname->IsString() && symname->AsString()->equals(name)) return h;
-      }
+      if (symbol->hash == hash && symbol->equals(name)) return h;
       h = symbol->next;
     }
   }
@@ -821,35 +807,6 @@ Handle Store::Symbol(Text name) {
   return AllocateSymbol(name, hash);
 }
 
-Handle Store::Symbol(Handle name) {
-  if (IsSymbol(name)) {
-    // Name is a symbol, so just return it.
-    return name;
-  } else {
-    // Get name string.
-    Text str = GetString(name)->str();
-
-    // Compute hash for name.
-    Handle hash = Hash(str);
-
-    // Try to look up symbol in local store.
-    Handle h = FindSymbol(str, hash);
-    if (!h.IsNil()) return h;
-
-    // Try to look up symbol in global store.
-    if (globals_ != nullptr) {
-      h = globals_->FindSymbol(str, hash);
-      if (!h.IsNil()) return h;
-    }
-
-    // Do not create new symbol if store is frozen.
-    if (frozen_) return Handle::nil();
-
-    // Symbol not found; create new symbol.
-    return AllocateSymbol(name, hash);
-  }
-}
-
 Handle Store::ExistingSymbol(Text name) const {
   // Compute hash for name.
   Handle hash = Hash(name);
@@ -867,51 +824,7 @@ Handle Store::ExistingSymbol(Text name) const {
   return Handle::nil();
 }
 
-Handle Store::ExistingSymbol(Handle name) const {
-  if (IsSymbol(name)) {
-    // Name is a symbol, so just return it.
-    return name;
-  } else {
-    // Get name string.
-    Text str = GetString(name)->str();
-
-    // Compute hash for name.
-    Handle hash = Hash(str);
-
-    // Try to look up symbol in local store.
-    Handle h = FindSymbol(str, hash);
-    if (!h.IsNil()) return h;
-
-    // Try to look up symbol in global store.
-    if (globals_ != nullptr) {
-      h = globals_->FindSymbol(str, hash);
-      if (!h.IsNil()) return h;
-    }
-  }
-
-  return Handle::nil();
-}
-
 Handle Store::Lookup(Text name) {
-  // Lookup or create symbol.
-  Handle sym = Symbol(name);
-  if (sym.IsNil()) return Handle::nil();
-
-  // Return symbol value if it is already bound.
-  SymbolDatum *symbol = GetSymbol(sym);
-  if (symbol->bound()) return symbol->value;
-
-  // If the symbol is unbound but the store is frozen then we can't create a
-  // proxy, so just return nil.
-  if (frozen_) return Handle::nil();
-
-  // Symbol is unbound. Bind it to a new proxy.
-  Handle proxy = AllocateProxy(sym);
-  GetSymbol(sym)->value = proxy;
-  return proxy;
-}
-
-Handle Store::Lookup(Handle name) {
   // Lookup or create symbol.
   Handle sym = Symbol(name);
   if (sym.IsNil()) return Handle::nil();
@@ -937,17 +850,7 @@ Handle Store::LookupExisting(Text name) const {
 
   // Return symbol value if it is already bound.
   const SymbolDatum *symbol = GetSymbol(sym);
-  return symbol->bound() ? symbol->value : Handle::nil();
-}
-
-Handle Store::LookupExisting(Handle name) const {
-  // Lookup symbol.
-  Handle sym = ExistingSymbol(name);
-  if (sym.IsNil()) return Handle::nil();
-
-  // Return symbol value if it is already bound.
-  const SymbolDatum *symbol = GetSymbol(sym);
-  return symbol->bound() ? symbol->value : Handle::nil();
+  return symbol->value;
 }
 
 SymbolDatum *Store::LocalSymbol(SymbolDatum *symbol) {
@@ -955,22 +858,12 @@ SymbolDatum *Store::LocalSymbol(SymbolDatum *symbol) {
   if (Owned(symbol->self)) return symbol;
 
   // Try to resolve symbol in the store.
-  Text name = GetString(symbol->name)->str();
-  Handle h = FindSymbol(name, symbol->hash);
+  Handle h = FindSymbol(symbol->name(), symbol->hash);
   if (!h.IsNil()) return GetSymbol(h);
 
-  // Create local symbol. The name string object from the global symbol is
-  // reused in the local symbol.
-  SymbolDatum *local = AllocateDatum(SYMBOL, SymbolDatum::kSize)->AsSymbol();
-  local->hash = symbol->hash;
-  local->next = Handle::nil();
-  local->name = symbol->name;
-  local->value = AllocateHandle(local);
-
-  // Add symbol to local symbol table.
-  InsertSymbol(local);
-
-  return local;
+  // Create local symbol.
+  Handle local = AllocateSymbol(symbol->name(), symbol->hash);
+  return GetSymbol(local);
 }
 
 bool Store::Equal(Handle x, Handle y, bool byref) const {
@@ -1269,8 +1162,7 @@ Text Store::SymbolName(Handle handle) const {
   const Datum *datum = Deref(handle);
   if (!datum->IsSymbol()) return Text();
   const SymbolDatum *symbol = datum->AsSymbol();
-  const StringDatum *symstr = GetString(symbol->name);
-  return symstr->str();
+  return symbol->name();
 }
 
 Text Store::FrameId(Handle handle) const {
@@ -1378,6 +1270,8 @@ void Store::Mark() {
             Range *r = stack.push();
             r->begin = object->AsString()->qaddr();
             r->end = r->begin + 1;
+          } else if (type == SYMBOL) {
+            object->AsSymbol()->range(stack.push());
           } else if (type != STRING) {
             object->range(stack.push());
           }
@@ -1667,7 +1561,7 @@ void Store::CoalesceStrings(Word buckets) {
     Datum *object = heap->base();
     Datum *end = heap->end();
     while (object < end) {
-      if (!object->invalid() && !object->IsString()) {
+      if (object->IsFrame() || object->IsArray()) {
         // Replace all string matches in the object values.
         Handle *begin = reinterpret_cast<Handle *>(object->payload());
         Handle *end = reinterpret_cast<Handle *>(object->limit());
@@ -1714,14 +1608,10 @@ string Store::DebugString(Handle handle) const {
       if (id.IsRef() && !id.IsNil()) object = Deref(id);
     }
 
-    // Get name for symbol.
-    if (object->IsSymbol()) {
-      const SymbolDatum *symbol = object->AsSymbol();
-      object = Deref(symbol->name);
-    }
-
     // Return name for object.
-    if (object->IsString()) {
+    if (object->IsSymbol()) {
+      return object->AsSymbol()->name().str();
+    } else if (object->IsString()) {
       return StrCat(object->AsString()->str());
     } else if (object->IsArray()) {
       const ArrayDatum *array = object->AsArray();

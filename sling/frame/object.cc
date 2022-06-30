@@ -920,14 +920,6 @@ Symbol &Symbol::operator =(const Symbol &other) {
   return *this;
 }
 
-Object Symbol::GetName() const {
-  return Object(store(), symbol()->name);
-}
-
-Object Symbol::GetValue() const {
-  return Object(store(), symbol()->value);
-}
-
 Array::Array(Store *store, Handle handle) : Object(store, handle) {
   DCHECK(IsNil() || IsArray()) << Type();
 }
@@ -1406,7 +1398,7 @@ Builder &Builder::AddId(Text id) {
 Builder &Builder::AddId(const String &id) {
   Slot *slot = NewSlot();
   slot->name = Handle::id();
-  slot->value = store_->Symbol(id.handle());
+  slot->value = store_->Symbol(id.text());
   return *this;
 }
 

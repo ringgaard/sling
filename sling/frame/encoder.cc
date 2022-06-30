@@ -196,9 +196,8 @@ void Encoder::EncodeLink(Handle handle) {
 }
 
 void Encoder::EncodeSymbol(const SymbolDatum *symbol, int type) {
-  const StringDatum *name = store_->GetString(symbol->name);
-  WriteTag(type, name->length());
-  output_->Write(name->data(), name->length());
+  WriteTag(type, symbol->length());
+  output_->Write(symbol->data(), symbol->length());
 }
 
 void Encoder::WriteReference(const Reference &ref) {

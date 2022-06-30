@@ -258,9 +258,9 @@ class ItemMerger : public task::Reducer {
   void Reduce(const task::ReduceInput &input) override {
     // Create frame with reconciled id.
     Store store;
-    Handle id = store.Lookup(input.key());
+    Handle proxy = store.Lookup(input.key());
     Builder builder(&store);
-    builder.AddId(id);
+    builder.AddId(proxy);
 
     // Merge all item sources.
     Statements statements(&store);
@@ -272,9 +272,9 @@ class ItemMerger : public task::Reducer {
       // Since the merged frames are anonymous, self-references need to be
       // updated to the reconciled frame.
       Handle self = item.handle();
-      item.TraverseSlots([self, id](Slot *s) {
-        if (s->name == self) s->name = id;
-        if (s->value == self) s->value = id;
+      item.TraverseSlots([self, proxy](Slot *s) {
+        if (s->name == self) s->name = proxy;
+        if (s->value == self) s->value = proxy;
       });
 
       // Add new statements skipping duplicates.

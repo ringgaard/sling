@@ -65,10 +65,10 @@ void JSONWriter::Write(Handle handle) {
   }
 }
 
-void JSONWriter::WriteString(const StringDatum *str) {
-  if (UTF8::Valid(str->data(), str->length())) {
-    unsigned char *s = str->payload();
-    unsigned char *end = s + str->length();
+void JSONWriter::WriteString(Text str) {
+  if (UTF8::Valid(str.data(), str.size())) {
+    const char *s = str.data();
+    const char *end = s + str.size();
     WriteChar('"');
     while (s < end) {
       switch (*s) {
@@ -173,8 +173,7 @@ void JSONWriter::WriteArray(const ArrayDatum *array) {
 }
 
 void JSONWriter::WriteSymbol(const SymbolDatum *symbol) {
-  const StringDatum *name = store_->GetString(symbol->name);
-  WriteString(name);
+  WriteString(symbol->name());
 }
 
 void JSONWriter::WriteLink(Handle handle, bool reference) {

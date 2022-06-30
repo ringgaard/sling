@@ -192,16 +192,8 @@ class Shell {
 
   // Loads encoded file into store.
   void LoadCommand(const string &args) {
-    File *file = OpenFile(args, "r");
-    if (file == nullptr) return;
     Timing timing(this);
-    store_->LockGC();
-    FileDecoder decoder(store_, file);
-    Object obj = decoder.DecodeAll();
-    store_->UnlockGC();
-    if (trace_ > 0) {
-      std::cout << ToText(obj, indent_) << "\n";
-    }
+    LoadStore(args, store_);
   }
 
   // Saves all named objects in store to file.
@@ -495,8 +487,7 @@ class Shell {
       while (!h.IsNil()) {
         const SymbolDatum *symbol = store_->GetSymbol(h);
         if (symbol->unbound()) {
-          String name(store_, symbol->name);
-          if (name.valid()) std::cout << name.value() << "\n";
+          std::cout << symbol->name() << "\n";
         }
         h = symbol->next;
       }

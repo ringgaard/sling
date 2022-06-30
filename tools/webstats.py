@@ -99,9 +99,9 @@ pages = [
   ("CotM page",            re.compile(r"^\/cotm$")),
   ("Home app",             re.compile(r"^\/home\/app\/")),
   ("Home image",           re.compile(r"^\/home\/image\/")),
-
-  ("API item fetch",       re.compile(r"^\/kb/item\?fmt=cjson&id=(.+)$")),
-  ("API name lookup",      re.compile(r"^\/kb/query\?fmt=cjson&q=(.+)$")),
+  ("Case home",            re.compile(r"^\/c\/$")),
+  ("Case open",            re.compile(r"^\/c\/\d+")),
+  ("Case app",             re.compile(r"^\/(case|c)\/app\/(.+)$")),
 
   ("media file",           re.compile(r"^\/media\/.+")),
   ("thumbnail",            re.compile(r"^\/thumb\/.+")),
@@ -114,29 +114,40 @@ pages = [
   ("CMS admin (legacy)",   re.compile(r"^\/admin.*")),
 
   ("data download",        re.compile(r"^\/data\/.*")),
+
   ("KB app",               re.compile(r"^\/kb/app/")),
   ("KB home",              re.compile(r"^\/kb\/$")),
   ("KB item",              re.compile(r"^\/kb\/(.+)$")),
 
-  ("Wikidata auth",        re.compile(r"^\/case/wikibase\/(.+)$")),
-  ("Case home",            re.compile(r"^\/c\/$")),
-  ("Case open",            re.compile(r"^\/c\/\d+")),
-  ("Case app",             re.compile(r"^\/(case|c)\/app\/(.+)$")),
-  ("API create case",      re.compile(r"^\/case\/new$")),
-  ("API fetch case",       re.compile(r"^\/case/fetch\/?\?(.+)$")),
-  ("API share case",       re.compile(r"^\/case/share$")),
-  ("API case service",     re.compile(r"^\/case/service\/")),
-  ("API case proxy",       re.compile(r"^\/case/proxy\?")),
-  ("API case plugin",      re.compile(r"^\/case/plugin\/")),
-  ("API case xrefs",       re.compile(r"^\/case/xrefs$")),
-  ("API image caching",    re.compile(r"^\/case/cacheimg$")),
-  ("API schema",           re.compile(r"^\/schema(.+)$")),
-  ("API collaboration",    re.compile(r"^\/collab\/")),
-
   ("photo search",         re.compile(r"^\/photosearch\/")),
-  ("redreport add media",  re.compile(r"^\/redreport\/addmedia\/")),
   ("redreport",            re.compile(r"^\/redreport\/")),
   ("reddit report",        re.compile(r"^\/reddit\/report\/")),
+]
+
+apis = [
+  ("item fetch",           re.compile(r"^\/kb/item\?fmt=cjson&id=(.+)$")),
+  ("name lookup",          re.compile(r"^\/kb/query\?fmt=cjson&q=(.+)$")),
+
+  ("Wikidata auth",        re.compile(r"^\/case/wikibase\/(.+)$")),
+  ("create case",          re.compile(r"^\/case\/new$")),
+  ("fetch case",           re.compile(r"^\/case/fetch\/?\?(.+)$")),
+  ("share case",           re.compile(r"^\/case/share$")),
+  ("case service",         re.compile(r"^\/case/service\/")),
+  ("case proxy",           re.compile(r"^\/case/proxy\?")),
+  ("case plugin",          re.compile(r"^\/case/plugin\/")),
+  ("case xrefs",           re.compile(r"^\/case/xrefs$")),
+  ("image caching",        re.compile(r"^\/case/cacheimg$")),
+  ("schema",               re.compile(r"^\/schema(.+)$")),
+  ("collaboration",        re.compile(r"^\/collab\/")),
+  ("redreport add media",  re.compile(r"^\/redreport\/addmedia\/")),
+
+
+  ("KB query" ,            re.compile(r"^\/kb\/query\?")),
+  ("KB search",            re.compile(r"^\/kb\/search\?")),
+  ("KB item",              re.compile(r"^\/kb\/item\?")),
+  ("KB frame",             re.compile(r"^\/kb\/frame\?")),
+  ("KB topic",             re.compile(r"^\/kb\/topic\?")),
+  ("KB stubs",             re.compile(r"^\/kb\/stubs\?")),
 ]
 
 browsers = [
@@ -315,6 +326,7 @@ num_monitor = 0
 num_curls = 0
 
 page_hits = defaultdict(int)
+api_calls = defaultdict(int)
 date_hits = defaultdict(int)
 date_visitors = defaultdict(set)
 visitors = set()
@@ -482,13 +494,21 @@ for logfn in flags.arg.logfiles:
          query_hits[query] = 0
       prev_query[ipaddr] = query
 
-    # Known pages.
+    # Known APIs.
     known = False
-    for page_name, page_pattern in pages:
-      if page_pattern.match(path):
-        page_hits[page_name] += 1
+    for api_call, api_pattern in apis:
+      if api_pattern.match(path):
+        api_calls[api_call] += 1
         known = True
         break
+
+    # Known pages.
+    if not known:
+      for page_name, page_pattern in pages:
+        if page_pattern.match(path):
+          page_hits[page_name] += 1
+          known = True
+          break
 
     # Hits and visitors per day.
     ts = datetime.datetime.strptime(timestamp, "%d/%b/%Y:%H:%M:%S %z")
@@ -553,6 +573,7 @@ print("%6d total hits" % total_hits)
 print("%6d MB" % (num_bytes / (1024 * 1024)))
 
 print_table("PAGES", "page", page_hits)
+print_table("API CALLS", "api", api_calls)
 print_table("HITS PER DAY", "date", date_hits, chron=True)
 print_table("VISITS PER DAY", "date", visits_per_day, chron=True)
 print_table("BROWSERS", "browser", browser_hits)

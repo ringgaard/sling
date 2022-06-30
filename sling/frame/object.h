@@ -337,16 +337,9 @@ class Symbol : public Object {
   // Assignment operator.
   Symbol &operator =(const Symbol &other);
 
-  // Returns symbol name.
-  Object GetName() const;
-
-  // Returns symbol value.
-  Object GetValue() const;
-
   // Returns symbol name as text.
   Text name() const {
-    StringDatum *symname = store()->GetString(symbol()->name);
-    return Text(symname->data(), symname->size());
+    return symbol()->name();
   }
 
   // Checks if symbol is bound.

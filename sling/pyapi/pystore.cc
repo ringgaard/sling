@@ -477,8 +477,7 @@ PyObject *PyStore::PyValue(Handle handle, bool binary) {
       } else if (datum->IsSymbol()) {
         // Return symbol name.
         SymbolDatum *symbol = datum->AsSymbol();
-        StringDatum *str = store->Deref(symbol->name)->AsString();
-        return PyUnicode_FromStringAndSize(str->data(), str->size());
+        return PyUnicode_FromStringAndSize(symbol->data(), symbol->length());
       } else {
         // Unsupported type.
         PyErr_SetString(PyExc_ValueError, "Unsupported object type");
