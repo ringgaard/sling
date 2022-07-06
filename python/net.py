@@ -67,6 +67,9 @@ class HTTPRequest:
   def json(self):
     return json.loads(self.body)
 
+  def form(self):
+    return urllib.parse.parse_qs(self.body.decode())
+
   def frame(self, store=None):
     if store is None: store = sling.Store()
     return store.parse(self.body)

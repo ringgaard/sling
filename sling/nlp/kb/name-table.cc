@@ -40,7 +40,7 @@ void NameTable::Load(const string &filename) {
 }
 
 void NameTable::Lookup(Text query, bool prefix, int limit, int boost,
-                       std::vector<Text> *matches) const {
+                       Matches *matches) const {
   // Normalize prefix.
   string normalized;
   UTF8::Normalize(query.data(), query.size(), normalization_, &normalized);
@@ -89,17 +89,11 @@ void NameTable::Lookup(Text query, bool prefix, int limit, int boost,
   }
 
   // Sort matching entities by decreasing frequency.
-  std::vector<std::pair<uint32, const EntityItem *>> matching_entities;
-  for (auto it : entities) {
-    matching_entities.emplace_back(it.second, it.first);
-  }
-  std::sort(matching_entities.rbegin(), matching_entities.rend());
-
-  // Copy matching entity ids to output.
   matches->clear();
-  for (const auto &item : matching_entities) {
-    matches->push_back(item.second->id());
+  for (auto it : entities) {
+    matches->emplace_back(it.second, it.first);
   }
+  std::sort(matches->rbegin(), matches->rend());
 }
 
 }  // namespace nlp

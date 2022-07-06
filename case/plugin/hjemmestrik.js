@@ -44,7 +44,7 @@ function date_of_week(y, w) {
   return start;
 }
 
-// Se & Hør is published weekly in Wednesdays.
+// Se & Hør is published weekly on Wednesdays.
 function sh_date(y, w) {
   var date = date_of_week(y, w);
   date.setDate(date.getDate() + 2);

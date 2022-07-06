@@ -128,14 +128,14 @@ string HTMLEscape(const char *text, int size) {
   return escaped;
 }
 
-URLQuery::URLQuery(const char *query) {
-  if (query == nullptr) return;
-  const char *q = query;
+URLQuery::URLQuery(Text query) {
+  const char *q = query.data();
+  const char *end = q + query.size();
 
   // Split query string into ampersand-separated parts.
   std::vector<Text> parts;
   const char *p = q;
-  while (*q) {
+  while (q < end) {
     if (*q == '&') {
       parts.emplace_back(p, q - p);
       q++;

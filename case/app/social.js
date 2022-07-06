@@ -13,6 +13,10 @@ let xrefs = [
     property: store.lookup("P968"),
   },
   {
+    pattern: /^https:\/\/ringgaard.com\/kb\/(.*)$/i,
+    property: store.lookup("is"),
+  },
+  {
     pattern: /^https?:\/\/(?:www\.)?twitter\.com\/([A-Za-z0-9_]+)(\?.*)?$/i,
     property: store.lookup("P2002"),
   },
@@ -279,10 +283,6 @@ let xrefs = [
   {
     pattern: /^(https?:\/\/honeydrip\.com\/model\/.+)/,
     property: store.lookup("P973"),
-  },
-  {
-    pattern: /^(mailto:.+)/,
-    property: store.lookup("P968"),
   },
 ];
 

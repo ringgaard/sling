@@ -36,7 +36,9 @@ struct HTTPHeader {
 class URLQuery {
  public:
   // Parse URL query string.
-  URLQuery(const char *query);
+  URLQuery(Text query);
+  URLQuery(const char *query)
+    : URLQuery(Text(query, query ? strlen(query) : 0)) {}
 
   // Get URL query parameter.
   Text Get(Text name) const;

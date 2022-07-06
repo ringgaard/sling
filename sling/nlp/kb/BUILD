@@ -225,6 +225,22 @@ cc_library(
 )
 
 cc_library(
+  name = "refine-service",
+  srcs = ["refine-service.cc"],
+  hdrs = ["refine-service.h"],
+  deps = [
+    ":knowledge-service",
+    "//sling/base",
+    "//sling/frame:json",
+    "//sling/frame:object",
+    "//sling/frame:reader",
+    "//sling/frame:store",
+    "//sling/net:http-server",
+    "//sling/stream:memory",
+  ],
+)
+
+cc_library(
   name = "schema-service",
   srcs = ["schema-service.cc"],
   hdrs = ["schema-service.h"],
@@ -243,6 +259,7 @@ cc_binary(
   srcs = ["knowledge-server.cc"],
   deps = [
     ":knowledge-service",
+    ":refine-service",
     ":schema-service",
     "//sling/base",
     "//sling/file",

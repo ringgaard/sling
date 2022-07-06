@@ -99,11 +99,17 @@ class KnowledgeService {
   // Handle KB stubs requests.
   void HandleGetStubs(HTTPRequest *request, HTTPResponse *response);
 
- private:
   // Get item from id. This also resolves cross-reference and loads offline
   // items from the item database.
   Handle RetrieveItem(Store *store, Text id, bool offline = true) const;
 
+  // Return representative image URL for item.
+  string GetImage(const Frame &item);
+
+  // Alias table.
+  const NameTable &aliases() const { return aliases_; }
+
+ private:
   // Fetch properties.
   void FetchProperties(const Frame &item, Item *info);
 

@@ -62,6 +62,7 @@ export default class TablePlugin {
     for (let row = 1; row < lines.length; ++row) {
       let f = lines[row].split(sep);
       let cols = Math.min(f.length, columns.length);
+      if (cols == 0) continue;
       let topic = await context.new_topic();
       for (let col = 0; col < cols; ++col) {
         let column = columns[col];

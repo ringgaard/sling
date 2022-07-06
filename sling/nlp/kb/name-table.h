@@ -29,21 +29,6 @@ namespace nlp {
 // Name table for looking up entities based on name prefix.
 class NameTable {
  public:
-  // Load name repository from file.
-  void Load(const string &filename);
-
-  // Look up entities with names matching a query. The matches are sorted
-  // by decreasing entity frequency.
-  void Lookup(Text query, bool prefix, int limit, int boost,
-              std::vector<Text> *matches) const;
-
- private:
-  // Entity name with offset and frequency.
-  struct EntityName {
-    uint32 offset;
-    uint32 count;
-  };
-
   // Entity item in repository.
   class EntityItem : public RepositoryObject {
    public:
@@ -60,6 +45,23 @@ class NameTable {
     // Entity id.
     REPOSITORY_FIELD(uint8, idlen, 1, AFTER(count));
     REPOSITORY_FIELD(char, id, *idlen_ptr(), AFTER(idlen));
+  };
+
+  typedef std::vector<std::pair<uint32, const EntityItem *>> Matches;
+
+  // Load name repository from file.
+  void Load(const string &filename);
+
+  // Look up entities with names matching a query. The matches are sorted
+  // by decreasing entity frequency.
+  void Lookup(Text query, bool prefix, int limit, int boost,
+              Matches *matches) const;
+
+ private:
+  // Entity name with offset and frequency.
+  struct EntityName {
+    uint32 offset;
+    uint32 count;
   };
 
   // Name item in repository.

@@ -19,6 +19,7 @@
 #include "sling/net/http-server.h"
 #include "sling/net/media-service.h"
 #include "sling/nlp/kb/knowledge-service.h"
+#include "sling/nlp/kb/refine-service.h"
 #include "sling/nlp/kb/schema-service.h"
 
 DEFINE_string(host, "", "HTTP server host address");
@@ -46,6 +47,7 @@ int main(int argc, char *argv[]) {
   HTTPServer http(options, FLAGS_host.c_str(), FLAGS_port);
   CHECK(http.Start(false));
 
+  // Initialize knowledge service.
   KnowledgeService kb;
   kb.Load(&commons, FLAGS_names);
   if (!FLAGS_xref.empty()) {
@@ -65,17 +67,24 @@ int main(int argc, char *argv[]) {
     kb.OpenItemDatabase(FLAGS_itemdb);
   }
 
+  // Initialize refine service.
+  RefineService refine(&commons, &kb);
+
   commons.Freeze();
 
+  // Initialize schema service.
   SchemaService schemas(&commons);
 
+  // Initialize media service.
   MediaService media("/media", FLAGS_mediadb);
   media.set_redirect(true);
   media.Register(&http);
-  http.Register("/thumb", &media, &MediaService::Handle);
 
+  // Register services.
   kb.Register(&http);
   schemas.Register(&http);
+  refine.Register(&http);
+  http.Register("/thumb", &media, &MediaService::Handle);
 
   http.Register("/", [](HTTPRequest *req, HTTPResponse *rsp) {
     rsp->TempRedirectTo("/kb");

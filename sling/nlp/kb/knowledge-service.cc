@@ -445,7 +445,7 @@ void KnowledgeService::HandleQuery(HTTPRequest *request,
   VLOG(1) << "Name query: " << query;
 
   // Lookup name in name table.
-  std::vector<Text> matches;
+  NameTable::Matches matches;
   if (!query.empty()) {
     aliases_.Lookup(query, !fullmatch, window, boost, &matches);
   }
@@ -464,8 +464,9 @@ void KnowledgeService::HandleQuery(HTTPRequest *request,
 
   // Generate response.
   Builder b(ws.store());
-  for (Text id : matches) {
+  for (const auto &m : matches) {
     if (results.size() >= limit) break;
+    Text id = m.second->id();
     Frame item(ws.store(), RetrieveItem(ws.store(), id));
     if (item.invalid()) continue;
     Builder match(ws.store());
@@ -1158,6 +1159,29 @@ void KnowledgeService::HandleGetStubs(HTTPRequest *request,
     }
   }
   encoder.Encode(stubs);
+}
+
+string KnowledgeService::GetImage(const Frame &item) {
+  Store *store = item.store();
+  for (const Slot &s : item) {
+    // Return first media file.
+    if (s.name == n_media_) {
+      Handle url = store->Resolve(s.value);
+      if (store->IsString(url)) {
+        return store->GetString(url)->str().str();
+      }
+    }
+
+    // Look up property.
+    Property *property = GetProperty(s.name);
+    if (!property || !property->image) continue;
+    Handle filename = store->Resolve(s.value);
+    if (store->IsString(filename)) {
+      return CommonsUrl(store->GetString(filename)->str());
+    }
+  }
+
+  return "";
 }
 
 }  // namespace nlp

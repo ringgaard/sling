@@ -30,7 +30,7 @@ export default class XrefPlugin {
       // Check if item with xref is already known.
       let kbitem = await context.idlookup(prop, identifier);
       if (kbitem) {
-        context.topic.put(n_is, kbitem);
+        context.topic.put(n_is, kbitem.id);
       }
       context.updated(context.topic);
       return true;
@@ -52,7 +52,7 @@ export default class XrefPlugin {
     // Check if item with xref is already known.
     let kbitem = await item.context.idlookup(prop, identifier);
     if (kbitem) {
-      topic.put(n_is, kbitem);
+      topic.put(n_is, kbitem.id);
     }
   }
 };
