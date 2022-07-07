@@ -19,7 +19,7 @@
 #include "sling/nlp/kb/refine-service.h"
 #include "sling/stream/memory.h"
 
-DEFINE_string(kburl_prefix, "https://ringgaard,com", "KB service URL prefix");
+DEFINE_string(kburl_prefix, "https://ringgaard.com", "KB service URL prefix");
 
 namespace sling {
 namespace nlp {
@@ -48,6 +48,7 @@ RefineService::RefineService(Store *commons, KnowledgeService *kb)
 void RefineService::Register(HTTPServer *http) {
   http->Register("/refine", this, &RefineService::HandleRefine);
   http->Register("/preview", this, &RefineService::HandlePreview);
+  http->Register("/suggest", this, &RefineService::HandleSuggest);
 }
 
 void RefineService::HandleRefine(HTTPRequest *req, HTTPResponse *rsp) {
@@ -95,19 +96,35 @@ void RefineService::HandleManifest(HTTPRequest *req, HTTPResponse *rsp) {
   manifest.Add(n_id_space_, "http://www.wikidata.org/entity/");
   manifest.Add(n_schema_space_, "http://www.wikidata.org/prop/direct/");
 
-  // Add view.
+  // View.
   Builder view(&store);
   view.Add(n_url_, FLAGS_kburl_prefix + "/kb/{{id}}");
   manifest.Add(n_view_, view.Create());
 
-  // Add preview.
+  // Preview.
   Builder preview(&store);
   preview.Add(n_url_, FLAGS_kburl_prefix + "/preview/{{id}}");
   preview.Add(n_width_, 400);
   preview.Add(n_height_, 100);
   manifest.Add(n_preview_, preview.Create());
 
-  // Add default types.
+  // Suggest service.
+  Builder suggest_entity(&store);
+  suggest_entity.Add(n_service_url_, FLAGS_kburl_prefix);
+  suggest_entity.Add(n_service_path_, "/suggest/entity");
+  Builder suggest_property(&store);
+  suggest_property.Add(n_service_url_, FLAGS_kburl_prefix);
+  suggest_property.Add(n_service_path_, "/suggest/property");
+  Builder suggest_type(&store);
+  suggest_type.Add(n_service_url_, FLAGS_kburl_prefix);
+  suggest_type.Add(n_service_path_, "/suggest/type");
+  Builder suggest(&store);
+  suggest.Add("entity", suggest_entity.Create());
+  suggest.Add("property", suggest_property.Create());
+  suggest.Add("type", suggest_type.Create());
+  manifest.Add(n_suggest_, suggest.Create());
+
+  // Default types.
   Handles types(&store);
   for (Handle type : default_types_) {
     Frame property(&store, type);
@@ -199,30 +216,28 @@ void RefineService::HandlePreview(HTTPRequest *req, HTTPResponse *rsp) {
   rsp->Append(
     "<html>"
     "<head><meta charset=\"utf-8\" /></head>"
-    "<body style=\"margin: 0px; font-family: Arial; sans-serif\">"
-    "<div style=\"height: 100px; width: 400px; overflow: hidden; "
-    "font-size: 0.7em\">"
+    "<body style=\"margin: 0px; font: 0.7em sans-serif; overflow: hidden\">"
+    "<div style=\"height: 100px; width: 400px; display: flex\">"
   );
 
   if (!image.empty()) {
-    rsp->Append(
-      "<div style=\"width: 100px; text-align: center; "
-      "overflow: hidden; margin-right: 9px; float: left\">"
-      "<img src=\"");
+    rsp->Append("<img src=\"");
     rsp->Append(image);
-    rsp->Append("\" style=\"height: 100px\" /></div>");
+    rsp->Append("\" width=\"100\" height=\"100\" ");
+    rsp->Append("style=\"padding-right: 5px\"/>");
   }
 
-  rsp->Append("<div style=\"margin-left: 3px;\">");
+  rsp->Append("<div><div>");
   rsp->Append("<a href=\"");
   rsp->Append(FLAGS_kburl_prefix);
-  rsp->Append("/");
+  rsp->Append("/kb/");
   rsp->Append(HTMLEscape(id));
   rsp->Append("\" target=\"_blank\" style=\"text-decoration: none;\">");
   rsp->Append(HTMLEscape(name));
+  rsp->Append("</a>");
   rsp->Append("<span style=\"color: #505050;\"> (");
   rsp->Append(HTMLEscape(id));
-  rsp->Append(")</span>");
+  rsp->Append(")</span></div>");
   if (!description.empty()) {
     rsp->Append("<p>");
     rsp->Append(HTMLEscape(description));
@@ -230,9 +245,54 @@ void RefineService::HandlePreview(HTTPRequest *req, HTTPResponse *rsp) {
   }
   rsp->Append("</div>");
 
-
   rsp->Append("</div></body></html>");
   rsp->set_content_type("text/html");
+}
+
+void RefineService::HandleSuggest(HTTPRequest *req, HTTPResponse *rsp) {
+  // Get query parameters.
+  Text path = req->path();
+  URLQuery params(req->query());
+  Text prefix = params.Get("prefix");
+  bool prefixed = params.Get("prefixed", true);
+  bool properties = path.starts_with("/property");
+  LOG(INFO) << "suggest prefix: " << prefix << " prefixed: " << prefixed;
+
+  // Search name table.
+  NameTable::Matches matches;
+  kb_->aliases().Lookup(prefix, prefixed, 5000, 1000, &matches);
+
+  // Generate matches.
+  Store store(commons_);
+  String n_id(&store, "id");
+  Handles results(&store);
+  const static int limit = 50;
+  for (const auto &m : matches) {
+    if (results.size() >= limit) break;
+
+    Text id = m.second->id();
+    Frame item(&store, kb_->RetrieveItem(&store, id));
+    if (item.invalid()) continue;
+
+    if (item.IsA(n_property_) != properties) continue;
+
+    Builder match(&store);
+    match.Add(n_id, item);
+
+    Handle name = item.GetHandle(n_name_);
+    if (!name.IsNil()) match.Add(n_name_, name);
+
+    Handle description = item.GetHandle(n_description_);
+    if (!description.IsNil()) match.Add(n_description_, description);
+
+    results.push_back(match.Create().handle());
+  }
+
+  Builder response(&store);
+  response.Add(n_result_, Array(&store, results));
+
+  // Output response.
+  WriteJSON(response.Create(), rsp);
 }
 
 Object RefineService::ReadJSON(Store *store, const Slice &data) {

@@ -175,6 +175,16 @@ class CaseEditor extends MdApp {
 
     let omnibox = this.find("omni-box");
     omnibox.add((query, full, results) => this.search(query, full, results));
+    omnibox.add((query, full, results) => {
+      if (!query.endsWith("?")) {
+        results.push({
+          title: "More...",
+          description: 'Search for "' + query + '" 🔎',
+          query: query,
+          onitem: item => { omnibox.set(item.query + "?"); },
+        });
+      }
+    });
   }
 
   onbeforeunload(e) {

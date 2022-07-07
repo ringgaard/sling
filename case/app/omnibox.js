@@ -61,6 +61,13 @@ export class OmniBox extends Component {
     target.populate(detail, results);
   }
 
+  async set(query) {
+    let searchbox = this.find("md-search");
+    searchbox.set(query);
+    let results = await search(query, this.backends);
+    searchbox.populate(query, results);
+  }
+
   query() {
     return this.find("md-search").query();
   }
