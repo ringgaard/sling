@@ -6,8 +6,9 @@
 import {store} from "/case/app/global.js";
 import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 
+const n_is = store.is;
 const n_name = store.lookup("name");
-const n_is = store.lookup("is");
+const n_description = store.lookup("description");
 
 export default class WikipeidaPlugin {
   async process(action, query, context) {
@@ -49,14 +50,28 @@ export default class WikipeidaPlugin {
 
     // Get page information.
     let pages = reply.query.pages;
+    let title = undefined;
+    let qid = undefined;
     for (let pageid in pages) {
       let page = pages[pageid];
-      let qid = page.pageprops.wikibase_item;
-      let title = page.title;
-      topic.put(n_name, title);
-      topic.put(n_is, store.lookup(qid));
+      qid = page.pageprops.wikibase_item;
+      title = page.title;
     }
 
+    // Move disambiguation to description.
+    name = title;
+    let description = undefined;
+    if (title.endsWith(")")) {
+      let m = title.match(/^(.+) \((.+)\)$/);
+      if (m) {
+        name = m[1];
+        description = m[2];
+      }
+    }
+
+    topic.put(n_name, name);
+    topic.put(n_description, description);
+    topic.put(n_is, qid);
     context.updated(topic);
   }
 };

@@ -178,7 +178,9 @@ const images_services = [
 {
   pattern: /https?:\/\/postimage.org\/image\//,
   fetch: async (url, context) => {
-    let r = await fetch(context.proxy(url));
+    let r = await fetch(context.proxy(url), {headers: {
+      "XUser-Agent": navigator.userAgent,
+    }});
     let html = await r.text();
     let doc = new DOMParser().parseFromString(html, "text/html");
     let img = doc.getElementById("main-image");

@@ -103,6 +103,8 @@ n_male = commons["Q6581097"];
 n_born = commons["P569"]
 n_died = commons["P570"]
 n_viaf = commons["P214"];
+n_lc = commons["P244"];
+n_worldcat = commons["P7859"];
 
 # MARC record format.
 n_record = commons["mx:record"]
@@ -214,7 +216,7 @@ class VIAFService:
             refid = m[2].replace(" ", "")
             if reftype == "WKP":
               prop = n_is;
-              refid = store[refid]
+              refid = refid
             else:
               prop = viaf_components.get(reftype)
             if prop is not None:
@@ -246,6 +248,8 @@ class VIAFService:
     profile.put(n_viaf, viafid)
     for prop, value in xrefs.items():
       profile.put(prop, value)
+      if prop == n_lc:
+        profile.put(n_worldcat, "lccn-" + value)
 
     # Return profile frame.
     return profile.create()

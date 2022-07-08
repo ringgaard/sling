@@ -83,6 +83,7 @@ fi
 #   numpy (myelin tests)
 #   tweepy (twitter)
 #   praw (reddit)
+#   urllib3 (proxy)
 
 # Done.
 echo

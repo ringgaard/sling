@@ -222,12 +222,13 @@ void RefineService::HandlePreview(HTTPRequest *req, HTTPResponse *rsp) {
 
   if (!image.empty()) {
     rsp->Append("<img src=\"");
+    rsp->Append(FLAGS_kburl_prefix);
+    rsp->Append("/media/");
     rsp->Append(image);
-    rsp->Append("\" width=\"100\" height=\"100\" ");
-    rsp->Append("style=\"padding-right: 5px\"/>");
+    rsp->Append("\" style=\"float: left\" />");
   }
 
-  rsp->Append("<div><div>");
+  rsp->Append("<div style=\"padding-left: 5px\"><div>");
   rsp->Append("<a href=\"");
   rsp->Append(FLAGS_kburl_prefix);
   rsp->Append("/kb/");
