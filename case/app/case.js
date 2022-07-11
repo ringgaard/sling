@@ -178,8 +178,8 @@ class CaseEditor extends MdApp {
     omnibox.add((query, full, results) => {
       if (!query.endsWith("?")) {
         results.push({
-          title: "More...",
-          description: 'Search for "' + query + '" 🔎',
+          title: "more...",
+          description: 'search for "' + query + '" 🔎',
           query: query,
           onitem: item => { omnibox.set(item.query + "?"); },
         });

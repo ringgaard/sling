@@ -78,7 +78,7 @@ class SearchWorkflow:
       # Shuffle terms in bucket order (bucket, termid, entityid).
       postings = self.wf.shuffle(terms, bufsize=256 * 1024 * 1024)
 
-      # Collect entities and terms and build search indes.
+      # Collect entities and terms and build search index.
       builder = self.wf.task("search-index-builder")
       builder.attach_input("config", self.search_config())
       self.wf.connect(entities, builder, name="entities")

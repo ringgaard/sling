@@ -1,0 +1,113 @@
+{
+  ; Term normalization.
+  normalization: "clnp"
+  dictionary_aliases: false
+
+  ; Languages for selecting dictionary terms.
+  dictionary_languages: [
+    /lang/en ; English
+    /lang/de ; German
+    /lang/fr ; French
+  ]
+
+  ; Languages for index terms.
+  index_languages: [
+    /lang/en ; English
+    /lang/de ; German
+    /lang/fr ; French
+  ]
+
+  ; Stopwords that are not indexed.
+  stopwords: [
+    ; English
+    "+",
+    "a", "after", "an", "and", "are", "as", "at", "also",
+    "be", "by", "between",
+    "for", "from",
+    "human", "have", "her", "has", "he", "he's", "his",
+    "in", "is", "it", "i", "im", "its",
+    "may",
+    "no",
+    "of", "on", "or", "one", "one's",
+    "s",
+    "that", "the", "to", "their",
+    "under", "us", "use", "using",
+    "we", "what", "with", "was", "we'd", "what'd", "which", "who", "who's",
+
+    ; German
+    "ab", "als", "also", "am", "auch", "auf", "aus",
+    "bei", "bis",
+    "da", "das", "dem", "den", "der", "des", "die", "du", "durch",
+    "ein", "eine", "einem", "einer", "eines", "er", "es",
+    "für",
+    "großer",
+    "her",
+    "im", "ist",
+    "man", "mensch","mir", "mit",
+    "nach",
+    "oder",
+    "seit", "sich", "sie", "so", "sowie",
+    "um", "und", "unter",
+    "vom", "von",
+    "was", "will", "wird", "wurde", "würde",
+    "zu", "zum", "zur", "zwischen",
+    "über",
+
+    ; French
+    "ça",
+    "da", "des", "du", "dès",
+    "en", "es", "et", "ès",
+    "hé",
+    "il",
+    "la", "le", "les", "là", "lès",
+    "plus",
+    "sa", "si", "son", "sur",
+    "via",
+  ]
+
+  ; Indexed properties.
+  indexed: {
+    name: name,
+    alias: name,
+    description: text,
+    lex: lex,
+
+    P2561: name,      ; name
+    P4970: name,      ; alternate names
+    P1705: name,      ; native label
+    P97: name,        ; noble title
+    P1813: name,      ; short name
+    P735: name,       ; given name
+    P734: name,       ; family name
+    P1559: name,      ; name in native language
+    P1477: name,      ; birth name
+    P2562: name,      ; married name
+    P742: name,       ; pseudonym
+    P1786: name,      ; posthumous name
+    P1449: name,      ; nickname
+    P1448: name,      ; official name
+    P1549: name,      ; demonym
+
+    P31: item,        ; instance of
+    P19: item,        ; place of birth
+    P551: item,       ; residence
+    P27: item,        ; country of citizenship
+
+    P569: date,       ; date of birth
+
+    P106: item,       ; occupation
+    P641: item,       ; sport
+
+    P101: item,       ; field of work
+    P69: item,        ; educated at
+    P108: item,       ; employer
+    P1416: item,      ; affiliation
+    P6424: text,      ; affiliation string
+    P463: item,       ; member of
+    P1344: item,      ; participant of
+
+    P50: item,        ; author
+    P2093: item,      ; author name string
+  }
+}
+
