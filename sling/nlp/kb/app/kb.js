@@ -172,12 +172,14 @@ class KbSearchBox extends Component {
     let path = "/kb/query";
     let params = "fmt=cjson";
     let query = detail.trim();
+    let search = false;
     if (query.endsWith(".")) {
       params += "&fullmatch=1";
       query = query.slice(0, -1);
     } else  if (query.endsWith("?")) {
       path = "/kb/search";
       query = query.slice(0, -1);
+      search = true;
     }
 
     fetch(`${path}?${params}&q=${encodeURIComponent(query)}`)
@@ -185,11 +187,18 @@ class KbSearchBox extends Component {
       .then((data) => {
         let items = [];
         for (let item of data.matches) {
-        items.push(new MdSearchResult({
-          ref: item.ref,
-          name: item.text,
-          description: item.description
-        }));
+          items.push(new MdSearchResult({
+            ref: item.ref,
+            name: item.text,
+            description: item.description,
+          }));
+        }
+        if (!search) {
+          items.push(new MdSearchResult({
+            name: "more...",
+            description: 'search for "' + query + '" 🔎',
+            query: query,
+          }));
         }
         target.populate(detail, items);
       })
@@ -200,7 +209,14 @@ class KbSearchBox extends Component {
 
   onitem(e) {
     let item = e.detail;
-    this.match("#app").navigate(item.ref);
+    if (item.query) {
+      let search = this.find("md-search");
+      let query = item.query + "?";
+      search.set(query);
+      this.onquery({detail: query, target: search});
+    } else {
+      this.match("#app").navigate(item.ref);
+    }
   }
 
   query() {

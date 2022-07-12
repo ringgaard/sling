@@ -148,6 +148,10 @@ apis = [
   ("KB frame",             re.compile(r"^\/kb\/frame\?")),
   ("KB topic",             re.compile(r"^\/kb\/topic\?")),
   ("KB stubs",             re.compile(r"^\/kb\/stubs\?")),
+
+
+  ("refine" ,              re.compile(r"^\/refine")),
+  ("preview" ,             re.compile(r"^\/preview")),
 ]
 
 browsers = [
@@ -369,7 +373,7 @@ for logfn in flags.arg.logfiles:
     ua = m.group(9)
 
     # Internal traffic.
-    if ipaddr.startswith("10.1.") or ipaddr.startswith("77.241.128."):
+    if ipaddr.startswith("10.1.") or ipaddr.startswith("127."):
       if ua.startswith("Monit/"):
         num_monitor += 1
       else:
