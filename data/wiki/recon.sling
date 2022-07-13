@@ -35,6 +35,9 @@
       P1476: P1476 ; title
       P1810: P1810 ; named as
     }
+    P2522: {+P1346       ; victory -> winner
+      P585: P585   ; point in time
+    }
     P22: P40            ; father -> child
     P25: P40            ; mother -> child
     P26: P26            ; spouse -> spouse

@@ -221,6 +221,10 @@ let xrefs = [
     property: store.lookup("P8767"),
   },
   {
+    pattern: /^https?:\/\/www\.bgafd\.co\.uk\/actresses\/details.php\/id\/(\w+)/,
+    property: store.lookup("PBGAFD"),
+  },
+  {
     pattern: /^https?:\/\/(?:www\.)?boobpedia\.com\/boobs\/(.+)/,
     property: store.lookup("PBOOB"),
   },
