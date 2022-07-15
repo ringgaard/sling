@@ -2,7 +2,13 @@
 // Licensed under the Apache License, Version 2
 
 import {Component} from "/common/lib/component.js";
-import {StdDialog, MdIcon, MdDialog, inform} from "/common/lib/material.js";
+import {
+  StdDialog,
+  MdIcon,
+  MdDialog,
+  MdToolbox,
+  inform
+} from "/common/lib/material.js";
 import {Frame, QString, Printer} from "/common/lib/frame.js";
 import {store, settings} from "./global.js";
 import {get_schema, inverse_property} from "./schema.js";
@@ -265,6 +271,77 @@ document.onselectionchange = () => {
   }
 }
 
+class EditToolbox extends MdToolbox {
+  populate() {
+    this.innerHTML = `
+      <md-icon-button
+        id="save"
+        icon="save_alt"
+        tooltip="Save topic\n(Ctrl+S)">
+      </md-icon-button>
+      <md-icon-button
+        id="discard"
+        icon="cancel"
+        tooltip="Discard topic edits\n(Esc)"
+        tooltip-align="right">
+      </md-icon-button>
+   `;
+ }
+}
+
+Component.register(EditToolbox);
+
+class TopicToolbox extends MdToolbox {
+  populate() {
+    this.innerHTML = `
+          <md-icon-button
+            id="edit"
+            icon="edit"
+            tooltip="Edit topic\n(Enter)">
+          </md-icon-button>
+          <md-icon-button
+            id="websearch"
+            icon="search"
+            tooltip="Web search">
+          </md-icon-button>
+          <md-icon-button
+            id="imgsearch"
+            icon="image_search"
+            tooltip="Image search">
+          </md-icon-button>
+          <md-icon-button
+            id="copyid"
+            icon="numbers"
+            class="ripple"
+            tooltip="Copy topic id to clipboard\n(Ctrl+D)">
+          </md-icon-button>
+          <md-icon-button
+            id="import"
+            icon="publish"
+            tooltip="Import existing topic\n(Ctrl+I)">
+          </md-icon-button>
+          <md-icon-button
+            id="moveup"
+            icon="move-up"
+            tooltip="Move topic up\n(Ctrl+Up)">
+          </md-icon-button>
+          <md-icon-button
+            id="movedown"
+            icon="move-down"
+            tooltip="Move topic down\n(Ctrl+Down)">
+          </md-icon-button>
+          <md-icon-button
+            id="delete"
+            icon="delete"
+            tooltip="Delete topic\n(Del)"
+            tooltip-align="right">
+          </md-icon-button>
+   `;
+ }
+}
+
+Component.register(TopicToolbox);
+
 class TopicCard extends Component {
   constructor(state) {
     super(state);
@@ -274,23 +351,34 @@ class TopicCard extends Component {
   oninit() {
     let editor = this.match("#editor");
     this.readonly = editor && editor.readonly;
-    if (!this.readonly) {
-      this.bind("#delete", "click", e => this.ondelete(e));
-      this.bind("#import", "click", e => this.onimport(e));
-      this.bind("#moveup", "click", e => this.onmoveup(e));
-      this.bind("#movedown", "click", e => this.onmovedown(e));
-      this.bind("#edit", "click", e => this.onedit(e));
-      this.bind("#save", "click", e => this.onsave(e));
-      this.bind("#discard", "click", e => this.ondiscard(e));
-    }
 
-    this.bind("#websearch", "click", e => this.onwebsearch(e));
-    if (settings.imagesearch) {
-      this.bind("#imgsearch", "click", e => this.onimgsearch(e));
-    } else {
-      this.find("#imgsearch").update(false);
-    }
-    this.bind("#copyid", "click", e => this.oncopyid(e));
+    this.bind("#topic-actions", "menu", e => {
+      let action = e.detail;
+      if (action == "delete") {
+        this.ondelete(e);
+      } else if (action == "import") {
+        this.onimport(e);
+      } else if (action == "moveup") {
+        this.onmoveup(e);
+      } else if (action == "movedown") {
+        this.onmovedown(e);
+      } else if (action == "edit") {
+        this.onedit(e);
+      } else if (action == "websearch") {
+        this.onwebsearch(e);
+      } else if (action == "imgsearch") {
+        this.onimgsearch(e);
+      }
+    });
+
+    this.bind("#edit-actions", "menu", e => {
+      let action = e.detail;
+      if (action == "save") {
+        this.onsave(e);
+      } else if (action == "discard") {
+        this.ondiscard(e);
+      }
+    });
 
     this.bind(null, "click", e => this.onclick(e));
     this.bind(null, "mousedown", e => this.ondown(e));
@@ -701,63 +789,8 @@ class TopicCard extends Component {
         <md-icon id="icon"></md-icon>
         <md-text id="name"></md-text>
         <md-spacer></md-spacer>
-        <md-toolbox id="edit-actions" sticky="1">
-          <md-icon-button
-            id="save"
-            icon="save_alt"
-            tooltip="Save topic\n(Ctrl+S)">
-          </md-icon-button>
-          <md-icon-button
-            id="discard"
-            icon="cancel"
-            tooltip="Discard topic edits\n(Esc)"
-            tooltip-align="right">
-          </md-icon-button>
-        </md-toolbox>
-        <md-toolbox id="topic-actions">
-          <md-icon-button
-            id="edit"
-            icon="edit"
-            tooltip="Edit topic\n(Enter)">
-          </md-icon-button>
-          <md-icon-button
-            id="websearch"
-            icon="search"
-            tooltip="Web search">
-          </md-icon-button>
-          <md-icon-button
-            id="imgsearch"
-            icon="image_search"
-            tooltip="Image search">
-          </md-icon-button>
-          <md-icon-button
-            id="copyid"
-            icon="numbers"
-            class="ripple"
-            tooltip="Copy topic id to clipboard\n(Ctrl+D)">
-          </md-icon-button>
-          <md-icon-button
-            id="import"
-            icon="publish"
-            tooltip="Import existing topic\n(Ctrl+I)">
-          </md-icon-button>
-          <md-icon-button
-            id="moveup"
-            icon="move-up"
-            tooltip="Move topic up\n(Ctrl+Up)">
-          </md-icon-button>
-          <md-icon-button
-            id="movedown"
-            icon="move-down"
-            tooltip="Move topic down\n(Ctrl+Down)">
-          </md-icon-button>
-          <md-icon-button
-            id="delete"
-            icon="delete"
-            tooltip="Delete topic\n(Del)"
-            tooltip-align="right">
-          </md-icon-button>
-        </md-toolbox>
+        <edit-toolbox id="edit-actions" sticky="1"></edit-toolbox>
+        <topic-toolbox id="topic-actions"></topic-toolbox>
       </md-card-toolbar>
       <item-panel></item-panel>
       <fact-panel></fact-panel>
@@ -797,14 +830,16 @@ class TopicCard extends Component {
         position: relative;
         margin-bottom: 0px;
       }
-      $ md-toolbox {
-        top: -6px;
-      }
       $ #name {
         display: block;
         font-size: 24px;
       }
       $ #edit-actions {
+        top: -8px;
+        display: flex;
+      }
+      $ #topic-actions {
+        top: -8px;
         display: flex;
       }
       $ md-icon-button {

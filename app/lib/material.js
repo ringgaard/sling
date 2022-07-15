@@ -1548,10 +1548,15 @@ export class MdToolbox extends Component {
   }
 
   visible() {
-    return this.state && (this.attrs.sticky || this.hover);
+    let show = this.state && (this.attrs.sticky || this.hover);
+    if (show && this.children.length == 0) {
+      this.populate && this.populate();
+    }
+    return show;
   }
 
   onconnected() {
+    this.bind(null, "click", e => this.onclick(e));
     let parent = this.parentElement;
     parent.addEventListener("mouseenter", e => this.onenter(e));
     parent.addEventListener("mouseleave", e => this.onleave(e));
@@ -1569,6 +1574,12 @@ export class MdToolbox extends Component {
       this.hover = false;
       this.update(this.state);
     }
+  }
+
+  onclick(e) {
+    let t = e.target;
+    while (t && !t.id) t = t.parentNode;
+    this.dispatch("menu", t.id, true);
   }
 
   static stylesheet() {
