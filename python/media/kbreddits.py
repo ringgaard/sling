@@ -46,5 +46,5 @@ for item in kb:
     for sr in item(n_subreddit):
       sr = kb.resolve(sr)
       if is_human(item):
-        print(sr, item_text(item))
+        print(sr, item.id, item.name)
 
