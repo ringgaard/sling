@@ -229,6 +229,7 @@ cc_library(
   srcs = ["refine-service.cc"],
   hdrs = ["refine-service.h"],
   deps = [
+    ":facts",
     ":knowledge-service",
     "//sling/base",
     "//sling/frame:json",

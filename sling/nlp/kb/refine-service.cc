@@ -19,7 +19,13 @@
 #include "sling/nlp/kb/refine-service.h"
 #include "sling/stream/memory.h"
 
-DEFINE_string(kburl_prefix, "https://ringgaard.com", "KB service URL prefix");
+DEFINE_string(kburl_prefix,
+              "https://ringgaard.com",
+              "KB service URL prefix");
+
+DEFINE_string(openrefine_service_name,
+              "KnolBase",
+              "OpenRefine service name");
 
 namespace sling {
 namespace nlp {
@@ -43,6 +49,9 @@ RefineService::RefineService(Store *commons, KnowledgeService *kb)
     Handle t = commons->LookupExisting(*type);
     if (!t.IsNil()) default_types_.push_back(t);
   }
+
+  // Initialize facts.
+  facts_.Init(commons);
 }
 
 void RefineService::Register(HTTPServer *http) {
@@ -92,7 +101,7 @@ void RefineService::HandleManifest(HTTPRequest *req, HTTPResponse *rsp) {
 
   // Build OpenRefine manifest.
   Builder manifest(&store);
-  manifest.Add(n_name_, "KnolBase");
+  manifest.Add(n_name_, FLAGS_openrefine_service_name);
   manifest.Add(n_id_space_, "http://www.wikidata.org/entity/");
   manifest.Add(n_schema_space_, "http://www.wikidata.org/prop/direct/");
 
@@ -146,6 +155,7 @@ void RefineService::HandleManifest(HTTPRequest *req, HTTPResponse *rsp) {
 
 void RefineService::HandleQuery(Text queries, HTTPResponse *rsp) {
   // Parse queries.
+  LOG(INFO) << "query: " << queries;
   Store store(commons_);
   String n_id(&store, "id");
   Frame input = ReadJSON(&store, queries.slice()).AsFrame();
@@ -161,7 +171,10 @@ void RefineService::HandleQuery(Text queries, HTTPResponse *rsp) {
     Builder result(&store);
     Frame request(&store, q.value);
     Text query = request.GetText(n_query_);
-    int limit = request.GetInt(n_limit_, 50);
+    int limit = request.GetInt(n_limit_, 10);
+    Text type = request.GetText(n_type_);
+    Handle itemtype = Handle::nil();
+    if (!type.empty()) itemtype = commons_->LookupExisting(type);
 
     // Search name table.
     NameTable::Matches matches;
@@ -176,6 +189,13 @@ void RefineService::HandleQuery(Text queries, HTTPResponse *rsp) {
       Frame item(&store, kb_->RetrieveItem(&store, id));
       if (item.invalid()) continue;
 
+
+      // Check item type.
+      if (!itemtype.IsNil()) {
+        if (!facts_.InstanceOf(item.handle(), itemtype)) continue;
+      }
+
+      // Add match.
       Builder match(&store);
       match.Add(n_id, item);
       match.Add(n_score_, score);
@@ -257,7 +277,7 @@ void RefineService::HandleSuggest(HTTPRequest *req, HTTPResponse *rsp) {
   Text prefix = params.Get("prefix");
   bool prefixed = params.Get("prefixed", true);
   bool properties = path.starts_with("/property");
-  LOG(INFO) << "suggest prefix: " << prefix << " prefixed: " << prefixed;
+  bool types = path.starts_with("/type");
 
   // Search name table.
   NameTable::Matches matches;
@@ -276,6 +296,7 @@ void RefineService::HandleSuggest(HTTPRequest *req, HTTPResponse *rsp) {
     if (item.invalid()) continue;
 
     if (item.IsA(n_property_) != properties) continue;
+    if (types && !IsType(item)) continue;
 
     Builder match(&store);
     match.Add(n_id, item);
@@ -291,6 +312,9 @@ void RefineService::HandleSuggest(HTTPRequest *req, HTTPResponse *rsp) {
 
   Builder response(&store);
   response.Add(n_result_, Array(&store, results));
+
+  // Add CORS headers.
+  rsp->Add("Access-Control-Allow-Origin", "*");
 
   // Output response.
   WriteJSON(response.Create(), rsp);

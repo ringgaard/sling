@@ -468,7 +468,7 @@ const char *property_order[] = {
   "P166",       // award received
   "P2522",      // victory
   "P1441",      // present in work
-  "FEIN",       // featured in
+  "PFEIN",      // featured in
 
   // Media.
   "P18",        // image

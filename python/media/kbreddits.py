@@ -28,19 +28,6 @@ def is_human(item):
     if t == n_human: return True
   return False
 
-def item_text(item):
-  s = str(item.id)
-  name = item.name
-  if name != None: s += " " + str(name)
-  descr = item.description
-  if descr != None:
-    descr = str(descr)
-    if len(descr) > 40:
-      s += " (" + descr[:40] + "...)"
-    else:
-      s += " (" + descr + ")"
-  return s
-
 for item in kb:
   if n_subreddit in item:
     for sr in item(n_subreddit):

@@ -17,6 +17,7 @@
 
 #include "sling/frame/store.h"
 #include "sling/net/http-server.h"
+#include "sling/nlp/kb/facts.h"
 #include "sling/nlp/kb/knowledge-service.h"
 
 namespace sling {
@@ -41,6 +42,13 @@ class RefineService {
   // Get representative image for item.
   string GetImage(const Frame &item);
 
+  // Check if item is a type.
+  bool IsType(const Frame &item) const {
+    if (item.Has(n_subclass_of_)) return true;
+    if (item == n_entity_) return true;
+    return false;
+  }
+
   // Read JSON request.
   static Object ReadJSON(Store *store, const Slice &slice);
   static Object ReadJSON(Store *store, HTTPRequest *req) {
@@ -59,6 +67,9 @@ class RefineService {
   // Default types.
   Handles default_types_;
 
+  // Fact catalog for type checking.
+  FactCatalog facts_;
+
   // Symbols.
   Names names_;
   Name n_name_{names_, "name"};
@@ -75,9 +86,12 @@ class RefineService {
   Name n_width_{names_, "width"};
   Name n_height_{names_, "height"};
   Name n_query_{names_, "query"};
+  Name n_type_{names_, "type"};
   Name n_limit_{names_, "limit"};
   Name n_result_{names_, "result"};
   Name n_score_{names_, "score"};
+  Name n_entity_{names_, "Q35120"};
+  Name n_subclass_of_{names_, "P279"};
   Name n_property_{names_, "/w/property"};
 };
 
