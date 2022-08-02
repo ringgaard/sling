@@ -35,8 +35,10 @@ class RefineService {
   void HandleRefine(HTTPRequest *req, HTTPResponse *rsp);
   void HandleManifest(HTTPRequest *req, HTTPResponse *rsp);
   void HandleQuery(Text queries, HTTPResponse *rsp);
+  void HandleExtend(Text extend, HTTPResponse *rsp);
   void HandlePreview(HTTPRequest *req, HTTPResponse *rsp);
   void HandleSuggest(HTTPRequest *req, HTTPResponse *rsp);
+  void HandlePropose(HTTPRequest *req, HTTPResponse *rsp);
 
  private:
   // Get representative image for item.
@@ -82,6 +84,8 @@ class RefineService {
   Name n_suggest_{names_, "suggest"};
   Name n_service_url_{names_, "service_url"};
   Name n_service_path_{names_, "service_path"};
+  Name n_extend_{names_, "extend"};
+  Name n_versions_{names_, "versions"};
   Name n_url_{names_, "url"};
   Name n_width_{names_, "width"};
   Name n_height_{names_, "height"};
@@ -90,6 +94,7 @@ class RefineService {
   Name n_limit_{names_, "limit"};
   Name n_result_{names_, "result"};
   Name n_score_{names_, "score"};
+  Name n_properties_{names_, "properties"};
   Name n_entity_{names_, "Q35120"};
   Name n_subclass_of_{names_, "P279"};
   Name n_property_{names_, "/w/property"};

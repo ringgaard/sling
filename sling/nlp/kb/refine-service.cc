@@ -58,40 +58,28 @@ void RefineService::Register(HTTPServer *http) {
   http->Register("/refine", this, &RefineService::HandleRefine);
   http->Register("/preview", this, &RefineService::HandlePreview);
   http->Register("/suggest", this, &RefineService::HandleSuggest);
+  http->Register("/propose", this, &RefineService::HandlePropose);
 }
 
 void RefineService::HandleRefine(HTTPRequest *req, HTTPResponse *rsp) {
-  switch (req->Method()) {
-    case HTTP_GET: {
-      URLQuery query(req->query());
-      Text queries = query.Get("queries");
-      if (!queries.empty()) {
-        HandleQuery(queries, rsp);
-      } else {
-        HandleManifest(req, rsp);
-      }
-      break;
-    }
+  // Get parameters.
+  Text qs = req->query();
+  if (req->Method() == HTTP_POST) {
+    qs = Text(req->content(), req->content_size());
+  } else {
+    qs = Text(req->query());
+  }
+  URLQuery query(qs);
 
-    case HTTP_POST: {
-      Text ct = req->content_type();
-      int semi = ct.find(';');
-      if (semi != -1) ct = ct.substr(0, semi);
-      if (ct == "application/x-www-form-urlencoded") {
-        Text body(req->content(), req->content_size());
-        URLQuery query(body);
-        Text queries = query.Get("queries");
-        HandleQuery(queries, rsp);
-      } else {
-        URLQuery query(req->query());
-        Text queries = query.Get("queries");
-        HandleQuery(queries, rsp);
-      }
-      break;
-    }
-
-    default:
-      rsp->SendError(405);
+  // Dispatch call.
+  Text queries = query.Get("queries");
+  Text extend = query.Get("extend");
+  if (!queries.empty()) {
+    HandleQuery(queries, rsp);
+  } else if (!extend.empty()) {
+    HandleExtend(extend, rsp);
+  } else {
+    HandleManifest(req, rsp);
   }
 }
 
@@ -133,6 +121,15 @@ void RefineService::HandleManifest(HTTPRequest *req, HTTPResponse *rsp) {
   suggest.Add("type", suggest_type.Create());
   manifest.Add(n_suggest_, suggest.Create());
 
+  // Extend service.
+  //Builder propose(&store);
+  //propose.Add(n_service_url_, FLAGS_kburl_prefix);
+  //propose.Add(n_service_path_, "/propose");
+
+  Builder extend(&store);
+  //extend.Add("propose_properties", propose.Create());
+  manifest.Add(n_extend_, extend.Create());
+
   // Default types.
   Handles types(&store);
   for (Handle type : default_types_) {
@@ -143,6 +140,12 @@ void RefineService::HandleManifest(HTTPRequest *req, HTTPResponse *rsp) {
     types.push_back(b.Create().handle());
   }
   manifest.Add(n_default_types_, Array(&store, types));
+
+  // Versions supported.
+  Array versions(&store, 2);
+  versions.set(0, store.AllocateString("0.1"));
+  versions.set(1, store.AllocateString("0.2"));
+  manifest.Add(n_versions_, versions);
 
   // Output as JSON.
   WriteJSON(manifest.Create(), rsp);
@@ -189,7 +192,6 @@ void RefineService::HandleQuery(Text queries, HTTPResponse *rsp) {
       Frame item(&store, kb_->RetrieveItem(&store, id));
       if (item.invalid()) continue;
 
-
       // Check item type.
       if (!itemtype.IsNil()) {
         if (!facts_.InstanceOf(item.handle(), itemtype)) continue;
@@ -212,8 +214,22 @@ void RefineService::HandleQuery(Text queries, HTTPResponse *rsp) {
     response.Add(q.name, result.Create());
   }
 
+  // Add CORS headers.
+  rsp->Add("Access-Control-Allow-Origin", "*");
+
   // Output response.
   WriteJSON(response.Create(), rsp);
+}
+
+void RefineService::HandleExtend(Text extend, HTTPResponse *rsp) {
+  // Parse extension request.
+  LOG(INFO) << "extend: " << extend;
+  Store store(commons_);
+  Frame input = ReadJSON(&store, extend.slice()).AsFrame();
+  if (input.invalid()) {
+    rsp->SendError(400);
+    return;
+  }
 }
 
 void RefineService::HandlePreview(HTTPRequest *req, HTTPResponse *rsp) {
@@ -312,6 +328,24 @@ void RefineService::HandleSuggest(HTTPRequest *req, HTTPResponse *rsp) {
 
   Builder response(&store);
   response.Add(n_result_, Array(&store, results));
+
+  // Add CORS headers.
+  rsp->Add("Access-Control-Allow-Origin", "*");
+
+  // Output response.
+  WriteJSON(response.Create(), rsp);
+}
+
+void RefineService::HandlePropose(HTTPRequest *req, HTTPResponse *rsp) {
+  // Get query parameters.
+  URLQuery params(req->query());
+  Text type = params.Get("type");
+
+  Store store(commons_);
+  Builder response(&store);
+  response.Add(n_type_, type);
+  Array properties(&store, 0);
+  response.Add(n_properties_, properties);
 
   // Add CORS headers.
   rsp->Add("Access-Control-Allow-Origin", "*");
