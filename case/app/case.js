@@ -8,6 +8,7 @@ import {Store, Frame, Encoder, Printer} from "/common/lib/frame.js";
 
 import {store, settings} from "./global.js";
 import * as plugins from "./plugins.js";
+import * as importers from "./importers.js";
 import {NewFolderDialog} from "./folder.js";
 import {Drive} from "./drive.js";
 import {wikidata_initiate, wikidata_export} from "./wikibase.js";
@@ -160,6 +161,7 @@ class CaseEditor extends MdApp {
     this.bind("md-menu #share", "click", e => this.onshare(e));
     this.bind("md-menu #collaborate", "click", e => this.oncollaborate(e));
     this.bind("md-menu #imgcache", "click", e => this.onimgcache(e));
+    this.bind("md-menu #import", "click", e => this.onimport(e));
     this.bind("md-menu #export", "click", e => this.onexport(e));
     this.bind("md-menu #upload", "click", e => this.onupload(e));
     this.bind("md-menu #copyall", "click", e => this.oncopyall(e));
@@ -1384,6 +1386,18 @@ class CaseEditor extends MdApp {
     this.style.cursor = "";
   }
 
+  async onimport(e) {
+    if (this.readonly) return;
+    try {
+      await importers.import_data(this.casefile, this);
+      this.mark_dirty();
+      await this.update_folders();
+      await this.refresh_topics();
+    } catch (error) {
+      inform("Error importing data: " + error);
+    }
+  }
+
   async onaddlink(e) {
     let ok = await StdDialog.confirm(
       "Create linked case",
@@ -1613,6 +1627,7 @@ class CaseEditor extends MdApp {
           <md-menu-item id="share">Share</md-menu-item>
           <md-menu-item id="collaborate">Collaborate</md-menu-item>
           <md-menu-item id="upload">Upload files</md-menu-item>
+          <md-menu-item id="import">Import from file</md-menu-item>
           <md-menu-item id="imgcache">Cache images</md-menu-item>
           <md-menu-item id="export">Publish in Wikidata</md-menu-item>
           <md-menu-item id="copyall">Copy all</md-menu-item>

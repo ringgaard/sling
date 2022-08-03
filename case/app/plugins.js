@@ -274,7 +274,7 @@ export class Context {
   }
 
   async new_topic() {
-    let topic = await editor.new_topic();
+    let topic = await this.editor.new_topic();
     if (!topic) return null;
     this.added = topic;
     return topic;

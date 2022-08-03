@@ -1366,6 +1366,18 @@ void Store::GC() {
            << "compact " << compact_time << " us";
 }
 
+void Store::ForAll(std::function<void(Handle handle)> callback) {
+  const MapDatum *map = GetMap(symbols());
+  for (Handle *bucket = map->begin(); bucket < map->end(); ++bucket) {
+    Handle h = *bucket;
+    while (!h.IsNil()) {
+      const SymbolDatum *symbol = GetSymbol(h);
+      if (symbol->bound()) callback(symbol->value);
+      h = symbol->next;
+    }
+  }
+}
+
 bool Store::IsValidReference(Handle handle) const {
   // Check that handle is a reference.
   if (handle.IsNil()) return true;

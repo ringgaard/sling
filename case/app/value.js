@@ -659,3 +659,8 @@ export function value_text(val, prop) {
   }
 }
 
+export var parsers = new Map();
+parsers.set(n_time_type, date_parser);
+parsers.set(n_quantity_type, quantity_parser);
+parsers.set(n_geo_type, geo_parser);
+

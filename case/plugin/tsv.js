@@ -1,37 +1,27 @@
 // Copyright 2020 Ringgaard Research ApS
 // Licensed under the Apache License, Version 2
 
-// SLING case plug-in for importing tables from clipboard.
+// SLING importer plug-in for importing data from TSV files.
 
 import {store} from "/case/app/global.js";
 import {get_property_index} from "/case/app/schema.js";
 import {parsers} from "/case/app/value.js";
-import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 
 const n_id = store.id;
 const n_is = store.is;
 const n_target = store.lookup("target");
 
-export default class TablePlugin {
-  async process(action, data, context) {
+export default class TSVImporter {
+  async process(file, context) {
     // Split data into lines.
+    let data = await file.text();
     let lines = data.split("\n")
-    if (lines.length < 2) return false;
-
-    // Determine field separator.
-    let header = lines[0];
-    let sep = undefined;
-    for (let c of ["\t", "|", ";", ","]) {
-      if (header.includes(c)) {
-        sep = c;
-        break;
-      }
-    }
-    if (!sep) return false;
+    if (lines.length < 2) return;
 
     // Determine property for each field.
+    let header = lines[0];
     let propidx = await get_property_index();
-    let fields = header.split(sep);
+    let fields = header.split("\t");
     let columns = new Array();
     for (let name of fields) {
       let resolve = name.endsWith("#");
@@ -53,9 +43,10 @@ export default class TablePlugin {
     for (let row = 1; row < lines.length; ++row) {
       let line = lines[row];
       if (line.length == 0) continue;
-      let f = line.split(sep);
+      let f = line.split("\t");
       let cols = Math.min(f.length, columns.length);
       if (cols == 0) continue;
+
       let topic = await context.new_topic();
       for (let col = 0; col < cols; ++col) {
         let column = columns[col];
@@ -75,8 +66,6 @@ export default class TablePlugin {
         topic.put(name, value);
       }
     }
-
-    return true;
   }
 };
 
