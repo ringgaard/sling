@@ -747,9 +747,6 @@ unk_functions = {}
 industry_codes = {}
 for key, rec in cvrdb.items():
   num_entities += 1
-  if num_entities % 10000 == 0:
-    print(num_entities, "entities")
-    sys.stdout.flush()
 
   # Parse JSON record.
   data = json.loads(rec)

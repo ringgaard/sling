@@ -1,9 +1,9 @@
-// Copyright 2020 Ringgaard Research ApS
+// Copyright 2022 Ringgaard Research ApS
 // Licensed under the Apache License, Version 2
 
 // SLING import plug-ins.
 
-// Import plug-ins.
+// Data importer plug-ins.
 var importers = {
   "tsv" : {
     name: "Tab-separated values",

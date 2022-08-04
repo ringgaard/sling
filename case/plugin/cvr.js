@@ -1,4 +1,4 @@
-// Copyright 2020 Ringgaard Research ApS
+// Copyright 2022 Ringgaard Research ApS
 // Licensed under the Apache License, Version 2
 
 // SLING case plug-in for adding topic from CVR (Danish Business Register).
