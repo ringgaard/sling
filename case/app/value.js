@@ -85,7 +85,8 @@ export function decimal2degree(coord, latitude, ascii) {
 
 export function latlong(lat, lng, ascii) {
   if (ascii) {
-    return decimal2degree(lat, true, true) + "%20" + decimal2degree(lng, false, true);
+    return decimal2degree(lat, true, true) + "%20" +
+           decimal2degree(lng, false, true);
   } else {
     return decimal2degree(lat, true) + ", " + decimal2degree(lng, false);
   }
@@ -333,6 +334,16 @@ export class Time {
     t.day = day;
     t.precision = precision;
     return t;
+  }
+
+  static wikidate(date) {
+    let m = date.match(/^(\+|\-)(\d+)\-(\d{2})\-(\d{2})T00:00:00Z\/(\d+)$/);
+    if (!m) return undefined;
+    let year = parseInt(m[2]) * (m[1] == "-" ? -1 : 1);
+    let month = parseInt(m[3]);
+    let day = parseInt(m[4]);
+    let precision = parseInt(m[5]) - 5;
+    return Time.value(year, month, day, precision);
   }
 
   age(time) {

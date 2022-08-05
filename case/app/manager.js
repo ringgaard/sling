@@ -621,8 +621,8 @@ class SettingsDialog extends material.MdDialog {
     this.find("#picturesize").value = settings.picturesize;
     this.find("#kbservice").value = settings.kbservice;
     this.find("#collaburl").value = settings.collaburl;
+    this.find("#imagesearch").value = settings.imagesearch;
     this.find("#userscripts").checked = settings.userscripts;
-    this.find("#imagesearch").checked = settings.imagesearch;
     this.find("#nsfw").checked = settings.nsfw;
     this.bind("#clearwd", "click", e => {
       settings.wikidata_key = null;
@@ -636,8 +636,8 @@ class SettingsDialog extends material.MdDialog {
     settings.picturesize = this.find("#picturesize").value;
     settings.kbservice = this.find("#kbservice").value;
     settings.collaburl = this.find("#collaburl").value;
+    settings.imagesearch = this.find("#imagesearch").value;
     settings.userscripts = this.find("#userscripts").checked;
-    settings.imagesearch = this.find("#imagesearch").checked;
     settings.nsfw = this.find("#nsfw").checked;
     save_settings();
     this.close(true);
@@ -663,8 +663,11 @@ class SettingsDialog extends material.MdDialog {
           id="collaburl"
           label="Collaboration service URL">
         </md-text-field>
+        <md-text-field
+          id="imagesearch"
+          label="Image search URL">
+        </md-text-field>
         <md-switch id="userscripts" label="Enable user scripts"></md-switch>
-        <md-switch id="imagesearch" label="Enable image search"></md-switch>
         <md-switch id="nsfw" label="Show adult content (NSFW)"></md-switch>
       </div>
       </div>

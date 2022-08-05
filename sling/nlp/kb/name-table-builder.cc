@@ -92,7 +92,7 @@ class NameTableBuilder : public task::FrameProcessor {
         });
 
     // Get normalized alias for cluster.
-    Text alias = frame.GetText(Handle::is());
+    Text alias = frame.GetText(Handle::is()).trim();
     string normalized;
     UTF8::Normalize(alias.data(), alias.size(), normalization_, &normalized);
     if (normalized.empty()) return;

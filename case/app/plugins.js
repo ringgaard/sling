@@ -361,8 +361,13 @@ export async function process(action, query, context) {
     if (!plugin.instance) {
       let module_url = `/case/plugin/${plugin.module}`;
       console.log(`Load plugin ${plugin.name} from ${module_url}`);
-      const { default: component } = await import(module_url);
-      plugin.instance = new component();
+      try {
+        const { default: component } = await import(module_url);
+        plugin.instance = new component();
+      } catch (e) {
+        console.log(e);
+        throw `error loading plugin from ${module_url}`;
+      }
     }
 
     // Let plugin process the query.

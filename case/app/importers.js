@@ -63,8 +63,13 @@ export async function import_data(casefile, editor) {
   if (!importer.instance) {
     let module_url = `/case/plugin/${importer.module}`;
     console.log(`Load importer from ${module_url}`);
-    const { default: component } = await import(module_url);
-    importer.instance = new component();
+    try {
+      const { default: component } = await import(module_url);
+      importer.instance = new component();
+    } catch (e) {
+      console.log(e);
+      throw `error loading importer plugin from ${module_url}`;
+    }
   }
 
   // Call importer to import data from file.

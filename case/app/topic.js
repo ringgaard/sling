@@ -666,8 +666,10 @@ class TopicCard extends Component {
     let name = topic.get(n_name);
     if (name) {
       let query = encodeURIComponent(name);
-      let url = `${settings.kbservice}/photosearch?q="${query}"`;
-      if (settings.nsfw) url += "&nsfw=1";
+      if (!settings.imagesearch) {
+        settings.imagesearch = "https://www.google.com/search?tbm=isch&q=%1";
+      }
+      let url = settings.imagesearch.replaceAll(/%1/g, query);
       window.open(url, "_blank");
     }
   }

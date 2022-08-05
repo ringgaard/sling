@@ -187,6 +187,15 @@ export class Store {
     encoder.encode(obj);
     return encoder.output();
   }
+
+  // Return localized string.
+  localized(s, lang) {
+    if (lang) {
+      return new QString(s, this.lookup(`/lang/${lang}`));
+    } else {
+      return s;
+    }
+  }
 }
 
 // A frame has a list of (name,value) slots.

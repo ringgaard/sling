@@ -134,8 +134,8 @@ export default class BabepediaPlugin {
     for (let i = 0; i < biolist.children.length; i++) {
       let li = biolist.children[i];
       let m = li.innerText.match(/^([^:]+): ?(.+)/);
-      let field = m[1];
-      let value = m[2];
+      let field = m[1].strip();
+      let value = m[2].strip();
       if (field == "Born") {
         let m = value.match(/\w+ (\d+)\w+ of (\w+) (\d+)/);
         let date = new Date(m[1] + " " + m[2] + " " + m[3]);

@@ -1626,10 +1626,10 @@ class CaseEditor extends MdApp {
           <md-menu-item id="save">Save</md-menu-item>
           <md-menu-item id="share">Share</md-menu-item>
           <md-menu-item id="collaborate">Collaborate</md-menu-item>
-          <md-menu-item id="upload">Upload files</md-menu-item>
           <md-menu-item id="import">Import from file</md-menu-item>
-          <md-menu-item id="imgcache">Cache images</md-menu-item>
+          <md-menu-item id="upload">Upload files</md-menu-item>
           <md-menu-item id="export">Publish in Wikidata</md-menu-item>
+          <md-menu-item id="imgcache">Cache images</md-menu-item>
           <md-menu-item id="copyall">Copy all</md-menu-item>
         </md-menu>
       </md-toolbar>
