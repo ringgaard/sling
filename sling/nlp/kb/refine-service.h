@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// W3C Reconciliation Service API
+
 #ifndef NLP_KB_REFINE_SERVICE_H_
 #define NLP_KB_REFINE_SERVICE_H_
 
@@ -32,7 +34,7 @@ class RefineService {
   void Register(HTTPServer *http);
 
   // OpenRefine request handlers.
-  void HandleRefine(HTTPRequest *req, HTTPResponse *rsp);
+  void HandleReconcile(HTTPRequest *req, HTTPResponse *rsp);
   void HandleManifest(HTTPRequest *req, HTTPResponse *rsp);
   void HandleQuery(Text queries, HTTPResponse *rsp);
   void HandleExtend(Text extend, HTTPResponse *rsp);

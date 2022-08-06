@@ -55,13 +55,13 @@ RefineService::RefineService(Store *commons, KnowledgeService *kb)
 }
 
 void RefineService::Register(HTTPServer *http) {
-  http->Register("/refine", this, &RefineService::HandleRefine);
+  http->Register("/reconcile", this, &RefineService::HandleReconcile);
   http->Register("/preview", this, &RefineService::HandlePreview);
   http->Register("/suggest", this, &RefineService::HandleSuggest);
   http->Register("/propose", this, &RefineService::HandlePropose);
 }
 
-void RefineService::HandleRefine(HTTPRequest *req, HTTPResponse *rsp) {
+void RefineService::HandleReconcile(HTTPRequest *req, HTTPResponse *rsp) {
   // Get parameters.
   Text qs = req->query();
   if (req->Method() == HTTP_POST) {
