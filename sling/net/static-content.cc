@@ -26,6 +26,7 @@
 // Use internal embedded file system for web content by default.
 DEFINE_string(webdir, "/intern", "Base directory for serving web contents");
 DEFINE_bool(webcache, true, "Enable caching of web content");
+DEFINE_string(static_expires, "", "Expiry time for static content");
 
 namespace sling {
 
@@ -179,6 +180,11 @@ void StaticContent::HandleFile(HTTPRequest *request, HTTPResponse *response) {
     // Set file modified time.
     char datebuf[RFCTIME_SIZE];
     response->Set("Last-Modified", RFCTime(stat.mtime, datebuf));
+
+    // Set expiry time.
+    if (!FLAGS_static_expires.empty()) {
+      response->Set("Expires", FLAGS_static_expires.c_str());
+    }
   }
 
   // Do not return file content if only headers were requested.

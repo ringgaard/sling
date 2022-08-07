@@ -209,6 +209,10 @@ let xrefs = [
     property: store.lookup("P2471"),
   },
   {
+    pattern: /^https?:\/\/(?:www\.)?models\.com\/people\/(.+)/,
+    property: store.lookup("P2471"),
+  },
+  {
     pattern: /^https?:\/\/www\.iafd\.com\/person\.rme\/perfid=(\w+)\/?/,
     property: store.lookup("P3869"),
   },

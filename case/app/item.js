@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2
 
 import {Component} from "/common/lib/component.js";
+import {inform} from "/common/lib/material.js";
 import {Frame, QString} from "/common/lib/frame.js";
 import {store, settings} from "./global.js";
 import {Time, LabelCollector, latlong} from "./value.js";
@@ -620,8 +621,13 @@ class TopicExpander extends Component {
       let response = await fetch(url);
       if (response.status == 200) {
         item = await store.parse(response);
+      } else if (response.status == 404 && item.id.match(/Q\d+/)) {
+        window.open(`https://www.wikidata.org/wiki/${item.id}`, "_blank",
+                    "noopener,noreferrer");
+        return;
       } else {
-        console.log("Error fetching item", item.id);
+        inform("Error fetching item", item.id);
+        return;
       }
     }
 

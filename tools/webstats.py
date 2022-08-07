@@ -96,6 +96,7 @@ pages = [
   ("Contact page",         re.compile(r"^\/contact$")),
   ("Privacy page",         re.compile(r"^\/privacy$")),
   ("KnolCase page",        re.compile(r"^\/knolcase$")),
+  ("KnolBase page",        re.compile(r"^\/knolbase$")),
   ("CotM page",            re.compile(r"^\/cotm$")),
   ("Home app",             re.compile(r"^\/home\/app\/")),
   ("Home image",           re.compile(r"^\/home\/image\/")),
@@ -141,7 +142,6 @@ apis = [
   ("collaboration",        re.compile(r"^\/collab\/")),
   ("redreport add media",  re.compile(r"^\/redreport\/addmedia\/")),
 
-
   ("KB query" ,            re.compile(r"^\/kb\/query\?")),
   ("KB search",            re.compile(r"^\/kb\/search\?")),
   ("KB item",              re.compile(r"^\/kb\/item\?")),
@@ -151,7 +151,9 @@ apis = [
 
 
   ("refine" ,              re.compile(r"^\/refine")),
+  ("reconcile" ,           re.compile(r"^\/reconcile")),
   ("preview" ,             re.compile(r"^\/preview")),
+  ("suggest" ,             re.compile(r"^\/suggest")),
 ]
 
 browsers = [
@@ -209,6 +211,8 @@ bots = [
   ("DuckDuckGo Favicons",    re.compile(r"DuckDuckGo-Favicons-Bot")),
   ("commoncrawl.org",        re.compile(r"CCBot")),
   ("Dataprovider.com",       re.compile(r"Dataprovider\.com")),
+  ("LinkAnalyser",           re.compile(r"LinkAnalyser")),
+  ("COIBotParser",           re.compile(r"COIBotParser")),
 
   ("Majestic",               re.compile(r"MJ12bot")),
   ("Mail.RU",                re.compile(r"Mail.RU_Bot")),
