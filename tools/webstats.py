@@ -98,16 +98,12 @@ pages = [
   ("KnolCase page",        re.compile(r"^\/knolcase$")),
   ("KnolBase page",        re.compile(r"^\/knolbase$")),
   ("CotM page",            re.compile(r"^\/cotm$")),
-  ("Home app",             re.compile(r"^\/home\/app\/")),
   ("Home image",           re.compile(r"^\/home\/image\/")),
   ("Case home",            re.compile(r"^\/c\/$")),
   ("Case open",            re.compile(r"^\/c\/\d+")),
-  ("Case app",             re.compile(r"^\/(case|c)\/app\/(.+)$")),
 
   ("media file",           re.compile(r"^\/media\/.+")),
   ("thumbnail",            re.compile(r"^\/thumb\/.+")),
-
-  ("common library",       re.compile(r"^\/common\/")),
 
   ("CMS search (legacy)",  re.compile(r"^\/query:.*$")),
   ("CMS user (legacy)",    re.compile(r"^\/\/?user\/.+")),
@@ -116,7 +112,6 @@ pages = [
 
   ("data download",        re.compile(r"^\/data\/.*")),
 
-  ("KB app",               re.compile(r"^\/kb/app/")),
   ("KB home",              re.compile(r"^\/kb\/$")),
   ("KB item",              re.compile(r"^\/kb\/(.+)$")),
 
@@ -154,6 +149,13 @@ apis = [
   ("reconcile" ,           re.compile(r"^\/reconcile")),
   ("preview" ,             re.compile(r"^\/preview")),
   ("suggest" ,             re.compile(r"^\/suggest")),
+]
+
+sources = [
+  ("KB app",               re.compile(r"^\/kb/app/")),
+  ("Case app",             re.compile(r"^\/(case|c)\/app\/(.+)$")),
+  ("Home app",             re.compile(r"^\/home\/app\/")),
+  ("common library",       re.compile(r"^\/common\/")),
 ]
 
 browsers = [
@@ -313,6 +315,7 @@ spammers = set([
   "rczhan.com",
   "sarahmilne.top",
   "sloopyjoes.com",
+  "qtrstar.xyz",
 ])
 
 total_hits = 0
@@ -335,6 +338,7 @@ num_curls = 0
 
 page_hits = defaultdict(int)
 api_calls = defaultdict(int)
+source_files = defaultdict(int)
 date_hits = defaultdict(int)
 date_visitors = defaultdict(set)
 visitors = set()
@@ -518,6 +522,14 @@ for logfn in flags.arg.logfiles:
           known = True
           break
 
+    # Known source files.
+    if not known:
+      for source_file, source_pattern in sources:
+        if source_pattern.match(path):
+          source_files[source_file] += 1
+          known = True
+          break
+
     # Hits and visitors per day.
     ts = datetime.datetime.strptime(timestamp, "%d/%b/%Y:%H:%M:%S %z")
     day = ts.date()
@@ -582,6 +594,7 @@ print("%6d MB" % (num_bytes / (1024 * 1024)))
 
 print_table("PAGES", "page", page_hits)
 print_table("API CALLS", "api", api_calls)
+print_table("SOURCE FILES", "files", source_files)
 print_table("HITS PER DAY", "date", date_hits, chron=True)
 print_table("VISITS PER DAY", "date", visits_per_day, chron=True)
 print_table("BROWSERS", "browser", browser_hits)

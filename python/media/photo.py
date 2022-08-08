@@ -513,6 +513,10 @@ class Profile:
         print("Skipping video", url)
         return 0
 
+    # Discard subreddits.
+    m = re.match("^https?://reddit\.com/r/\w+/?$", url)
+    if m != None: return 0;
+
     # Discard empty urls.
     if len(url) == 0: return 0
 

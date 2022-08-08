@@ -15,6 +15,7 @@ const n_target = store.lookup("target");
 
 const n_item_type = store.lookup("/w/item");
 const n_string_type = store.lookup("/w/string");
+const n_text_type = store.lookup("/w/text");
 const n_xref_type = store.lookup("/w/xref");
 const n_time_type = store.lookup("/w/time");
 const n_url_type = store.lookup("/w/url");
@@ -28,23 +29,44 @@ const n_geo = store.lookup("/w/geo");
 const n_lat = store.lookup("/w/lat");
 const n_lng = store.lookup("/w/lng");
 
+function add(topic, name, value, lang) {
+  if (value.charAt(0) == '"' && value.slice(-1) == '"') {
+    value = value.slice(1, -1);
+  }
+  topic.add(name, store.localized(value, lang));
+}
+
 function convert(value, dt) {
   switch (dt) {
-    case n_item_type:
+    case n_item_type: {
       return store.lookup(value);
+    }
 
-    case n_string_type:
-      // TODO: handle localized strings: <lang>:"string"
+    case n_text_type: {
+      let lang = undefined;
+      let m = value.match(/^(\w\w):(".+)$/);
+      if (m) {
+        lang = m[1];
+        value = m[2];
+      }
+      if (value.charAt(0) == '"' && value.slice(-1) == '"') {
+        value = value.slice(1, -1);
+      }
+      return store.localized(value, lang);
+    }
+
     case n_xref_type:
     case n_url_type:
-    case n_media_type:
+    case n_string_type:
+    case n_media_type: {
       if (value.charAt(0) == '"' && value.slice(-1) == '"') {
         return value.slice(1, -1);
       } else {
         return value;
       }
+    }
 
-    case n_quantity_type:
+    case n_quantity_type: {
       let u = value.indexOf("U");
       if (u > 0) {
         let amount = parseFloat(value.slice(0, u));
@@ -56,12 +78,14 @@ function convert(value, dt) {
       } else {
         return parseFloat(value)
       }
+    }
 
-    case n_time_type:
+    case n_time_type: {
       let t = Time.wikidate(value);
       return t && t.value();
+    }
 
-    case n_geo_type:
+    case n_geo_type: {
       let m = value.match(/^@([0-9\.\+\-]+)\/([0-9\.\+\-]+)$/);
       if (!m) return null;
       let lat = parseFloat(m[1]);
@@ -71,14 +95,8 @@ function convert(value, dt) {
       v.add(n_lat, lat);
       v.add(n_lng, lng);
       return v;
+    }
   }
-}
-
-function add(topic, name, value, lang) {
-  if (value.charAt(0) == '"' && value.slice(-1) == '"') {
-    value = value.slice(1, -1);
-  }
-  topic.add(name, store.localized(value, lang));
 }
 
 export default class QuickStatementsImporter {
