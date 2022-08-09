@@ -58,7 +58,6 @@ void RefineService::Register(HTTPServer *http) {
   http->Register("/reconcile", this, &RefineService::HandleReconcile);
   http->Register("/preview", this, &RefineService::HandlePreview);
   http->Register("/suggest", this, &RefineService::HandleSuggest);
-  http->Register("/propose", this, &RefineService::HandlePropose);
 }
 
 void RefineService::HandleReconcile(HTTPRequest *req, HTTPResponse *rsp) {
@@ -122,12 +121,7 @@ void RefineService::HandleManifest(HTTPRequest *req, HTTPResponse *rsp) {
   manifest.Add(n_suggest_, suggest.Create());
 
   // Extend service.
-  //Builder propose(&store);
-  //propose.Add(n_service_url_, FLAGS_kburl_prefix);
-  //propose.Add(n_service_path_, "/propose");
-
   Builder extend(&store);
-  //extend.Add("propose_properties", propose.Create());
   manifest.Add(n_extend_, extend.Create());
 
   // Default types.
@@ -139,7 +133,7 @@ void RefineService::HandleManifest(HTTPRequest *req, HTTPResponse *rsp) {
     b.Add(n_name_, property.GetHandle(n_name_));
     types.push_back(b.Create().handle());
   }
-  manifest.Add(n_default_types_, Array(&store, types));
+  manifest.Add(n_default_types_, types);
 
   // Versions supported.
   Array versions(&store, 2);
@@ -183,6 +177,13 @@ void RefineService::HandleQuery(Text queries, HTTPResponse *rsp) {
     NameTable::Matches matches;
     kb_->aliases().Lookup(query, false, 5000, 1, &matches);
 
+    // Sum up total score.
+    int total = 0;
+    for (const auto &m : matches) {
+      total += m.first;
+    }
+    int threshold = total * 0.8;
+
     // Generate matches.
     Handles results(&store);
     for (const auto &m : matches) {
@@ -201,6 +202,8 @@ void RefineService::HandleQuery(Text queries, HTTPResponse *rsp) {
       Builder match(&store);
       match.Add(n_id, item);
       match.Add(n_score_, score);
+      if (score >= threshold) match.Add(n_match_, true);
+
 
       Handle name = item.GetHandle(n_name_);
       if (!name.IsNil()) match.Add(n_name_, name);
@@ -210,7 +213,7 @@ void RefineService::HandleQuery(Text queries, HTTPResponse *rsp) {
 
       results.push_back(match.Create().handle());
     }
-    result.Add(n_result_, Array(&store, results));
+    result.Add(n_result_, results);
     response.Add(q.name, result.Create());
   }
 
@@ -225,11 +228,91 @@ void RefineService::HandleExtend(Text extend, HTTPResponse *rsp) {
   // Parse extension request.
   LOG(INFO) << "extend: " << extend;
   Store store(commons_);
+  String n_id(&store, "id");
+
   Frame input = ReadJSON(&store, extend.slice()).AsFrame();
   if (input.invalid()) {
     rsp->SendError(400);
     return;
   }
+
+  Array ids = input.Get(n_ids_).AsArray();
+  Array properties = input.Get(n_properties_).AsArray();
+  if (ids.invalid() || properties.invalid()) {
+    rsp->SendError(400);
+    return;
+  }
+
+  // Add meta data to response.
+  Builder response(&store);
+  Handles props(&store);
+  Handles meta(&store);
+  for (int i = 0; i < properties.length(); ++i) {
+    Frame property(&store, properties.get(i));
+    if (property.invalid()) continue;
+    Text pid = property.GetText("_id");
+    Handle prop = store.LookupExisting(pid);
+    if (prop.IsNil()) continue;
+
+    props.push_back(prop);
+    Frame p(&store, prop);
+
+    Builder b(&store);
+    b.Add(n_id, p.Id());
+    b.Add(n_name_, p.GetText(n_name_));
+    meta.push_back(b.Create().handle());
+  }
+  response.Add(n_meta_, meta);
+
+  // Look up property values for items.
+  Builder rows(&store);
+  for (int i = 0; i < ids.length(); ++i) {
+    Handle id = ids.get(i);
+    if (!store.IsString(id)) continue;
+    Text itemid = store.GetString(id)->str();
+
+    Frame item(&store, kb_->RetrieveItem(&store, itemid));
+    if (item.invalid()) continue;
+
+    // TODO: handle date properties (date: "YYYY-MM-DD")
+    Builder row(&store);
+    for (Handle prop : props) {
+      Handles values(&store);
+      for (const Slot &s : item.Slots(prop)) {
+        Handle value = store.Resolve(s.value);
+        Builder v(&store);
+        if (value.IsInt()) {
+          v.Add(n_int_, value);
+        } else if (value.IsFloat()) {
+          v.Add(n_float_, value);
+        } else {
+          const Datum *datum = store.GetObject(value);
+          if (datum->IsString()) {
+            v.Add(n_str_, value);
+          } else if (datum->IsFrame() && datum->AsFrame()->IsPublic()) {
+            Frame frame(&store, value);
+            v.Add(n_id, frame.Id());
+            if (frame.Has(n_name_)) {
+              v.Add(n_name_, frame.Get(n_name_));
+            }
+            if (frame.Has(n_description_)) {
+              v.Add(n_description_, frame.Get(n_description_));
+            }
+          }
+        }
+        values.push_back(v.Create().handle());
+      }
+      row.Add(prop, values);
+    }
+    rows.Add(id, row.Create());
+  }
+  response.Add(n_rows_, rows.Create());
+
+  // Add CORS headers.
+  rsp->Add("Access-Control-Allow-Origin", "*");
+
+  // Output response.
+  WriteJSON(response.Create(), rsp);
 }
 
 void RefineService::HandlePreview(HTTPRequest *req, HTTPResponse *rsp) {
@@ -327,25 +410,7 @@ void RefineService::HandleSuggest(HTTPRequest *req, HTTPResponse *rsp) {
   }
 
   Builder response(&store);
-  response.Add(n_result_, Array(&store, results));
-
-  // Add CORS headers.
-  rsp->Add("Access-Control-Allow-Origin", "*");
-
-  // Output response.
-  WriteJSON(response.Create(), rsp);
-}
-
-void RefineService::HandlePropose(HTTPRequest *req, HTTPResponse *rsp) {
-  // Get query parameters.
-  URLQuery params(req->query());
-  Text type = params.Get("type");
-
-  Store store(commons_);
-  Builder response(&store);
-  response.Add(n_type_, type);
-  Array properties(&store, 0);
-  response.Add(n_properties_, properties);
+  response.Add(n_result_, results);
 
   // Add CORS headers.
   rsp->Add("Access-Control-Allow-Origin", "*");

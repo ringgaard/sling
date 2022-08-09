@@ -44,6 +44,7 @@
     P1027: Q101072499   ; conferred by -> award conferred
     P170: Q78522641     ; creator -> creator of
     P199: Q67205181     ; business division -> business division of
+    P1889: P1889        ; different from -> different from
 
     ; FactGrid inversions.
     P8168/P33: P8168/Q245690     ; persons mentioned -> mentioned in

@@ -40,7 +40,6 @@ class RefineService {
   void HandleExtend(Text extend, HTTPResponse *rsp);
   void HandlePreview(HTTPRequest *req, HTTPResponse *rsp);
   void HandleSuggest(HTTPRequest *req, HTTPResponse *rsp);
-  void HandlePropose(HTTPRequest *req, HTTPResponse *rsp);
 
  private:
   // Get representative image for item.
@@ -96,7 +95,14 @@ class RefineService {
   Name n_limit_{names_, "limit"};
   Name n_result_{names_, "result"};
   Name n_score_{names_, "score"};
+  Name n_match_{names_, "match"};
+  Name n_ids_{names_, "ids"};
   Name n_properties_{names_, "properties"};
+  Name n_meta_{names_, "meta"};
+  Name n_rows_{names_, "rows"};
+  Name n_int_{names_, "int"};
+  Name n_float_{names_, "float"};
+  Name n_str_{names_, "str"};
   Name n_entity_{names_, "Q35120"};
   Name n_subclass_of_{names_, "P279"};
   Name n_property_{names_, "/w/property"};

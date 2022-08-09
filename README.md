@@ -1,8 +1,6 @@
 # SLING - A natural language frame semantics parser
 by [Ringgaard Research](https://ringgaard.com)
 
-[![Build Status](https://travis-ci.com/ringgaard/sling.svg?branch=dev)](https://travis-ci.com/ringgaard/sling)
-
 The aim of the SLING project is to learn to read and understand Wikipedia
 articles in many languages for the purpose of knowledge base completion, e.g.
 adding facts mentioned in Wikipedia (and other sources) to the
