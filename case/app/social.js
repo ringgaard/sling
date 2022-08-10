@@ -45,6 +45,10 @@ let xrefs = [
     property: store.lookup("P1902"),
   },
   {
+    pattern: /^https?:\/\/(?:music)\.apple\.com\/(?:\w+)\/artist\/(?:\w+)\/(\d+)/,
+    property: store.lookup("P2850"),
+  },
+  {
     pattern: /^https?:\/\/(?:www\.).pinterest\.\w+\/([^\/\?]+)/,
     property: store.lookup("P3836"),
   },

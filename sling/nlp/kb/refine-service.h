@@ -97,6 +97,8 @@ class RefineService {
   Name n_score_{names_, "score"};
   Name n_match_{names_, "match"};
   Name n_ids_{names_, "ids"};
+  Name n_pid_{names_, "pid"};
+  Name n_v_{names_, "v"};
   Name n_properties_{names_, "properties"};
   Name n_meta_{names_, "meta"};
   Name n_rows_{names_, "rows"};

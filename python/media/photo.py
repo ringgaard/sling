@@ -17,11 +17,15 @@
 import hashlib
 import json
 import os
+import io
 import re
 import requests
 import ssl
 import urllib.parse
 import urllib3
+
+import imagehash
+from PIL import Image
 
 import sling
 import sling.flags as flags
@@ -78,6 +82,10 @@ flags.define("--albums",
              help="add albums from posting",
              default=False,
              action="store_true")
+
+flags.define("--hash",
+             help="image hash method",
+             default="md5")
 
 # Photo database.
 db = None
@@ -138,6 +146,45 @@ def photodb():
   global db
   if db is None: db = sling.Database(flags.arg.photodb, "photo.py")
   return db
+
+# Image hashing.
+
+def md5_hasher(image):
+  return hashlib.md5(image).digest(), len(image)
+
+def average_hasher(image):
+  img = Image.open(io.BytesIO(image))
+  return str(imagehash.average_hash(img)), img.width * img.height
+
+def perceptual_hasher(image):
+  img = Image.open(io.BytesIO(image))
+  return str(imagehash.phash(img)), img.width * img.height
+
+def difference_hasher(image):
+  img = Image.open(io.BytesIO(image))
+  return str(imagehash.dhash(img)), img.width * img.height
+
+def wavelet_hasher(image):
+  img = Image.open(io.BytesIO(image))
+  return str(imagehash.whash(img)), img.width * img.height
+
+def color_hasher(image):
+  img = Image.open(io.BytesIO(image))
+  return str(imagehash.colorhash(img)), img.width * img.height
+
+def crop_hasher(image):
+  img = Image.open(io.BytesIO(image))
+  return str(imagehash.crop_resistant_hash(img)), img.width * img.height
+
+image_hashers = {
+  "md5": md5_hasher,
+  "average": average_hasher,
+  "perceptual": perceptual_hasher,
+  "difference": difference_hasher,
+  "wavelet": wavelet_hasher,
+  "color": color_hasher,
+  "crop": crop_hasher,
+}
 
 class Profile:
   def __init__(self, itemid):
@@ -580,6 +627,7 @@ class Profile:
 
     # Compute image hash for each photo to detect duplicates.
     fingerprints = {}
+    pixels = {}
     captions = {}
     duplicates = set()
     missing = set()
@@ -587,6 +635,7 @@ class Profile:
     num_photos = 0
     num_duplicates = 0
     num_missing = 0
+    hasher = image_hashers[flags.arg.hash]
     for media in self.media():
       url = store.resolve(media)
       nsfw = type(media) is sling.Frame and media[n_has_quality] == n_nsfw
@@ -606,8 +655,10 @@ class Profile:
         image = r.content
 
       # Compute hash and check for duplicates.
-      fingerprint = hashlib.md5(image).digest()
+      fingerprint, size = hasher(image)
+
       dup = fingerprints.get(fingerprint)
+      dupsize = pixels.get(fingerprint)
       if dup != None:
         if flags.arg.preservecaptioned and captioned:
           print(self.itemid, url, " preserve captioned duplicate of", dup)
@@ -615,14 +666,12 @@ class Profile:
           # Keep photo with the longest caption.
           urlcaption = trim_numbering(captions.get(url, ""))
           dupcaption = trim_numbering(captions.get(dup, ""))
-          if urlcaption != "" and dupcaption != "" and urlcaption != dupcaption:
-            print("caption:", urlcaption, "vs", dupcaption)
-          if len(dupcaption) < len(urlcaption):
+          if len(dupcaption) < len(urlcaption) or size * 0.8 > dupsize:
             # Remove previous duplicate.
             duplicates.add(dup)
             num_duplicates += 1
             fingerprints[fingerprint] = url
-            msg = "captioned duplicate of"
+            msg = "duplicate of"
           else:
             # Remove this duplicate.
             duplicates.add(url)
@@ -639,6 +688,18 @@ class Profile:
                 msg = "sfw duplicate of"
               else:
                 msg = "duplicate of"
+
+          if len(dupcaption) < len(urlcaption):
+            msg = "captioned " + msg
+          elif len(dupcaption) > len(urlcaption):
+            msg = msg + " captioned"
+
+          # Check size.
+          if size < dupsize:
+            msg = "smaller " + msg
+          elif size > dupsize:
+            msg = "bigger " + msg
+
           print(self.itemid, url, msg, dup)
       elif fingerprint in bad_photos:
         missing.add(url)
@@ -646,6 +707,7 @@ class Profile:
         print(self.itemid, url, " bad")
       else:
         fingerprints[fingerprint] = url
+        pixels[fingerprint] = size
 
       if nsfw: naughty.add(url)
       num_photos += 1

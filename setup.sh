@@ -48,15 +48,6 @@ SLINGPKG=/usr/lib/python3/dist-packages/sling
 
 PIP="sudo -H pip3 --disable-pip-version-check"
 
-if [[ -L "/usr/lib/python2.7/dist-packages/sling" ]]; then
-  echo "Removing deprecated SLING Python 2.7 package"
-  sudo rm /usr/lib/python2.7/dist-packages/sling
-fi
-if [[ -L "/usr/local/lib/python2.7/dist-packages/sling" ]]; then
-  echo "Removing deprecated SLING Python 2.7 local package"
-  sudo rm /usr/local/lib/python2.7/dist-packages/sling
-fi
-
 if [[ $(${PIP} freeze | grep "sling==") ]]; then
   echo "Removing existing SLING pip package"
   ${PIP} uninstall sling
@@ -84,6 +75,7 @@ fi
 #   tweepy (twitter)
 #   praw (reddit)
 #   urllib3 (proxy)
+#   imagehash (photo dedup)
 
 # Done.
 echo

@@ -169,9 +169,24 @@ void RefineService::HandleQuery(Text queries, HTTPResponse *rsp) {
     Frame request(&store, q.value);
     Text query = request.GetText(n_query_);
     int limit = request.GetInt(n_limit_, 10);
+
+    // Get type constraint.
     Text type = request.GetText(n_type_);
     Handle itemtype = Handle::nil();
-    if (!type.empty()) itemtype = commons_->LookupExisting(type);
+    if (!type.empty()) itemtype = store.LookupExisting(type);
+
+    // Get property constraints.
+    Slots filters(&store);
+    Array constraints = request.Get(n_properties_).AsArray();
+    if (constraints.valid()) {
+      for (int i = 0; i < constraints.length(); ++i) {
+        Frame constraint(&store, constraints.get(i));
+        Handle prop = store.LookupExisting(constraint.GetText(n_pid_));
+        Handle value = constraint.GetHandle(n_v_);
+        if (prop.IsNil() || value.IsNil()) continue;
+        filters.emplace_back(prop, value);
+      }
+    }
 
     // Search name table.
     NameTable::Matches matches;
@@ -197,6 +212,17 @@ void RefineService::HandleQuery(Text queries, HTTPResponse *rsp) {
       if (!itemtype.IsNil()) {
         if (!facts_.InstanceOf(item.handle(), itemtype)) continue;
       }
+
+      // Check property constraints.
+      bool discard = false;
+      for (const Slot &s : filters) {
+        Handle value = item.GetHandle(s.name);
+        if (!store.Equal(s.value, value, true)) {
+          discard = true;
+          break;
+        }
+      }
+      if (discard) continue;
 
       // Add match.
       Builder match(&store);
