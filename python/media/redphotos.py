@@ -148,6 +148,10 @@ for fn in flags.arg.subreddits.split(","):
       else:
         person_subreddits[sr] = itemid
 
+for sr in skipped_subreddits:
+  if sr in person_subreddits: del person_subreddits[sr]
+  if sr in general_subreddits: del general_subreddits[sr]
+
 # Read regex patterns for matching posting titles.
 patterns = []
 for fn in flags.arg.patterns.split(","):
@@ -174,16 +178,16 @@ for fn in flags.arg.celebmap.split(","):
       itemid = f[1].strip()
       celebmap[name] = itemid
 
-# Check if posting has been deleted.
+# Fetch posting from Reddit.
 session = requests.Session()
-def posting_deleted(sid):
+def fetch_posting(store, sid):
   r = session.get("https://api.reddit.com/api/info/?id=" + sid,
                    headers = {"User-agent": "SLING Bot 1.0"})
-  if r.status_code != 200: return True
-  children = r.json()["data"]["children"]
-  if len(children) == 0: return True
-  reply = children[0]["data"]
-  return reply["removed_by_category"] != None
+  if r.status_code != 200: return None
+  reply = store.parse(r.content, json=True)
+  children = reply["data"]["children"]
+  if len(children) == 0: return None
+  return children[0]["data"]
 
 # Check for selfies.
 def selfie(title):
@@ -224,7 +228,7 @@ num_profiles = 0
 num_photos = 0
 num_known = 0
 num_unknown = 0
-num_dups = 0
+num_reposts = 0
 num_deleted = 0
 num_selfies = 0
 
@@ -237,12 +241,6 @@ for key, value in postings:
   # Parse reddit posting.
   store = sling.Store(commons)
   posting = store.parse(value, json=True)
-
-  # Discard posting with bad titles.
-  title = posting[n_title]
-  if type(title) is bytes: continue
-  title = title.replace('\n', ' ').strip()
-  nsfw = True if posting[n_over_18] else None
 
   # Discard self-posts.
   if posting[n_is_self]: continue
@@ -257,6 +255,26 @@ for key, value in postings:
 
   # Discard videos.
   if photo.is_video(url): continue
+
+  # Discard duplicate postings.
+  if url in seen:
+    print(sr, key, "REPOST", title)
+    num_reposts += 1
+    continue
+  seen.add(url)
+
+  # Refetch posting from Reddit to check if it has been deleted.
+  posting = fetch_posting(store, key)
+  if posting is None or posting["removed_by_category"]:
+    print(sr, key, "DELETED", title)
+    num_deleted += 1
+    continue
+
+  # Discard posting with bad titles.
+  title = posting[n_title]
+  if type(title) is bytes: continue
+  title = title.replace('\n', ' ').strip()
+  nsfw = True if posting[n_over_18] else None
 
   # Check for personal subreddit.
   sr = posting[n_subreddit]
@@ -308,19 +326,6 @@ for key, value in postings:
           query = prefix
     else:
       continue
-
-  # Check if posting has been deleted.
-  if posting_deleted(key):
-    print(sr, key, "DELETED", title)
-    num_deleted += 1
-    continue
-
-  # Discard duplicate postings.
-  if url in seen:
-    print(sr, key, "DUP", title)
-    num_dups += 1
-    continue
-  seen.add(url)
 
   # Add posting to report.
   subreddit = report["subreddits"].get(sr)
@@ -392,7 +397,7 @@ print(num_photos, "photos,",
       num_profiles, "profiles,",
       num_known, "known,",
       num_unknown, "unknown,",
-      num_dups, "dups,",
+      num_reposts, "reposts,",
       num_deleted, "deleted,",
       num_selfies, "selfies")
 

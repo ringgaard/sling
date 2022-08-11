@@ -149,7 +149,12 @@ def photodb():
 
 # Video detection.
 
-video_suffixes = [".gifv", ".mp4", ".webm"]
+video_suffixes = [
+  ".gifv",
+  ".mp4",
+  ".webm",
+]
+
 video_prefixes = [
   "https://gfycat.com/",
   "https://redgifs.com/",
@@ -166,15 +171,14 @@ def is_video(url):
 # Image hashing.
 
 def md5_hasher(image):
-  return hashlib.md5(image).hexdigest(), None, None
+  return hashlib.md5(image).hexdigest(), 1, len(image)
 
 def img_hash(image, hasher):
   try:
     img = Image.open(io.BytesIO(image))
+    return str(hasher(img)), img.width, img.height
   except Exception:
     return md5_hasher(image)
-
-  return str(hasher(img)), img.width, img.height
 
 def average_hasher(image):
   return img_hash(image, imagehash.average_hash)
@@ -285,9 +289,16 @@ class Profile:
   # Return caption for photo.
   def caption(self, media):
     if type(media) is sling.Frame:
-      return str(media[n_caption])
+      return str(media[n_legend])
     else:
       return None
+
+  # Check if media has caption.
+  def captioned(self, media):
+    if type(media) is sling.Frame:
+      return n_legend in media
+    else:
+      return False
 
   # Import all photos from another profile.
   def copy(self, other):
@@ -687,8 +698,8 @@ class Profile:
     num_photos = 0
     for media in self.media():
       url = store.resolve(media)
-      nsfw = type(media) is sling.Frame and media[n_has_quality] == n_nsfw
       if is_video(url): continue
+      nsfw = type(media) is sling.Frame and media[n_has_quality] == n_nsfw
       captioned = type(media) is sling.Frame and n_legend in media
       if captioned: captions[url] = media[n_legend]
 
@@ -697,10 +708,11 @@ class Profile:
       if photo is None:
         missing.add(url)
         continue
-      photos[photo.fingerprint] = photo
 
       # Check for duplicate.
       dup = photos.get(photo.fingerprint)
+      photos[photo.fingerprint] = photo
+
       if dup != None:
         if flags.arg.preservecaptioned and captioned:
           print(self.itemid, url, " preserve captioned duplicate of", dup.url)
@@ -728,9 +740,9 @@ class Profile:
               else:
                 msg = "duplicate of"
 
-          if len(dupcaption) < len(urlcaption):
+          if len(urlcaption) > len(dupcaption):
             msg = "captioned " + msg
-          elif len(dupcaption) > len(urlcaption):
+          elif len(urlcaption) < len(dupcaption):
             msg = msg + " captioned"
 
           if photo.size() < dup.size():
