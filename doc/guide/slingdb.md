@@ -197,6 +197,9 @@ shorthand for `localhost:7070/test`.
   Fetch record with `key` and return `value` and `version` for record. Returns
   `(None, 0)` if record does not exist.
 
+* `values = db([key1, key2, ...])`<br>
+  Fetch multiple records. Returns a dictionary with the records.
+
 #### writing
 
 * `db[key] = value`<br>

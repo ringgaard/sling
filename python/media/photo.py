@@ -147,34 +147,52 @@ def photodb():
   if db is None: db = sling.Database(flags.arg.photodb, "photo.py")
   return db
 
+# Video detection.
+
+video_suffixes = [".gifv", ".mp4", ".webm"]
+video_prefixes = [
+  "https://gfycat.com/",
+  "https://redgifs.com/",
+  "https://v.redd.it/"
+]
+
+def is_video(url):
+  for suffix in video_suffixes:
+    if url.endswith(suffix): return True
+  for prefix in video_prefixes:
+    if url.startswith(suffix): return True
+  return False
+
 # Image hashing.
 
 def md5_hasher(image):
-  return hashlib.md5(image).digest(), len(image)
+  return hashlib.md5(image).hexdigest(), None, None
+
+def img_hash(image, hasher):
+  try:
+    img = Image.open(io.BytesIO(image))
+  except Exception:
+    return md5_hasher(image)
+
+  return str(hasher(img)), img.width, img.height
 
 def average_hasher(image):
-  img = Image.open(io.BytesIO(image))
-  return str(imagehash.average_hash(img)), img.width * img.height
+  return img_hash(image, imagehash.average_hash)
 
 def perceptual_hasher(image):
-  img = Image.open(io.BytesIO(image))
-  return str(imagehash.phash(img)), img.width * img.height
+  return img_hash(image, imagehash.phash)
 
 def difference_hasher(image):
-  img = Image.open(io.BytesIO(image))
-  return str(imagehash.dhash(img)), img.width * img.height
+  return img_hash(image, imagehash.dhash)
 
 def wavelet_hasher(image):
-  img = Image.open(io.BytesIO(image))
-  return str(imagehash.whash(img)), img.width * img.height
+  return img_hash(image, imagehash.whash)
 
 def color_hasher(image):
-  img = Image.open(io.BytesIO(image))
-  return str(imagehash.colorhash(img)), img.width * img.height
+  return img_hash(image, imagehash.colorhash)
 
 def crop_hasher(image):
-  img = Image.open(io.BytesIO(image))
-  return str(imagehash.crop_resistant_hash(img)), img.width * img.height
+  return img_hash(image, imagehash.crop_resistant_hash)
 
 image_hashers = {
   "md5": md5_hasher,
@@ -186,16 +204,53 @@ image_hashers = {
   "crop": crop_hasher,
 }
 
+class Photo:
+  def __init__(self, item, url):
+    self.item = item
+    self.url = url
+    self.fingerprint = None
+    self.width = None
+    self.height = None
+
+  def size(self):
+    return self.width * self.height
+
+photo_cache = {}
+
+def get_photo(item , url):
+  # Check if photo is cached.
+  photo = photo_cache.get(url)
+  if photo is not None: return photo
+
+  # Try to get image from media database.
+  global mediadb
+  if mediadb is None: mediadb = sling.Database(flags.arg.mediadb, "photo.py")
+  image = mediadb[url]
+
+  # Fetch image from source if it is not in the media database.
+  if image is None:
+    r = session.get(url)
+    if r.status_code != 200: return None
+    image = r.content
+
+  # Get photo fingerprint.
+  photo = Photo(item, url)
+  hasher = image_hashers[flags.arg.hash]
+  photo.fingerprint, photo.width, photo.height = hasher(image)
+
+  # Add photo to cache.
+  photo_cache[url] = photo
+
+  return photo
+
 class Profile:
-  def __init__(self, itemid):
+  def __init__(self, itemid, data=None):
     self.itemid = itemid
     self.excluded = None
     self.isnew = False
     self.skipdups = True
     self.captionless = flags.arg.captionless
-    if itemid is None:
-      data = None
-    else:
+    if data is None and itemid is not None:
       data, _ = photodb().get(itemid)
     if data is None:
       self.frame = store.frame({})
@@ -253,6 +308,14 @@ class Profile:
     for photo in photos: slots.append((n_media, photo))
     del self.frame[n_media]
     self.frame.extend(slots)
+
+  # Return all media urls.
+  def urls(self):
+    urls = []
+    for media in self.media():
+      if type(media) is sling.Frame: media = media[n_is]
+      urls.append(media)
+    return urls
 
   # Check if photo already in profile.
   def has(self, url, alturl=None):
@@ -549,16 +612,9 @@ class Profile:
     if m != None: url = m.group(1)
 
     # Discard videos.
-    if not flags.arg.video:
-      if url.endswith(".gif") or \
-         url.endswith(".gifv") or \
-         url.endswith(".mp4") or \
-         url.endswith(".webm") or \
-         url.startswith("https://gfycat.com/") or \
-         url.startswith("https://redgifs.com/") or \
-         url.startswith("https://v.redd.it/"):
-        print("Skipping video", url)
-        return 0
+    if not flags.arg.video and is_video(url):
+      print("Skipping video", url)
+      return 0
 
     # Discard subreddits.
     m = re.match("^https?://reddit\.com/r/\w+/?$", url)
@@ -621,63 +677,46 @@ class Profile:
     return self.add_photo(url, caption, flags.arg.source, nsfw)
 
   def dedup(self):
-    # Connect to media database.
-    global mediadb
-    if mediadb is None: mediadb = sling.Database(flags.arg.mediadb, "photo.py")
-
     # Compute image hash for each photo to detect duplicates.
-    fingerprints = {}
+    photos = {}
     pixels = {}
     captions = {}
     duplicates = set()
     missing = set()
     naughty = set()
     num_photos = 0
-    num_duplicates = 0
-    num_missing = 0
-    hasher = image_hashers[flags.arg.hash]
     for media in self.media():
       url = store.resolve(media)
       nsfw = type(media) is sling.Frame and media[n_has_quality] == n_nsfw
+      if is_video(url): continue
       captioned = type(media) is sling.Frame and n_legend in media
       if captioned: captions[url] = media[n_legend]
 
-      # Get image from database or fetch directly.
-      image = mediadb[url]
-      if image is None:
-        r = session.get(url)
-        if r.status_code != 200:
-          print(self.itemid, url, "missing", r.status_code)
-          missing.add(url)
-          num_missing += 1
-          continue
-        print(url, "not cached")
-        image = r.content
+      # Get photo information.
+      photo = get_photo(self.itemid, url)
+      if photo is None:
+        missing.add(url)
+        continue
+      photos[photo.fingerprint] = photo
 
-      # Compute hash and check for duplicates.
-      fingerprint, size = hasher(image)
-
-      dup = fingerprints.get(fingerprint)
-      dupsize = pixels.get(fingerprint)
+      # Check for duplicate.
+      dup = photos.get(photo.fingerprint)
       if dup != None:
         if flags.arg.preservecaptioned and captioned:
-          print(self.itemid, url, " preserve captioned duplicate of", dup)
+          print(self.itemid, url, " preserve captioned duplicate of", dup.url)
         else:
-          # Keep photo with the longest caption.
+          # Keep photo with the longest caption or the most pixels.
           urlcaption = trim_numbering(captions.get(url, ""))
           dupcaption = trim_numbering(captions.get(dup, ""))
-          if len(dupcaption) < len(urlcaption) or size * 0.8 > dupsize:
+          bigger = photo.size() * 0.8 > dup.size()
+          if len(dupcaption) < len(urlcaption) or bigger:
             # Remove previous duplicate.
-            duplicates.add(dup)
-            num_duplicates += 1
-            fingerprints[fingerprint] = url
+            duplicates.add(dup.url)
             msg = "duplicate of"
           else:
             # Remove this duplicate.
-            duplicates.add(url)
-            num_duplicates += 1
+            duplicates.add(photo.url)
 
-            # Check for inconsistent nsfw classification.
             if nsfw:
               if dup not in naughty:
                 msg = "nsfw duplicate of"
@@ -694,31 +733,26 @@ class Profile:
           elif len(dupcaption) > len(urlcaption):
             msg = msg + " captioned"
 
-          # Check size.
-          if size < dupsize:
+          if photo.size() < dup.size():
             msg = "smaller " + msg
-          elif size > dupsize:
+          elif photo.size() > dup.size():
             msg = "bigger " + msg
 
-          print(self.itemid, url, msg, dup)
-      elif fingerprint in bad_photos:
-        missing.add(url)
-        num_missing += 1
-        print(self.itemid, url, " bad")
-      else:
-        fingerprints[fingerprint] = url
-        pixels[fingerprint] = size
+          print(self.itemid, url, msg, dup.url)
+      elif photo.fingerprint in bad_photos:
+        missing.add(photo)
+        print(self.itemid, photo.url, " bad")
 
-      if nsfw: naughty.add(url)
+      if nsfw: naughty.add(photo)
       num_photos += 1
 
     print(self.itemid,
         num_photos, "photos,",
-        num_duplicates, "duplicates",
-        num_missing, "missing")
+        len(duplicates), "duplicates",
+        len(missing), "missing")
 
     # Remove duplicates.
-    if num_duplicates > 0 or num_missing > 0:
+    if len(duplicates) > 0 or len(missing) > 0:
       # Find photos to keep.
       keep = []
       for media in self.media():
@@ -726,5 +760,5 @@ class Profile:
         if url not in duplicates and url not in missing: keep.append(media)
       self.replace(keep)
 
-    return num_duplicates + num_missing
+    return len(duplicates) + len(missing)
 

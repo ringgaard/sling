@@ -222,19 +222,48 @@ int PyDatabase::Contains(PyObject *key) {
 }
 
 PyObject *PyDatabase::Lookup(PyObject *key) {
-  // Get record key.
-  DBRecord record;
-  if (!GetData(key, &record.key)) return nullptr;
+  if (PyList_Check(key)) {
+    // Build array of keys from list.
+    int size = PyList_Size(key);
+    std::vector<Slice> keys(size);
+    for (int i = 0; i < size; ++i) {
+      if (!GetData(PyList_GetItem(key, i), &keys.at(i))) return nullptr;
+    }
 
-  // Fetch record.
-  IOBuffer buffer;
-  Status st = Transact([&]() -> Status {
-    return db->Get(record.key, &record, &buffer);
-  });
-  if (!CheckIO(st)) return nullptr;
+    // Fetch records.
+    IOBuffer buffer;
+    std::vector<DBRecord> records;
+    Status st = Transact([&]() -> Status {
+      return db->Get(keys, &records, &buffer);
+    });
+    if (!CheckIO(st)) return nullptr;
 
-  // Return record value.
-  return PyValue(record.value);
+    // Return dictionary with records.
+    PyObject *results = PyDict_New();
+    if (results == nullptr) return nullptr;
+    for (const DBRecord &record : records) {
+      PyObject *key = PyDatabase::PyValue(record.key, false);
+      PyObject *value = PyDatabase::PyValue(record.value);
+      PyDict_SetItem(results, key, value);
+      Py_DECREF(key);
+      Py_DECREF(value);
+    }
+    return results;
+  } else {
+    // Get record key.
+    DBRecord record;
+    if (!GetData(key, &record.key)) return nullptr;
+
+    // Fetch record.
+    IOBuffer buffer;
+    Status st = Transact([&]() -> Status {
+      return db->Get(record.key, &record, &buffer);
+    });
+    if (!CheckIO(st)) return nullptr;
+
+    // Return record value.
+    return PyValue(record.value);
+  }
 }
 
 int PyDatabase::Assign(PyObject *key, PyObject *v) {

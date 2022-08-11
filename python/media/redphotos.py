@@ -256,10 +256,7 @@ for key, value in postings:
   if domain not in photosites: continue
 
   # Discard videos.
-  if url.endswith(".gif"): continue
-  if url.endswith(".gifv"): continue
-  if url.endswith(".mp4"): continue
-  if url.endswith(".webm"): continue
+  if photo.is_video(url): continue
 
   # Check for personal subreddit.
   sr = posting[n_subreddit]
