@@ -33,6 +33,11 @@ flags.define("--redditdb",
              default="reddit",
              metavar="DB")
 
+flags.define("--photoids",
+             help="table with photo fingerprints",
+             default="data/e/media/photoid.rec",
+             metavar="FILE")
+
 flags.define("--posting",
              help="single reddit posting",
              default=None,
@@ -65,11 +70,6 @@ flags.define("--aliases",
 
 flags.define("--report",
              help="JSON report for unmatched postings",
-             default=None,
-             metavar="FILE")
-
-flags.define("--batch",
-             help="output file for photo batch list",
              default=None,
              metavar="FILE")
 
@@ -178,6 +178,14 @@ for fn in flags.arg.celebmap.split(","):
       itemid = f[1].strip()
       celebmap[name] = itemid
 
+# Photo id table.
+photoids = sling.RecordDatabase(flags.arg.photoids)
+
+def get_photo_id(fingerprint):
+  info = photoids[fingerprint]
+  if info is None: return None
+  return json.loads(info)
+
 # Fetch posting from Reddit.
 session = requests.Session()
 def fetch_posting(store, sid):
@@ -215,13 +223,12 @@ def name_prefix(name):
   return " ".join(prefix).strip(" .,-?")
 
 # Find new postings to subreddits.
-batch = None
-if flags.arg.batch: batch = open(flags.arg.batch, 'w')
 redditdb = sling.Database(flags.arg.redditdb, "redphotos")
 chkpt = sling.util.Checkpoint(flags.arg.checkpoint)
 report = {}
 report["subreddits"] = {}
 seen = set()
+fingerprints = {}
 profiles = {}
 
 num_profiles = 0
@@ -229,7 +236,7 @@ num_photos = 0
 num_known = 0
 num_unknown = 0
 num_reposts = 0
-num_deleted = 0
+num_removed = 0
 num_selfies = 0
 
 if flags.arg.posting:
@@ -266,8 +273,8 @@ for key, value in postings:
   # Refetch posting from Reddit to check if it has been deleted.
   posting = fetch_posting(store, key)
   if posting is None or posting["removed_by_category"]:
-    print(sr, key, "DELETED", title)
-    num_deleted += 1
+    print(sr, key, "REMOVED", title)
+    num_removed += 1
     continue
 
   # Discard posting with bad titles.
@@ -279,7 +286,8 @@ for key, value in postings:
   # Check for personal subreddit.
   sr = posting[n_subreddit]
   itemid = person_subreddits.get(sr)
-  general = itemid is None
+  general = sr in general_subreddits
+  if itemid is None and not general: continue
 
   # Try to match patterns in title.
   if general:
@@ -290,42 +298,39 @@ for key, value in postings:
 
   # Check for name match in general subreddit.
   query = title
-  if itemid is None:
-    if sr in general_subreddits:
-      # Skip photos with multiple persons.
-      if " and " in title: continue
-      if " And " in title: continue
-      if " & " in title: continue
-      if " &amp; " in title: continue
-      if " vs. " in title: continue
-      if " vs " in title: continue
+  if general:
+    # Skip photos with multiple persons.
+    if " and " in title: continue
+    if " And " in title: continue
+    if " & " in title: continue
+    if " &amp; " in title: continue
+    if " vs. " in title: continue
+    if " vs " in title: continue
 
-      # Try to match title to name.
-      name = title
-      cut = len(name)
-      for d in delimiters:
-        p = name.find(d)
-        if p != -1 and p < cut: cut = p
-      name = name[:cut].strip(" .,-?—")
-      itemid = lookup_name(name)
-      query = name
+    # Try to match title to name.
+    name = title
+    cut = len(name)
+    for d in delimiters:
+      p = name.find(d)
+      if p != -1 and p < cut: cut = p
+    name = name[:cut].strip(" .,-?—")
+    itemid = lookup_name(name)
+    query = name
 
-      # Try to match up until first period.
-      if itemid is None:
-        period = title.find(". ")
-        if period != -1:
-          name = title[:period]
-          itemid = lookup_name(name)
-          query = name
+    # Try to match up until first period.
+    if itemid is None:
+      period = title.find(". ")
+      if period != -1:
+        name = title[:period]
+        itemid = lookup_name(name)
+        query = name
 
-      # Try to match name prefix.
-      if itemid is None:
-        prefix = name_prefix(name)
-        if prefix != None:
-          itemid = lookup_name(prefix)
-          query = prefix
-    else:
-      continue
+    # Try to match name prefix.
+    if itemid is None:
+      prefix = name_prefix(name)
+      if prefix != None:
+        itemid = lookup_name(prefix)
+        query = prefix
 
   # Add posting to report.
   subreddit = report["subreddits"].get(sr)
@@ -340,6 +345,65 @@ for key, value in postings:
   subreddit["total"] += 1
   p = {}
   p["posting"] = json.loads(value)
+
+  # Get photos for posting.
+  posting_profile = photo.Profile(None)
+  try:
+    n = posting_profile.add_media(url, None, nsfw)
+  except:
+    print("Error processing", url, "for", itemid)
+    traceback.print_exc(file=sys.stdout)
+  if n == 0:
+    print(sr, key, "EMPTY", title)
+    continue
+  p["photos"] = n
+
+  # Check for duplicates.
+  posting_profile.preload_fingerprints()
+  keep = []
+  for media in posting_profile.media():
+    # Get fingerprint for photo.
+    new_photo = photo.get_photo(itemid, posting_profile.url(media))
+    if new_photo == None: continue
+
+    # Try to locate existing photo with matching fingerprint.
+    existing_photo = get_photo_id(new_photo.fingerprint)
+    if existing_photo is None:
+      existing_photo = fingerprints.get(new_photo.fingerprint)
+
+    if existing_photo is None:
+      # Photo has not been seen before.
+      keep.append(media)
+
+      # Add photo to local fingerprint cache.
+      fingerprints[new_photo.fingerprint] = {
+        "item": new_photo.item,
+        "url": new_photo.url,
+        "width": new_photo.width,
+        "height": new_photo.height,
+      }
+    else:
+      existing_size = existing_photo["width"] * existing_photo["height"]
+      if "dup" not in p:
+        # Add dup information to posting.
+        p["dup"] = {
+          "item": existing_photo["item"],
+          "url": existing_photo["url"],
+          "smaller": existing_size < new_photo.size(),
+          "bigger": existing_size > new_photo.size(),
+        }
+
+      # Keep duplicate photo if it is for another item or it is bigger.
+      mismatch = itemid is not None and itemid != existing_photo["item"]
+      if mismatch or new_photo.size() > existing_size:
+        keep.append(media)
+
+      # Add photo to local cache.
+      fingerprints[new_photo.fingerprint] = existing_photo
+
+  posting_profile.replace(keep)
+  p["duplicates"] = n - len(keep)
+
   if itemid is None:
     if selfie(title):
       print(sr, key, "SELFIE", title, "NSFW" if nsfw else "", url)
@@ -350,36 +414,23 @@ for key, value in postings:
       p["matches"] = len(matches)
       if len(matches) == 1: p["match"] = matches[0].id()
       subreddit["unmatched"].append(p)
-      print(sr, key, "UNKNOWN", title, "NSFW" if nsfw else "", url)
       num_unknown += 1
   else:
     subreddit["matches"] += 1
     p["itemid"] = itemid
     if general: p["query"] = query
     subreddit["matched"].append(p)
-    print(sr, key, itemid, title, "NSFW" if nsfw else "", url)
     num_known += 1
 
     # Add media to photo db.
-    if flags.arg.photodb:
-      # Get or create new profile.
-      profile = profiles.get(itemid)
-      if profile is None:
-        profile = photo.Profile(itemid)
-        profiles[itemid] = profile
-        num_profiles += 1
+    profile = profiles.get(itemid)
+    if profile is None:
+      profile = photo.Profile(itemid)
+      profiles[itemid] = profile
+      num_profiles += 1
+    num_photos += profile.copy(posting_profile)
 
-      try:
-        n = profile.add_media(url, None, nsfw)
-        num_photos += n
-      except:
-        print("Error processing", url, "for", itemid)
-        traceback.print_exc(file=sys.stdout)
-
-    # Output photo to batch list.
-    if batch:
-      batch.write("%s %s #\t %s %s%s\n" %
-                  (sr, title, itemid, url, " NSFW" if nsfw else ""))
+  print(sr, key, itemid, title, "NSFW" if nsfw else "", url)
 
 # Output JSON report.
 if flags.arg.report:
@@ -398,10 +449,9 @@ print(num_photos, "photos,",
       num_known, "known,",
       num_unknown, "unknown,",
       num_reposts, "reposts,",
-      num_deleted, "deleted,",
+      num_removed, "removed,",
       num_selfies, "selfies")
 
 chkpt.commit(redditdb.position())
 redditdb.close()
-if batch: batch.close()
 

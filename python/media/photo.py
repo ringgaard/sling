@@ -40,6 +40,11 @@ flags.define("--mediadb",
              default="vault/media",
              metavar="DB")
 
+flags.define("--fpdb",
+             help="database for photo fingerprints",
+             default="vault/fingerprint",
+             metavar="DB")
+
 flags.define("--check",
              help="check that photo exists before adding",
              default=False,
@@ -93,6 +98,9 @@ db = None
 # Media database.
 mediadb = None
 
+# Photo fingerprint database.
+fpdb = None
+
 # Session for fetching image data. Disable SSL checking.
 class TLSAdapter(requests.adapters.HTTPAdapter):
   def init_poolmanager(self, *args, **kwargs):
@@ -129,12 +137,6 @@ if os.path.exists("local/keys/imgur.json"):
   with open("local/keys/imgur.json", "r") as f:
     imgurkeys = json.load(f)
 
-# Trim numbering from caption.
-def trim_numbering(caption):
-  m = re.fullmatch("(.+) \(\d+/\d+\)", caption)
-  if m != None: return m.group(1)
-  return caption
-
 # Tri-state override.
 def tri(value, override):
   if override is None:
@@ -144,7 +146,7 @@ def tri(value, override):
 
 def photodb():
   global db
-  if db is None: db = sling.Database(flags.arg.photodb, "photo.py")
+  if db is None: db = sling.Database(flags.arg.photodb)
   return db
 
 # Video detection.
@@ -169,6 +171,8 @@ def is_video(url):
   return False
 
 # Image hashing.
+
+Image.MAX_IMAGE_PIXELS = None
 
 def md5_hasher(image):
   return hashlib.md5(image).hexdigest(), 1, len(image)
@@ -198,6 +202,9 @@ def color_hasher(image):
 def crop_hasher(image):
   return img_hash(image, imagehash.crop_resistant_hash)
 
+def avg16_hasher(image):
+  return img_hash(image, lambda img: imagehash.average_hash(image, 16))
+
 image_hashers = {
   "md5": md5_hasher,
   "average": average_hasher,
@@ -206,6 +213,7 @@ image_hashers = {
   "wavelet": wavelet_hasher,
   "color": color_hasher,
   "crop": crop_hasher,
+  "avg16": avg16_hasher,
 }
 
 class Photo:
@@ -221,21 +229,31 @@ class Photo:
 
 photo_cache = {}
 
-def get_photo(item , url):
+def fetch_image(url):
+  # Try to get image from media database.
+  global mediadb
+  if mediadb is None and flags.arg.mediadb:
+    mediadb = sling.Database(flags.arg.mediadb)
+  if mediadb:
+    image = mediadb[url]
+    if image:
+      print("photodb", url)
+      return image
+
+  # Fetch image from source if it is not in the media database.
+  r = session.get(url)
+  if r.status_code != 200: return None
+  print("fetch", url)
+  return r.content
+
+def get_photo(item, url):
   # Check if photo is cached.
   photo = photo_cache.get(url)
   if photo is not None: return photo
 
-  # Try to get image from media database.
-  global mediadb
-  if mediadb is None: mediadb = sling.Database(flags.arg.mediadb, "photo.py")
-  image = mediadb[url]
-
-  # Fetch image from source if it is not in the media database.
-  if image is None:
-    r = session.get(url)
-    if r.status_code != 200: return None
-    image = r.content
+  # Get image.
+  image = fetch_image(url)
+  if image is None: return None
 
   # Get photo fingerprint.
   photo = Photo(item, url)
@@ -246,6 +264,28 @@ def get_photo(item , url):
   photo_cache[url] = photo
 
   return photo
+
+def load_fingerprints(urls):
+  missing = []
+  for url in urls:
+    if url not in photo_cache: missing.append(url)
+  if len(missing) == 0: return
+
+  # Fetch fingerprints from database.
+  if len(flags.arg.fpdb) == 0: return
+  global fpdb
+  if fpdb is None: fpdb = sling.Database(flags.arg.fpdb)
+
+  for url, data in fpdb[missing].items():
+    if data is None: continue
+    fp = json.loads(data)
+    if flags.arg.hash not in fp: continue
+
+    photo = Photo(fp.get("item"), url)
+    photo.fingerprint = fp[flags.arg.hash]
+    photo.width = fp["width"]
+    photo.height = fp["height"]
+    photo_cache[url] = photo
 
 class Profile:
   def __init__(self, itemid, data=None):
@@ -300,6 +340,15 @@ class Profile:
     else:
       return False
 
+  # Preload photo fingerprints.
+  def preload_fingerprints(self):
+    urls = []
+    for media in self.media():
+      if type(media) is sling.Frame: media = media[n_is]
+      if is_video(media): continue
+      urls.append(media)
+    load_fingerprints(urls)
+
   # Import all photos from another profile.
   def copy(self, other):
     num_added = 0
@@ -308,9 +357,9 @@ class Profile:
         url = media[n_is]
         caption = media[n_legend]
         nsfw = media[n_has_quality] == n_nsfw
-        num_added += self.add_media(url, caption, nsfw)
+        num_added += self.add_photo(url, caption, None, nsfw)
       else:
-        num_added += self.add_media(media, None, False)
+        num_added += self.add_photo(media, None, None, False)
     return num_added
 
   # Replace photos in profile:
@@ -386,9 +435,9 @@ class Profile:
       print("Skip existing photo", url)
       return 0
 
-    print("Photo", url,
-          caption if caption != None else "",
-          "NSFW" if nsfw else "")
+    #print("Photo", url,
+    #      caption if caption != None else "",
+    #      "NSFW" if nsfw else "")
 
     # Add media to profile.
     slots = [(n_is, url)]
@@ -688,6 +737,9 @@ class Profile:
     return self.add_photo(url, caption, flags.arg.source, nsfw)
 
   def dedup(self):
+    # Add photo fingerprints to cache.
+    self.preload_fingerprints()
+
     # Compute image hash for each photo to detect duplicates.
     photos = {}
     pixels = {}
@@ -718,10 +770,10 @@ class Profile:
           print(self.itemid, url, " preserve captioned duplicate of", dup.url)
         else:
           # Keep photo with the longest caption or the most pixels.
-          urlcaption = trim_numbering(captions.get(url, ""))
-          dupcaption = trim_numbering(captions.get(dup, ""))
+          caption = captions.get(url, "")
+          dupcaption = captions.get(dup, "")
           bigger = photo.size() * 0.8 > dup.size()
-          if len(dupcaption) < len(urlcaption) or bigger:
+          if len(dupcaption) < len(caption) or bigger:
             # Remove previous duplicate.
             duplicates.add(dup.url)
             msg = "duplicate of"
@@ -740,9 +792,9 @@ class Profile:
               else:
                 msg = "duplicate of"
 
-          if len(urlcaption) > len(dupcaption):
+          if len(caption) > len(dupcaption):
             msg = "captioned " + msg
-          elif len(urlcaption) < len(dupcaption):
+          elif len(caption) < len(dupcaption):
             msg = msg + " captioned"
 
           if photo.size() < dup.size():

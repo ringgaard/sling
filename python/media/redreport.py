@@ -282,6 +282,42 @@ class RedditPosting extends Component {
         </a>`;
     }
 
+    let photomsg = "";
+    let photos = item.photos || 0;
+    let duplicates = item.duplicates || 0;
+    if (photos > 0) {
+      if (duplicates == 0) {
+        if (photos > 1) photomsg = `${photos} photos`;
+      } else if (photos == duplicates) {
+        if (photos == 1) {
+          photomsg = "duplicate";
+        } else {
+          photomsg = `${photos} duplicates`;
+        }
+      } else if (duplicates == 1) {
+        photomsg = `${photos} photos, 1 duplicate`;
+      } else {
+        photomsg = `${photos} photos, ${duplicates} duplicates`;
+      }
+
+      if (item.dup) {
+        let kburl = `https://ringgaard.com/kb/${item.dup.item}`;
+        let mediaurl = `https://ringgaard.com/media/${item.dup.url}`;
+        if (item.dup.smaller) {
+          photomsg += ` <a href="${mediaurl}" target="_blank">smaller</a>`;
+        } else if (item.dup.bigger) {
+          photomsg += ` of <a href="${mediaurl}" target="_blank">bigger</a>`;
+        } else {
+          photomsg += ` of <a href="${mediaurl}" target="_blank">this</a>`;
+        }
+        if (item.itemid != item.dup.item) {
+          photomsg += `
+            in <a href="${kburl}" target="_blank">${item.dup.item}</a>
+          `;
+        }
+      }
+    }
+
     let match = "";
     let add = `
       <md-icon-button id="add" icon="add_a_photo" outlined></md-icon-button>
@@ -311,14 +347,16 @@ class RedditPosting extends Component {
       match = `${item.matches} matches for <b>${item.query}</b>`
     }
 
+    let skip = photos == duplicates;
     return `
       <img src="${thumb.url}" width="${thumb.width}" height="${thumb.height}">
       <div class="descr">
-        <div class="title">${posting.title}</div>
+        <div class="title${skip ? "-skip" : ""}">${posting.title}</div>
         <div class="info">
           <span class="${posting.over_18 ? "nsfw" : "sfw"}">NSFW</span>
           <a href="${permalink}" target="_blank">${posting.id}</a>
           ${xpost}
+          <span class="dups">${photomsg}</span>
         </div>
         <div class="match">
           <div>${match}</div>
@@ -344,6 +382,10 @@ class RedditPosting extends Component {
         font-size: 20px;
         color: #006ABA;
       }
+      $ .title-skip {
+        font-size: 20px;
+        color: #535353;
+      }
       $ .descr {
         margin: 5px;
         display: flex;
@@ -355,6 +397,12 @@ class RedditPosting extends Component {
       }
       $ .descr .info a {
         color: #006ABA;
+      }
+      $ .descr .dups {
+        color: #008000;
+      }
+      $ .descr .dups a {
+        color: #008000;
       }
       $ .descr .match {
         display: flex;

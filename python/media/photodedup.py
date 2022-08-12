@@ -55,13 +55,16 @@ if flags.arg.all:
   for id in ids:
     profile = photo.Profile(id)
     removed = profile.dedup()
-    if removed > 0 and not flags.arg.dryrun:
+    if removed > 0:
       # Write updated profile.
-      profile.write()
+      if not flags.arg.dryrun: profile.write()
       total_removed += removed
       profiles_updated += 1
 
-  if not flags.arg.dryrun:
+  if flags.arg.dryrun:
+    print(total_removed, "photos can be removed from",
+          profiles_updated, "profiles")
+  else:
     chkpt.commit(photo.photodb().epoch())
     print(total_removed, "photos removed from", profiles_updated, "profiles")
 else:

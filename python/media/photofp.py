@@ -20,16 +20,12 @@ import sling
 import sling.flags as flags
 import sling.media.photo as photo
 
-flags.define("--fpdb",
-             help="database for photo fingerprints",
-             default="vault/fingerprint",
-             metavar="DB")
-
 flags.parse()
 
 fpdb = sling.Database(flags.arg.fpdb)
 
 num_profiles = 0
+num_fingerprints = 0
 for key, _, data in photo.photodb():
   num_profiles += 1
   new_photos = 0
@@ -64,9 +60,11 @@ for key, _, data in photo.photodb():
     # Write fingerprint info to database.
     fpdb[url] = json.dumps(fpinfo)
     new_photos += 1
+    num_fingerprints += 1
 
   if new_photos > 0:
     print(num_profiles, key, new_photos, "new")
 
 fpdb.close()
+print(num_fingerprints, "new fingerprints added")
 
