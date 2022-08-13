@@ -115,6 +115,7 @@ session = requests.Session()
 session.verify = False
 session.mount('https://', TLSAdapter())
 urllib3.disable_warnings()
+pool =  urllib3.PoolManager()
 
 # Fingerprints for bad photos.
 bad_photos = set([
@@ -203,7 +204,7 @@ def crop_hasher(image):
   return img_hash(image, imagehash.crop_resistant_hash)
 
 def avg16_hasher(image):
-  return img_hash(image, lambda img: imagehash.average_hash(image, 16))
+  return img_hash(image, lambda img: imagehash.average_hash(img, 16))
 
 image_hashers = {
   "md5": md5_hasher,
@@ -236,15 +237,18 @@ def fetch_image(url):
     mediadb = sling.Database(flags.arg.mediadb)
   if mediadb:
     image = mediadb[url]
-    if image:
-      print("photodb", url)
-      return image
+    if image: return image
 
   # Fetch image from source if it is not in the media database.
-  r = session.get(url)
-  if r.status_code != 200: return None
   print("fetch", url)
-  return r.content
+  if pool:
+    r = pool.request("GET", url, timeout=60)
+    if r.status != 200: return None
+    return r.data
+  else:
+    r = session.get(url)
+    if r.status_code != 200: return None
+    return r.content
 
 def get_photo(item, url):
   # Check if photo is cached.

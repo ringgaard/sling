@@ -233,6 +233,7 @@ profiles = {}
 
 num_profiles = 0
 num_photos = 0
+num_dups = 0
 num_known = 0
 num_unknown = 0
 num_reposts = 0
@@ -381,6 +382,7 @@ for key, value in postings:
         "url": new_photo.url,
         "width": new_photo.width,
         "height": new_photo.height,
+        "sr": sr,
       }
     else:
       existing_size = existing_photo["width"] * existing_photo["height"]
@@ -389,6 +391,7 @@ for key, value in postings:
         p["dup"] = {
           "item": existing_photo["item"],
           "url": existing_photo["url"],
+          "sr": existing_photo.get("sr"),
           "smaller": existing_size < new_photo.size(),
           "bigger": existing_size > new_photo.size(),
         }
@@ -402,7 +405,8 @@ for key, value in postings:
       fingerprints[new_photo.fingerprint] = existing_photo
 
   posting_profile.replace(keep)
-  p["duplicates"] = n - len(keep)
+  dups = n - len(keep)
+  p["duplicates"] = dups
 
   if itemid is None:
     if selfie(title):
@@ -429,6 +433,7 @@ for key, value in postings:
       profiles[itemid] = profile
       num_profiles += 1
     num_photos += profile.copy(posting_profile)
+    num_dups += dups
 
   print(sr, key, itemid, title, "NSFW" if nsfw else "", url)
 
@@ -445,6 +450,7 @@ for id in profiles:
   profiles[id].write()
 
 print(num_photos, "photos,",
+      num_dups, "dups,",
       num_profiles, "profiles,",
       num_known, "known,",
       num_unknown, "unknown,",

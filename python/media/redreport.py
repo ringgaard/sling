@@ -310,10 +310,14 @@ class RedditPosting extends Component {
         } else {
           photomsg += ` of <a href="${mediaurl}" target="_blank">this</a>`;
         }
-        if (item.itemid != item.dup.item) {
+        if (item.itemid && item.itemid != item.dup.item) {
           photomsg += `
             in <a href="${kburl}" target="_blank">${item.dup.item}</a>
           `;
+        }
+        if (item.dup.sr) {
+          let sr = item.dup.sr;
+          photomsg += ` posted in <a href="#${sr}">${sr}</a>`;
         }
       }
     }
@@ -403,6 +407,7 @@ class RedditPosting extends Component {
       }
       $ .descr .dups a {
         color: #008000;
+        font-weight: bold;
       }
       $ .descr .match {
         display: flex;
@@ -438,7 +443,9 @@ class SubredditCard extends MdCard {
     let rw = (100 - coverage) * 2;
     h.push(`
       <h1>
-        <a href="https://www.reddit.com/r/${sr.name}/" target="_blank">
+        <a id="${sr.name}"
+           href="https://www.reddit.com/r/${sr.name}/"
+           target="_blank">
           ${sr.name}
         </a>
       </h1>

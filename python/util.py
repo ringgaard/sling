@@ -54,6 +54,7 @@ class Checkpoint:
       f = open(filename, 'r')
       self.checkpoint = int(f.read())
       f.close()
+      print("read checkpoint", self.checkpoint, "from", filename)
 
   def commit(self, checkpoint):
     self.checkpoint = checkpoint
@@ -61,4 +62,5 @@ class Checkpoint:
       f = open(self.filename, 'w')
       f.write(str(checkpoint))
       f.close()
+      print("write checkpoint", self.checkpoint, "to", filename)
 

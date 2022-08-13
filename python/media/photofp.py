@@ -20,51 +20,133 @@ import sling
 import sling.flags as flags
 import sling.media.photo as photo
 
+flags.define("--profiles",
+             help="add photo fingerprints from photo profiles",
+             default=False,
+             action="store_true")
+
+flags.define("--cases",
+             help="add photo fingerprints from published cases",
+             default=False,
+             action="store_true")
+
 flags.parse()
 
 fpdb = sling.Database(flags.arg.fpdb)
 
-num_profiles = 0
 num_fingerprints = 0
-for key, _, data in photo.photodb():
-  num_profiles += 1
-  new_photos = 0
 
-  profile = photo.Profile(key, data)
+if flags.arg.profiles:
+  num_profiles = 0
+  for key, _, data in photo.photodb():
+    num_profiles += 1
+    new_photos = 0
 
-  # Get fingerprints for photos in profile.
-  fingerprints = fpdb[profile.urls()]
+    profile = photo.Profile(key, data)
 
-  # Add missing photo fingerprints.
-  for url, fpdata in fingerprints.items():
-    # Skip videos.
-    if photo.is_video(url): continue
+    # Get fingerprints for photos in profile.
+    fingerprints = fpdb[profile.urls()]
 
-    # Parse fingerprint info.
-    if fpdata is None:
-      fpinfo = {"item": key}
-    else:
-      fpinfo = json.loads(fpdata)
+    # Add missing photo fingerprints.
+    for url, fpdata in fingerprints.items():
+      # Skip videos.
+      if photo.is_video(url): continue
 
-    # Check if hash is already in fingerprint database.
-    if flags.arg.hash in fpinfo: continue
+      # Parse fingerprint info.
+      if fpdata is None:
+        fpinfo = {"item": key}
+      else:
+        fpinfo = json.loads(fpdata)
 
-    # Compute photo fingerprint.
-    p = photo.get_photo(key, url)
-    if p is None: continue
+      # Check if hash is already in fingerprint database.
+      if flags.arg.hash in fpinfo: continue
 
-    fpinfo["width"] = p.width
-    fpinfo["height"] = p.height
-    fpinfo[flags.arg.hash] = p.fingerprint
+      # Compute photo fingerprint.
+      p = photo.get_photo(key, url)
+      if p is None: continue
 
-    # Write fingerprint info to database.
-    fpdb[url] = json.dumps(fpinfo)
-    new_photos += 1
-    num_fingerprints += 1
+      fpinfo["width"] = p.width
+      fpinfo["height"] = p.height
+      fpinfo[flags.arg.hash] = p.fingerprint
 
-  if new_photos > 0:
-    print(num_profiles, key, new_photos, "new")
+      # Write fingerprint info to database.
+      fpdb[url] = json.dumps(fpinfo)
+      new_photos += 1
+      num_fingerprints += 1
+
+    if new_photos > 0:
+      print(num_profiles, key, new_photos, "new")
+
+  print(num_fingerprints, "new fingerprints added")
+
+if flags.arg.cases:
+  store = sling.Store()
+  n_id = store["id"]
+  n_is = store["is"]
+  n_name = store["name"]
+  n_publish = store["publish"]
+  n_topics = store["topics"]
+  n_media = store["media"]
+
+  casedb = sling.Database("vault/case")
+  for key, value in casedb.items():
+    casefile = store.parse(value)
+    if n_topics not in casefile: continue
+    if not casefile[n_publish]: continue
+
+    for topic in casefile[n_topics]:
+      # Get item id.
+      topicid = topic[n_id]
+      redir = topic[n_is]
+      if type(redir) is sling.Frame:
+        itemid = redir.id
+      else:
+        itemid = redir
+      if itemid is None: itemid = topicid
+
+      # Get photo urls.
+      urls = []
+      for media in topic(n_media):
+        url = store.resolve(media)
+        urls.append(url)
+
+      # Get fingerprints for photos in topic.
+      fingerprints = fpdb[urls]
+
+      # Add missing photo fingerprints.
+      new_photos = 0
+      for url, fpdata in fingerprints.items():
+        # Skip videos.
+        if photo.is_video(url): continue
+
+        # Parse fingerprint info.
+        if fpdata is None:
+          fpinfo = {"item": itemid, "topic": topicid}
+        else:
+          fpinfo = json.loads(fpdata)
+
+        # Check if hash is already in fingerprint database.
+        if flags.arg.hash in fpinfo: continue
+
+        # Compute photo fingerprint.
+        p = photo.get_photo(itemid, url)
+        if p is None:
+          print(topicid, "missing photo", url)
+          continue
+
+        fpinfo["width"] = p.width
+        fpinfo["height"] = p.height
+        fpinfo[flags.arg.hash] = p.fingerprint
+
+        # Write fingerprint info to database.
+        fpdb[url] = json.dumps(fpinfo)
+        new_photos += 1
+        num_fingerprints += 1
+
+      if new_photos > 0:
+        print(itemid, topic[n_name], new_photos, "new")
+
+  casedb.close()
 
 fpdb.close()
-print(num_fingerprints, "new fingerprints added")
 
