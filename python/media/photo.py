@@ -90,7 +90,7 @@ flags.define("--albums",
 
 flags.define("--hash",
              help="image hash method",
-             default="md5")
+             default="average")
 
 # Photo database.
 db = None
