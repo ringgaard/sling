@@ -62,5 +62,5 @@ class Checkpoint:
       f = open(self.filename, 'w')
       f.write(str(checkpoint))
       f.close()
-      print("write checkpoint", self.checkpoint, "to", filename)
+      print("write checkpoint", self.checkpoint, "to", self.filename)
 
