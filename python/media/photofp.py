@@ -77,8 +77,6 @@ if flags.arg.profiles:
     if new_photos > 0:
       print(num_profiles, key, new_photos, "new")
 
-  print(num_fingerprints, "new fingerprints added")
-
 if flags.arg.cases:
   store = sling.Store()
   n_id = store["id"]
@@ -149,4 +147,5 @@ if flags.arg.cases:
   casedb.close()
 
 fpdb.close()
+print(num_fingerprints, "new fingerprints added")
 

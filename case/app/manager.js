@@ -552,7 +552,7 @@ class GettingStarted extends Component {
       </p>
       <p>You add new topics to the case by typing the name of the topic in the
       search bar. If the topic is already in the knowledge base, you can just
-      select it from the list. This create a topic that is an extension of an
+      select it from the list. This creates a topic that is an extension of an
       existing topic and you can click <md-icon icon="expand_more"></md-icon> to
       see the existing information. Otherwise, pressing Enter without selecting
       a topic will create a new topic.</p>

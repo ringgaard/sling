@@ -117,12 +117,6 @@ session.mount('https://', TLSAdapter())
 urllib3.disable_warnings()
 pool =  urllib3.PoolManager()
 
-# Fingerprints for bad photos.
-bad_photos = set([
-  b'\xf1{\x01\x90\x1cu,\x1b\xb0I(\x13\x1d\x16a\xaf', # i.reddit.it
-  b'\xd85\x88Cs\xf4\xd6\xc8\xf2GB\xce\xab\xe7IF',    # i.imgur.com/removed.png
-])
-
 # Global store.
 store = sling.Store()
 n_media = store["media"]
@@ -807,17 +801,9 @@ class Profile:
             msg = "bigger " + msg
 
           print(self.itemid, url, msg, dup.url)
-      elif photo.fingerprint in bad_photos:
-        missing.add(photo)
-        print(self.itemid, photo.url, " bad")
 
       if nsfw: naughty.add(photo)
       num_photos += 1
-
-    print(self.itemid,
-        num_photos, "photos,",
-        len(duplicates), "duplicates",
-        len(missing), "missing")
 
     # Remove duplicates.
     if len(duplicates) > 0 or len(missing) > 0:
@@ -827,6 +813,11 @@ class Profile:
         url = store.resolve(media)
         if url not in duplicates and url not in missing: keep.append(media)
       self.replace(keep)
+
+      print(self.itemid,
+          num_photos, "photos,",
+          len(duplicates), "duplicates",
+          len(missing), "missing")
 
     return len(duplicates) + len(missing)
 
