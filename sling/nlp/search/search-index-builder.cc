@@ -85,10 +85,12 @@ class SearchIndexMapper : public task::FrameProcessor {
 
     // Collect search terms for item.
     Terms terms;
+    bool omit_properties = config_.omit(key.str());
     for (const Slot &s : frame) {
       // Check if properties should be indexed.
       Handle type = config_.index(s.name);
       if (type.IsNil()) continue;
+      if (omit_properties && type != n_name_ && type != n_text_) continue;
       Handle value = store->Resolve(s.value);
 
       if (type == n_name_ || type == n_text_) {

@@ -310,7 +310,7 @@ class RedditPosting extends Component {
         } else {
           photomsg += ` of <a href="${mediaurl}" target="_blank">this</a>`;
         }
-        if (item.itemid && item.itemid != item.dup.item) {
+        if (item.dup.item && item.itemid != item.dup.item) {
           photomsg += `
             in <a href="${kburl}" target="_blank">${item.dup.item}</a>
           `;
@@ -358,7 +358,9 @@ class RedditPosting extends Component {
         <div class="title${skip ? "-skip" : ""}">${posting.title}</div>
         <div class="info">
           <span class="${posting.over_18 ? "nsfw" : "sfw"}">NSFW</span>
-          <a href="${permalink}" target="_blank">${posting.id}</a>
+          <a href="${permalink}" target="_blank">
+            ${posting._id || posting.id_}
+          </a>
           ${xpost}
           <span class="dups">${photomsg}</span>
         </div>

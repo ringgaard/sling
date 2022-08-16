@@ -44,6 +44,14 @@ void SearchConfiguration::Load(Store *store,
     properties_[s.name] = s.value;
   }
 
+  // Get omitted items.
+  Array omitted = config.Get("omitted").AsArray();
+  CHECK(omitted.valid());
+  for (int i = 0; i < omitted.length(); ++i) {
+    String itemid(store, omitted.get(i));
+    omitted_.insert(itemid.value());
+  }
+
   // Set up phrase normalization.
   normalization_ = config.GetString("normalization");
   tokenizer_.set_normalization(norm());

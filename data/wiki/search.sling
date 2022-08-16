@@ -129,38 +129,12 @@
     ;P2093: item,      ; author name string
   }
 
-  unused: [
-    P937,       ; work location
-    P452,       ; industry
-    P740,       ; location of formation
-    P571,       ; inception
-    P159,       ; headquarters location
-    P115,       ; home venue
-
-    P101,       ; field of work
-    P69,        ; educated at
-    P512,       ; academic degree
-    P812,       ; academic major
-    P108,       ; employer
-    P1416,      ; affiliation
-    P6424,      ; affiliation string
-    P39,        ; position held
-    P463,       ; member of
-    P1344,      ; participant of
-    P102,       ; member of political party
-    P1387,      ; political alignment
-    P1142,      ; political ideology
-
-    P1532,      ; country for sport
-    P118,       ; league
-
-    P276,       ; location
-    P17,        ; country
-    P131,       ; located in the administrative territorial entity
-
-    P166,       ; award received
-    P2522,      ; victory
-    P1441,      ; present in work
+  ; Items with large number of properties that are omitted from the search
+  ; index.
+  omit: [
+    Q12332288,         ; Preben Bang Henriksen
+    P7972/4003900475,  ; Per Emil Hasselbalch Stakemann
+    P7972/4000448343,  ; Peter Andreas Stakemann
   ]
 }
 

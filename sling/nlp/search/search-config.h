@@ -59,6 +59,11 @@ class SearchConfiguration {
     return wikitypes_.IsNonEntity(type) || wikitypes_.IsBiographic(type);
   }
 
+  // Check if properties for item are omitted from indexing.
+  bool omit(const string &itemid) const {
+    return omitted_.count(itemid) > 0;
+  }
+
   // Check if language is skipped in indexing.
   bool foreign(Handle lang) const {
     return !lang.IsNil() && languages_.count(lang) == 0;
@@ -98,6 +103,9 @@ class SearchConfiguration {
 
   // Stopwords.
   std::unordered_set<uint64> stopwords_;
+
+  // Items where properties are omitted from indexing.
+  std::unordered_set<string> omitted_;
 
   // Term normalization.
   string normalization_;

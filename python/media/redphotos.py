@@ -78,6 +78,11 @@ flags.define("--caseless",
              default=False,
              action="store_true")
 
+flags.define("--dryrun",
+             help="do not update database",
+             default=False,
+             action="store_true")
+
 flags.parse()
 
 # List of approved photo sites.
@@ -222,6 +227,10 @@ def name_prefix(name):
   if len(prefix) < 2: return None
   return " ".join(prefix).strip(" .,-?")
 
+# Get size of photo in pixels.
+def pixels(info):
+  return info["width"] * info["height"]
+
 # Find new postings to subreddits.
 redditdb = sling.Database(flags.arg.redditdb, "redphotos")
 chkpt = sling.util.Checkpoint(flags.arg.checkpoint)
@@ -345,7 +354,7 @@ for key, value in postings:
 
   subreddit["total"] += 1
   p = {}
-  p["posting"] = json.loads(value)
+  p["posting"] = json.loads(posting.data(json=True, byref=False))
 
   # Get photos for posting.
   posting_profile = photo.Profile(None)
@@ -367,10 +376,13 @@ for key, value in postings:
     new_photo = photo.get_photo(itemid, posting_profile.url(media))
     if new_photo == None: continue
 
-    # Try to locate existing photo with matching fingerprint.
+    # Try to locate biggest existing photo with matching fingerprint.
     existing_photo = get_photo_id(new_photo.fingerprint)
+    previous = fingerprints.get(new_photo.fingerprint)
     if existing_photo is None:
-      existing_photo = fingerprints.get(new_photo.fingerprint)
+      existing_photo = previous
+    elif previous is not None and pixel(previous) > pixel(existing_photo):
+      existing_photo = previous
 
     if existing_photo is None:
       # Photo has not been seen before.
@@ -385,7 +397,7 @@ for key, value in postings:
         "sr": sr,
       }
     else:
-      existing_size = existing_photo["width"] * existing_photo["height"]
+      existing_size = pixels(existing_photo)
       if "dup" not in p:
         # Add dup information to posting.
         p["dup"] = {
@@ -398,11 +410,11 @@ for key, value in postings:
 
       # Keep duplicate photo if it is for another item or it is bigger.
       mismatch = itemid is not None and itemid != existing_photo["item"]
-      if mismatch or new_photo.size() > existing_size:
-        keep.append(media)
+      if mismatch or new_photo.size() > existing_size: keep.append(media)
 
-      # Add photo to local cache.
-      fingerprints[new_photo.fingerprint] = existing_photo
+      # Add photo to local cache unless it is smaller.
+      if previous is None or existing_size > pixels(previous):
+        fingerprints[new_photo.fingerprint] = existing_photo
 
   posting_profile.replace(keep)
   dups = n - len(keep)
@@ -445,9 +457,10 @@ if flags.arg.report:
   fout.close()
 
 # Write updated profiles.
-photo.store.coalesce()
-for id in profiles:
-  profiles[id].write()
+if not flags.arg.dryrun:
+  photo.store.coalesce()
+  for id in profiles:
+    profiles[id].write()
 
 print(num_photos, "photos,",
       num_dups, "dups,",
@@ -458,6 +471,6 @@ print(num_photos, "photos,",
       num_removed, "removed,",
       num_selfies, "selfies")
 
-chkpt.commit(redditdb.position())
+if not flags.arg.dryrun: chkpt.commit(redditdb.position())
 redditdb.close()
 

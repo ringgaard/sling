@@ -761,7 +761,6 @@ class Profile:
 
       # Check for duplicate.
       dup = photos.get(photo.fingerprint)
-      photos[photo.fingerprint] = photo
 
       if dup != None:
         if flags.arg.preservecaptioned and captioned:
@@ -801,6 +800,10 @@ class Profile:
             msg = "bigger " + msg
 
           print(self.itemid, url, msg, dup.url)
+
+      # Add photo fingerprint for new or bigger photos.
+      if dup is None or dup.size() < photo.size():
+        photos[photo.fingerprint] = photo
 
       if nsfw: naughty.add(photo)
       num_photos += 1

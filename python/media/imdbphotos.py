@@ -91,12 +91,12 @@ for item in kb:
   info = json.loads(data)
 
   # Get image url.
-  try:
+  if len(info["d"]) == 0:
+    print("EMPTY", item.id, imdbid, item.name)
+    continue
+  else:
     d = info["d"][0]
     i = d.get("i")
-  except Exception as e:
-    print("Error", e, info)
-    continue
 
   if i is None or len(i) == 0:
     # Create empty profile if there is no photo.

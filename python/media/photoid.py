@@ -27,21 +27,30 @@ flags.define("--output",
 
 flags.parse()
 
-fpdb = sling.Database(flags.arg.fpdb)
-output = sling.RecordWriter(flags.arg.output, index=True)
+def pixels(info):
+  return info["width"] * info["height"]
 
+fpdb = sling.Database(flags.arg.fpdb)
+fingerprints = {}
 for url, _, data in fpdb:
-  fp = json.loads(data)
-  fingerprint = fp.get(flags.arg.hash)
+  info = json.loads(data)
+  fingerprint = info.get(flags.arg.hash)
   if fingerprint is None: continue
 
-  info = {
-    "item": fp["item"],
-    "url": url,
-    "width": fp["width"],
-    "height": fp["height"],
-  }
-  output.write(fingerprint, json.dumps(info))
+  existing = fingerprints.get(fingerprint)
+  if existing is None or pixels(existing) < pixels(info):
+    fingerprints[fingerprint] = {
+      "item": info["item"],
+      "url": url,
+      "width": info["width"],
+      "height": info["height"],
+    }
 
 fpdb.close()
+
+output = sling.RecordWriter(flags.arg.output, index=True)
+for fp, info in fingerprints.items():
+  output.write(fingerprint, json.dumps(info))
 output.close()
+print(len(fingerprints), "fingerprints")
+
