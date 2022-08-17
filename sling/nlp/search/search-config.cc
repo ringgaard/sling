@@ -46,10 +46,11 @@ void SearchConfiguration::Load(Store *store,
 
   // Get omitted items.
   Array omitted = config.Get("omitted").AsArray();
-  CHECK(omitted.valid());
-  for (int i = 0; i < omitted.length(); ++i) {
-    String itemid(store, omitted.get(i));
-    omitted_.insert(itemid.value());
+  if (omitted.valid()) {
+    for (int i = 0; i < omitted.length(); ++i) {
+      String itemid(store, omitted.get(i));
+      omitted_.insert(itemid.value());
+    }
   }
 
   // Set up phrase normalization.

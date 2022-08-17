@@ -359,7 +359,7 @@ class RedditPosting extends Component {
         <div class="info">
           <span class="${posting.over_18 ? "nsfw" : "sfw"}">NSFW</span>
           <a href="${permalink}" target="_blank">
-            ${posting._id || posting.id_}
+            ${posting._id || posting.id}
           </a>
           ${xpost}
           <span class="dups">${photomsg}</span>

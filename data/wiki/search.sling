@@ -131,7 +131,7 @@
 
   ; Items with large number of properties that are omitted from the search
   ; index.
-  omit: [
+  omitted: [
     Q12332288,         ; Preben Bang Henriksen
     P7972/4003900475,  ; Per Emil Hasselbalch Stakemann
     P7972/4000448343,  ; Peter Andreas Stakemann

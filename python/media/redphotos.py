@@ -373,30 +373,40 @@ for key, value in postings:
   keep = []
   for media in posting_profile.media():
     # Get fingerprint for photo.
-    new_photo = photo.get_photo(itemid, posting_profile.url(media))
-    if new_photo == None: continue
+    posting_photo = photo.get_photo(itemid, posting_profile.url(media))
+    if posting_photo == None: continue
 
     # Try to locate biggest existing photo with matching fingerprint.
-    existing_photo = get_photo_id(new_photo.fingerprint)
-    previous = fingerprints.get(new_photo.fingerprint)
+    existing_photo = get_photo_id(posting_photo.fingerprint)
+
+    # Check if there is a matching photo in a previous posting.
+    previous_photo = fingerprints.get(posting_photo.fingerprint)
+
+    # Use the photo from previous posting for comparison if there is no
+    # exising photo in the fingerprint database.
     if existing_photo is None:
-      existing_photo = previous
-    elif previous is not None and pixel(previous) > pixel(existing_photo):
-      existing_photo = previous
+      # No matching photo in fingerprint database; try using one from an
+      # earlier posting.
+      existing_photo = previous_photo
+    elif previous_photo is not None:
+      # Use photo from earlier posting if it is bigger.
+      if pixels(previous_photo) > pixels(existing_photo):
+        existing_photo = previous
 
     if existing_photo is None:
       # Photo has not been seen before.
       keep.append(media)
 
       # Add photo to local fingerprint cache.
-      fingerprints[new_photo.fingerprint] = {
-        "item": new_photo.item,
-        "url": new_photo.url,
-        "width": new_photo.width,
-        "height": new_photo.height,
+      fingerprints[posting_photo.fingerprint] = {
+        "item": posting_photo.item,
+        "url": posting_photo.url,
+        "width": posting_photo.width,
+        "height": posting_photo.height,
         "sr": sr,
       }
     else:
+      # Duplicate photo.
       existing_size = pixels(existing_photo)
       if "dup" not in p:
         # Add dup information to posting.
@@ -404,21 +414,25 @@ for key, value in postings:
           "item": existing_photo["item"],
           "url": existing_photo["url"],
           "sr": existing_photo.get("sr"),
-          "smaller": existing_size < new_photo.size(),
-          "bigger": existing_size > new_photo.size(),
+          "smaller": existing_size < posting_photo.size(),
+          "bigger": existing_size > posting_photo.size(),
         }
 
       # Keep duplicate photo if it is for another item or it is bigger.
-      mismatch = itemid is not None and itemid != existing_photo["item"]
-      if mismatch or new_photo.size() > existing_size: keep.append(media)
+      if itemid is not None and itemid != existing_photo["item"]:
+        keep.append(media)
+      elif posting_photo.size() > existing_size:
+        keep.append(media)
 
-      # Add photo to local cache unless it is smaller.
-      if previous is None or existing_size > pixels(previous):
-        fingerprints[new_photo.fingerprint] = existing_photo
+      # Overwrite cache if photo is bigger.
+      if previous_photo is not None:
+        if posting_photo.size() > pixels(previous_photo):
+          fingerprints[posting_photo.fingerprint] = posting_photo
 
   posting_profile.replace(keep)
   dups = n - len(keep)
   p["duplicates"] = dups
+  num_dups += dups
 
   if itemid is None:
     if selfie(title):
@@ -445,7 +459,6 @@ for key, value in postings:
       profiles[itemid] = profile
       num_profiles += 1
     num_photos += profile.copy(posting_profile)
-    num_dups += dups
 
   print(sr, key, itemid, title, "NSFW" if nsfw else "", url)
 

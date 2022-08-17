@@ -50,7 +50,7 @@ fpdb.close()
 
 output = sling.RecordWriter(flags.arg.output, index=True)
 for fp, info in fingerprints.items():
-  output.write(fingerprint, json.dumps(info))
+  output.write(fp, json.dumps(info))
 output.close()
 print(len(fingerprints), "fingerprints")
 

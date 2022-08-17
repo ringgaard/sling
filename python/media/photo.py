@@ -147,6 +147,7 @@ def photodb():
 # Video detection.
 
 video_suffixes = [
+  ".gif",
   ".gifv",
   ".mp4",
   ".webm",

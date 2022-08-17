@@ -5,6 +5,20 @@
 
 // Data importer plug-ins.
 var importers = {
+  "sling" : {
+    name: "SLING frames",
+    extension: ".sling",
+    mime: "application/json",
+    module: "sling.js",
+  },
+
+  "json" : {
+    name: "JSON objects",
+    extension: ".json",
+    mime: "application/json",
+    module: "json.js",
+  },
+
   "tsv" : {
     name: "Tab-separated values",
     extension: ".tsv",
