@@ -8,6 +8,7 @@ embed_data(
     "image/appicon.ico",
     "image/rr-logo.svg",
     "lib/component.js",
+    "lib/oneof.js",
     "lib/docview.js",
     "lib/gallery.js",
     "lib/material.js",

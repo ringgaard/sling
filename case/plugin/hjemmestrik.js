@@ -3,6 +3,7 @@
 
 // SLING case plug-in for adding topic from hjemmestrik.dk.
 
+import {Frame} from "/common/lib/frame.js";
 import {store} from "/case/app/global.js";
 import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 
@@ -213,16 +214,7 @@ export default class HjemmestrikPlugin {
     }
 
     // Add biographical information.
-    if (name) {
-      topic.put(n_name, name);
-
-      // Look up name in KB.
-      let r = await context.kblookup(name, {fullmatch: 1});
-      let data = await r.json();
-      if (data.matches.length > 0) {
-        topic.put(n_is, store.lookup(data.matches[0].ref));
-      }
-    }
+    topic.put(n_name, name);
     topic.put(n_instance_of, n_human);
     topic.put(n_gender, n_female);
 
@@ -262,7 +254,7 @@ export default class HjemmestrikPlugin {
     }
 
     // Add height and weight.
-    if (props["Højde"]) {
+    if (props["Højde"] && !topic.has(n_height)) {
       let m = props["Højde"].match(/(\d+) cm\.?/);
       if (m) {
         let v = store.frame();
@@ -271,7 +263,7 @@ export default class HjemmestrikPlugin {
         topic.put(n_height, v);
       }
     }
-    if (props["Vægt"]) {
+    if (props["Vægt"] && !topic.has(n_weight)) {
       let m = props["Vægt"].match(/(\d+) kg\.?/);
       if (m) {
         let v = store.frame();
@@ -306,11 +298,21 @@ export default class HjemmestrikPlugin {
     }
 
     // Add award(s).
-    let award = store.frame();
-    award.add(n_is, n_sh_girl);
-    award.add(n_point_in_time, date_number(date));
-    topic.put(n_award_received, award);
-    let seen = new Set([date_number(date)]);
+    let seen = new Set();
+    for (let award of topic.all(n_award_received)) {
+      console.log(typeof(award));
+      if (award instanceof Frame) {
+        let dt = award.get(n_point_in_time);
+        if (dt) seen.add(dt);
+      }
+    }
+    if (!seen.has(date_number(date))) {
+      let award = store.frame();
+      award.add(n_is, n_sh_girl);
+      award.add(n_point_in_time, date_number(date));
+      topic.put(n_award_received, award);
+      seen.add(date_number(date));
+    }
     for (let link of hslinks) {
       let m = link.match(/^https:\/\/hjemmestrik\.dk\/pige\/(\d+)\/(\d+)\//);
       if (m) {
@@ -341,18 +343,34 @@ export default class HjemmestrikPlugin {
       let r = await fetch(context.proxy(shurl));
       let html = await r.text();
       let doc = new DOMParser().parseFromString(html, "text/html");
-      let primary = doc.querySelector("div.primary-media");
-      let pictures = (primary || doc).querySelectorAll("picture");
-      for (let i = 0; i < pictures.length; ++i) {
-        let img = pictures[i].querySelector("img.img__thumbnail");
-        if (!img) continue;
-        let src = img.getAttribute("src");
-        let qpos = src.indexOf("?");
-        if (qpos > 0) src = src.substr(0, qpos);
-        let media = store.frame();
-        media.add(n_is, src);
-        media.add(n_has_quality, n_not_safe_for_work);
-        topic.put(n_media, media);
+
+      let content = doc.querySelector("div.content");
+      if (content) {
+        let pictures = content.querySelectorAll("img[srcset]");
+        for (let i = 0; i < pictures.length; ++i) {
+          let img = pictures[i];
+          let src = img.getAttribute("src");
+          let qpos = src.indexOf("?");
+          if (qpos > 0) src = src.substr(0, qpos);
+          let media = store.frame();
+          media.add(n_is, src);
+          media.add(n_has_quality, n_not_safe_for_work);
+          topic.put(n_media, media);
+        }
+      } else {
+        let primary = doc.querySelector("div.primary-media");
+        let pictures = (primary || doc).querySelectorAll("picture");
+        for (let i = 0; i < pictures.length; ++i) {
+          let img = pictures[i].querySelector("img.img__thumbnail");
+          if (!img) continue;
+          let src = img.getAttribute("src");
+          let qpos = src.indexOf("?");
+          if (qpos > 0) src = src.substr(0, qpos);
+          let media = store.frame();
+          media.add(n_is, src);
+          media.add(n_has_quality, n_not_safe_for_work);
+          topic.put(n_media, media);
+        }
       }
     }
 

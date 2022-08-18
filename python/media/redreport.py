@@ -287,7 +287,11 @@ class RedditPosting extends Component {
     let duplicates = item.duplicates || 0;
     if (photos > 0) {
       if (duplicates == 0) {
-        if (photos > 1) photomsg = `${photos} photos`;
+        if (photos > 1) {
+          photomsg = `${photos} photos`;
+        } else if (photos > 0 && item.dup) {
+          photomsg = "duplicate";
+        }
       } else if (photos == duplicates) {
         if (photos == 1) {
           photomsg = "duplicate";

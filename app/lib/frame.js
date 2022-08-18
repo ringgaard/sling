@@ -464,6 +464,12 @@ export class Frame {
     };
     return it(this.store, this.slots);
   }
+
+  // Assign id to frame.
+  assign(id) {
+    this.slots.unshift(this.store.id, id);
+    this.store.register(id, this);;
+  }
 }
 
 // Qualified string.
@@ -548,10 +554,14 @@ export class Decoder {
     return this.readString(size);
   }
 
+  done() {
+    return this.pos == this.input.length;
+  }
+
   // Read all the objects from the input.
   readAll() {
     let obj = this.read();
-    while (this.pos < this.input.length) obj = this.read();
+    while (!this.done()) obj = this.read();
     return obj;
   }
 

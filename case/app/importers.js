@@ -8,7 +8,7 @@ var importers = {
   "sling" : {
     name: "SLING frames",
     extension: ".sling",
-    mime: "application/json",
+    mime: "application/sling",
     module: "sling.js",
   },
 
@@ -48,8 +48,8 @@ export class Context {
     this.editor = editor;
   }
 
-  async new_topic() {
-    return await this.editor.new_topic();
+  async new_topic(topic) {
+    return await this.editor.new_topic(topic);
   }
 };
 
