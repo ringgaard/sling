@@ -63,6 +63,10 @@ flags.define("--urllib3_proxy",
              default=True,
              action="store_true")
 
+flags.define("--media_service",
+             help="Media cache service",
+             default=None)
+
 # Load services before parsing flags to allow services to define flags.
 services.load()
 flags.parse()
@@ -282,8 +286,11 @@ def xrefs_request(request):
 
 @app.route("/media")
 def media_request(request):
-  # Dummy media service that always redirects to the original url.
-  return sling.net.HTTPRedirect(urllib.parse.unquote(request.path[1:]))
+  # Dummy media service that redirects the media server or the original url.
+  redir = urllib.parse.unquote(request.path[1:])
+  if flags.arg.media_service:
+    redir = flags.arg.media_service + "/" + redir
+  return sling.net.HTTPRedirect(redir)
 
 @app.route("/case/cacheimg", method="POST")
 def cache_images_request(request):

@@ -700,10 +700,18 @@ class TopicCard extends Component {
   async onimgdups(e) {
     // Get list of images.
     let topic = this.state;
+    let media = [];
     let images = [];
-    for (let media of topic.all(n_media)) {
-      let url = store.resolve(media);
+    let seen = new Set();
+    for (let m of topic.all(n_media)) {
+      let url = store.resolve(m);
+      if (seen.has(url)) {
+        console.log("dup url", url);
+        continue;
+      }
+      media.push(m);
       images.push(url);
+      seen.add(url);
     }
     if (images.length == 0) return;
 
@@ -713,7 +721,6 @@ class TopicCard extends Component {
       body: JSON.stringify({itemid: topic.get(n_id), images}),
     });
     let response = await r.json();
-    console.log(response);
     for (let image of response.dups) {
       if (image.bigger) {
         image.dup.remove = true;
@@ -728,15 +735,12 @@ class TopicCard extends Component {
       let dialog = new DedupDialog(response);
       let result = await dialog.show();
       if (result) {
-        topic.purge((name, value) => {
-          if (name == n_media) {
-            let url = store.resolve(value);
-            if (result.includes(url)) {
-              console.log("remove", url);
-              return true;
-            }
-          }
-        });
+        // Remove selected urls.
+        topic.remove(n_media);
+        for (let m of media) {
+          let url = store.resolve(m);
+          if (!result.includes(url)) topic.add(n_media, m)
+        }
 
         inform(`${plural(result.length, "photo")} removed`);
         this.refresh();
