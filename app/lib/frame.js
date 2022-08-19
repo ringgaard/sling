@@ -391,6 +391,24 @@ export class Frame {
     }
   }
 
+  // Remove slots from frame based on criteria.
+  purge(func) {
+    let slots = this.slots;
+    if (!slots) return
+    let i = 0;
+    let j = 0;
+    let l = slots.length;
+    while (i < l) {
+      if (func(slots[i], slots[i + 1])) {
+        i += 2;
+      } else {
+        slots[j++] = slots[i++];
+        slots[j++] = slots[i++];
+      }
+    }
+    slots.length = j;
+  }
+
   // Convert frame to human-readable representation.
   text(pretty, anon) {
     let printer = new Printer(this.store);

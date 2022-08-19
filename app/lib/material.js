@@ -1607,7 +1607,7 @@ var current_snack = null;
 
 export class MdSnackbar extends Component {
   onconnected() {
-    this.bind(null, "click", e => this.close());
+    this.bind("#close", "click", e => this.close());
     setTimeout(snack => snack.timeout(), 5000, this);
   }
 
@@ -1621,12 +1621,18 @@ export class MdSnackbar extends Component {
   }
 
   render() {
-    return Component.escape(this.state);
+    return `
+      <div>${Component.escape(this.state)}</div>
+      <md-icon id="close" icon="close"}></md-icon>
+    `;
   }
 
   static stylesheet() {
     return `
       $ {
+        display: flex;
+        align-items: center;
+        gap: 8px;
         position: absolute;
         left: 50%;
         bottom: 0px;
@@ -1635,6 +1641,10 @@ export class MdSnackbar extends Component {
         background-color: #323232;
         color: #e3e3e3;
         border-radius: 5px;
+      }
+
+      $ md-icon:hover {
+        background-color: #505050;
         cursor: pointer;
       }
     `;

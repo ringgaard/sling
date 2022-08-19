@@ -29,6 +29,13 @@ const n_not_safe_for_work = store.lookup("Q2716583");
 // Cross-reference configuration.
 var xrefs;
 
+
+// Singular/plural.
+function plural(n, kind) {
+  if (n == 1) return kind
+  return `${n} ${kind}s`;
+}
+
 // Get topic card containing element.
 function topic_card(e) {
   while (e) {
@@ -310,6 +317,11 @@ class TopicToolbox extends MdToolbox {
             tooltip="Image search">
           </md-icon-button>
           <md-icon-button
+            id="imgdups"
+            icon="difference"
+            tooltip="Find photo duplicates">
+          </md-icon-button>
+          <md-icon-button
             id="copyid"
             icon="numbers"
             class="ripple"
@@ -368,6 +380,8 @@ class TopicCard extends Component {
         this.onwebsearch(e);
       } else if (action == "imgsearch") {
         this.onimgsearch(e);
+      } else if (action == "imgdups") {
+        this.onimgdups(e);
       }
     });
 
@@ -661,6 +675,15 @@ class TopicCard extends Component {
     }
   }
 
+  onwebsearch(e) {
+    let topic = this.state;
+    let name = topic.get(n_name);
+    if (name) {
+      let url = "https://www.google.com/search?q=" + encodeURIComponent(name);
+      window.open(url, "_blank");
+    }
+  }
+
   onimgsearch(e) {
     let topic = this.state;
     let name = topic.get(n_name);
@@ -674,12 +697,51 @@ class TopicCard extends Component {
     }
   }
 
-  onwebsearch(e) {
+  async onimgdups(e) {
+    // Get list of images.
     let topic = this.state;
-    let name = topic.get(n_name);
-    if (name) {
-      let url = "https://www.google.com/search?q=" + encodeURIComponent(name);
-      window.open(url, "_blank");
+    let images = [];
+    for (let media of topic.all(n_media)) {
+      let url = store.resolve(media);
+      images.push(url);
+    }
+    if (images.length == 0) return;
+
+    // Find duplicates.
+    let r = await fetch("/case/service/dups", {
+      method: "POST",
+      body: JSON.stringify({itemid: topic.get(n_id), images}),
+    });
+    let response = await r.json();
+    console.log(response);
+    for (let image of response.dups) {
+      if (image.bigger) {
+        image.dup.remove = true;
+      } else {
+        image.remove = true;
+      }
+    }
+
+    if (response.dups.length == 0 && response.missing.length == 0) {
+      inform("no duplicate photos found");
+    } else {
+      let dialog = new DedupDialog(response);
+      let result = await dialog.show();
+      if (result) {
+        topic.purge((name, value) => {
+          if (name == n_media) {
+            let url = store.resolve(value);
+            if (result.includes(url)) {
+              console.log("remove", url);
+              return true;
+            }
+          }
+        });
+
+        inform(`${plural(result.length, "photo")} removed`);
+        this.refresh();
+        this.mark_dirty();
+      }
     }
   }
 
@@ -916,6 +978,101 @@ class RawEditDialog extends MdDialog {
 }
 
 Component.register(RawEditDialog);
+
+class TopicPhoto extends Component {
+  render() {
+    let photo = this.state;
+    let url = `/media/${encodeURI(photo.url)}`;
+    return `
+      <a href="${url}" target="_blank"><img src="${url}"></a>
+      <div>
+        <input id="remove" type="checkbox" ${photo.remove ? "checked" : ""}>
+        ${photo.width} x ${photo.width}
+        ${photo.bigger ? " bigger" : ""}
+        ${photo.smaller ? " smaller" : ""}
+      </div>
+    `
+  }
+
+  url() {
+    return this.state.url;
+  }
+
+  remove() {
+    return this.find("#remove").checked;
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        padding: 16px;
+      }
+      $ img {
+        height: 200px;
+      }
+      $ input {
+        user-select: none;
+      }
+    `;
+  }
+}
+
+Component.register(TopicPhoto);
+
+class DedupDialog extends MdDialog {
+  submit() {
+    let selected = new Array();
+    let photo = this.find("#photos").firstChild;
+    while (photo) {
+      if (photo.remove()) selected.push(photo.url());
+      photo = photo.nextSibling;
+    }
+
+    if (this.find("#missing").checked) {
+      selected.push(...this.state.missing)
+    }
+
+    this.close(selected);
+  }
+
+  render() {
+    let missing = this.state.missing;
+    return `
+      <md-dialog-top>Remove photos</md-dialog-top>
+      <div id="photos"></div>
+      <div style="display: ${missing.length > 0 ? "block" : "none"};">
+        <input id="missing" type="checkbox">
+        Remove ${plural(missing.length, "missing photo")}
+      </div>
+      <md-dialog-bottom>
+        <button id="cancel">Cancel</button>
+        <button id="submit">Remove</button>
+      </md-dialog-bottom>
+    `;
+  }
+
+  onrendered() {
+    let photos = this.find("#photos");
+    for (let image of this.state.dups) {
+      photos.appendChild(new TopicPhoto(image.dup));
+      photos.appendChild(new TopicPhoto(image));
+    }
+  }
+
+  static stylesheet() {
+    return `
+      $ #photos {
+        display: grid;
+        width: 75vw;
+        height: 75vh;
+        overflow: auto;
+        grid-template-columns: 50% 50%;
+      }
+    `;
+  }
+}
+
+Component.register(DedupDialog);
 
 MdIcon.custom("move-down", `
 <svg width="24" height="24" viewBox="0 0 32 32">

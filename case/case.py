@@ -193,7 +193,7 @@ def share_case(request):
       log.info("Unshare case #%d version %d for client %s" %
                (caseid, ts, client))
 
-@app.route("/case/service")
+@app.route("/case/service", methods=["GET", "POST"])
 def service_request(request):
   # Get service name.
   service = request.path

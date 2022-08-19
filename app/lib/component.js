@@ -60,6 +60,7 @@ export class Component extends HTMLElement {
     // Render component.
     if (this.onconnect) await this.onconnect();
     if (!this.hide()) {
+      if (this.onrender) await this.onrender();
       this.generate();
       await this.initialize();
       if (this.onrendered) await this.onrendered();
