@@ -375,6 +375,13 @@ for key, value in postings:
     # Get fingerprint for photo.
     posting_photo = photo.get_photo(itemid, posting_profile.url(media))
     if posting_photo == None: continue
+    posting_info = {
+      "item": posting_photo.item,
+      "url": posting_photo.url,
+      "width": posting_photo.width,
+      "height": posting_photo.height,
+      "sr": sr,
+    }
 
     # Try to locate biggest existing photo with matching fingerprint.
     existing_photo = get_photo_id(posting_photo.fingerprint)
@@ -398,13 +405,7 @@ for key, value in postings:
       keep.append(media)
 
       # Add photo to local fingerprint cache.
-      fingerprints[posting_photo.fingerprint] = {
-        "item": posting_photo.item,
-        "url": posting_photo.url,
-        "width": posting_photo.width,
-        "height": posting_photo.height,
-        "sr": sr,
-      }
+      fingerprints[posting_photo.fingerprint] = posting_info
     else:
       # Duplicate photo.
       existing_size = pixels(existing_photo)
@@ -427,7 +428,7 @@ for key, value in postings:
       # Overwrite cache if photo is bigger.
       if previous_photo is not None:
         if posting_photo.size() > pixels(previous_photo):
-          fingerprints[posting_photo.fingerprint] = posting_photo
+          fingerprints[posting_photo.fingerprint] = posting_info
 
   posting_profile.replace(keep)
   dups = n - len(keep)

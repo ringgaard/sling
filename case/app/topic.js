@@ -716,10 +716,12 @@ class TopicCard extends Component {
     if (images.length == 0) return;
 
     // Find duplicates.
+    this.style.cursor = "wait";
     let r = await fetch("/case/service/dups", {
       method: "POST",
       body: JSON.stringify({itemid: topic.get(n_id), images}),
     });
+    this.style.cursor = "";
     let response = await r.json();
     for (let image of response.dups) {
       if (image.bigger) {
