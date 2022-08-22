@@ -10,6 +10,7 @@ import {
   inform
 } from "/common/lib/material.js";
 import {Frame, QString, Printer} from "/common/lib/frame.js";
+import {imageurl} from "/common/lib/gallery.js";
 import {store, settings} from "./global.js";
 import {get_schema, inverse_property} from "./schema.js";
 import {LabelCollector, value_parser} from "./value.js";
@@ -988,7 +989,7 @@ Component.register(RawEditDialog);
 class TopicPhoto extends Component {
   render() {
     let photo = this.state;
-    let url = `/media/${encodeURI(photo.url)}`;
+    let url = imageurl(photo.url);
     return `
       <a href="${url}" target="_blank"><img src="${url}"></a>
       <div>
@@ -1014,7 +1015,7 @@ class TopicPhoto extends Component {
         padding: 16px;
       }
       $ img {
-        height: 200px;
+        height: 250px;
       }
       $ input {
         user-select: none;
@@ -1069,8 +1070,8 @@ class DedupDialog extends MdDialog {
     return `
       $ #photos {
         display: grid;
-        width: 75vw;
-        height: 75vh;
+        max-width: 75vw;
+        max-height: 75vh;
         overflow: auto;
         grid-template-columns: 50% 50%;
       }

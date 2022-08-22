@@ -54,9 +54,9 @@ flags.define("--fixedcaption",
              default=None,
              help="override photo caption")
 
-flags.define("--captionless",
-             help="no photo caption",
-             default=False,
+flags.define("--captions",
+             help="add caption to photos",
+             default=True,
              action="store_true")
 
 flags.define("--perimagecaption",
@@ -291,8 +291,6 @@ class Profile:
     self.itemid = itemid
     self.excluded = None
     self.isnew = False
-    self.skipdups = True
-    self.captionless = flags.arg.captionless
     if data is None and itemid is not None:
       data, _ = photodb().get(itemid)
     if data is None:
@@ -430,7 +428,7 @@ class Profile:
       alturl = "https://i.imgur.com/" + url[18:]
     elif url.startswith("https://i.imgur.com/"):
       alturl = "https://imgur.com/" + url[20:]
-    if self.skipdups and self.has(url, alturl):
+    if self.has(url, alturl):
       print("Skip existing photo", url)
       return 0
 
@@ -441,7 +439,7 @@ class Profile:
     # Add media to profile.
     slots = [(n_is, url)]
     if flags.arg.fixedcaption: caption = flags.arg.fixedcaption
-    if caption and not self.captionless: slots.append((n_legend, caption))
+    if caption and flags.arg.captions: slots.append((n_legend, caption))
     if source: slots.append((n_stated_in, store[source]))
     if nsfw: slots.append((n_has_quality, n_nsfw))
     if len(slots) == 1:
@@ -579,7 +577,7 @@ class Profile:
 
       title = reply["title"]
       if title is None: title = caption
-      if self.captionless: title = None
+      if not flags.arg.captions: title = None
       nsfw = tri(reply["over_18"], nsfw_override)
 
       count = 0
@@ -627,7 +625,7 @@ class Profile:
         title = caption
       elif caption is not None and caption.startswith(title):
         title = caption
-      if self.captionless: title = None
+      if not flags.arg.captions: title = None
 
       if title != None and flags.arg.numbering:
         title = "%s (%d/%d)" % (title, serial, len(items))
@@ -767,11 +765,11 @@ class Profile:
         if flags.arg.preservecaptioned and captioned:
           print(self.itemid, url, " preserve captioned duplicate of", dup.url)
         else:
-          # Keep photo with the longest caption or the most pixels.
-          caption = captions.get(url, "")
-          dupcaption = captions.get(dup, "")
+          # Keep biggest captioned photo.
+          caption = captions.get(url)
+          dupcaption = captions.get(dup.url)
           bigger = photo.size() * 0.8 > dup.size()
-          if len(dupcaption) < len(caption) or bigger:
+          if bigger or (caption is not None and dupcaption is None):
             # Remove previous duplicate.
             duplicates.add(dup.url)
             msg = "duplicate of"
@@ -790,10 +788,8 @@ class Profile:
               else:
                 msg = "duplicate of"
 
-          if len(caption) > len(dupcaption):
-            msg = "captioned " + msg
-          elif len(caption) < len(dupcaption):
-            msg = msg + " captioned"
+          if caption is not None: msg = "captioned " + msg
+          if dupcaption is not None: msg = msg + " captioned"
 
           if photo.size() < dup.size():
             msg = "smaller " + msg

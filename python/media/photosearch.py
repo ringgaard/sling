@@ -381,7 +381,6 @@ def handle_albums(request):
 
   # Get photos from urls.
   profile = photolib.Profile(None)
-  profile.captionless = True
   for url in urls: profile.add_media(url)
   profile.dedup()
 

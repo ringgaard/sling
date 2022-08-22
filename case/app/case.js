@@ -4,7 +4,7 @@
 import {Component} from "/common/lib/component.js";
 import {MdApp, MdDialog, StdDialog, MdIcon, MdSearchResult, inform}
        from "/common/lib/material.js";
-import {Store, Frame, Encoder, Printer} from "/common/lib/frame.js";
+import {Store, Frame, Encoder, Printer, Reader} from "/common/lib/frame.js";
 
 import {store, settings} from "./global.js";
 import * as plugins from "./plugins.js";
@@ -74,10 +74,9 @@ async function write_to_clipboard(topics) {
   let printer = new Printer(store);
   for (let topic of topics) {
     printer.print(topic);
+    printer.write("\n");
+
   }
-  let clip = store.frame();
-  clip.add(n_topics, topics);
-  printer.print(clip);
 
   // Write selected topics to clipboard.
   if (!navigator.clipboard) throw "Access to clipboard denied";
@@ -94,8 +93,13 @@ async function read_from_clipboard() {
   if (clipboard.charAt(0) == "{") {
     try {
       let store = new Store();
-      let obj = await store.parse(clipboard);
-      return obj;
+      let reader = new Reader(store, clipboard);
+      let frames = new Array();
+      while (!reader.done()) {
+        let obj = reader.parse();
+        if (obj instanceof Frame) frames.push(obj);
+      }
+      return frames;
     } catch (error) {
       console.log("ignore sling parse error", error);
     }
@@ -1083,68 +1087,65 @@ class CaseEditor extends MdApp {
     let clip = await read_from_clipboard();
 
     // Add topics to current folder if clipboard contains frames.
-    if (clip instanceof Frame) {
+    if (clip instanceof Array) {
       let first = null;
       let last = null;
-      let topics = clip.get("topics");
-      if (topics) {
-        let scraps_before = this.scraps.length > 0;
-        let import_mapping = new Map();
-        for (let t of topics) {
-          // Determine if pasted topic is from this case.
-          let topic = store.find(t.id);
-          let external = true;
-          if (topic) {
-            let in_topics = this.topics.includes(topic);
-            if (in_topics) {
-              // Add link to topic in current folder.
-              console.log("paste topic link", t.id);
+      let scraps_before = this.scraps.length > 0;
+      let import_mapping = new Map();
+      for (let t of clip) {
+        // Determine if pasted topic is from this case.
+        let topic = store.find(t.id);
+        let external = true;
+        if (topic) {
+          let in_topics = this.topics.includes(topic);
+          if (in_topics) {
+            // Add link to topic in current folder.
+            console.log("paste topic link", t.id);
+            this.add_topic(topic);
+            external = false;
+          } else {
+            let draft_pos = this.scraps.indexOf(topic);
+            if (draft_pos != -1) {
+              // Move topic from scraps to current folder.
+              console.log("undelete", topic.id);
               this.add_topic(topic);
+              this.scraps.splice(draft_pos, 1);
               external = false;
-            } else {
-              let draft_pos = this.scraps.indexOf(topic);
-              if (draft_pos != -1) {
-                // Move topic from scraps to current folder.
-                console.log("undelete", topic.id);
-                this.add_topic(topic);
-                this.scraps.splice(draft_pos, 1);
-                external = false;
-              }
             }
           }
+        }
 
-          // Copy topic if it is external.
-          if (external) {
-            topic = await this.new_topic();
-            import_mapping.set(t.id, topic);
-            console.log("paste external topic", t.id, topic.id);
-            for (let [name, value] of t) {
-              if (name != t.store.id) {
-                topic.add(store.transfer(name), store.transfer(value));
-              }
+        // Copy topic if it is external.
+        if (external) {
+          topic = await this.new_topic();
+          import_mapping.set(t.id, topic);
+          console.log("paste external topic", t.id, topic.id);
+          for (let [name, value] of t) {
+            if (name != t.store.id) {
+              topic.add(store.transfer(name), store.transfer(value));
             }
-            this.topic_updated(topic);
           }
-
-          if (!first) first = topic;
-          last = topic;
+          this.topic_updated(topic);
         }
 
-        // Redirect imported topic ids.
-        for (let [id, topic] of import_mapping.entries()) {
-          let proxy = store.find(id);
-          if (proxy) this.redirect(proxy, topic);
-        }
+        if (!first) first = topic;
+        last = topic;
+      }
 
-        // Update topic list.
-        let scraps_after = this.scraps.length > 0;
-        if (scraps_before != scraps_after) await this.update_folders();
-        await this.update_topics();
-        if (first && last) {
-          let list = this.find("topic-list");
-          list.select_range(first, last);
-          list.card(last).focus();
-        }
+      // Redirect imported topic ids.
+      for (let [id, topic] of import_mapping.entries()) {
+        let proxy = store.find(id);
+        if (proxy) this.redirect(proxy, topic);
+      }
+
+      // Update topic list.
+      let scraps_after = this.scraps.length > 0;
+      if (scraps_before != scraps_after) await this.update_folders();
+      await this.update_topics();
+      if (first && last) {
+        let list = this.find("topic-list");
+        list.select_range(first, last);
+        list.card(last).focus();
       }
 
       return;

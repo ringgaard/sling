@@ -287,7 +287,7 @@ def xrefs_request(request):
 @app.route("/media")
 def media_request(request):
   # Dummy media service that redirects the media server or the original url.
-  redir = urllib.parse.unquote(request.path[1:])
+  redir = request.path[1:]
   if flags.arg.media_service:
     redir = flags.arg.media_service + "/" + redir
   return sling.net.HTTPRedirect(redir)
