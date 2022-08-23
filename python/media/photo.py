@@ -24,7 +24,6 @@ import ssl
 import urllib.parse
 import urllib3
 
-import imagehash
 from PIL import Image
 
 import sling
@@ -170,46 +169,40 @@ def is_video(url):
 
 Image.MAX_IMAGE_PIXELS = None
 
+# MD5 hash computation.
 def md5_hasher(image):
   return hashlib.md5(image).hexdigest(), 1, len(image)
 
-def img_hash(image, hasher):
-  try:
-    img = Image.open(io.BytesIO(image))
-    return str(hasher(img)), img.width, img.height
-  except Exception:
-    return md5_hasher(image)
-
+# Average hash computation.
+# See:
+# https://www.hackerfactor.com/blog/index.php?/archives/432-Looks-Like-It.html
 def average_hasher(image):
-  return img_hash(image, imagehash.average_hash)
+  try:
+    # Read image.
+    img = Image.open(io.BytesIO(image))
 
-def perceptual_hasher(image):
-  return img_hash(image, imagehash.phash)
+    # Simplify image by reducing its size and colors.
+    pixels = img.convert("L").resize((8, 8), Image.ANTIALIAS).getdata()
 
-def difference_hasher(image):
-  return img_hash(image, imagehash.dhash)
+    # Get the average pixel value.
+    sum = 0.0
+    for p in pixels: sum += p
+    mean = sum / 64
 
-def wavelet_hasher(image):
-  return img_hash(image, imagehash.whash)
+    # Generate the hash by comparing each pixel's value to the average.
+    bits = 0
+    for p in pixels:
+      bits <<= 1
+      if p > mean: bits |= 1
 
-def color_hasher(image):
-  return img_hash(image, imagehash.colorhash)
-
-def crop_hasher(image):
-  return img_hash(image, imagehash.crop_resistant_hash)
-
-def avg16_hasher(image):
-  return img_hash(image, lambda img: imagehash.average_hash(img, 16))
+    return "%016x" % bits, img.width, img.height
+  except Exception:
+    # Fall back to MD hashing if fingerprint cannot be computed.
+    return md5_hasher(image)
 
 image_hashers = {
   "md5": md5_hasher,
   "average": average_hasher,
-  "perceptual": perceptual_hasher,
-  "difference": difference_hasher,
-  "wavelet": wavelet_hasher,
-  "color": color_hasher,
-  "crop": crop_hasher,
-  "avg16": avg16_hasher,
 }
 
 class Photo:

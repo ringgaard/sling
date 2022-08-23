@@ -176,6 +176,8 @@ browsers = [
   ("python",               re.compile(r"Python\/([0-9\.]+)")),
   ("pip",                  re.compile(r"pip\/([0-9\.]+)")),
   ("perl",                 re.compile(r"libwww-perl\/([0-9\.]+)")),
+  ("Java",                 re.compile(r"Java\/([0-9\.]+)")),
+  ("OpenRefine",           re.compile(r"OpenRefine\/([0-9\.]+)")),
   ("None",                 re.compile(r"-")),
   ("Other",                re.compile(r"")),
 ]

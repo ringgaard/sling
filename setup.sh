@@ -75,7 +75,7 @@ fi
 #   tweepy (twitter)
 #   praw (reddit)
 #   urllib3 (proxy)
-#   imagehash (photo dedup)
+#   pillow (photo dedup)
 
 # Done.
 echo
