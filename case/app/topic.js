@@ -994,7 +994,7 @@ class TopicPhoto extends Component {
       <a href="${url}" target="_blank"><img src="${url}"></a>
       <div>
         <input id="remove" type="checkbox" ${photo.remove ? "checked" : ""}>
-        ${photo.width} x ${photo.width}
+        ${photo.width} x ${photo.height}
         ${photo.bigger ? " bigger" : ""}
         ${photo.smaller ? " smaller" : ""}
       </div>

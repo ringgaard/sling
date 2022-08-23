@@ -56,7 +56,7 @@ flags.define("--fixedcaption",
 
 flags.define("--captions",
              help="add caption to photos",
-             default=True,
+             default=False,
              action="store_true")
 
 flags.define("--perimagecaption",
@@ -325,7 +325,7 @@ class Profile:
 
   # Return caption for photo.
   def caption(self, media):
-    if type(media) is sling.Frame:
+    if type(media) is sling.Frame and n_legend in media:
       return str(media[n_legend])
     else:
       return None
