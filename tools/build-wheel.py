@@ -85,6 +85,7 @@ pyfiles = [
   'myelin/__init__.py',
   'myelin/builder.py',
   'myelin/flow.py',
+  'myelin/script.py',
   'myelin/nn.py',
   'myelin/tf.py',
 
@@ -104,10 +105,6 @@ pyfiles = [
   'task/wikidata.py',
   'task/wikipedia.py',
   'task/workflow.py',
-
-  'media/__init__.py',
-  'media/wikimedia.py',
-  'media/twitterprofiles.py',
 ]
 
 for f in pyfiles:
@@ -134,7 +131,7 @@ package_metadata_filename = dist_dir + "/METADATA"
 package_metadata = """Metadata-Version: 2.0
 Name: sling
 Version: $VERSION$
-Summary: SLING frame semantic parsing framework
+Summary: SLING frame semantic framework
 Home-page: https://github.com/ringgaard/sling
 Author: Michael Ringgaard
 Author-email: michael@ringgaard.com
@@ -144,7 +141,7 @@ Platform: UNKNOWN
 Classifier: Programming Language :: Python
 Classifier: Programming Language :: Python :: $PYVERSION$
 
-SLING frame semantic parsing framework
+SLING frame semantic framework
 """
 package_metadata = package_metadata.replace("$VERSION$", version)
 package_metadata = package_metadata.replace("$PYVERSION$", pyversion)
