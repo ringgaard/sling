@@ -43,6 +43,7 @@ DEFINE_int32(port, 7700, "HTTP server port");
 DEFINE_int32(workers, 16, "Number of network worker threads");
 DEFINE_int32(flush, 30, "Number of seconds before writing changes to disk");
 DEFINE_int32(ping, 30, "Number of seconds between keep-alive pings");
+DEFINE_int32(onetime_invite, false, "Invalidate invite when joining");
 DEFINE_string(datadir, ".", "Data directory for collaborations");
 
 // Collaboration protocol opcodes.
@@ -290,18 +291,29 @@ class CollabCase {
   string Join(const string &id, const string &key) {
     MutexLock lock(&mu_);
 
+    // Check that user is a participant.
+    if (!IsParticipant(id)) return "";
+
     // Check that user has been invited.
     bool valid = false;
     for (auto it = invites_.begin(); it != invites_.end(); ++it) {
       if (it->id == id && it->credentials == key) {
-        // Remove invite so it cannot be used again.
         valid = true;
-        invites_.erase(it);
+        if (FLAGS_onetime_invite) {
+          // Remove invite so it cannot be used again.
+          invites_.erase(it);
+        }
         break;
       }
     }
     if (!valid) return "";
-    if (!IsParticipant(id)) return "";
+
+    // Check for existing credentials.
+    for (const User &user : participants_) {
+      if (user.id == id) {
+        return user.credentials;
+      }
+    }
 
     // Generate new credentials.
     string credentials = RandomKey();
@@ -949,8 +961,6 @@ class CollabClient : public WebSocket {
     writer.WriteString(message);
     writer.Send(this);
   }
-
-  const string &userid() const { return userid_; }
 
  private:
   // Collaboration service.

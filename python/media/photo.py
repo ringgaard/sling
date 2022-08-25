@@ -228,15 +228,19 @@ def fetch_image(url):
     if image: return image
 
   # Fetch image from source if it is not in the media database.
-  print("fetch", url)
-  if pool:
-    r = pool.request("GET", url, timeout=60)
-    if r.status != 200: return None
-    return r.data
-  else:
-    r = session.get(url)
-    if r.status_code != 200: return None
-    return r.content
+  try:
+    print("fetch", url)
+    if pool:
+      r = pool.request("GET", url, timeout=60)
+      if r.status != 200: return None
+      return r.data
+    else:
+      r = session.get(url)
+      if r.status_code != 200: return None
+      return r.content
+  except Exception as e:
+    print("fail", e, url)
+    return None
 
 def get_photo(item, url):
   # Check if photo is cached.

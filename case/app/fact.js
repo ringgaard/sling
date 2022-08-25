@@ -110,18 +110,18 @@ class FactEditor extends Component {
     this.dirty = false;
 
     this.list = this.parentElement.list();
-    this.list.bind(null, "select", e => this.onselect(e));
+    this.list.attach(this.onselect, "select");
 
-    this.bind(null, "keydown", e => this.onkeydown(e));
-    this.bind(null, "click", e => this.onclick(e));
-    this.bind(null, "cut", e => this.oncut(e));
-    this.bind(null, "copy", e => this.oncopy(e));
-    this.bind(null, "paste", e => this.onpaste(e));
+    this.attach(this.onkeydown, "keydown");
+    this.attach(this.onclick, "click");
+    this.attach(this.oncut, "cut");
+    this.attach(this.oncopy, "copy");
+    this.attach(this.onpaste, "paste");
 
-    this.bind(null, "input", e => this.oninput(e));
-    this.bind(null, "beforeinput", e => this.onbeforeinput(e));
-    this.bind(null, "focusin", e => this.onfocusin(e));
-    this.bind(null, "focusout", e => this.onfocusout(e));
+    this.attach(this.oninput, "input");
+    this.attach(this.onbeforeinput, "beforeinput");
+    this.attach(this.onfocusin, "focusin");
+    this.attach(this.onfocusout, "focusout");
   }
 
   onfocusin(e) {

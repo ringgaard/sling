@@ -145,36 +145,36 @@ function search_topics(query, full, topics) {
 
 class CaseEditor extends MdApp {
   oninit() {
-    this.attach("omni-box md-search", "item", this.onitem);
-    this.attach("omni-box md-search", "enter", this.onenter);
+    this.attach(this.onitem, "item", "omni-box md-search");
+    this.attach(this.onenter, "enter", "omni-box md-search");
 
-    this.attach("#drawer", "click", this.ondrawer);
-    this.attach("#merge", "click", this.onmerge);
+    this.attach(this.ondrawer, "click", "#drawer");
+    this.attach(this.onmerge, "click", "#merge");
     if (settings.userscripts) {
-      this.attach("#script", "click", this.onscript);
+      this.attach(this.onscript, "click", "#script");
     }
-    this.attach("#export", "click", this.onexport);
-    this.attach("#addlink", "click", this.onaddlink);
-    this.attach("#save", "click", this.onsave);
-    this.attach("#invite", "click", this.oninvite);
-    this.attach("#share", "click", this.onshare);
-    this.attach("#home", "click", this.close);
-    this.attach("#newfolder", "click", this.onnewfolder);
+    this.attach(this.onexport, "click", "#export");
+    this.attach(this.onaddlink, "click", "#addlink");
+    this.attach(this.onsave, "click", "#save");
+    this.attach(this.oninvite, "click", "#invite");
+    this.attach(this.onshare, "click", "#share");
+    this.attach(this.close, "click", "#home");
+    this.attach(this.onnewfolder, "click", "#newfolder");
 
-    this.attach("md-menu #save", "click", this.onsave);
-    this.attach("md-menu #share", "click", this.onshare);
-    this.attach("md-menu #collaborate", "click", this.oncollaborate);
-    this.attach("md-menu #imgcache", "click", this.onimgcache);
-    this.attach("md-menu #import", "click", this.onimport);
-    this.attach("md-menu #export", "click", this.onexport);
-    this.attach("md-menu #upload", "click", this.onupload);
-    this.attach("md-menu #copyall", "click", this.oncopyall);
+    this.attach(this.onsave, "click", "md-menu #save");
+    this.attach(this.onshare, "click", "md-menu #share");
+    this.attach(this.oncollaborate, "click", "md-menu #collaborate");
+    this.attach(this.onimgcache, "click", "md-menu #imgcache");
+    this.attach(this.onimport, "click", "md-menu #import");
+    this.attach(this.onexport, "click", "md-menu #export");
+    this.attach(this.onupload, "click", "md-menu #upload");
+    this.attach(this.oncopyall, "click", "md-menu #copyall");
 
-    this.attach(null, "cut", this.oncut);
-    this.attach(null, "copy", this.oncopy);
-    this.attach(null, "paste", this.onpaste);
+    this.attach(this.oncut, "cut");
+    this.attach(this.oncopy, "copy");
+    this.attach(this.onpaste, "paste");
 
-    this.attach(null, "navigate", this.onnavigate);
+    this.attach(this.onnavigate, "navigate");
 
     document.addEventListener("keydown", e => this.onkeydown(e));
     window.addEventListener("beforeunload", e => this.onbeforeunload(e));
@@ -1733,7 +1733,7 @@ class SharingDialog extends MdDialog {
     this.find("#sharingurl").update(this.sharingurl());
 
     for (let checkbox of ["#private", "#share", "#restrict", "#publish"]) {
-      this.attach(checkbox, "change", this.onchange);
+      this.attach(this.onchange, "change", checkbox);
     }
   }
 
@@ -1948,7 +1948,7 @@ Component.register(CollaborateDialog);
 
 export class InviteDialog extends MdDialog {
   onconnected() {
-    this.attach("md-search", "item", this.onitem);
+    this.attach(this.onitem, "item", "md-search");
 
     let omnibox = this.find("#value");
     let editor = document.getElementById("editor");

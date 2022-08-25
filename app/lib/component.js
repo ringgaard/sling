@@ -178,7 +178,7 @@ export class Component extends HTMLElement {
   }
 
   // Attach method to event on selected element.
-  attach(selector, event, method) {
+  attach(method, event, selector) {
     this.bind(selector, event, method.bind(this));
   }
 
