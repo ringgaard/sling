@@ -208,7 +208,7 @@ class RemoveUnusedVariables : public Transformer {
     // Find intermediate variables with no producers or consumers.
     std::vector<Flow::Variable *> remove;
     for (Flow::Variable *var : flow->vars()) {
-      if (!var->out() && var->producer == nullptr && var->consumers.empty()) {
+      if (!var->in() && !var->out() && var->detached()) {
         remove.push_back(var);
       }
     }

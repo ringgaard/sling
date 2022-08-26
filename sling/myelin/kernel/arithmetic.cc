@@ -337,7 +337,7 @@ struct Expression {
     return prototype->shape().elements() * basic.Complexity();
   }
 
-  // Compute how many spare register we have for hoisting constant out of the
+  // Compute how many spare registers we have for hoisting constant out of the
   // loop body. This is only done for floating-point operations to avoid
   // register pressure on the regular x64 integer registers which are also
   // used for the loop indexing.
@@ -666,6 +666,33 @@ class ExpressionTransformer : public Transformer {
       }
     }
 
+    // Eliminate duplicate inputs to calculate ops.
+    for (int i = 0; i < candidates.size(); ++i) {
+      Flow::Operation *op = candidates[i];
+      bool again = true;
+      while (again) {
+        again = false;
+        Express expr;
+        InitExpression(op, &expr);
+        for (int i = 0; i < op->indegree(); ++i) {
+          for (int j = i + 1; j < op->indegree(); ++j) {
+            if (op->inputs[i] == op->inputs[j]) {
+              Express::Var *vi = expr.Variable(Express::INPUT, i);
+              Express::Var *vj = expr.Variable(Express::INPUT, j);
+              vj->Redirect(vi);
+              op->RemoveInput(op->inputs[j]);
+              op->type = "Calculate";
+              op->SetAttr("expr", expr.AsRecipe());
+              again = true;
+              break;
+            }
+            if (again) break;
+          }
+          if (again) break;
+        }
+      }
+    }
+
     // Merge calculate ops into assignment.
     int num_combines = 0;
     bool again = true;
@@ -749,7 +776,7 @@ class ExpressionTransformer : public Transformer {
           if (!IsCalculateOp(op)) continue;
           if (first == nullptr) {
             first = op;
-          } else {
+          } else if (op != first) {
             second = op;
             break;
           }
@@ -950,12 +977,16 @@ class ExpressionTransformer : public Transformer {
   static void MapVars(Flow::Operation *op, Express *expr, VarMap *varmap) {
     // Map input variables.
     for (int i = 0; i < op->indegree(); ++i) {
-      (*varmap)[op->inputs[i]] = expr->Variable(InputType(op->inputs[i]), i);
+      Flow::Variable *input = op->inputs[i];
+      CHECK(varmap->count(input) == 0)  << "Duplicate input " << input->name;
+      (*varmap)[input] = expr->Variable(InputType(input), i);
     }
 
     // Map output variables.
     for (int i = 0; i < op->outdegree(); ++i) {
-      (*varmap)[op->outputs[i]] = expr->Variable(Express::OUTPUT, i);
+      Flow::Variable *output = op->outputs[i];
+      CHECK(varmap->count(output) == 0)  << "Duplicate output " << output->name;
+      (*varmap)[output] = expr->Variable(Express::OUTPUT, i);
     }
   }
 

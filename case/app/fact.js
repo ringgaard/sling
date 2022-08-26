@@ -110,7 +110,7 @@ class FactEditor extends Component {
     this.dirty = false;
 
     this.list = this.parentElement.list();
-    this.list.attach(this.onselect, "select");
+    this.list.bind(null, "select", e => this.onselect(e));
 
     this.attach(this.onkeydown, "keydown");
     this.attach(this.onclick, "click");

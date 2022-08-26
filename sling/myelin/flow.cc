@@ -1681,7 +1681,6 @@ void Flow::Eliminate(Operation *op) {
       if (output->local() && output->in() && output->detached()) {
         op->func->unused.push_back(output);
       }
-
     } else {
       // Replace output with input.
       input->flags |= output->flags;

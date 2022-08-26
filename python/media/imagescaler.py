@@ -17,7 +17,7 @@
 import io
 import urllib3
 import PIL
-from PIL import Image, JpegImagePlugin, PngImagePlugin
+from PIL import Image, JpegImagePlugin, PngImagePlugin, MpoImagePlugin
 
 import sling
 import sling.flags as flags
@@ -87,9 +87,14 @@ def jpeg_reponse(image, request, response):
   response.ct = "image/png"
   response.body = result.getvalue()
 
+@sling.net.response(MpoImagePlugin.MpoImageFile)
+def mpo_reponse(image, request, response):
+  return jpeg_reponse(image, request, response)
+
 @app.route("/thumb")
 def thumb(request):
   url = request.param("url")
+  if url is None: return 400
   size = request.param("size")
   if size is None:
     size = flags.arg.thumbsize

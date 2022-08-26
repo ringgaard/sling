@@ -22,6 +22,8 @@ import sling.pysling as api
 from .flow import Flow
 from .builder import Builder
 
+verbose = False
+
 # Type class for representing tensor types.
 class Type(object):
   def __init__(self, dt, dims=None):
@@ -52,6 +54,7 @@ int64 = Type("int64")
 # Python opcodes.
 LOAD_GLOBAL = opcode.opmap["LOAD_GLOBAL"]
 LOAD_FAST = opcode.opmap["LOAD_FAST"]
+LOAD_CONST = opcode.opmap["LOAD_CONST"]
 STORE_FAST = opcode.opmap["STORE_FAST"]
 CALL_FUNCTION = opcode.opmap["CALL_FUNCTION"]
 RETURN_VALUE = opcode.opmap["RETURN_VALUE"]
@@ -183,26 +186,61 @@ opemitters = {
   # onehot
 }
 
+# A script object contains the runtime information for a function.
+class Script(object):
+  def __init__(self, module, func):
+    self.module = module
+    self.func = func
+    self.argcount = 0;
+    self.cell = None
+    self.argvars = []
+    self.argidxs = []
+    self.retvar = None
+    self.retidx = None
+    module.scripts.append(self)
+
+
+  def link(self, net):
+    self.cell = net.cell(self.func.name)
+    self.argcount = len(self.argvars)
+    for arg in self.argvars:
+      idx = None
+      if arg in self.cell: idx = self.cell.index(arg)
+      self.argidxs.append(idx)
+    if self.retvar in self.cell:
+      self.retidx = self.cell.index(self.retvar)
+
 # Module for defining and compiling script functions.
 class Module(object):
   def __init__(self):
     self.flow = Flow()
     self.net = None
+    self.scripts = []
 
   def build(self, func):
     # Set up builder for function.
     b = Builder(self.flow, func.__name__)
-    code = func.__code__
+
+    # Create script object for function.
+    script = Script(self, b.func)
+    if verbose:
+      dis.show_code(func)
+      dis.dis(func)
 
     # Add function arguments as variables.
     variables = {}
+    code = func.__code__
     for i in range(code.co_argcount):
       argname = code.co_varnames[i]
       argtype = func.__annotations__[argname]
       var = b.var(argname, argtype.dt, argtype.dims)
       var.input = True
+      # TODO pass arguments by reference when input tensor sharing has been
+      # disabled.
+      #var.ref = True
       var.pyname = argname
       variables[argname] = var
+      script.argvars.append(var)
 
     # Generate Myelin ops from Python byte code.
     stack = []
@@ -213,6 +251,9 @@ class Module(object):
       elif instr.opcode == LOAD_FAST:
         var = variables[instr.argval]
         stack.append(var)
+      elif instr.opcode == LOAD_CONST:
+        value = code.co_consts[instr.arg]
+        stack.append(value)
       elif instr.opcode == STORE_FAST:
         value = stack.pop()
         varname = instr.argval
@@ -229,6 +270,7 @@ class Module(object):
       elif instr.opcode == RETURN_VALUE:
         result = stack.pop()
         result.output = True
+        script.retvar = result
       elif instr.opcode == BINARY_ADD:
         y = stack.pop()
         x = stack.pop()
@@ -357,13 +399,42 @@ class Module(object):
       else:
         raise Exception("Unsupported instruction: " + str(instr))
 
-    return b.func
+    return script
 
+  # Decorator for turning Python function into a compiled Myelin function
   def function(self, func):
-    f = self.build(func)
-    return func
+    # Build script from Python function
+    script = self.build(func)
 
+    # Wrapper function for running the compiled cell.
+    def wrapper(*args):
+      # Compile script on-demand.
+      if script.cell is None: script.module.compile()
+
+      # Create cell instance.
+      data = script.cell.instance()
+
+      # Set up arguments.
+      for i in range(script.argcount):
+        idx = script.argidxs[i]
+        if idx is None: continue
+        data[idx] = args[i]
+
+      # Execute cell computation.
+      data.compute()
+
+      # Return result.
+      if script.retidx is not None: return data[script.retidx]
+
+    return wrapper
+
+  # Compile and link module.
   def compile(self):
+    # Compile flow.
     compiler = api.Compiler()
     self.net = compiler.compile(self.flow)
+
+    # Link scripts to compiled network.
+    for script in self.scripts:
+      script.link(self.net)
 
