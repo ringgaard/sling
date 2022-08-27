@@ -791,6 +791,13 @@ bool Express::Has(std::initializer_list<OpType> ops) const {
   return false;
 }
 
+bool Express::Reducing() const {
+  for (Op *op : ops_) {
+    if (op->reduction() || op->preduction()) return true;
+  }
+  return false;
+}
+
 int Express::Complexity() const {
   int n = 0;
   for (Op *op : ops_) {

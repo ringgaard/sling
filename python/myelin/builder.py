@@ -112,9 +112,9 @@ def list_to_array(l, typecode=None):
   return a, typecode, shape
 
 class Builder:
-  def __init__(self, flow, func):
+  def __init__(self, flow, func=None):
     self.flow = flow
-    self.func = flow.func(func)
+    if func is not None: self.func = flow.func(func)
 
   def var(self, name, dtype=DT_FLOAT, shape=[]):
     n = self.func.name + "/" + name
@@ -173,7 +173,7 @@ class Builder:
     self.func.add(op)
     return op
 
-  def const(self, value, dtype=None, shape=None):
+  def const(self, value, dtype=None, shape=None, name=None):
     # Scalar type conversion.
     if type(value) is int and dtype == DT_FLOAT: value = float(value)
     if type(value) is float and dtype == DT_INT: value = int(value)
@@ -195,11 +195,20 @@ class Builder:
       if shape is None: shape = [len(value)]
       value = memoryview(value)
 
+    # Convert other objects supporting the buffer protocol
+    try:
+      buffer = memoryview(value)
+      if dtype is None: dtype = typemap[buffer.format]
+      if shape is None: shape = list(buffer.shape)
+    except TypeError:
+      pass
+
     # Get type and shape if missing.
     if dtype is None: dtype = str(value.dtype)
     if shape is None: shape = list(value.shape)
 
-    var = self.flow.var(self.varname("const"), dtype, shape)
+    if name is None: name = self.varname("const")
+    var = self.flow.var(name, dtype, shape)
     var.data = value
     return var
 

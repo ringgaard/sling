@@ -214,7 +214,8 @@ int main(int argc, char *argv[]) {
   //Test("@0=Tanh(%0)");
   //Test("@0=Log(%0)");
   //Test("@0=Sigmoid(%0)");
-  Test("@0=Id(#0)");
+  //Test("@0=Id(#0)");
+  Test("@0=Sum(Square(%0));@1=Sum(Square(%0))");
 
 }
 

@@ -637,7 +637,7 @@ def submit_command(request):
   if len(path) == 1:
     job = submit_job(path[0], None, args)
   elif len(path) == 2:
-    job = submit_job(path[1], path[1], args)
+    job = submit_job(path[1], path[0], args)
   else:
     job = None
 

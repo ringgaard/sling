@@ -892,6 +892,9 @@ class ExpressionTransformer : public Transformer {
     VarMap vars2;
     MapVars(second, &expr2, &vars2);
 
+    // Two reducing expressions cannot be merged.
+    if (expr1.Reducing() && expr2.Reducing()) return "";
+
     // Build expression variable mapping for mapping variables in the second
     // expression to variables in the first expression.
     Express::Map mapping;

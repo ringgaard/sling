@@ -389,6 +389,12 @@ class Attributes : public std::vector<Attribute> {
   // Copy attributes from another attribute list.
   void CopyAttrsFrom(const Attributes &other);
 
+  // Check if this is a subset of another attribute list.
+  bool SubsetOfAttrs(const Attributes &other) const;
+  bool SameAttrs(const Attributes &other) const {
+    return SubsetOfAttrs(other) && other.SubsetOfAttrs(*this);
+  }
+
   // Return attribute list.
   const std::vector<Attribute> attrs() const { return *this; }
 };
@@ -843,6 +849,9 @@ class Flow {
                   Operation *second,
                   const string &combined,
                   bool merge_inputs = false);
+
+  // Replace one operation with another.
+  void Replace(Operation *op, Operation *replacement);
 
   // Remove operation from flow.
   void RemoveOperation(Operation *op);

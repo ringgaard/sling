@@ -216,6 +216,7 @@ class RemoveUnusedVariables : public Transformer {
     // Remove unused variables.
     if (remove.empty()) return false;
     for (Flow::Variable *var : remove) {
+      VLOG(10) << "Remove unused variable " << var->name;
       flow->DeleteVariable(var);
     }
     return true;

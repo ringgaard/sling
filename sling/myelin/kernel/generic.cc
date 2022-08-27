@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <algorithm>
+#include <map>
 #include <vector>
 
 #include "sling/myelin/compute.h"
@@ -171,6 +172,52 @@ class IdentityTransformer : public Transformer {
     }
 
     return !noops.empty();
+  }
+};
+
+// Remove common subexpressions.
+class RemoveCommonSubexpressions : public Transformer {
+ public:
+  string Name() override { return "RemoveCommonSubexpressions"; }
+
+  bool Transform(Flow *flow) override {
+    std::map<Flow::Operation *, Flow::Operation *> dups;
+    for (Flow::Variable *var : flow->vars()) {
+      for (Flow::Operation *op1 : var->consumers) {
+        for (Flow::Operation *op2 : var->consumers) {
+          // Only compare unique pairs.
+          if (op1 >= op2) continue;
+
+          // Check types.
+          if (op1->type != op2->type) continue;
+
+          // Check inputs and outputs.
+          if (op1->indegree() != op2->indegree()) continue;
+          if (op1->outdegree() != op2->outdegree()) continue;
+          bool same = true;
+          for (int i = 0; i < op1->inputs.size(); ++i) {
+            if (op1->inputs[i] != op2->inputs[i]) same = false;
+          }
+          if (!same) continue;
+
+          // Check attributes.
+          if (!op1->SameAttrs(*op2)) continue;
+
+          // Add duplicate op.
+          dups[op2] = op1;
+        }
+      }
+    }
+    if (dups.size() == 0) return false;
+
+    // Merge duplicate ops.
+    for (const auto &d : dups) {
+      VLOG(10) << "Replace " << d.first->name << " with " << d.second->name;
+      flow->Replace(d.first, d.second);
+      flow->RemoveOperation(d.first);
+    }
+
+    return true;
   }
 };
 
@@ -335,6 +382,7 @@ class FlattenConcatTransformer : public Transformer {
 
 // Register generic transforms.
 void RegisterGenericTransforms(Library *library) {
+  library->RegisterTransformer(new RemoveCommonSubexpressions());
   library->RegisterTransformer(new IdentityTransformer());
   library->RegisterTransformer(new FlattenConcatTransformer());
   library->RegisterTransformer(new CompositeTransformer());

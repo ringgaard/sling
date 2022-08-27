@@ -14,15 +14,20 @@
 
 """Myelin script compiler."""
 
+import sys
 import dis
 import opcode
 
 import sling.pysling as api
+import sling.flags as flags
 
 from .flow import Flow
 from .builder import Builder
 
-verbose = False
+flags.define("--dump_bytecode",
+             help="output Python bytecode for Myelin scripts",
+             default=False,
+             action="store_true")
 
 # Type class for representing tensor types.
 class Type(object):
@@ -58,33 +63,13 @@ LOAD_CONST = opcode.opmap["LOAD_CONST"]
 STORE_FAST = opcode.opmap["STORE_FAST"]
 CALL_FUNCTION = opcode.opmap["CALL_FUNCTION"]
 RETURN_VALUE = opcode.opmap["RETURN_VALUE"]
-
-BINARY_ADD = opcode.opmap["BINARY_ADD"]
-BINARY_SUBTRACT  = opcode.opmap["BINARY_SUBTRACT"]
-BINARY_MULTIPLY = opcode.opmap["BINARY_MULTIPLY"]
-BINARY_MODULO = opcode.opmap["BINARY_MODULO"]
-BINARY_MATRIX_MULTIPLY = opcode.opmap["BINARY_MATRIX_MULTIPLY"]
-BINARY_POWER  = opcode.opmap["BINARY_POWER"]
-BINARY_TRUE_DIVIDE = opcode.opmap["BINARY_TRUE_DIVIDE"]
-BINARY_AND = opcode.opmap["BINARY_AND"]
-BINARY_OR = opcode.opmap["BINARY_OR"]
-BINARY_XOR = opcode.opmap["BINARY_XOR"]
+BUILD_TUPLE = opcode.opmap["BUILD_TUPLE"]
+UNPACK_SEQUENCE = opcode.opmap["UNPACK_SEQUENCE"]
 COMPARE_OP = opcode.opmap["COMPARE_OP"]
-UNARY_NEGATIVE = opcode.opmap["UNARY_NEGATIVE"]
-UNARY_NOT = opcode.opmap["UNARY_NOT"]
-INPLACE_ADD = opcode.opmap["INPLACE_ADD"]
-INPLACE_SUBTRACT = opcode.opmap["INPLACE_SUBTRACT"]
-INPLACE_MULTIPLY = opcode.opmap["INPLACE_MULTIPLY"]
-INPLACE_MATRIX_MULTIPLY = opcode.opmap["INPLACE_MATRIX_MULTIPLY"]
-INPLACE_TRUE_DIVIDE = opcode.opmap["INPLACE_TRUE_DIVIDE"]
-INPLACE_MODULO = opcode.opmap["INPLACE_MODULO"]
-INPLACE_POWER = opcode.opmap["INPLACE_POWER"]
-INPLACE_AND = opcode.opmap["INPLACE_AND"]
-INPLACE_XOR = opcode.opmap["INPLACE_XOR"]
-INPLACE_OR = opcode.opmap["INPLACE_OR"]
 
 # Myelin op emitters.
-opemitters = {
+
+function_emitters = {
   "concat": lambda b, args: b.conat(args),
 
   "add": lambda b, args: b.add(args[0], args[1]),
@@ -167,7 +152,7 @@ opemitters = {
   "softmax": lambda b, args: b.softmax(args[0]),
   "logsumexp": lambda b, args: b.logsumexp(args[0]),
 
-  # Unsupported:
+  # Not yet supported:
   # ref
   # shape
   # size
@@ -186,19 +171,58 @@ opemitters = {
   # onehot
 }
 
+binary_emitters = {
+  opcode.opmap["BINARY_ADD"]: lambda b, x, y: b.add(x, y),
+  opcode.opmap["BINARY_SUBTRACT"]: lambda b, x, y: b.sub(x, y),
+  opcode.opmap["BINARY_MULTIPLY"]: lambda b, x, y: b.mul(x, y),
+  opcode.opmap["BINARY_MODULO"]: lambda b, x, y: b.mod(x, y),
+  opcode.opmap["BINARY_MATRIX_MULTIPLY"]: lambda b, x, y: b.matmul(x, y),
+  opcode.opmap["BINARY_TRUE_DIVIDE"]: lambda b, x, y: b.div(x, y),
+  opcode.opmap["BINARY_AND"]: lambda b, x, y: b.logical_and(x, y),
+  opcode.opmap["BINARY_OR"]: lambda b, x, y: b.logical_or(x, y),
+  opcode.opmap["BINARY_XOR"]: lambda b, x, y: b.logical_xor(x, y),
+  opcode.opmap["BINARY_POWER"]: lambda b, x, y: b.pow(x, y),
+}
+
+unary_emitters = {
+  opcode.opmap["UNARY_NEGATIVE"]: lambda b, x: b.neg(x),
+  opcode.opmap["UNARY_NOT"]: lambda b, x: b.logical_not(x),
+}
+
+inplace_emitters = {
+  opcode.opmap["INPLACE_ADD"]: lambda b, x, y: b.add(x, y),
+  opcode.opmap["INPLACE_SUBTRACT"]: lambda b, x, y: b.sub(x, y),
+  opcode.opmap["INPLACE_MULTIPLY"]: lambda b, x, y: b.mul(x, y),
+  opcode.opmap["INPLACE_MATRIX_MULTIPLY"]: lambda b, x, y: b.matmul(x, y),
+  opcode.opmap["INPLACE_TRUE_DIVIDE"]: lambda b, x, y: b.div(x, y),
+  opcode.opmap["INPLACE_MODULO"]: lambda b, x, y: b.mod(x, y),
+  opcode.opmap["INPLACE_POWER"]: lambda b, x, y: b.pow(x, y),
+  opcode.opmap["INPLACE_AND"]: lambda b, x, y: b.logical_and(x, y),
+  opcode.opmap["INPLACE_OR"]: lambda b, x, y: b.logical_or(x, y),
+  opcode.opmap["INPLACE_XOR"]: lambda b, x, y: b.logical_xor(x, y),
+}
+
+compare_emitters = {
+  "<": lambda b, x, y: b.less(x, y),
+  "<=": lambda b, x, y: b.less_equal(x, y),
+  "==": lambda b, x, y: b.equal(x, y),
+  "!=": lambda b, x, y: b.not_equal(x, y),
+  ">": lambda b, x, y: b.greater(x, y),
+  ">=": lambda b, x, y: b.greater_equal(x, y),
+}
+
 # A script object contains the runtime information for a function.
 class Script(object):
-  def __init__(self, module, func):
+  def __init__(self, module, func, pyfunc):
     self.module = module
     self.func = func
+    self.pyfunc = pyfunc
     self.argcount = 0;
     self.cell = None
     self.argvars = []
     self.argidxs = []
     self.retvar = None
     self.retidx = None
-    module.scripts.append(self)
-
 
   def link(self, net):
     self.cell = net.cell(self.func.name)
@@ -207,46 +231,53 @@ class Script(object):
       idx = None
       if arg in self.cell: idx = self.cell.index(arg)
       self.argidxs.append(idx)
-    if self.retvar in self.cell:
-      self.retidx = self.cell.index(self.retvar)
+
+    self.retidx = self.cell.index(self.retvar)
 
 # Module for defining and compiling script functions.
 class Module(object):
   def __init__(self):
     self.flow = Flow()
     self.net = None
-    self.scripts = []
+    self.scripts = {}
 
-  def build(self, func):
-    # Set up builder for function.
-    b = Builder(self.flow, func.__name__)
-
-    # Create script object for function.
-    script = Script(self, b.func)
-    if verbose:
-      dis.show_code(func)
-      dis.dis(func)
-
+  def translate(self, builder, func, args):
     # Add function arguments as variables.
     variables = {}
+    locals = {}
     code = func.__code__
     for i in range(code.co_argcount):
       argname = code.co_varnames[i]
-      argtype = func.__annotations__[argname]
-      var = b.var(argname, argtype.dt, argtype.dims)
-      var.input = True
-      # TODO pass arguments by reference when input tensor sharing has been
-      # disabled.
-      #var.ref = True
-      var.pyname = argname
-      variables[argname] = var
-      script.argvars.append(var)
+      locals[args[i]] = argname
+      variables[argname] = args[i]
 
     # Generate Myelin ops from Python byte code.
     stack = []
+    retval = None
     for instr in dis.get_instructions(func):
       if instr.opcode == LOAD_GLOBAL:
-        value = opemitters.get(instr.argval, instr.argval)
+        # Locate global variable.
+        name = instr.argval
+
+        # Script function.
+        value = self.scripts.get(name)
+
+        # Look up global variable in flow.
+        if value is None:
+          value = self.flow.vars.get(name)
+
+        # Look up global in Python module.
+        if value is None:
+          context = sys.modules[func.__module__]
+          v = getattr(context, name, None)
+          if v is not None:
+            value = builder.const(v, name=name)
+
+        # Look up built-in Myelin op.
+        if value is None:
+          value = function_emitters.get(instr.argval)
+
+        # Push global to stack.
         stack.append(value)
       elif instr.opcode == LOAD_FAST:
         var = variables[instr.argval]
@@ -257,147 +288,98 @@ class Module(object):
       elif instr.opcode == STORE_FAST:
         value = stack.pop()
         varname = instr.argval
-        value.pyname = varname
         variables[varname] = value
+        locals[value] = varname
       elif instr.opcode == CALL_FUNCTION:
         numargs = instr.arg
-        args = stack[-numargs:]
+        params = stack[-numargs:]
         stack = stack[0:-numargs]
         op = stack.pop()
-        if type(op) is str: raise Exception("Unknown myelin op: " + op)
-        result = op(b, args)
+        if type(op) is Script:
+          # Inline script.
+          result = self.translate(builder, op.pyfunc, params)
+        elif type(op) is str:
+          raise Exception("Unknown function " + op)
+        else:
+          # Emit op.
+          result = op(builder, params)
+
         stack.append(result)
       elif instr.opcode == RETURN_VALUE:
-        result = stack.pop()
-        result.output = True
-        script.retvar = result
-      elif instr.opcode == BINARY_ADD:
+        retval = stack.pop()
+      elif instr.opcode == BUILD_TUPLE:
+        size = instr.arg
+        value = tuple(stack[-size:])
+        stack = stack[0:-size]
+        stack.append(value);
+      elif instr.opcode == UNPACK_SEQUENCE:
+        count = instr.arg
+        seq = list(stack.pop())
+        for _ in range(count): stack.append(seq.pop())
+      elif instr.opcode in binary_emitters:
         y = stack.pop()
         x = stack.pop()
-        stack.append(b.add(x, y))
-      elif instr.opcode == BINARY_SUBTRACT:
-        y = stack.pop()
+        emitter = binary_emitters[instr.opcode]
+        stack.append(emitter(builder, x, y))
+      elif instr.opcode in unary_emitters:
         x = stack.pop()
-        stack.append(b.sub(x, y))
-      elif instr.opcode == BINARY_MULTIPLY:
-        y = stack.pop()
-        x = stack.pop()
-        stack.append(b.mul(x, y))
-      elif instr.opcode == BINARY_MODULO:
-        y = stack.pop()
-        x = stack.pop()
-        stack.append(b.mod(x, y))
-      elif instr.opcode == BINARY_MATRIX_MULTIPLY:
-        y = stack.pop()
-        x = stack.pop()
-        stack.append(b.matmul(x, y))
-      elif instr.opcode == BINARY_TRUE_DIVIDE:
-        y = stack.pop()
-        x = stack.pop()
-        stack.append(b.div(x, y))
-      elif instr.opcode == BINARY_AND:
-        y = stack.pop()
-        x = stack.pop()
-        stack.append(b.logical_and(x, y))
-      elif instr.opcode == BINARY_OR:
-        y = stack.pop()
-        x = stack.pop()
-        stack.append(b.logical_or(x, y))
-      elif instr.opcode == BINARY_XOR:
-        y = stack.pop()
-        x = stack.pop()
-        stack.append(b.logical_xor(x, y))
-      elif instr.opcode == BINARY_POWER:
-        y = stack.pop()
-        x = stack.pop()
-        stack.append(b.pow(x, y))
+        emitter = unary_emitters[instr.opcode]
+        stack.append(emitter(builder, x))
       elif instr.opcode == COMPARE_OP:
         op = instr.argval
         y = stack.pop()
         x = stack.pop()
-        if op == "<":
-          result = b.less(x, y)
-        elif op == "<=":
-          result = b.less_equal(x, y)
-        elif op == "==":
-          result = b.equal(x, y)
-        elif op == "!=":
-          result = b.not_equal(x, y)
-        elif op == ">":
-          result = b.greater(x, y)
-        elif op == ">=":
-          result = b.greater_equal(x, y)
-        else:
-          raise Exception("Unsupported comparison: " + op)
+        emitter = compare_emitters.get(op)
+        if emitter is None: raise Exception("Unsupported comparison: " + op)
+        result = emitter(builder, x, y)
         stack.append(result)
-      elif instr.opcode == UNARY_NEGATIVE:
-        x = stack.pop()
-        stack.append(b.neg(x, y))
-      elif instr.opcode == UNARY_NOT:
-        x = stack.pop()
-        stack.append(b.logical_not(x, y))
-      elif instr.opcode == INPLACE_ADD:
+      elif instr.opcode in inplace_emitters:
         val = stack.pop()
         var = stack.pop()
-        result = b.add(var, val)
-        variables[var.pyname] = result
-        stack.append(result)
-      elif instr.opcode == INPLACE_SUBTRACT:
-        val = stack.pop()
-        var = stack.pop()
-        result = b.sub(var, val)
-        variables[var.pyname] = result
-        stack.append(result)
-      elif instr.opcode == INPLACE_MULTIPLY:
-        val = stack.pop()
-        var = stack.pop()
-        result = b.mul(var, val)
-        variables[var.pyname] = result
-        stack.append(result)
-      elif instr.opcode == INPLACE_MATRIX_MULTIPLY:
-        val = stack.pop()
-        var = stack.pop()
-        result = b.matmul(var, val)
-        variables[var.pyname] = result
-        stack.append(result)
-      elif instr.opcode == INPLACE_TRUE_DIVIDE:
-        val = stack.pop()
-        var = stack.pop()
-        result = b.div(var, val)
-        variables[var.pyname] = result
-        stack.append(result)
-      elif instr.opcode == INPLACE_MODULO:
-        val = stack.pop()
-        var = stack.pop()
-        result = b.mod(var, val)
-        variables[var.pyname] = result
-        stack.append(result)
-      elif instr.opcode == INPLACE_POWER:
-        val = stack.pop()
-        var = stack.pop()
-        result = b.pow(var, val)
-        variables[var.pyname] = result
-        stack.append(result)
-      elif instr.opcode == INPLACE_AND:
-        val = stack.pop()
-        var = stack.pop()
-        result = b.logical_and(var, val)
-        variables[var.pyname] = result
-        stack.append(result)
-      elif instr.opcode == INPLACE_OR:
-        val = stack.pop()
-        var = stack.pop()
-        result = b.logical_or(var, val)
-        variables[var.pyname] = result
-        stack.append(result)
-      elif instr.opcode == INPLACE_XOR:
-        val = stack.pop()
-        var = stack.pop()
-        result = b.logical_xor(var, val)
-        variables[var.pyname] = result
+        emitter = inplace_emitters[instr.opcode]
+        result = emitter(builder, var, val)
+        varname = locals[var]
+        variables[varname] = result
+        locals[result] = varname
         stack.append(result)
       else:
         raise Exception("Unsupported instruction: " + str(instr))
+
+    return retval
+
+  def build(self, func):
+    # Set up builder for function.
+    name = func.__name__
+    builder = Builder(self.flow, name)
+
+    # Create script object for function.
+    script = Script(self, builder.func, func)
+    self.scripts[name] = script
+
+    # Create input variables for arguments.
+    args = []
+    code = func.__code__
+    for i in range(code.co_argcount):
+      argname = code.co_varnames[i]
+      argtype = func.__annotations__[argname]
+      var = builder.var(argname, argtype.dt, argtype.dims)
+      var.input = True
+      var.pyname = argname
+      script.argvars.append(var)
+      args.append(var)
+
+    # Output Python bytecode.
+    if flags.arg.dump_bytecode:
+      dis.show_code(func)
+      dis.dis(func)
+
+    # Translate Python bytecode to Myelin flow.
+    script.retvar = self.translate(builder, func, args)
+    if script.retvar:
+      if type(script.retvar) is tuple:
+        for v in script.retvar: v.output = True
+      else:
+        script.retvar.output = True
 
     return script
 
@@ -415,16 +397,13 @@ class Module(object):
       data = script.cell.instance()
 
       # Set up arguments.
-      for i in range(script.argcount):
-        idx = script.argidxs[i]
-        if idx is None: continue
-        data[idx] = args[i]
+      for i in range(script.argcount): data[script.argidxs[i]] = args[i]
 
       # Execute cell computation.
       data.compute()
 
       # Return result.
-      if script.retidx is not None: return data[script.retidx]
+      return data[script.retidx]
 
     return wrapper
 
@@ -435,6 +414,17 @@ class Module(object):
     self.net = compiler.compile(self.flow)
 
     # Link scripts to compiled network.
-    for script in self.scripts:
+    for script in self.scripts.values():
       script.link(self.net)
+
+  # Add global variables to network.
+  def globals(self, globs):
+    builder = Builder(self.flow)
+    for name, value in globs.items():
+      builder.const(value, name=name)
+
+  # Output profiling information if enabled.
+  def profile(self):
+    if flags.arg.profile:
+      print(self.net.profile())
 

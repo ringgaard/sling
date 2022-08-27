@@ -661,6 +661,14 @@ void Attributes::CopyAttrsFrom(const Attributes &other) {
   for (auto &attr : other) emplace_back(attr);
 }
 
+bool Attributes::SubsetOfAttrs(const Attributes &other) const {
+  for (auto &attr : *this) {
+    if (!other.HasAttr(attr.name)) return false;
+    if (other.GetAttr(attr.name) != attr.value) return false;
+  }
+  return true;
+}
+
 void Flow::Variable::AddAlias(const string &alias) {
   if (std::find(aliases.begin(), aliases.end(), alias) == aliases.end()) {
     aliases.push_back(alias);
@@ -1463,6 +1471,17 @@ Flow::Operation *Flow::Fuse(Operation *first,
   DeleteOperation(second);
 
   return first;
+}
+
+void Flow::Replace(Operation *op, Operation *replacement) {
+  // Move all consumers to the replacement.
+  CHECK(op->outdegree() == replacement->outdegree());
+  for (int i = 0; i < op->outdegree(); ++i) {
+    Variable *v = op->outputs[i];
+    for (Operation *c : v->consumers) {
+      c->ReplaceInput(v, replacement->outputs[i]);
+    }
+  }
 }
 
 std::vector<Flow::Operation *> Flow::Find(const string &pathexpr) {

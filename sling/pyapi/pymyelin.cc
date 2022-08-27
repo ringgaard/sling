@@ -631,6 +631,18 @@ PyObject *PyCell::NewChannel(PyObject *args) {
 }
 
 PyObject *PyCell::Index(PyObject *key) {
+  // Look up multiple indices if argument is a tuple.
+  if (key == Py_None) Py_RETURN_NONE;
+  if (PyTuple_Check(key)) {
+    int n = PyTuple_Size(key);
+    PyObject *results = PyTuple_New(n);
+    for (int i = 0; i < n; ++i) {
+      PyObject *result = Index(PyTuple_GetItem(key, i));
+      PyTuple_SetItem(results, i, result);
+    }
+    return results;
+  }
+
   // Look up tensor in network.
   Tensor *tensor = pynet->FindTensor(key, cell);
   if (tensor == nullptr) return nullptr;
@@ -710,6 +722,18 @@ PyObject *PyInstance::LookupTensor(PyObject *key) {
 }
 
 PyObject *PyInstance::GetTensor(PyObject *key) {
+  // Look up multiple tensors if argument is a tuple.
+  if (key == Py_None) Py_RETURN_NONE;
+  if (PyTuple_Check(key)) {
+    int n = PyTuple_Size(key);
+    PyObject *results = PyTuple_New(n);
+    for (int i = 0; i < n; ++i) {
+      PyObject *result = GetTensor(PyTuple_GetItem(key, i));
+      PyTuple_SetItem(results, i, result);
+    }
+    return results;
+  }
+
   // Look up tensor in network.
   Tensor *tensor = pycell->pynet->FindTensor(key, data->cell());
   if (tensor == nullptr) return nullptr;

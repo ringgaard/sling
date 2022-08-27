@@ -446,6 +446,9 @@ class Express {
   // Check if expression has any nodes of a set of type.
   bool Has(std::initializer_list<OpType> ops) const;
 
+  // Check if expression has any reductions.
+  bool Reducing() const;
+
   // Compact temporary variable ids and return the number of temporary variable.
   int CompactTempVars();
 
