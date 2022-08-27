@@ -258,6 +258,7 @@ for key, value in postings:
   # Parse reddit posting.
   store = sling.Store(commons)
   posting = store.parse(value, json=True)
+  title = posting[n_title]
 
   # Discard self-posts.
   if posting[n_is_self]: continue
@@ -288,7 +289,6 @@ for key, value in postings:
     continue
 
   # Discard posting with bad titles.
-  title = posting[n_title]
   if type(title) is bytes: continue
   title = title.replace('\n', ' ').strip()
   nsfw = True if posting[n_over_18] else None
