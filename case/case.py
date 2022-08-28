@@ -16,7 +16,6 @@
 
 import datetime
 import json
-import requests
 import socket
 import time
 import urllib.parse
@@ -57,11 +56,6 @@ flags.define("--casedb",
              help="database for shared cases",
              default="case",
              metavar="DB")
-
-flags.define("--urllib3_proxy",
-             help="Use urllib3 for proxy requests",
-             default=True,
-             action="store_true")
 
 flags.define("--media_service",
              help="Media cache service",
@@ -217,10 +211,7 @@ non_proxy_headers = set([
 ])
 
 checked_hostnames = set()
-if flags.arg.urllib3_proxy:
-  proxy_pool = urllib3.PoolManager()
-else:
-  proxy_pool = requests.Session()
+proxy_pool = urllib3.PoolManager()
 
 @app.route("/case/proxy")
 def service_request(request):
@@ -244,40 +235,23 @@ def service_request(request):
   if cookie: headers["Cookie"] = cookie
 
   log.info("Proxy request for", url, headers)
-  if flags.arg.urllib3_proxy:
-    # Forward request.
-    r = proxy_pool.request("GET", url, headers=headers, timeout=30)
 
-    # Relay back response.
-    response = sling.net.HTTPResponse()
-    response.status = r.status
-    response.headers = []
-    for key, value in r.headers.items():
-      if key.lower() in non_proxy_headers: continue
-      if key == "Set-Cookie": key = "XSet-Cookie"
-      response.headers.append((key, value))
-    response.body = r.data
-  else:
-    # Forward request.
-    cookies = None
-    if cookie:
-      delim = cookie.find("=")
-      if delim != -1:
-        cookies = {cookie[:delim]: cookie[delim + 1:]}
-    r = proxy_pool.get(url, headers=headers, cookies=cookies, timeout=30)
+  # Forward request.
+  r = proxy_pool.request("GET", url, headers=headers, timeout=30)
 
-    # Relay back response.
-    response = sling.net.HTTPResponse()
-    response.status = r.status_code
-    response.headers = []
-    for key, value in r.headers.items():
-      if key.lower() in non_proxy_headers: continue
-      if key == "Set-Cookie": key = "XSet-Cookie"
-      response.headers.append((key, value))
-    response.body = r.content
-    log.info("Return", len(response.body), "bytes")
+  # Relay back response.
+  response = sling.net.HTTPResponse()
+  response.status = r.status
+  response.body = r.data
 
-  log.info("Return", len(response.body), "bytes")
+  response.headers = []
+  for key, value in r.headers.items():
+    if key.lower() in non_proxy_headers: continue
+    if key.lower() == "set-cookie":
+      print("proxy cookie", value, "from", url)
+      key = "XSet-Cookie"
+    response.headers.append((key, value))
+
   return response
 
 @app.route("/case/xrefs")

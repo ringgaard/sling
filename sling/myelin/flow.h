@@ -389,11 +389,8 @@ class Attributes : public std::vector<Attribute> {
   // Copy attributes from another attribute list.
   void CopyAttrsFrom(const Attributes &other);
 
-  // Check if this is a subset of another attribute list.
-  bool SubsetOfAttrs(const Attributes &other) const;
-  bool SameAttrs(const Attributes &other) const {
-    return SubsetOfAttrs(other) && other.SubsetOfAttrs(*this);
-  }
+  // Check if attributes are the same.
+  bool SameAttrs(const Attributes &other) const;
 
   // Return attribute list.
   const std::vector<Attribute> attrs() const { return *this; }

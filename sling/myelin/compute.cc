@@ -955,6 +955,7 @@ bool Step::AllowInPlace(int input, int output, bool preserved) {
       if (t->constant()) return false;
       if (t->consumers().size() != 1) return false;
       if (t->out()) return false;
+      if (t->in() && t->ref()) return false;
     }
     if (t->ref() != out->ref()) return false;
     if (t->dynamic() != out->dynamic()) return false;

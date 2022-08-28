@@ -231,7 +231,6 @@ class Script(object):
       idx = None
       if arg in self.cell: idx = self.cell.index(arg)
       self.argidxs.append(idx)
-
     self.retidx = self.cell.index(self.retvar)
 
 # Module for defining and compiling script functions.
@@ -244,11 +243,11 @@ class Module(object):
   def translate(self, builder, func, args):
     # Add function arguments as variables.
     variables = {}
-    locals = {}
+    bindings = {}
     code = func.__code__
     for i in range(code.co_argcount):
       argname = code.co_varnames[i]
-      locals[args[i]] = argname
+      bindings[args[i]] = argname
       variables[argname] = args[i]
 
     # Generate Myelin ops from Python byte code.
@@ -256,28 +255,17 @@ class Module(object):
     retval = None
     for instr in dis.get_instructions(func):
       if instr.opcode == LOAD_GLOBAL:
-        # Locate global variable.
         name = instr.argval
-
-        # Script function.
         value = self.scripts.get(name)
-
-        # Look up global variable in flow.
         if value is None:
           value = self.flow.vars.get(name)
-
-        # Look up global in Python module.
         if value is None:
-          context = sys.modules[func.__module__]
-          v = getattr(context, name, None)
+          scope = sys.modules[func.__module__]
+          v = getattr(scope, name, None)
           if v is not None:
             value = builder.const(v, name=name)
-
-        # Look up built-in Myelin op.
         if value is None:
           value = function_emitters.get(instr.argval)
-
-        # Push global to stack.
         stack.append(value)
       elif instr.opcode == LOAD_FAST:
         var = variables[instr.argval]
@@ -289,21 +277,18 @@ class Module(object):
         value = stack.pop()
         varname = instr.argval
         variables[varname] = value
-        locals[value] = varname
+        bindings[value] = varname
       elif instr.opcode == CALL_FUNCTION:
         numargs = instr.arg
         params = stack[-numargs:]
         stack = stack[0:-numargs]
         op = stack.pop()
         if type(op) is Script:
-          # Inline script.
           result = self.translate(builder, op.pyfunc, params)
         elif type(op) is str:
           raise Exception("Unknown function " + op)
         else:
-          # Emit op.
           result = op(builder, params)
-
         stack.append(result)
       elif instr.opcode == RETURN_VALUE:
         retval = stack.pop()
@@ -338,9 +323,9 @@ class Module(object):
         var = stack.pop()
         emitter = inplace_emitters[instr.opcode]
         result = emitter(builder, var, val)
-        varname = locals[var]
+        varname = bindings[var]
         variables[varname] = result
-        locals[result] = varname
+        binsings[result] = varname
         stack.append(result)
       else:
         raise Exception("Unsupported instruction: " + str(instr))
@@ -388,8 +373,8 @@ class Module(object):
     # Build script from Python function
     script = self.build(func)
 
-    # Wrapper function for running the compiled cell.
-    def wrapper(*args):
+    # Trampoline function for running the compiled cell.
+    def trampoline(*args):
       # Compile script on-demand.
       if script.cell is None: script.module.compile()
 
@@ -405,7 +390,7 @@ class Module(object):
       # Return result.
       return data[script.retidx]
 
-    return wrapper
+    return trampoline
 
   # Compile and link module.
   def compile(self):

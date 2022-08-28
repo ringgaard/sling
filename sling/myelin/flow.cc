@@ -661,10 +661,14 @@ void Attributes::CopyAttrsFrom(const Attributes &other) {
   for (auto &attr : other) emplace_back(attr);
 }
 
-bool Attributes::SubsetOfAttrs(const Attributes &other) const {
-  for (auto &attr : *this) {
+bool Attributes::SameAttrs(const Attributes &other) const {
+  for (const auto &attr : *this) {
     if (!other.HasAttr(attr.name)) return false;
     if (other.GetAttr(attr.name) != attr.value) return false;
+  }
+  for (const auto &attr : other) {
+    if (!HasAttr(attr.name)) return false;
+    if (GetAttr(attr.name) != attr.value) return false;
   }
   return true;
 }
