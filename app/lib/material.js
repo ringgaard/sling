@@ -419,7 +419,7 @@ export class MdToolbar extends Component {
         height: 56px;
         max-height: 56px;
         font-size: 20px;
-        padding: 0px 16px;
+        padding: 0px 8px;
         margin: 0;
         box-shadow: 0 1px 8px 0 rgba(0,0,0,.2),
                     0 3px 4px 0 rgba(0,0,0,.14),
@@ -480,7 +480,7 @@ export class MdMenu extends Component {
 
   render() {
     let h = [];
-    h.push('<md-icon-button id="open" icon="more_vert"></md-icon-button>');
+    h.push('<md-icon id="open" icon="more_vert"></md-icon-button>');
     let content = document.createElement("div");
     content.className = "menu-content";
     for (let item of this.items) {
@@ -496,6 +496,31 @@ export class MdMenu extends Component {
       $ {
         display: inline-block;
         position: relative;
+      }
+
+      $ #open {
+        border-radius: 50%;
+        border: 0;
+        height: 40px;
+        width: 40px;
+        background: transparent;
+        user-select: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      $ #open:hover {
+        background-color: rgba(0,0,0,0.07);
+      }
+
+      md-toolbar $ #open {
+        color: rgb(255,255,255);
+      }
+
+      $ #open:focus {
+        outline: none;
       }
 
       $ .menu-content {
@@ -778,9 +803,6 @@ class MdRippleButton extends Component {
     let diameter = Math.max(button.clientWidth, button.clientHeight);
     let radius = diameter / 2;
 
-    let existing = this.find("md-ripple");
-    if (existing) existing.remove();
-
     let ripple = new MdRipple();
     let s = ripple.style;
     let r = button.getBoundingClientRect();
@@ -788,6 +810,7 @@ class MdRippleButton extends Component {
     s.left = `${e.clientX - (r.left + radius)}px`;
     s.top = `${e.clientY - (r.top + radius)}px`;
     button.appendChild(ripple);
+    ripple.bind(null, "animationend", ripple.remove());
   }
 
   static stylesheet() {

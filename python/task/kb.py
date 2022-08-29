@@ -42,6 +42,12 @@ class KnowledgeBaseWorkflow:
                             dir=corpora.kbdir(),
                             format="store/frame")
 
+  def conflicts(self):
+    """Resource for store with merge conflicts."""
+    return self.wf.resource("conflicts.sling",
+                            dir=corpora.kbdir(),
+                            format="store/frame")
+
   def topics(self):
     """Resource for public case topics."""
     return self.wf.resource("topics.rec",
@@ -195,6 +201,7 @@ class KnowledgeBaseWorkflow:
       builder.attach_input("config", self.xref_config())
       xrefs = self.xrefs()
       builder.attach_output("output", xrefs)
+      builder.attach_output("conflicts", self.conflicts())
     return xrefs
 
   def reconcile_items(self, items=None, output=None):

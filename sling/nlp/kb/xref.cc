@@ -175,18 +175,22 @@ void XRef::Build(Store *store) {
       // Build frame with id slots for all the identifiers in the cluster.
       builder.Clear();
       for (Identifier *id : cluster) {
-        if (id->type->name.empty()) {
-          builder.AddId(id->value);
-        } else {
-          name.clear();
-          name.append(id->type->name);
-          name.push_back('/');
-          name.append(id->value);
-          builder.AddId(name);
-        }
+        id->GetName(&name);
+        builder.AddId(name);
       }
       builder.Create();
     }
+  }
+}
+
+void XRef::Identifier::GetName(string *name) const {
+  if (type->name.empty()) {
+    *name = value;
+  } else {
+    name->clear();
+    name->append(type->name);
+    name->push_back('/');
+    name->append(value);
   }
 }
 
@@ -207,6 +211,16 @@ string XRef::Identifier::ToString() const {
   str.push_back(']');
 
   return str;
+}
+
+XRef::Identifier *XRef::Identifier::Canonical() {
+  Identifier *canonical = this;
+  Identifier *id = this->ring;
+  do {
+    if (id->order() < canonical->order()) canonical = id;
+    id = id->ring;
+  } while (id != this);
+  return canonical;
 }
 
 bool XRefMapping::Map(string *id) const {

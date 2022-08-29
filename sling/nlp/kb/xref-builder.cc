@@ -109,7 +109,13 @@ class XRefBuilder : public task::FrameProcessor {
       } else if (s.name == Handle::is()) {
         // Redirect ids.
         Text ref = store->FrameId(store->Resolve(s.value));
-        anchor = Merge(anchor, xref_.GetIdentifier(ref));
+        XRef::Identifier *id = xref_.GetIdentifier(ref);
+        XRef::Identifier *merged = Merge(anchor, id);
+        if (merged == nullptr) {
+          conflicts_.emplace_back(anchor, id);
+        } else {
+          anchor = merged;
+        }
         num_redirects_->Increment();
       } else if (s.name.IsGlobalRef() && s.name != Handle::isa()) {
         // Add identifiers for tracked properties. Look up property to see if
@@ -120,7 +126,13 @@ class XRefBuilder : public task::FrameProcessor {
           Handle value = store->Resolve(s.value);
           if (store->IsString(value)) {
             Text ref = store->GetString(value)->str();
-            anchor = Merge(anchor, xref_.GetIdentifier(property, ref));
+            XRef::Identifier *id = xref_.GetIdentifier(property, ref);
+            XRef::Identifier *merged = Merge(anchor, id);
+            if (merged == nullptr) {
+              conflicts_.emplace_back(anchor, id);
+            } else {
+              anchor = merged;
+            }
             num_property_ids_->Increment();
           }
         }
@@ -163,10 +175,48 @@ class XRefBuilder : public task::FrameProcessor {
     if (snapshot) {
       CHECK(Snapshot::Write(&store, file->resource()->name()));
     }
+
+    // Write conflict report.
+    if (task->GetOutput("conflicts")) {
+      WriteReport(task->GetOutputFile("conflicts"));
+    }
+  }
+
+  // Output SLING store with merge conflicts.
+  void WriteReport(const string &reportfn) {
+    // Output frame for each cluster with conflicting clusters.
+    Store store;
+    string first_cluster_name;
+    string second_cluster_name;
+    string first_id_name;
+    string second_id_name;
+    for (auto &conflict : conflicts_) {
+      conflict.first->GetName(&first_id_name);
+      conflict.second->GetName(&second_id_name);
+
+      XRef::Identifier *first_cluster = conflict.first->Canonical();
+      XRef::Identifier *second_cluster = conflict.second->Canonical();
+
+      first_cluster->GetName(&first_cluster_name);
+      second_cluster->GetName(&second_cluster_name);
+
+      Handle first = store.Lookup(first_cluster_name);
+      Handle second = store.Lookup(second_cluster_name);
+
+      store.Add(first, second, store.AllocateString(second_id_name));
+      store.Add(second, first, store.AllocateString(second_id_name));
+    }
+
+    // Write conflict store to file.
+    FileEncoder encoder(&store, reportfn);
+    encoder.encoder()->set_shallow(true);
+    encoder.EncodeAll();
+    CHECK(encoder.Close());
   }
 
  private:
-  // Merge identifier with anchor. Returns new anchor.
+  // Merge identifier with anchor. Returns new anchor or null if merging would
+  // lead to a conflict.
   XRef::Identifier *Merge(XRef::Identifier *anchor, XRef::Identifier *id) {
     if (id == nullptr || id == anchor) {
       return anchor;
@@ -180,9 +230,10 @@ class XRefBuilder : public task::FrameProcessor {
                   << " and " << id->ToString();
           num_skipped_->Increment();
         } else {
-          LOG(WARNING) << "Merge conflict between " << anchor->ToString()
-                       << " and " << id->ToString();
+          VLOG(1) << "Merge conflict between " << anchor->ToString()
+                  << " and " << id->ToString();
           num_conflicts_->Increment();
+          return nullptr;
         }
       }
       return anchor;
@@ -191,6 +242,9 @@ class XRefBuilder : public task::FrameProcessor {
 
   // Identifier cross-reference.
   XRef xref_;
+
+  // List of conflicting identifier pairs.
+  std::vector<std::pair<XRef::Identifier *, XRef::Identifier *>> conflicts_;
 
   // Property mnemonics.
   Frame mnemonics_;

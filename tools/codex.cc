@@ -45,6 +45,7 @@ DEFINE_bool(utf8, true, "Allow UTF8-encoded output");
 DEFINE_bool(db, false, "Read input from database");
 DEFINE_bool(version, false, "Output record version");
 DEFINE_bool(follow, false, "Incrementally fetch new changes");
+DEFINE_bool(shallow, false, "Output shallow frames");
 DEFINE_int32(poll, 1000, "Poll interval (in ms) for incremental fetching");
 DEFINE_string(field, "", "Only display a single field from frame");
 DEFINE_bool(timestamp, false, "Output version as timestamp");
@@ -64,7 +65,7 @@ void DisplayObject(const Object &object) {
   } else {
     StringPrinter printer(object.store());
     printer.printer()->set_indent(FLAGS_indent);
-    printer.printer()->set_shallow(false);
+    printer.printer()->set_shallow(FLAGS_shallow);
     printer.printer()->set_utf8(FLAGS_utf8);
     if (!FLAGS_field.empty() && object.IsFrame()) {
       Frame frame = object.AsFrame();

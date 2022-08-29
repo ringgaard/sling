@@ -101,16 +101,14 @@ class CaseFolder extends Component {
         border: 0;
         fill: #808080;
       }
-      $ md-icon-button button {
-        height: 30px;
-        width: 30px;
-        border-radius: 15px;
-      }
       $:hover {
         background-color: #eeeeee;
       }
       $ md-menu #open {
         visibility: hidden;
+        height: 30px;
+        width: 30px;
+        border-radius: 15px;
       }
       $:hover md-menu #open {
         visibility: visible;

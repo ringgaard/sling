@@ -59,6 +59,12 @@ class XRef {
     // Order identifiers by priority with redirects after non-redirects.
     int order() const { return type->priority * 2 + redirect; }
 
+    // Get identifier name.
+    void GetName(string *name) const;
+
+    // Return canonical identifier in cluster.
+    Identifier *Canonical();
+
     // Return identifier cluster as string.
     string ToString() const;
   };
