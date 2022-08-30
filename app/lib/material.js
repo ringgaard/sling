@@ -10,20 +10,20 @@ import {Component, stylesheet} from "./component.js";
 //-----------------------------------------------------------------------------
 
 stylesheet(`
-@import url(https://fonts.googleapis.com/css?family=Roboto:400,400italic,500,500italic,700,700italic,900,900italic,300italic,300,100italic,100);
+@import url(/common/font/roboto.css);
 
 @font-face {
   font-family: 'Material Icons';
   font-style: normal;
   font-weight: 400;
-  src: url(https://fonts.gstatic.com/s/materialicons/v115/flUhRq6tzZclQEJ-Vdg-IuiaDsNc.woff2) format('woff2');
+  src: url(/common/font/material.woff2) format('woff2');
 }
 
 @font-face {
   font-family: 'Material Icons Outlined';
   font-style: normal;
   font-weight: 400;
-  src: url(https://fonts.gstatic.com/s/materialiconsoutlined/v90/gok-H7zzDkdnRel8-DQ6KAXJ69wP1tGnf4ZGhUce.woff2) format('woff2');
+  src: url(/common/font/material-outline.woff2) format('woff2');
 }
 
 html {

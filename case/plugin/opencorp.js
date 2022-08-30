@@ -121,8 +121,7 @@ export default class OpenCorpPlugin {
 
   async populate(context, topic, ocid) {
     // Fetch company information from OpenCorporates.
-    let url = `https://api.opencorporates.com/companies/${ocid}?format=json`;
-    let r = await fetch(context.proxy(url));
+    let r = await fetch(context.service("opencorp", {ocid}));
     if (!r.ok) throw "Company not found";
     let json = await r.json();
     let company = json.results.company;

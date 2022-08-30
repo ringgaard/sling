@@ -39,7 +39,8 @@ function wikiurl(id) {
 }
 
 stylesheet(`
-@import url('https://fonts.googleapis.com/css?family=Lato|Lora:400,400i,700,700i');
+@import url('/common/font/lora.css');
+@import url('/common/font/lato.css');
 `);
 
 //-----------------------------------------------------------------------------

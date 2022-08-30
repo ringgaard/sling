@@ -67,6 +67,8 @@ cc_library(
     ":app",
     ":job",
     "//app",
+    "//app:roboto-font",
+    "//app:material-icons",
     "//sling/base",
     "//sling/base:perf",
     "//sling/file:embed",
