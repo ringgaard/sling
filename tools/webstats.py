@@ -121,8 +121,14 @@ pages = [
 ]
 
 apis = [
-  ("item fetch",           re.compile(r"^\/kb/item\?fmt=cjson&id=(.+)$")),
-  ("name lookup",          re.compile(r"^\/kb/query\?fmt=cjson&q=(.+)$")),
+  ("KB item fetch",        re.compile(r"^\/kb/item\?fmt=cjson&id=(.+)$")),
+  ("KB name lookup",       re.compile(r"^\/kb/query\?fmt=cjson&q=(.+)$")),
+  ("KB query" ,            re.compile(r"^\/kb\/query\?")),
+  ("KB search",            re.compile(r"^\/kb\/search\?")),
+  ("KB item",              re.compile(r"^\/kb\/item\?")),
+  ("KB frame",             re.compile(r"^\/kb\/frame\?")),
+  ("KB topic",             re.compile(r"^\/kb\/topic\?")),
+  ("KB stubs",             re.compile(r"^\/kb\/stubs\?")),
 
   ("Wikidata auth",        re.compile(r"^\/case/wikibase\/(.+)$")),
   ("create case",          re.compile(r"^\/case\/new$")),
@@ -135,20 +141,14 @@ apis = [
   ("image caching",        re.compile(r"^\/case/cacheimg$")),
   ("schema",               re.compile(r"^\/schema(.+)$")),
   ("collaboration",        re.compile(r"^\/collab\/")),
-  ("redreport add media",  re.compile(r"^\/redreport\/addmedia\/")),
 
-  ("KB query" ,            re.compile(r"^\/kb\/query\?")),
-  ("KB search",            re.compile(r"^\/kb\/search\?")),
-  ("KB item",              re.compile(r"^\/kb\/item\?")),
-  ("KB frame",             re.compile(r"^\/kb\/frame\?")),
-  ("KB topic",             re.compile(r"^\/kb\/topic\?")),
-  ("KB stubs",             re.compile(r"^\/kb\/stubs\?")),
+  ("add media",            re.compile(r"^\/redreport\/addmedia\/")),
 
-
-  ("refine" ,              re.compile(r"^\/refine")),
-  ("reconcile" ,           re.compile(r"^\/reconcile")),
-  ("preview" ,             re.compile(r"^\/preview")),
-  ("suggest" ,             re.compile(r"^\/suggest")),
+  ("RS refine" ,           re.compile(r"^\/refine")),
+  ("RS reconcile" ,        re.compile(r"^\/reconcile")),
+  ("RS preview" ,          re.compile(r"^\/preview")),
+  ("RS suggest" ,          re.compile(r"^\/suggest")),
+  ("RS propose" ,          re.compile(r"^\/propose")),
 ]
 
 sources = [

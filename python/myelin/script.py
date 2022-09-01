@@ -325,7 +325,7 @@ class Module(object):
         result = emitter(builder, var, val)
         varname = bindings[var]
         variables[varname] = result
-        binsings[result] = varname
+        bindings[result] = varname
         stack.append(result)
       else:
         raise Exception("Unsupported instruction: " + str(instr))

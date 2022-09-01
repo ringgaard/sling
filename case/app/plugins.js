@@ -216,7 +216,7 @@ var plugins = [
   module: "images.js",
   actions: [PASTEURL],
   patterns: [
-    /^https?:\/\/.*\.(jpg|jpeg|gif|png|mp4|webm|webp)([\/\?].+)?$/i,
+    /^https?:\/\/.*\.(jpg|jpeg|gif|png|mp4|webm|webp|avif)([\/\?].+)?$/i,
   ],
 },
 

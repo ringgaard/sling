@@ -300,6 +300,10 @@ let xrefs = [
     pattern: /^(https?:\/\/honeydrip\.com\/model\/.+)/,
     property: store.lookup("P973"),
   },
+  {
+    pattern: /^https?:\/\/linktr\.ee\/(.+)/,
+    property: store.lookup("PLITR"),
+  },
 ];
 
 export function match_link(url) {

@@ -10,6 +10,7 @@ import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 const n_name = store.lookup("name");
 const n_description = store.lookup("description");
 const n_media = store.lookup("media");
+const n_linktree = store.lookup("PLITR");
 
 export default class LinkTreePlugin {
   async process(action, query, context) {
@@ -72,6 +73,9 @@ export default class LinkTreePlugin {
         await social.add_link(link.url, strip_emojis(link.title));
       }
     }
+
+    // Add linktree id.
+    topic.add(n_linktree, username);
 
     // Add profile photo.
     if (account.profilePictureUrl) {

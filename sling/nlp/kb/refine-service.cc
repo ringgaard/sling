@@ -58,6 +58,7 @@ void RefineService::Register(HTTPServer *http) {
   http->Register("/reconcile", this, &RefineService::HandleReconcile);
   http->Register("/preview", this, &RefineService::HandlePreview);
   http->Register("/suggest", this, &RefineService::HandleSuggest);
+  http->Register("/propose", this, &RefineService::HandlePropose);
 }
 
 void RefineService::HandleReconcile(HTTPRequest *req, HTTPResponse *rsp) {
@@ -122,6 +123,10 @@ void RefineService::HandleManifest(HTTPRequest *req, HTTPResponse *rsp) {
 
   // Extend service.
   Builder extend(&store);
+  Builder propose_properties(&store);
+  propose_properties.Add(n_service_url_, FLAGS_kburl_prefix);
+  propose_properties.Add(n_service_path_, "/propose");
+  extend.Add("propose_properties", propose_properties.Create());
   manifest.Add(n_extend_, extend.Create());
 
   // Default types.
@@ -437,6 +442,39 @@ void RefineService::HandleSuggest(HTTPRequest *req, HTTPResponse *rsp) {
 
   Builder response(&store);
   response.Add(n_result_, results);
+
+  // Add CORS headers.
+  rsp->Add("Access-Control-Allow-Origin", "*");
+
+  // Output response.
+  WriteJSON(response.Create(), rsp);
+}
+
+void RefineService::HandlePropose(HTTPRequest *req, HTTPResponse *rsp) {
+  URLQuery params(req->query());
+  Text type = params.Get("type");
+  int limit = params.Get("limit", 50);
+
+  // Find properties for item type.
+  Store store(commons_);
+  String n_id(&store, "id");
+  Builder response(&store);
+  response.Add(n_limit_, limit);
+  response.Add(n_type_, type);
+
+  Frame item(&store, type);
+  if (item.valid()) {
+    Handles properties(&store);
+    for (const Slot &s : item.Slots(n_properties_for_type_)) {
+      Frame property(&store, store.Resolve(s.value));
+      Builder b(&store);
+      b.Add(n_id, property.Id());
+      b.Add(n_name_, property.GetHandle(n_name_));
+      properties.push_back(b.Create().handle());
+      if (properties.size() >= limit) break;
+    }
+    response.Add(n_properties_, properties);
+  }
 
   // Add CORS headers.
   rsp->Add("Access-Control-Allow-Origin", "*");
