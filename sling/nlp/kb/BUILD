@@ -39,6 +39,20 @@ cc_library(
 )
 
 cc_library(
+  name = "property-usage",
+  srcs = ["property-usage.cc"],
+  deps = [
+    "//sling/base",
+    "//sling/file:recordio",
+    "//sling/frame:object",
+    "//sling/frame:serialization",
+    "//sling/frame:store",
+    "//sling/task:process",
+  ],
+  alwayslink = 1,
+)
+
+cc_library(
   name = "reconciler",
   srcs = ["reconciler.cc"],
   deps = [

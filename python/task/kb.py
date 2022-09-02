@@ -48,6 +48,13 @@ class KnowledgeBaseWorkflow:
                             dir=corpora.kbdir(),
                             format="store/frame")
 
+  def usage(self):
+    """Resource for property usage."""
+    return self.wf.resource("usage.rec",
+                            dir=corpora.kbdir(),
+                            format="records/frame",
+                            serial=240)
+
   def topics(self):
     """Resource for public case topics."""
     return self.wf.resource("topics.rec",
@@ -145,6 +152,7 @@ class KnowledgeBaseWorkflow:
   #  210 wikidata redirects
   #  220 fanin
   #  230 popularity
+  #  240 usage
   #  300 wikipedia items
   #  310 wikipedia members
   #  320 wikipedia summaries
@@ -166,6 +174,7 @@ class KnowledgeBaseWorkflow:
 
   def extended_item_sources(self):
     return self.wf.bundle(
+      self.usage(),
       self.topics(),
       self.wikipedia_media(),
       self.twitter(),
@@ -268,6 +277,12 @@ class KnowledgeBaseWorkflow:
     """Task for loading items into database."""
     self.wf.write(self.wf.read(self.data.items()), self.kbdb())
 
+  def property_usage(self):
+    """Task for computing property usage statistics."""
+    usage = self.wf.task("property-usage")
+    usage.attach_input("kb", self.data.knowledge_base())
+    usage.attach_output("output", self.usage())
+
 def collect_xrefs():
   log.info("Build cross references")
   wf = KnowledgeBaseWorkflow("xref-builder")
@@ -296,5 +311,11 @@ def load_items():
   log.info("Load items into database")
   wf = KnowledgeBaseWorkflow("knowledge-base")
   wf.load_items()
+  run(wf.wf)
+
+def property_usage():
+  log.info("Property usage")
+  wf = KnowledgeBaseWorkflow("property-usage")
+  wf.property_usage()
   run(wf.wf)
 

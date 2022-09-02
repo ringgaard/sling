@@ -106,6 +106,7 @@ cc_library(
     "//sling/nlp/kb:reconciler",
     "//sling/nlp/kb:name-table-builder",
     "//sling/nlp/kb:phrase-table-builder",
+    "//sling/nlp/kb:property-usage",
 
     "//sling/nlp/search:search-dictionary-builder",
     "//sling/nlp/search:search-index-builder",

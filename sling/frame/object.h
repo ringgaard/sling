@@ -89,6 +89,18 @@ class HandleSet : public std::unordered_set<Handle, HandleHash> {
    bool has(Handle h) const { return find(h) != end(); }
 };
 
+// Hash map keyed by pair of handles.
+typedef std::pair<Handle, Handle> HandlePair;
+
+struct HandlePairHash {
+  size_t operator()(const HandlePair handles) const {
+    return (handles.first.raw() ^ handles.second.raw()) >> Handle::kTagBits;
+  }
+};
+
+template<typename T> using HandlePairMap =
+  std::unordered_map<HandlePair, T, HandlePairHash>;
+
 // Name with lazy lookup that can be initialized as static variables and
 // then later be resolved using a Names object, e.g.:
 //

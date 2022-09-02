@@ -180,6 +180,10 @@ commands = [
     help="Load items into database",
     package="sling.task.kb",
   ),
+  Command("property_usage",
+    help="Compute property usage statistics",
+    package="sling.task.kb",
+  ),
 
   # Aliases.
   Command("extract_aliases",
