@@ -55,6 +55,9 @@ struct PyHTTPServer : public PyBase {
   // Start HTTP server.
   PyObject *Start();
 
+  // Request shudown of HTTP server.
+  PyObject *Shutdown();
+
   // Stop HTTP server.
   PyObject *Stop();
 

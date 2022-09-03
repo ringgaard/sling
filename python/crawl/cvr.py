@@ -25,8 +25,8 @@ flags.define("--end",
 
 flags.define("--cvrdb",
              help="database for storing CVR records",
-             default="http://localhost:7070/cvr",
-             metavar="DBURL")
+             default="cvr",
+             metavar="DB")
 
 flags.parse()
 
@@ -35,7 +35,7 @@ with open(flags.arg.apikey) as f:
   apikey = f.read().strip().split(" ")
 credentials = requests.auth.HTTPBasicAuth(apikey[0], apikey[1])
 url = "http://distribution.virk.dk/"
-dbsession = requests.Session()
+cvrdb = sling.Database(flags.arg.cvrdb, "cvr")
 
 # Set up query.
 if flags.arg.start is None and flags.arg.end is None:
@@ -85,20 +85,11 @@ while True:
 
       # Update company record in database. Only update record if the version
       # number is updated.
-      r = dbsession.put(
-        flags.arg.cvrdb + "/" + str(cvrid),
-        json=rec,
-        headers={
-          "Version": str(version),
-          "Mode": "newer",
-        }
-      )
-      r.raise_for_status()
-      result = r.headers["Result"]
+      result = cvrdb.put(str(cvrid), json.dumps(rec), version, sling.DBNEWER)
 
-      if result != "unchanged":
+      if result != sling.DBUNCHANGED:
         print(num_records, "/", total_records,
-              last_updated[:10], kind[2], cvrnr if cvrnr != None else cvrid,
+              kind[2], cvrnr if cvrnr != None else cvrid,
               version, result)
         sys.stdout.flush()
         num_updates += 1

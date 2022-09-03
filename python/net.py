@@ -192,9 +192,14 @@ def redirect_page(value, request, response):
 class HTTPServer:
   def __init__(self, port, addr=""):
     self.httpd = api.HTTPServer(addr, port)
+    self.terminate = False
 
   def start(self):
     self.httpd.start()
+
+  def shutdown(self):
+    self.terminate = True
+    self.httpd.shutdown()
 
   def stop(self):
     self.httpd.stop()
@@ -206,7 +211,7 @@ class HTTPServer:
 
     # Wait until shutdown.
     try:
-      while True: time.sleep(1)
+      while not self.terminate: time.sleep(1)
     except KeyboardInterrupt:
       pass
 

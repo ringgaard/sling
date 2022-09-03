@@ -28,6 +28,7 @@ void PyHTTPServer::Define(PyObject *module) {
   type.tp_dealloc = method_cast<destructor>(&PyHTTPServer::Dealloc);
 
   methods.Add("start", &PyHTTPServer::Start);
+  methods.Add("shutdown", &PyHTTPServer::Shutdown);
   methods.Add("stop", &PyHTTPServer::Stop);
   methods.Add("static", &PyHTTPServer::Static);
   methods.Add("dynamic", &PyHTTPServer::Dynamic);
@@ -77,6 +78,11 @@ PyObject *PyHTTPServer::Start() {
     PyErr_SetString(PyExc_IOError, st.message());
     return nullptr;
   }
+  Py_RETURN_NONE;
+}
+
+PyObject *PyHTTPServer::Shutdown() {
+  httpd->Shutdown();
   Py_RETURN_NONE;
 }
 

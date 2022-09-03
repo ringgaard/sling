@@ -29,12 +29,13 @@ import sling
 import sling.flags as flags
 import sling.log as log
 import sling.net
+import sling.task.alert as alert
 
 flags.define("--tasklist",
              default="local/tasks.sling",
              help="task list")
 
-flags.define("--logdir",
+flags.define("--logpath",
              default="local/logs",
              help="directory for job logs")
 
@@ -188,7 +189,7 @@ class Job:
 
       if self.task.statistics:
         cmd.append("--logdir")
-        cmd.append(flags.arg.logdir)
+        cmd.append(flags.arg.logpath)
         cmd.append("--jobid")
         cmd.append(self.id)
 
@@ -238,10 +239,10 @@ class Queue(threading.Thread):
     log.info("command:", cmd)
 
     # Output files for stdout and strerr.
-    job.stdout = flags.arg.logdir + "/" + job.id + ".log"
-    job.stderr = flags.arg.logdir + "/" + job.id + ".err"
+    job.stdout = flags.arg.logpath + "/" + job.id + ".log"
+    job.stderr = flags.arg.logpath + "/" + job.id + ".err"
     if job.task.statistics:
-      job.status = flags.arg.logdir + "/" + job.id + ".json"
+      job.status = flags.arg.logpath + "/" + job.id + ".json"
     out = open(job.stdout, "w")
     err = open(job.stderr, "w")
     if type(cmd) is list:
@@ -310,10 +311,16 @@ class Queue(threading.Thread):
     if job.error:
       log.error("failed to lauch job", job.id, str(job), job.error)
       job.state = Job.FAILED
+      alert.send("Job %s failed to launch" % str(job),
+        "Error launching job %s %s on %s: %s" %
+          (job.id, str(job), socket.gethostname(), job.error))
     elif process.returncode != 0:
       log.error("job", job.id, str(job), "failed, returned", process.returncode)
       job.state = Job.FAILED
       job.error = "Error " + str(process.returncode)
+      alert.send("Job %s failed" % str(job),
+        "Job %s %s failed on %s with error code %d" %
+          (job.id, str(job), socket.gethostname(), process.returncode))
     else:
       log.info("completed job", job.id, str(job))
       job.state = Job.COMPLETED

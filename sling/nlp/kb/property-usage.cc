@@ -48,15 +48,25 @@ class PropertyUsage : public task::Process {
     LoadStore(task->GetInputFile("kb"), &store);
 
     // Resolve symbols.
-    Names names;
-    Name n_item(names, "/w/item");
-    Name p_instance_of(names, "P31");
-    Name n_usage(names, "usage");
+    Handle n_item = store.Lookup("/w/item");
+    Handle n_property = store.Lookup("/w/property");
+    Handle n_instance_of = store.Lookup("P31");
+    Handle n_usage = store.Lookup("usage");
+
+    // Property usage table (prop,type)->count.
+    HandlePairMap<int> usage;
+    auto add_type = [&](Handle prop, Handle value) {
+      auto *item = store.GetFrame(value);
+      for (Slot *s = item->begin(); s < item->end(); ++s) {
+        if (s->name == n_instance_of) {
+          Handle type = store.Resolve(s->value);
+          usage[std::make_pair(prop, type)]++;
+        }
+      }
+    };
 
     // Collect property statistics from items.
     task::Counter *num_items = task->GetCounter("items");
-    //HandleMap<Usage *> usage;
-    HandlePairMap<int> usage;
     store.ForAll([&](Handle handle) {
       Frame item(&store, handle);
       if (!item.IsA(n_item)) return;
@@ -67,7 +77,7 @@ class PropertyUsage : public task::Process {
         if (!store.IsPublic(prop)) continue;
         if (!store.IsFrame(value)) continue;
         if (store.IsPublic(value)) {
-          usage[std::make_pair(prop, value)]++;
+          add_type(prop, value);
         } else {
           Frame qualifiers(&store, value);
           for (const Slot &qs : qualifiers) {
@@ -77,7 +87,7 @@ class PropertyUsage : public task::Process {
             if (!store.IsFrame(qvalue)) continue;
             if (store.IsAnonymous(qvalue)) continue;
             if (qprop == Handle::is()) qprop = prop;
-            usage[std::make_pair(qprop, qvalue)]++;
+            add_type(qprop, qvalue);
           }
         }
       }
@@ -119,6 +129,8 @@ class PropertyUsage : public task::Process {
     RecordWriter output(task->GetOutputFile("output"));
     for (auto &it : propstat) {
       Handle prop = it.first;
+      if (!store.GetFrame(prop)->isa(n_property)) continue;
+
       PropertyStats &ps = it.second;
       const auto &types = ps.types;
       if (types.empty()) continue;
