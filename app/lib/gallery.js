@@ -64,12 +64,12 @@ export class PhotoGallery extends MdModal {
   }
 
   onconnected() {
-    this.bind(".photo", "click", e => this.onclick(e));
-    this.bind(".prev", "click", e => this.onprev(e));
-    this.bind(".next", "click", e => this.onnext(e));
-    this.bind(".close", "click", e => this.close(e));
-    this.bind(".domain", "click", e => this.onsource(e));
-    this.bind(null, "keydown", e => this.onkeypress(e));
+    this.attach(this.onclick, "click", ".photo");
+    this.attach(this.onprev, "click", ".prev");
+    this.attach(this.onnext, "click", ".next");
+    this.attach(this.close, "click", ".close");
+    this.attach(this.onsource, "click", ".domain");
+    this.attach(this.onkeypress, "keydown");
   }
 
   onupdate() {

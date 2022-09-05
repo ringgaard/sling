@@ -990,13 +990,17 @@ class TopicPhoto extends Component {
   render() {
     let photo = this.state;
     let url = imageurl(photo.url);
+    let label = `Remove ${photo.width} x ${photo.height}`
+    if (photo.bigger) label += " bigger";
+    if (photo.smaller) label += " smaller";
     return `
       <a href="${url}" target="_blank"><img src="${url}"></a>
       <div>
-        <input id="remove" type="checkbox" ${photo.remove ? "checked" : ""}>
-        ${photo.width} x ${photo.height}
-        ${photo.bigger ? " bigger" : ""}
-        ${photo.smaller ? " smaller" : ""}
+        <md-checkbox
+          id="remove"
+          label="${label}"
+          checked=${!!photo.remove}>
+        </md-checkbox>
       </div>
     `
   }
@@ -1017,7 +1021,10 @@ class TopicPhoto extends Component {
       $ img {
         height: 250px;
       }
-      $ input {
+      $ div {
+        display: inline;
+      }
+      $ md-checkbox input {
         user-select: none;
       }
     `;
@@ -1047,9 +1054,11 @@ class DedupDialog extends MdDialog {
     return `
       <md-dialog-top>Remove photos</md-dialog-top>
       <div id="photos"></div>
-      <div style="display: ${missing.length > 0 ? "block" : "none"};">
-        <input id="missing" type="checkbox">
-        Remove ${plural(missing.length, "missing photo")}
+      <div class="${missing.length > 0 ? "miss" : "nomiss"}">
+        <md-checkbox
+          id="missing"
+          label="Remove ${plural(missing.length, "missing photo")}">
+        </md-checkbox>
       </div>
       <md-dialog-bottom>
         <button id="cancel">Cancel</button>
@@ -1074,6 +1083,12 @@ class DedupDialog extends MdDialog {
         max-height: 75vh;
         overflow: auto;
         grid-template-columns: 50% 50%;
+      }
+      $ .miss {
+       padding: 16px;
+      }
+      $ .nomiss {
+       display: none;
       }
     `;
   }

@@ -1290,9 +1290,10 @@ export class MdCheckbox extends Component {
 
   render() {
     let label = this.attrs.label ? Component.escape(this.attrs.label) : "";
+    let checked = this.state || this.attrs.checked;
     return `
-      <label ${this.state ? 'class="checked"' : ''}>
-        <input type="checkbox" ${this.state ? "checked" : ""}>
+      <label ${checked ? 'class="checked"' : ''}>
+        <input type="checkbox" ${checked ? "checked" : ""}>
         <div>${label}</div>
       </label>
     `;
@@ -1302,6 +1303,7 @@ export class MdCheckbox extends Component {
     return `
       $ label {
         display: flex;
+        align-items: center;
       }
       $ input {
         transform: scale(1.5)
@@ -1311,8 +1313,7 @@ export class MdCheckbox extends Component {
       }
       $ div {
         font-size: 16px;
-        margin-left: 3px;
-        margin-top: -1px;
+        margin-left: 4px;
       }
     `;
   }

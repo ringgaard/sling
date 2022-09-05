@@ -525,7 +525,7 @@ document.body.style = null;
 """)
 
 @app.route("/jobs")
-def jobs_page(request):
+def jobs_request(request):
   running = []
   pending = []
   terminated = []
@@ -594,6 +594,19 @@ def jobs_page(request):
     "running": running,
     "pending": pending,
     "terminated": terminated
+  }
+
+@app.route("/summary")
+def summary_request(request):
+  summary = {}
+  for job in jobs:
+    summary[job.state] = summary.get(job.state, 0) + 1
+
+  return {
+    "running": summary.get(Job.RUNNING, 0),
+    "pending": summary.get(Job.PENDING, 0),
+    "completed": summary.get(Job.COMPLETED, 0),
+    "failed": summary.get(Job.FAILED, 0),
   }
 
 @app.route("/log")

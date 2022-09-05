@@ -43,11 +43,9 @@ flags.define("--smtpport",
              type=int,
              metavar="PORT")
 
-flags.define("--schedulers",
-             help="list of machines with job schedulers")
-
-flags.define("--monitors",
-             help="list of machines with monitors")
+flags.define("--cfg",
+             help="system monitor configuration",
+             default="sysmon.sling")
 
 flags.define("--mbox",
              help="file for writing received messages",
@@ -107,7 +105,6 @@ app.page("/",
           <md-data-field field="running" class="right">Running</md-data-field>
           <md-data-field field="pending" class="right">Pending</md-data-field>
           <md-data-field field="done" class="right">Done</md-data-field>
-          <md-data-field field="confirmed" class="right">Confirmed</md-data-field>
           <md-data-field field="failed" class="right">Failed</md-data-field>
         </md-data-table>
       </md-card>
@@ -168,15 +165,12 @@ class MonitorApp extends MdApp {
     });
   }
 
-  failures() {
-    let failures = 0;
-    for (let s of Object.values(this.state.schedulers)) {
-      failures += s.failed;
-    }
+  alarms() {
+    let n = this.state.alerts.length;
     for (let m of Object.values(this.state.monitors)) {
-      failures += m.failures;
+      n += m.failures;
     }
-    return failures;
+    return n;
   }
 
   onupdate() {
@@ -184,16 +178,16 @@ class MonitorApp extends MdApp {
     this.find("#scheduler-table").update(this.state.schedulers);
     this.find("#monitor-table").update(this.state.monitors);
 
-    let failures = this.failures();
+    let alarms = this.alarms();
     let status = this.find("#status");
-    if (failures == 0) {
+    if (alarms == 0) {
       status.update("ALL SYSTEMS GO");
       status.className = "success"
     } else if (failures == 1) {
-      status.update("1 FAILURE");
+      status.update("1 ALARM");
       status.className = "failure";
     } else {
-      status.update(`${failures} FAILURES`);
+      status.update(`${alarms} ALARMS`);
       status.className = "failure";
     }
   }
@@ -239,13 +233,12 @@ document.body.style = null;
 session = requests.Session()
 commons = sling.Store()
 
+config = commons.load(flags.arg.cfg)
+
 n_running = commons["running"]
 n_pending = commons["pending"]
-n_terminated = commons["terminated"]
-n_style = commons["style"]
-n_ended = commons["ended"]
-n_job = commons["job"]
-n_command = commons["command"]
+n_completed = commons["completed"]
+n_failed = commons["failed"]
 
 n_monit = commons["monit"]
 n_idsym = commons["_id"]
@@ -265,34 +258,11 @@ commons.freeze()
 inbox = []
 
 # Current system status.
-status = {
-  "alerts": [],
-  "schedulers": {},
-  "monitors": {},
-}
-
-acked_job_alerts = set()
-
-schedulers = flags.arg.schedulers.split(",")
-for s in schedulers:
-  status["schedulers"][s] = {
-    "machine": s,
-    "link": '<a href="http://%s:5050/">%s</a>' % (s, s),
-  }
-
-monitors = flags.arg.monitors.split(",")
-for m in monitors:
-  status["monitors"][m] = {
-    "machine": m,
-    "link": '<a href="http://%s:2812/">%s</a>' % (m, m),
-  }
+status = {}
 
 def refresh():
-  # Clear alert list.
-  alerts = status["alerts"]
-  alerts.clear()
-
   # Add alerts from inbox.
+  alerts = []
   for m in inbox:
     if m["ack"]: continue
     mail = m["mail"]
@@ -309,49 +279,37 @@ def refresh():
     })
 
   # Refresh jobs scheduler status.
-  for s in schedulers:
-    scheduler = status["schedulers"][s]
+  schedulers = []
+  for s in config.schedulers:
+    scheduler = {
+      "machine": s.machine,
+      "link": '<a href="%s">%s</a>' % (s.url, s.machine),
+    }
+    schedulers.append(scheduler)
     try:
-      url = "http://" + s + ":5050"
-      r = session.get(url + "/jobs")
+      r = session.get(s["url"] + "/summary")
       r.raise_for_status()
       store = sling.Store(commons)
-      data = store.parse(r.content, json=True)
-      confirmed = 0
-      failed = 0
-      done = 0
-      for job in data[n_terminated]:
-        if job[n_style]:
-          jobid = s + ":" + job[n_job]
-          if jobid in acked_job_alerts:
-            confirmed += 1
-          else:
-            failed += 1
-            alerts.append({
-              "time": job[n_ended],
-              "source": '<a href="%s">%s scheduler</a>' % (url, s),
-              "alert": "Job %s %s failed on %s" %
-                       (job[n_job], job[n_command], s),
-              "ack": '<md-icon-button icon="delete" alerttype="job" alertid="' +
-                     jobid + '"></md-icon-button>',
-            })
-        else:
-          done += 1
+      summary = store.parse(r.content, json=True)
       scheduler["status"] = "OK"
-      scheduler["running"] = len(data[n_running])
-      scheduler["pending"] = len(data[n_pending])
-      scheduler["done"] = done
-      scheduler["confirmed"] = confirmed
-      scheduler["failed"] = failed
+      scheduler["running"] = summary[n_running]
+      scheduler["pending"] = summary[n_pending]
+      scheduler["done"] = summary[n_completed]
+      scheduler["failed"] = summary[n_failed]
     except Exception as e:
       scheduler["status"] = str(e)
+      scheduler["failed"] = 1
 
   # Refresh monitor status.
-  for m in monitors:
-    monitor = status["monitors"][m]
+  monitors = []
+  for m in config.monitors:
+    monitor = {
+      "machine": m.machine,
+      "link": '<a href="%s">%s</a>' % (m.url, m.machine),
+    }
+    monitors.append(monitor)
     try:
-      url = "http://" + m + ":2812"
-      r = session.get(url + "/_status?format=xml")
+      r = session.get(m["url"] + "/_status?format=xml")
       r.raise_for_status()
       store = sling.Store(commons)
       data = store.parse(r.content, xml=True, idsym=n_idsym)
@@ -371,14 +329,7 @@ def refresh():
       for service in monit(n_service):
         probes += 1
         st = int(service[n_status])
-        if st != 0:
-          failures += 1
-          tm = time.localtime(int(service[n_collected_sec]))
-          alerts.append({
-            "time": time.strftime("%Y-%m-%d %H:%M:%S", tm),
-            "source": '<a href="%s">%s monitor</a>' % (url, m),
-            "alert": "Probe %s alarm" % (service["name"])
-          })
+        if st != 0: failures += 1
 
       monitor["status"] = "OK"
       monitor["probes"] = probes
@@ -386,6 +337,25 @@ def refresh():
 
     except Exception as e:
       monitor["status"] = str(e)
+
+  global status
+  status = {
+    "alerts": alerts,
+    "schedulers": schedulers,
+    "monitors": monitors,
+  }
+
+def notify(subject, message):
+  for n in config.notifications:
+    if n.type == "telegram":
+      url = f"https://api.telegram.org/bot{n.token}"
+      params = {
+        "chat_id": n.chat,
+        "text": subject + "\n" + message,
+      }
+      session.get(url + "/sendMessage", params=params)
+    else:
+      log.error("unknown notification type:", n.type)
 
 @app.route("/status")
 def status_page(request):
@@ -435,8 +405,11 @@ class AlertServer(smtpd.SMTPServer):
       })
       next_inbox_id += 1
 
+      # Send notifications.
+      notify(mail["Subject"], mail.get_payload())
+
     except Exception as e:
-      log.info("Error receiving message:", e)
+      log.error("Error receiving message:", e)
       traceback.print_exc()
 
 smtpsrv = AlertServer(("0.0.0.0", flags.arg.smtpport), None)

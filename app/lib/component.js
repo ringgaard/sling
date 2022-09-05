@@ -43,18 +43,11 @@ export class Component extends HTMLElement {
       let name = attr.name.replace(/-/g, "_");
       let value = attr.value;
 
-      if (value == "null") {
-        value = null;
-      } else if (value == "true") {
-        value = true;
-      } else if (value == "false") {
-        value = false;
-      } else {
-        let n = parseFloat(value);
-        if (!isNaN(n) && isFinite(n)) value = n;
+      try {
+        this.attrs[name] = JSON.parse(value);
+      } catch (e) {
+        this.attrs[name] = value;
       }
-
-      this.attrs[name] = value;
     }
 
     // Render component.
