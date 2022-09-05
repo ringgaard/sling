@@ -6,11 +6,10 @@ import {MdSearchResult} from "/common/lib/material.js";
 
 import {store, settings} from "./global.js";
 
-export async function search(query, backends) {
+export async function search(query, backends, options) {
   // Do full match if query ends with period.
-  let full = false;
   if (query.endsWith(".")) {
-    full = true;
+    options.full = true;
     query = query.slice(0, -1);
   }
 
@@ -19,7 +18,7 @@ export async function search(query, backends) {
     // Collect search results from backends.
     let items = new Array();
     for (let backend of backends) {
-      await backend(query, full, items);
+      await backend(query, items, options);
     }
 
     // Convert items to search results filtering out duplicates.

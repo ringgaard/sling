@@ -78,9 +78,11 @@ class PropertyIndex {
     });
   }
 
-  match(query, limit=30, prefix=true) {
+  match(query, options = {}) {
     // Normalize query.
     let normalized_query = normalized(query);
+    let prefix = !options.full;
+    let limit = options.limit || 30;
 
     // Add property shortcut matches.
     let matches = new Set();
@@ -218,9 +220,9 @@ export function inverse_property(property, source) {
   }
 }
 
-export async function psearch(query, full, results) {
+export async function psearch(query, results, options) {
   let props = await get_property_index();
-  let matches = props.match(query, 30, !full);
+  let matches = props.match(query, options);
   for (let match of matches) {
     results.push({
       ref: match.id,

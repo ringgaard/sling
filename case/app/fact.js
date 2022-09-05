@@ -7,7 +7,7 @@ import {Frame, QString, Printer} from "/common/lib/frame.js";
 import {store, settings} from "./global.js";
 import {value_text, value_parser, LabelCollector} from "./value.js";
 import {Context} from "./plugins.js";
-import {search} from "./omnibox.js";
+import {search} from "./search.js";
 import {qualified, psearch} from "./schema.js";
 
 const n_id = store.id;
@@ -1258,9 +1258,9 @@ class FactValue extends FactField {
   backends() {
     let editor = this.match("#editor");
     return [
-      (query, full, results) => value_parser(query, results),
-      (query, full, results) => editor.search(query, full, results),
-      (query, full, results) => newtopic(query, editor, results),
+      (query, results, options) => value_parser(query, results),
+      editor.search.bind(editor),
+      (query, results, options) => newtopic(query, editor, results),
     ];
   }
 

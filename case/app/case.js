@@ -15,7 +15,7 @@ import {wikidata_initiate, wikidata_export} from "./wikibase.js";
 import {generate_key, encrypt} from "./crypto.js";
 import {Collaboration} from "./collab.js";
 import "./topic.js";
-import "./omnibox.js";
+import "./search.js";
 
 const n_is = store.is;
 const n_name = store.lookup("name");
@@ -107,7 +107,7 @@ async function read_from_clipboard() {
 }
 
 // Find topics matching search query.
-function search_topics(query, full, topics) {
+function search_topics(query, topics, options = {}) {
   query = query.toLowerCase();
   let results = [];
   let partial = [];
@@ -122,7 +122,7 @@ function search_topics(query, full, topics) {
       names.push(...topic.all(n_alias));
       for (let name of names) {
         let normalized = name.toString().toLowerCase();
-        if (full) {
+        if (options.full) {
           match = normalized == query;
         } else {
           match = normalized.startsWith(query);
@@ -180,8 +180,8 @@ class CaseEditor extends MdApp {
     window.addEventListener("beforeunload", e => this.onbeforeunload(e));
 
     let omnibox = this.find("omni-box");
-    omnibox.add((query, full, results) => this.search(query, full, results));
-    omnibox.add((query, full, results) => {
+    omnibox.add(this.search.bind(this));
+    omnibox.add((query, results, options) => {
       if (!query.endsWith("?")) {
         results.push({
           title: "more...",
@@ -235,9 +235,9 @@ class CaseEditor extends MdApp {
     }
   }
 
-  async search(query, full, results) {
+  async search(query, results, options = {}) {
     // Search topcis in case file.
-    for (let result of search_topics(query, full, this.topics)) {
+    for (let result of search_topics(query, this.topics, options)) {
       let name = result.get(n_name);
       results.push({
         ref: result.id,
@@ -252,7 +252,7 @@ class CaseEditor extends MdApp {
     for (let link of this.links) {
       let topics = link.get(n_topics);
       if (topics) {
-        for (let result of search_topics(query, full, topics)) {
+        for (let result of search_topics(query, topics, options)) {
           let name = result.get(n_name);
           results.push({
             ref: result.id,
@@ -267,7 +267,7 @@ class CaseEditor extends MdApp {
     }
 
     // Search local case database.
-    for (let result of this.match("#app").search(query, full)) {
+    for (let result of this.match("#app").search(query, options)) {
       let caseid = "c/" + result.id;
       results.push({
         ref: caseid,
@@ -280,7 +280,7 @@ class CaseEditor extends MdApp {
 
     // Search plug-ins.
     let context = new plugins.Context(null, this.casefile, this);
-    await plugins.search_plugins(context, query, full, results);
+    await plugins.search_plugins(context, query, results, options);
 
     // Search knowledge base.
     try {
@@ -290,7 +290,7 @@ class CaseEditor extends MdApp {
         query = query.slice(0, -1);
       }
       let params = "fmt=cjson";
-      if (full) params += "&fullmatch=1";
+      if (options.full) params += "&fullmatch=1";
       params += `&q=${encodeURIComponent(query)}`;
 
       let response = await fetch(`${settings.kbservice}${path}?${params}`);
@@ -1952,8 +1952,8 @@ export class InviteDialog extends MdDialog {
 
     let omnibox = this.find("#value");
     let editor = document.getElementById("editor");
-    omnibox.add((query, full, results) => editor.search(query, full, results));
-    omnibox.add((query, full, results) => {
+    omnibox.add(editor.search.bind(editor));
+    omnibox.add((query, results, options) => {
       results.push({
         ref: query,
         name: query,

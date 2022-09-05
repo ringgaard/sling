@@ -239,6 +239,7 @@ cc_library(
     "//sling/util:md5",
     "//sling/util:mutex",
     "//sling/util:sortmap",
+    "//sling/util:top",
   ],
 )
 

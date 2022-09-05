@@ -32,6 +32,7 @@
 #include "sling/nlp/kb/xref.h"
 #include "sling/nlp/search/search-engine.h"
 #include "sling/util/mutex.h"
+#include "sling/util/top.h"
 
 namespace sling {
 namespace nlp {
@@ -146,6 +147,7 @@ class KnowledgeService {
     bool image;
     bool origin;
     int order = kint32max;
+    HandleMap<float> usage;
   };
 
   // Get property descriptor.
@@ -169,6 +171,18 @@ class KnowledgeService {
 
   // Statement with property and value.
   typedef std::pair<Property *, Handle> Statement;
+
+  // Ranking.
+  struct Hit {
+   Hit(float score, Handle item) : score(score), item(item) {}
+    bool operator >(const Hit &other) const {
+      return score > other.score;
+    }
+    float score;
+    Handle item;
+  };
+
+  typedef Top<Hit> Ranking;
 
   // Knowledge base store.
   Store *kb_ = nullptr;
@@ -207,6 +221,7 @@ class KnowledgeService {
   Name n_name_{names_, "name"};
   Name n_description_{names_, "description"};
   Name n_media_{names_, "media"};
+  Name n_usage_{names_, "usage"};
   Name n_role_{names_, "role"};
   Name n_target_{names_, "target"};
   Name n_properties_{names_, "properties"};

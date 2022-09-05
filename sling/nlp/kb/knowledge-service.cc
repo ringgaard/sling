@@ -212,6 +212,20 @@ void KnowledgeService::Load(Store *kb, const string &name_table) {
       if (ps.name == n_instance_of_ && ps.value == n_representative_image_) {
         p.image = true;
       }
+
+      // Collect property usage statistics.
+      if (ps.name == n_usage_) {
+        float sum = 0.0;
+        for (const Slot &u : Frame(kb, ps.value)) {
+          float value = u.value.AsInt();
+          if (!u.name.IsNil()) p.usage[u.name] = value;
+          sum += value;
+        }
+        if (sum == 0.0) sum = 1.0;
+        for (auto &it : p.usage) {
+          it.second = it.second / sum * 100.0;
+        }
+      }
     }
 
     // Add property.
@@ -435,9 +449,11 @@ void KnowledgeService::HandleLandingPage(HTTPRequest *request,
 void KnowledgeService::HandleQuery(HTTPRequest *request,
                                    HTTPResponse *response) {
   WebService ws(kb_, request, response);
+  Store *store = ws.store();
 
   // Get query
   Text query = ws.Get("q");
+  Text prop = ws.Get("prop");
   bool fullmatch = ws.Get("fullmatch", false);
   int window = ws.Get("window", 5000);
   int limit = ws.Get("limit", 50);
@@ -451,27 +467,65 @@ void KnowledgeService::HandleQuery(HTTPRequest *request,
   }
 
   // Check for exact match with id.
-  Handles results(ws.store());
-  Handle idmatch = RetrieveItem(ws.store(), query, fullmatch);
+  Handles results(store);
+  Handle idmatch = RetrieveItem(store, query, fullmatch);
   if (!idmatch.IsNil()) {
-    Frame item(ws.store(), idmatch);
+    Frame item(store, idmatch);
     if (item.valid()) {
-      Builder match(ws.store());
+      Builder match(store);
       GetStandardProperties(item, &match, true);
       results.push_back(match.Create().handle());
     }
   }
 
+  // Get property for type ranking.
+  Property *property = nullptr;
+  if (!prop.empty()) property = GetProperty(kb_->LookupExisting(prop));
+
   // Generate response.
-  Builder b(ws.store());
-  for (const auto &m : matches) {
-    if (results.size() >= limit) break;
-    Text id = m.second->id();
-    Frame item(ws.store(), RetrieveItem(ws.store(), id));
-    if (item.invalid()) continue;
-    Builder match(ws.store());
-    GetStandardProperties(item, &match, true);
-    results.push_back(match.Create().handle());
+  Builder b(store);
+  if (property == nullptr) {
+    for (const auto &m : matches) {
+      if (results.size() >= limit) break;
+      Text id = m.second->id();
+      Frame item(store, RetrieveItem(store, id));
+      if (item.invalid()) continue;
+      Builder match(store);
+      GetStandardProperties(item, &match, true);
+      results.push_back(match.Create().handle());
+    }
+  } else {
+    // Rerank results by type.
+    Ranking ranking(limit);
+    float specificity = ws.Get("specificity", 1000);
+    for (const auto &m : matches) {
+      Text id = m.second->id();
+      Handle item = RetrieveItem(store, id);
+      if (item.IsNil()) continue;
+
+      Handle type = store->GetFrame(item)->get(n_instance_of_.handle());
+      type = store->Resolve(type);
+
+      float score = m.first;
+      if (!type.IsNil()) {
+        auto f = property->usage.find(type);
+        if (f != property->usage.end()) {
+          score *= f->second * specificity;
+        }
+      }
+
+      ranking.push(Hit(score, item));
+    }
+    ranking.sort();
+
+    // Output top results.
+    for (const auto &hit : ranking) {
+      Frame item(store, hit.item);
+      Builder match(store);
+      GetStandardProperties(item, &match, true);
+      match.Add(n_score_, hit.score);
+      results.push_back(match.Create().handle());
+    }
   }
   b.Add(n_matches_,  Array(ws.store(), results));
 

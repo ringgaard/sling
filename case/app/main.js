@@ -331,7 +331,7 @@ class CaseApp extends Component {
     await this.refresh_manager();
   }
 
-  search(query, full) {
+  search(query, options = {}) {
     query = query.toLowerCase();
     let results = [];
     let partial = [];
@@ -345,7 +345,7 @@ class CaseApp extends Component {
           let normalized = caserec.name.toLowerCase();
           if (normalized == query) {
             results.push(caserec);
-          } else if (!full && normalized.startsWith(query)) {
+          } else if (!options.full && normalized.startsWith(query)) {
             partial.push(caserec);
           }
         }

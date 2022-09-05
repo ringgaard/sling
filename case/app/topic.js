@@ -16,7 +16,6 @@ import {get_schema, inverse_property} from "./schema.js";
 import {LabelCollector, value_parser} from "./value.js";
 import "./item.js"
 import "./fact.js"
-import "./omnibox.js"
 
 const n_id = store.id;
 const n_is = store.is;
@@ -29,7 +28,6 @@ const n_not_safe_for_work = store.lookup("Q2716583");
 
 // Cross-reference configuration.
 var xrefs;
-
 
 // Singular/plural.
 function plural(n, kind) {

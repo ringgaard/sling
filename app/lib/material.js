@@ -810,7 +810,7 @@ class MdRippleButton extends Component {
     s.left = `${e.clientX - (r.left + radius)}px`;
     s.top = `${e.clientY - (r.top + radius)}px`;
     button.appendChild(ripple);
-    ripple.bind(null, "animationend", ripple.remove());
+    ripple.bind(null, "animationend", e => ripple.remove());
   }
 
   static stylesheet() {
