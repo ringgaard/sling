@@ -247,9 +247,7 @@ def service_request(request):
   response.headers = []
   for key, value in r.headers.items():
     if key.lower() in non_proxy_headers: continue
-    if key.lower() == "set-cookie":
-      print("proxy cookie", value, "from", url)
-      key = "XSet-Cookie"
+    if key.lower() == "set-cookie": key = "XSet-Cookie"
     response.headers.append((key, value))
 
   return response

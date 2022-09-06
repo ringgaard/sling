@@ -15,30 +15,34 @@ const n_alias = store.lookup("alias");
 const n_description = store.lookup("description");
 const n_instance_of = store.lookup("P31");
 const n_inverse_property = store.lookup("P1696");
+const n_properties_for_type = store.lookup("P1963");
+const n_property_constraint = store.lookup("P2302");
+const n_allowed_qualifiers_constraint = store.lookup("Q21510851");
+const n_property = store.lookup("P2306");
 
 const n_properties = store.lookup("properties");
 const n_fanin = store.lookup("/w/item/fanin");
 
-const max_fainin = 1000000;
+const max_fanin = 100000000;
 
 n_is.add(n_name, "is");
 n_is.add(n_description, "same as");
-n_is.add(n_fanin, max_fainin);
+n_is.add(n_fanin, max_fanin);
 
 n_name.add(n_name, "name");
 n_name.add(n_description, "item name");
-n_name.add(n_fanin, max_fainin);
+n_name.add(n_fanin, max_fanin);
 
 n_description.add(n_name, "description");
 n_description.add(n_description, "item description");
-n_description.add(n_fanin, max_fainin);
+n_description.add(n_fanin, max_fanin);
 
 n_instance_of.add(n_name, "instance of");
 n_instance_of.add(n_description, "item type");
 
 n_alias.add(n_name, "alias");
 n_alias.add(n_description, "item alias");
-n_alias.add(n_fanin, max_fainin);
+n_alias.add(n_fanin, max_fanin);
 
 const property_shortcuts = {
   "is": n_is,
@@ -76,24 +80,72 @@ class PropertyIndex {
       if (a.name > b.name) return 1;
       return 0;
     });
+
+    // Type cache with properties for types.
+    this.types = new Map();
   }
 
-  match(query, options = {}) {
+  async properties_for(type) {
+    // Check if type properties are already cached.
+    if (!type) return;
+    if (!(type instanceof Frame)) return;
+    let props = type.get(type);
+    if (props) return props;
+
+    // Retrieve type if needed.
+    if (!type.ispublic()) {
+      let url = `${settings.kbservice}/kb/topic?id=${type.id}`;
+      let response = await fetch(url);
+      if (!response.ok) return;
+      type = await store.parse(response);
+    }
+
+    // Get properties for type.
+    let properties = new Set();
+    for (let prop of type.all(n_properties_for_type)) {
+      properties.add(store.resolve(prop));
+    }
+
+    // Update cache.
+    this.types.set(type, properties);
+
+    return properties;
+  }
+
+  qualifiers_for(prop) {
+    if (!prop) return;
+    if (!(prop instanceof Frame)) return;
+
+    for (let c of prop.all(n_property_constraint)) {
+      if (store.resolve(c) == n_allowed_qualifiers_constraint) {
+        let properties = new Set();
+        for (let p of c.all(n_property)) {
+          properties.add(store.resolve(p))
+        }
+        return properties;
+      }
+    }
+  }
+
+  async match(query, options = {}) {
     // Normalize query.
     let normalized_query = normalized(query);
     let prefix = !options.full;
     let limit = options.limit || 30;
 
     // Add property shortcut matches.
-    let matches = new Set();
-    let scores = new Map();
+    let matches = new Map();
     let query_len = normalized_query.length;
     for (let [name, value] of Object.entries(property_shortcuts)) {
       if (name.substring(0, query_len) == normalized_query) {
-        matches.add(value);
-        scores.set(value, 1000);
+        matches.set(value, value.get(n_fanin));
       }
     }
+
+    // Get properties for type, occupation, and qualifier ranking.
+    let type_props = await this.properties_for(options.type);
+    let occ_props = await this.properties_for(options.occupation);
+    let qual_props = this.qualifiers_for(options.qualify);
 
     // Add matching property id.
     let prop = this.ids.get(query);
@@ -115,9 +167,6 @@ class PropertyIndex {
     // Find all names matching the prefix. Stop if we hit the limit.
     let index = lo;
     while (index < this.names.length) {
-      // Check if we have reached the limit.
-      if (matches.length > limit) break;
-
       // Stop if the current name does not match (the prefix).
       let entry = this.names[index];
       let fullmatch = entry.name == normalized_query
@@ -127,24 +176,25 @@ class PropertyIndex {
         if (!fullmatch) break;
       }
 
+      // Compute ranking score for match.
       let prop = entry.property;
-      matches.add(prop);
-      let score = scores.get(prop) || 1;
-      if (!entry.alias) score = 100;
-      if (fullmatch) score *= 100;
-      scores.set(prop, score);
+      let score = matches.get(prop) || prop.get(n_fanin) || 1;
+      if (!entry.alias) score *= 30;
+      if (fullmatch) score *= 10;
+      if (type_props && type_props.has(prop)) score *= 100;
+      if (occ_props && occ_props.has(prop)) score *= 10;
+      if (qual_props && qual_props.has(prop)) score *= 1000;
+      matches.set(prop, score);
       index++;
     }
 
     // Rank search results.
-    let results = Array.from(matches);
+    let results = Array.from(matches.keys());
     results.sort((a, b) => {
-      let fa = (a.get(n_fanin) || 1) * scores.get(a);
-      let fb = (b.get(n_fanin) || 1) * scores.get(b);
-      return fb - fa;
+      return matches.get(b) - matches.get(a);
     });
 
-    return results;
+    return results.slice(0, limit);
   }
 };
 
@@ -222,7 +272,7 @@ export function inverse_property(property, source) {
 
 export async function psearch(query, results, options) {
   let props = await get_property_index();
-  let matches = props.match(query, options);
+  let matches = await props.match(query, options);
   for (let match of matches) {
     results.push({
       ref: match.id,

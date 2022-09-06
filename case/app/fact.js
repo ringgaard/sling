@@ -699,6 +699,16 @@ class FactEditor extends Component {
     return end;
   }
 
+  value(prop) {
+    for (let stmt = this.firstChild; stmt; stmt = stmt.nextSibling) {
+      if (stmt.placeholder()) continue;
+      if (stmt.qualified) continue;
+      if (stmt.property().getAttribute("value") == prop) {
+        return stmt.value().value();
+      }
+    }
+  }
+
   selection() {
     let s = document.getSelection();
     if (!s.focusNode) return;
@@ -864,6 +874,14 @@ class FactStatement extends Component {
     if (this.lastChild) this.lastChild.remove();
   }
 
+  property() {
+    return this.firstChild;
+  }
+
+  value() {
+    return this.lastChild;
+  }
+
   render() {
     let statement = this.state;
     if (!statement) return "";
@@ -965,7 +983,8 @@ class FactField extends Component {
         }
 
         // Search for matches.
-        let results = await search(query, this.backends());
+        let context = this.search();
+        let results = await search(query, context.backends, context.options);
         if (modifiers) {
           for (let r of results) r.state.modifiers = modifiers;
         }
@@ -1206,8 +1225,23 @@ class FactField extends Component {
 Component.register(FactField);
 
 class FactProperty extends FactField {
-  backends() {
-    return [psearch];
+  search() {
+    let options = {};
+    let backends = [psearch];
+
+    let stmt = this.parentElement;
+    if (stmt.qualified) {
+      while (stmt && stmt.qualified) stmt = stmt.previousSibling;
+      if (stmt && !stmt.empty()) {
+        options.qualify = stmt.property().value();
+      }
+    } else {
+      let editor = this.closest("fact-editor");
+      options.type = editor.value("P31");
+      options.occupation = editor.value("P106");
+    }
+
+    return {options, backends};
   }
 
   static stylesheet() {
@@ -1255,13 +1289,18 @@ function newtopic(query, editor, results) {
 }
 
 class FactValue extends FactField {
-  backends() {
+  search() {
     let editor = this.match("#editor");
-    return [
-      (query, results, options) => value_parser(query, results),
-      editor.search.bind(editor),
-      (query, results, options) => newtopic(query, editor, results),
-    ];
+    return {
+      options: {
+        property: this.previousSibling.value(),
+      },
+      backends: [
+        (query, results, options) => value_parser(query, results),
+        editor.search.bind(editor),
+        (query, results, options) => newtopic(query, editor, results),
+      ],
+    };
   }
 
   static stylesheet() {

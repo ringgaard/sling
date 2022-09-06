@@ -223,7 +223,7 @@ void KnowledgeService::Load(Store *kb, const string &name_table) {
         }
         if (sum == 0.0) sum = 1.0;
         for (auto &it : p.usage) {
-          it.second = it.second / sum * 100.0;
+          it.second = it.second / sum * 100.0 + 1.0;
         }
       }
     }
@@ -499,18 +499,23 @@ void KnowledgeService::HandleQuery(HTTPRequest *request,
     Ranking ranking(limit);
     float specificity = ws.Get("specificity", 1000);
     for (const auto &m : matches) {
+      // Get id and score.
+      float score = m.first;
       Text id = m.second->id();
+
+      // Retrieve item.
       Handle item = RetrieveItem(store, id);
       if (item.IsNil()) continue;
 
-      Handle type = store->GetFrame(item)->get(n_instance_of_.handle());
-      type = store->Resolve(type);
-
-      float score = m.first;
-      if (!type.IsNil()) {
+      // Boost score.
+      FrameDatum *f = store->GetFrame(item);
+      for (const Slot *s = f->begin(); s < f->end(); ++s) {
+        if (s->name != n_instance_of_.handle()) continue;
+        Handle type = store->Resolve(s->value);
         auto f = property->usage.find(type);
         if (f != property->usage.end()) {
           score *= f->second * specificity;
+          break;
         }
       }
 

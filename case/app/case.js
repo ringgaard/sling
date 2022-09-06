@@ -280,7 +280,8 @@ class CaseEditor extends MdApp {
 
     // Search plug-ins.
     let context = new plugins.Context(null, this.casefile, this);
-    await plugins.search_plugins(context, query, results, options);
+    context.options = options;
+    await plugins.search_plugins(context, query, results);
 
     // Search knowledge base.
     try {
@@ -291,6 +292,7 @@ class CaseEditor extends MdApp {
       }
       let params = "fmt=cjson";
       if (options.full) params += "&fullmatch=1";
+      if (options.property) params += "&prop=" + options.property.id;
       params += `&q=${encodeURIComponent(query)}`;
 
       let response = await fetch(`${settings.kbservice}${path}?${params}`);

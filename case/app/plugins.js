@@ -385,7 +385,7 @@ export async function process(action, query, context) {
   return result;
 }
 
-export async function search_plugins(context, query, full, results) {
+export async function search_plugins(context, query, results) {
   let result = await process(SEARCH, query, context);
   if (result instanceof Array) {
     for (let r of result) results.push(r);

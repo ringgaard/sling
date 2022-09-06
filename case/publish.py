@@ -52,6 +52,7 @@ n_topics = commons["topics"]
 n_has_part = commons["P527"]
 n_publication_date = commons["P577"]
 n_described_by_source = commons["P1343"]
+n_topic_id = commons["PTOPIC"]
 commons.freeze()
 
 # Output all published cases.
@@ -105,6 +106,9 @@ for rec in casedb.values():
 
     # Add case source to topic.
     topic.append(n_described_by_source, main)
+
+    # Add topic reference.
+    topic.append(n_topic_id, topic[n_id][2:])
 
     num_topics += 1
     if topic.get(n_is) is None:
