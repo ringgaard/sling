@@ -769,21 +769,20 @@ class Profile:
           if bigger or (caption is not None and dupcaption is None):
             # Remove previous duplicate.
             duplicates.add(dup.url)
-            msg = "duplicate of"
           else:
             # Remove this duplicate.
             duplicates.add(photo.url)
 
-            if nsfw:
-              if dup not in naughty:
-                msg = "nsfw duplicate of"
-              else:
-                msg = "duplicate of"
+          if nsfw:
+            if dup not in naughty:
+              msg = "nsfw duplicate of"
             else:
-              if dup in naughty:
-                msg = "sfw duplicate of"
-              else:
-                msg = "duplicate of"
+              msg = "duplicate of"
+          else:
+            if dup in naughty:
+              msg = "sfw duplicate of"
+            else:
+              msg = "duplicate of"
 
           if caption is not None: msg = "captioned " + msg
           if dupcaption is not None: msg = msg + " captioned"

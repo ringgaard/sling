@@ -795,7 +795,10 @@ Component.register(MdRipple);
 
 class MdRippleButton extends Component {
   onrendered() {
+    this.ripple = null;
     this.bind("button", "click", e => this.onanimate(e));
+    this.bind("button", "animationend", e => this.onanimateend(e));
+    this.bind("button", "mouseleave", e => this.onanimateend(e));
   }
 
   onanimate(e) {
@@ -803,14 +806,18 @@ class MdRippleButton extends Component {
     let diameter = Math.max(button.clientWidth, button.clientHeight);
     let radius = diameter / 2;
 
-    let ripple = new MdRipple();
-    let s = ripple.style;
+    this.ripple = new MdRipple();
+    let s = this.ripple.style;
     let r = button.getBoundingClientRect();
     s.width = s.height = `${diameter}px`;
     s.left = `${e.clientX - (r.left + radius)}px`;
     s.top = `${e.clientY - (r.top + radius)}px`;
-    button.appendChild(ripple);
-    ripple.bind(null, "animationend", e => ripple.remove());
+    button.appendChild(this.ripple);
+  }
+
+  onanimateend(e) {
+    if (this.ripple) this.ripple.remove();
+    this.ripple = null;
   }
 
   static stylesheet() {

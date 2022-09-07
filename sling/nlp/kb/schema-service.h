@@ -40,6 +40,9 @@ class SchemaService {
   // Pre-encoded schemas.
   string encoded_schemas_;
 
+  // Compressed pre-encoded schemas.
+  string compressed_schemas_;
+
   // Timestamp for cache control.
   time_t timestamp_;
 };

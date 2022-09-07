@@ -23,7 +23,7 @@ const n_property = store.lookup("P2306");
 const n_properties = store.lookup("properties");
 const n_fanin = store.lookup("/w/item/fanin");
 
-const max_fanin = 100000000;
+const max_fanin = Number.POSITIVE_INFINITY;
 
 n_is.add(n_name, "is");
 n_is.add(n_description, "same as");
@@ -39,6 +39,7 @@ n_description.add(n_fanin, max_fanin);
 
 n_instance_of.add(n_name, "instance of");
 n_instance_of.add(n_description, "item type");
+n_instance_of.add(n_fanin, max_fanin);
 
 n_alias.add(n_name, "alias");
 n_alias.add(n_description, "item alias");
@@ -49,7 +50,6 @@ const property_shortcuts = {
   "name": n_name,
   "description": n_description,
   "alias": n_alias,
-  "type": n_instance_of,
 };
 
 var kbschema;

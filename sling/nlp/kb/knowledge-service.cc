@@ -509,15 +509,14 @@ void KnowledgeService::HandleQuery(HTTPRequest *request,
 
       // Boost score.
       FrameDatum *f = store->GetFrame(item);
+      float boost = 0.0;
       for (const Slot *s = f->begin(); s < f->end(); ++s) {
         if (s->name != n_instance_of_.handle()) continue;
         Handle type = store->Resolve(s->value);
         auto f = property->usage.find(type);
-        if (f != property->usage.end()) {
-          score *= f->second * specificity;
-          break;
-        }
+        if (f != property->usage.end()) boost += f->second;
       }
+      if (boost != 0.0)  score *= boost * specificity;
 
       ranking.push(Hit(score, item));
     }

@@ -271,6 +271,7 @@ cc_library(
     "//sling/frame:store",
     "//sling/net:http-server",
     "//sling/net:http-utils",
+    "//third_party/zlib",
   ],
 )
 

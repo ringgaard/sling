@@ -629,7 +629,8 @@ class TopicCard extends Component {
     for (let ref of topic.links()) {
       for (let [name, value] of ref) {
         if (name == n_id || name == n_media) continue;
-        if (topic.put(name, value)) {
+        if (!topic.has(name, value)) {
+          topic.add(name, value);
           changed = true;
         }
       }

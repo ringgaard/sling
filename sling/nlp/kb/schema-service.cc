@@ -18,8 +18,19 @@
 
 #include "sling/frame/serialization.h"
 #include "sling/net/http-utils.h"
+#include "third_party/zlib/zlib.h"
 
 namespace sling {
+
+// Compress buffer using gzip.
+static void gzip_compress(const string &input, string *output) {
+  size_t bufsize = compressBound(input.size());
+  output->resize(bufsize);
+  const uint8 *src = reinterpret_cast<const uint8 *>(input.data());
+  uint8 *dest = reinterpret_cast<uint8 *>(&(*output)[0]);
+  compress(dest, &bufsize, src, input.size());
+  output->resize(bufsize);
+}
 
 SchemaService::SchemaService(Store *kb) {
   // Initialize local store for pre-encoded schema.
@@ -54,8 +65,10 @@ SchemaService::SchemaService(Store *kb) {
   }
   encoder.Encode(schemas);
   encoded_schemas_ = encoder.buffer();
+  gzip_compress(encoded_schemas_, &compressed_schemas_);
   timestamp_ = time(0);
-  VLOG(1) << "Pre-encoded schema size: " << encoded_schemas_.size();
+  VLOG(1) << "Pre-encoded schema size: " << encoded_schemas_.size()
+          << ", compressed " << compressed_schemas_.size();
 }
 
 void SchemaService::Register(HTTPServer *http) {
@@ -84,7 +97,13 @@ void SchemaService::HandleSchema(HTTPRequest *request, HTTPResponse *response) {
   if (strcmp(request->method(), "HEAD") == 0) return;
 
   // Return schemas.
-  response->Append(encoded_schemas_);
+  const char *accept = request->Get("Accept-Encoding");
+  if (accept) {
+    response->Set("Transfer-Encoding", "gzip");
+    response->Append(compressed_schemas_);
+  } else {
+    response->Append(encoded_schemas_);
+  }
 }
 
 }  // namespace sling
