@@ -1010,7 +1010,7 @@ class FactField extends Component {
       let items = this.list.state.items;
       if (items && items.length > 0) item = items[0].state;
     }
-    if (item) {
+    if (item && !item.newtopic) {
       this.select(item);
     }
     let next = this.nextSibling;
@@ -1276,6 +1276,7 @@ function newtopic(query, editor, results) {
     ref: query,
     name: query,
     description: "new topic",
+    newtopic: true,
     context: new Context(null, editor.casefile, editor),
     onitem: async item => {
       // Create new topic stub.
