@@ -97,9 +97,10 @@ void SchemaService::HandleSchema(HTTPRequest *request, HTTPResponse *response) {
   if (strcmp(request->method(), "HEAD") == 0) return;
 
   // Return schemas.
+  // TODO: compression is turned off by now until issues have been resolved.
   const char *accept = request->Get("Accept-Encoding");
-  if (accept) {
-    response->Set("Transfer-Encoding", "gzip");
+  if (false && accept && strstr(accept, "gzip")) {
+    response->Set("Content-Encoding", "gzip");
     response->Append(compressed_schemas_);
   } else {
     response->Append(encoded_schemas_);
