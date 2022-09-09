@@ -7,6 +7,7 @@ import {Component} from "/common/lib/component.js";
 import {MdSearchResult} from "/common/lib/material.js";
 import {Frame} from "/common/lib/frame.js";
 import {store, settings} from "./global.js";
+import {SearchIndex} from "./search.js";
 
 const n_is = store.is;
 const n_id = store.id;
@@ -53,33 +54,12 @@ const property_shortcuts = {
 };
 
 var kbschema;
-var kbpropidx;
+var kbprops;
 
-function normalized(str) {
-  return str.toString().toLowerCase();
-}
-
-class PropertyIndex {
+class Properties {
   constructor(schema) {
-    // Collect all property names and aliases.
-    this.ids = new Map();
-    this.names = new Array();
-    for (let property of schema.get(n_properties)) {
-      this.ids.set(property.id, property);
-      for (let name of property.all(n_name)) {
-        this.names.push({name: normalized(name), property});
-      }
-      for (let alias of property.all(n_alias)) {
-        this.names.push({name: normalized(alias), property, alias: true});
-      }
-    }
-
-    // Sort property names.
-    this.names.sort((a, b) => {
-      if (a.name < b.name) return -1;
-      if (a.name > b.name) return 1;
-      return 0;
-    });
+    // Build property search index.
+    this.index = new SearchIndex(schema.get(n_properties));
 
     // Type cache with properties for types.
     this.types = new Map();
@@ -128,16 +108,11 @@ class PropertyIndex {
   }
 
   async match(query, options = {}) {
-    // Normalize query.
-    let normalized_query = normalized(query);
-    let prefix = !options.full;
-    let limit = options.limit || 30;
-
     // Add property shortcut matches.
     let matches = new Map();
-    let query_len = normalized_query.length;
+    let query_len = query.length;
     for (let [name, value] of Object.entries(property_shortcuts)) {
-      if (name.substring(0, query_len) == normalized_query) {
+      if (name.substring(0, query_len) == query) {
         matches.set(value, value.get(n_fanin));
       }
     }
@@ -147,45 +122,17 @@ class PropertyIndex {
     let occ_props = await this.properties_for(options.occupation);
     let qual_props = this.qualifiers_for(options.qualify);
 
-    // Add matching property id.
-    let prop = this.ids.get(query);
-    if (prop) matches.add(prop);
-
-    // Find first name that is greater than or equal to the prefix.
-    let lo = 0;
-    let hi = this.names.length - 1;
-    while (lo < hi) {
-      let mid = (lo + hi) >> 1;
-      let entry = this.names[mid];
-      if (entry.name < normalized_query) {
-        lo = mid + 1;
-      } else {
-        hi = mid;
-      }
-    }
-
-    // Find all names matching the prefix. Stop if we hit the limit.
-    let index = lo;
-    while (index < this.names.length) {
-      // Stop if the current name does not match (the prefix).
-      let entry = this.names[index];
-      let fullmatch = entry.name == normalized_query
-      if (prefix) {
-        if (!entry.name.startsWith(normalized_query)) break;
-      } else {
-        if (!fullmatch) break;
-      }
-
+    // Search for matching propeties.
+    for (let hit of this.index.hits(query, options)) {
       // Compute ranking score for match.
-      let prop = entry.property;
+      let prop = hit.topic;
       let score = matches.get(prop) || prop.get(n_fanin) || 1;
-      if (!entry.alias) score *= 30;
-      if (fullmatch) score *= 10;
+      if (!hit.alias) score *= 30;
+      if (hit.full) score *= 10;
       if (type_props && type_props.has(prop)) score *= 100;
       if (occ_props && occ_props.has(prop)) score *= 10;
       if (qual_props && qual_props.has(prop)) score *= 1000;
       matches.set(prop, score);
-      index++;
     }
 
     // Rank search results.
@@ -194,9 +141,9 @@ class PropertyIndex {
       return matches.get(b) - matches.get(a);
     });
 
-    return results.slice(0, limit);
+    return results.slice(0, options.limit);
   }
-};
+}
 
 export async function get_schema() {
   // Return schema if it has already been fetched.
@@ -212,15 +159,15 @@ export async function get_schema() {
 
 export async function get_property_index() {
   // Return property index if it has already been built.
-  if (kbpropidx) return kbpropidx;
+  if (kbprops) return kbprops;
 
   // Get schema.
   let schema = await get_schema();
-  if (kbpropidx) return kbpropidx;
+  if (kbprops) return kbprops;
 
   // Build property index.
-  kbpropidx = new PropertyIndex(schema);
-  return kbpropidx;
+  kbprops = new Properties(schema);
+  return kbprops;
 }
 
 export function qualified(v) {

@@ -14,8 +14,8 @@ import {Drive} from "./drive.js";
 import {wikidata_initiate, wikidata_export} from "./wikibase.js";
 import {generate_key, encrypt} from "./crypto.js";
 import {Collaboration} from "./collab.js";
+import {SearchIndex} from "./search.js";
 import "./topic.js";
-import "./search.js";
 
 const n_is = store.is;
 const n_name = store.lookup("name");
@@ -106,43 +106,6 @@ async function read_from_clipboard() {
   }
 }
 
-// Find topics matching search query.
-function search_topics(query, topics, options = {}) {
-  query = query.toLowerCase();
-  let results = [];
-  let partial = [];
-  for (let topic of topics) {
-    let match = false;
-    let submatch = false;
-    if (topic.id == query) {
-      match = true;
-    } else {
-      let names = [];
-      names.push(...topic.all(n_name));
-      names.push(...topic.all(n_alias));
-      for (let name of names) {
-        let normalized = name.toString().toLowerCase();
-        if (options.full) {
-          match = normalized == query;
-        } else {
-          match = normalized.startsWith(query);
-          if (!match && normalized.includes(query)) {
-            submatch = true;
-          }
-        }
-        if (match) break;
-      }
-    }
-    if (match) {
-      results.push(topic);
-    } else if (submatch) {
-      partial.push(topic);
-    }
-  }
-  results.push(...partial);
-  return results;
-}
-
 class CaseEditor extends MdApp {
   oninit() {
     this.attach(this.onitem, "item", "omni-box md-search");
@@ -182,7 +145,7 @@ class CaseEditor extends MdApp {
     let omnibox = this.find("omni-box");
     omnibox.add(this.search.bind(this));
     omnibox.add((query, results, options) => {
-      if (!query.endsWith("?")) {
+      if (!options.keyword) {
         results.push({
           title: "more...",
           description: 'search for "' + query + '" 🔎',
@@ -205,21 +168,20 @@ class CaseEditor extends MdApp {
     e.preventDefault();
     e.stopPropagation();
     let ref = e.detail.ref;
-    let item = store.find(ref);
-    if (!item) return;
-    if (e.detail.event.ctrlKey) {
-      let topic = this.find_topic(item);
-      if (!topic) {
-        let link = await this.add_topic_link(item);
-        this.redirect(item, link);
-        return;
-      }
-      item = topic;
-    }
 
-    if (this.topics.includes(item) || this.scraps.includes(item)) {
-      this.navigate_to(item);
+    if (!this.index) this.index = new SearchIndex(this.topics);
+    let topic = this.index.ids.get(ref);
+    if (topic) {
+      // Navigate to existing topic.
+      this.navigate_to(topic);
+    } else if (e.detail.event.ctrlKey) {
+      // Add new linked topic and navigate to it.
+      let item = store.lookup(ref);
+      let link = await this.add_topic_link(item);
+      this.redirect(item, link);
+      this.navigate_to(link);
     } else {
+      // Open external knowledge browser for item.
       window.open(`${settings.kbservice}/kb/${ref}`, "_blank");
     }
   }
@@ -237,32 +199,37 @@ class CaseEditor extends MdApp {
 
   async search(query, results, options = {}) {
     // Search topcis in case file.
-    for (let result of search_topics(query, this.topics, options)) {
-      let name = result.get(n_name);
+    if (!this.index) this.index = new SearchIndex(this.topics);
+    for (let hit of this.index.hits(query, options)) {
+      let topic = hit.topic;
+      let name = topic.get(n_name);
       results.push({
-        ref: result.id,
+        ref: topic.id,
         name: name,
-        title: name + (result == this.main ? " 🗄️" : " ⭐"),
-        description: result.get(n_description),
-        topic: result,
+        title: name + (topic == this.main ? " 🗄️" : " ⭐"),
+        description: topic.get(n_description),
+        topic: topic,
       });
     }
 
     // Search topics in linked case files.
     for (let link of this.links) {
-      let topics = link.get(n_topics);
-      if (topics) {
-        for (let result of search_topics(query, topics, options)) {
-          let name = result.get(n_name);
-          results.push({
-            ref: result.id,
-            name: name,
-            title: name + " 🔗",
-            description: result.get(n_description),
-            topic: result,
-            casefile: link,
-          });
-        }
+      let index = this.linksindex.get(link);
+      if (!index) {
+        index = new SearchIndex(link.get(n_topics));
+        this.linksindex.set(link, index);
+      }
+      for (let hit of index.hits(query, options)) {
+        let topic = hit.topic;
+        let name = topic.get(n_name);
+        results.push({
+          ref: topic.id,
+          name: name,
+          title: name + " 🔗",
+          description: topic.get(n_description),
+          topic: topic,
+          casefile: link,
+        });
       }
     }
 
@@ -285,11 +252,7 @@ class CaseEditor extends MdApp {
 
     // Search knowledge base.
     try {
-      let path = "/kb/query";
-      if (query.endsWith("?")) {
-        path = "/kb/search";
-        query = query.slice(0, -1);
-      }
+      let path = options.keyword ? "/kb/search" : "/kb/query";
       let params = "fmt=cjson";
       if (options.full) params += "&fullmatch=1";
       if (options.property) params += "&prop=" + options.property.id;
@@ -515,6 +478,8 @@ class CaseEditor extends MdApp {
   async onupdate() {
     if (!this.state) return;
     this.mark_clean();
+    this.index = null;
+    this.linksindex = new Map();
     this.casefile = this.state;
 
     // Connect to collaboration server for collaboration case.
@@ -633,6 +598,7 @@ class CaseEditor extends MdApp {
   }
 
   mark_dirty() {
+    this.index = null;
     if (this.collab) return;
     this.dirty = true;
     this.find("#save").enable();

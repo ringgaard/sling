@@ -6,10 +6,21 @@ import {MdSearchResult} from "/common/lib/material.js";
 
 import {store, settings} from "./global.js";
 
-export async function search(query, backends, options) {
-  // Do full match if query ends with period.
+const n_name = store.lookup("name");
+const n_alias = store.lookup("alias");
+
+function normalized(str) {
+  return str.toString().toLowerCase();
+}
+
+export async function search(query, backends, options = {}) {
   if (query.endsWith(".")) {
+    // Do full matching if query ends with period.
     options.full = true;
+    query = query.slice(0, -1);
+  } else if (query.endsWith("?")) {
+    // Do keyword matching if query ends with question mark.
+    options.keyword = true;
     query = query.slice(0, -1);
   }
 
@@ -36,6 +47,92 @@ export async function search(query, backends, options) {
   }
 
   return results;
+}
+
+export class SearchIndex {
+  constructor(topics) {
+    this.topics = topics;
+    this.ids = new Map();
+    this.names = new Array();
+    for (let topic of topics) {
+      // Add topic ids to id index.
+      this.ids.set(topic.id, topic);
+      for (let link of topic.links()) {
+        this.ids.set(link.id, topic)
+      }
+
+      // Add topic names and aliases to index.
+      for (let name of topic.all(n_name)) {
+        this.names.push({name: normalized(name), topic});
+      }
+      for (let alias of topic.all(n_alias)) {
+        this.names.push({name: normalized(alias), topic, alias: true});
+      }
+    }
+
+    // Sort topic names.
+    this.names.sort((a, b) => {
+      if (a.name < b.name) return -1;
+      if (a.name > b.name) return 1;
+      return 0;
+    });
+  }
+
+  hits(query, options = {}) {
+    let it = function* (names, ids, topics) {
+      // Normalize query.
+      let normalized_query = normalized(query);
+
+      // Add matching id.
+      let topic = ids.get(query);
+      if (topic) yield {topic, full: true};
+
+      // Find first name that is greater than or equal to the query.
+      let lo = 0;
+      let hi = names.length - 1;
+      while (lo < hi) {
+        let mid = (lo + hi) >> 1;
+        let entry = names[mid];
+        if (entry.name < normalized_query) {
+          lo = mid + 1;
+        } else {
+          hi = mid;
+        }
+      }
+
+      // Find all names matching the query. Stop if we hit the limit.
+      for (let index = lo; index < names.length; ++index) {
+        // Stop if the current name does not match (the prefix).
+        let entry = names[index];
+        let full = entry.name == normalized_query;
+        if (options.full) {
+          if (!full) break;
+        } else {
+          if (!entry.name.startsWith(normalized_query)) break;
+        }
+
+        yield {topic: entry.topic, alias: entry.alias, full};
+      }
+
+      // Add submatches.
+      if (options.keyword) {
+        for (let topic of topics) {
+          for (let name of topic.all(n_name)) {
+            if (normalized(name).includes(normalized_query)) {
+              yield {topic, sub: true};
+            }
+          }
+          for (let name of topic.all(n_alias)) {
+            if (normalized(name).includes(normalized_query)) {
+              yield {topic, sub: true, alias: true};
+            }
+          }
+        }
+      }
+    }
+
+    return it(this.names, this.ids, this.topics);
+  }
 }
 
 export class OmniBox extends Component {
