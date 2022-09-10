@@ -7,7 +7,7 @@ import {Frame, QString, Printer} from "/common/lib/frame.js";
 import {store, settings} from "./global.js";
 import {value_text, value_parser, LabelCollector} from "./value.js";
 import {Context} from "./plugins.js";
-import {search} from "./search.js";
+import {search, kbsearch} from "./search.js";
 import {qualified, psearch} from "./schema.js";
 
 const n_id = store.id;
@@ -1299,6 +1299,7 @@ class FactValue extends FactField {
       backends: [
         (query, results, options) => value_parser(query, results),
         editor.search.bind(editor),
+        kbsearch,
         (query, results, options) => newtopic(query, editor, results),
       ],
     };

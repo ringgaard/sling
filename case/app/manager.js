@@ -4,6 +4,7 @@
 import {Component} from "/common/lib/component.js";
 import * as material from "/common/lib/material.js";
 import {store, settings, save_settings} from "./global.js";
+import {search, kbsearch} from "./search.js";
 
 function pad2(num) {
   return ("0" + num).toString().slice(-2)
@@ -226,50 +227,8 @@ class CaseSearchBox extends Component {
     let target = e.target;
     let query = detail.trim();
 
-    // Do full match if query ends with period.
-    let full = false;
-    if (query.endsWith(".")) {
-      full = true;
-      query = query.slice(0, -1);
-    }
-
-    // Seach local case database.
-    let items = [];
-    let seen = new Set();
-    for (let result of app.search(query, full)) {
-      items.push(new material.MdSearchResult({
-        ref: result.id,
-        name: result.name,
-        title: result.name + " ⭐",
-        description: result.description,
-        caserec: result,
-      }));
-      seen.add("c/" + result.id);
-    }
-
-    // Seach knowledge base for matches for new case.
-    try {
-      let params = "fmt=cjson";
-      if (full) params += "&fullmatch=1";
-      params += `&q=${encodeURIComponent(query)}`;
-      let response = await fetch(`${settings.kbservice}/kb/query?${params}`);
-      let data = await response.json();
-      for (let item of data.matches) {
-        if (seen.has(item.ref)) continue;
-        items.push(new material.MdSearchResult({
-          ref: item.ref,
-          name: item.text,
-          description: item.description,
-        }));
-      }
-    } catch (error) {
-      console.log("Case query error", query, error.message, error.stack);
-      material.StdDialog.error(error.message);
-      target.populate(detail, null);
-      return;
-    }
-
-    target.populate(detail, items);
+    let results = await search(query, [app.search.bind(app), kbsearch]);
+    target.populate(detail, results);
   }
 
   onitem(e) {

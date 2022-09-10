@@ -331,28 +331,34 @@ class CaseApp extends Component {
     await this.refresh_manager();
   }
 
-  search(query, options = {}) {
-    query = query.toLowerCase();
-    let results = [];
-    let partial = [];
-    if (this.caselist) {
-      for (let caserec of this.caselist) {
-        let match = false;
-        let submatch = false;
-        if (query == caserec.id || query == `c/${caserec.id}`) {
-            results.push(caserec);
+  search(query, results, options = {}) {
+    if (!this.caselist) return;
+
+    for (let caserec of this.caselist) {
+      let match = false;
+      if (query == caserec.id || query == `c/${caserec.id}`) {
+        match = true;
+      } else {
+        let normalized = caserec.name.toLowerCase();
+        if (options.ful) {
+          match = normalized == query;
+        } else if (options.keyword) {
+          match = normalized.includes(query);
         } else {
-          let normalized = caserec.name.toLowerCase();
-          if (normalized == query) {
-            results.push(caserec);
-          } else if (!options.full && normalized.startsWith(query)) {
-            partial.push(caserec);
-          }
+          match =  normalized.startsWith(query);
         }
       }
+
+      if (match) {
+        results.push({
+          ref: "c/" + caserec.id,
+          name: caserec.name,
+          title: caserec.name + " 🗄️",
+          description: caserec.description,
+          caserec: caserec,
+        });
+      }
     }
-    results.push(...partial);
-    return results;
   }
 
   static stylesheet() {

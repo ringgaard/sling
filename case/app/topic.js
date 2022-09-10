@@ -537,6 +537,7 @@ class TopicCard extends Component {
 
     // Save changes to topic.
     let topic = this.state;
+    let title = topic.get(n_name);
     let edit = this.find("fact-panel");
     let slots = edit.slots();
     if (!slots) {
@@ -581,6 +582,15 @@ class TopicCard extends Component {
       // Update target topic if it is in the same folder.
       if (editor.folder.includes(target)) {
         await editor.update_topic(target);
+      }
+    }
+
+    // Refresh topics in folder on title change.
+    if (title != topic.get(n_name)) {
+      for (let t of editor.folder) {
+        if (t.contains(topic)) {
+          await editor.update_topic(t);
+        }
       }
     }
 

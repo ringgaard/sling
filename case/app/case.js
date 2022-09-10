@@ -14,7 +14,7 @@ import {Drive} from "./drive.js";
 import {wikidata_initiate, wikidata_export} from "./wikibase.js";
 import {generate_key, encrypt} from "./crypto.js";
 import {Collaboration} from "./collab.js";
-import {SearchIndex} from "./search.js";
+import {SearchIndex, kbsearch} from "./search.js";
 import "./topic.js";
 
 const n_is = store.is;
@@ -143,7 +143,10 @@ class CaseEditor extends MdApp {
     window.addEventListener("beforeunload", e => this.onbeforeunload(e));
 
     let omnibox = this.find("omni-box");
+    let app = this.match("#app");
     omnibox.add(this.search.bind(this));
+    omnibox.add(kbsearch);
+    omnibox.add(app.search.bind(app));
     omnibox.add((query, results, options) => {
       if (!options.keyword) {
         results.push({
@@ -233,43 +236,10 @@ class CaseEditor extends MdApp {
       }
     }
 
-    // Search local case database.
-    for (let result of this.match("#app").search(query, options)) {
-      let caseid = "c/" + result.id;
-      results.push({
-        ref: caseid,
-        name: result.name,
-        title: result.name + " 🗄️",
-        description: result.description,
-        caserec: result,
-      });
-    }
-
     // Search plug-ins.
     let context = new plugins.Context(null, this.casefile, this);
     context.options = options;
     await plugins.search_plugins(context, query, results);
-
-    // Search knowledge base.
-    try {
-      let path = options.keyword ? "/kb/search" : "/kb/query";
-      let params = "fmt=cjson";
-      if (options.full) params += "&fullmatch=1";
-      if (options.property) params += "&prop=" + options.property.id;
-      params += `&q=${encodeURIComponent(query)}`;
-
-      let response = await fetch(`${settings.kbservice}${path}?${params}`);
-      let data = await response.json();
-      for (let item of data.matches) {
-        results.push({
-          ref: item.ref,
-          name: item.text,
-          description: item.description,
-        });
-      }
-    } catch (error) {
-      console.log("Query error", query, error.message, error.stack);
-    }
   }
 
   onenter(e) {
@@ -1921,6 +1891,7 @@ export class InviteDialog extends MdDialog {
     let omnibox = this.find("#value");
     let editor = document.getElementById("editor");
     omnibox.add(editor.search.bind(editor));
+    omnibox.add(kbsearch);
     omnibox.add((query, results, options) => {
       results.push({
         ref: query,

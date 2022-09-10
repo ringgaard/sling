@@ -238,6 +238,15 @@ export class Frame {
     return false;
   }
 
+  // Check if frame contains value.
+  contains(value) {
+    if (!this.slots) return false;
+    for (let n = 0; n < this.slots.length; ++n) {
+      if (this.store.resolve(this.slots[n]) === value) return true;
+    }
+    return false;
+  }
+
   // Return id for frame.
   get id() {
     if (this.state == ANONYMOUS) return undefined;

@@ -49,6 +49,28 @@ export async function search(query, backends, options = {}) {
   return results;
 }
 
+export async function kbsearch(query, results, options) {
+  try {
+    let path = options.keyword ? "/kb/search" : "/kb/query";
+    let params = "fmt=cjson";
+    if (options.full) params += "&fullmatch=1";
+    if (options.property) params += "&prop=" + options.property.id;
+    params += `&q=${encodeURIComponent(query)}`;
+
+    let response = await fetch(`${settings.kbservice}${path}?${params}`);
+    let data = await response.json();
+    for (let item of data.matches) {
+      results.push({
+        ref: item.ref,
+        name: item.text,
+        description: item.description,
+      });
+    }
+  } catch (error) {
+    console.log("Query error", query, error.message, error.stack);
+  }
+}
+
 export class SearchIndex {
   constructor(topics) {
     this.topics = topics;

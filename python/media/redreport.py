@@ -561,7 +561,7 @@ def add_media(request):
   id = r.get("id")
   nsfw = r.get("nsfw")
   print("***", id, name, url, "NSFW" if nsfw else "")
-  if id is None or id == "": return 400
+  if id is None or id == "" or " " in id: return 400
   if url is None or url == "": return 400
 
   # Add media to profile.

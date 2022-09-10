@@ -61,7 +61,7 @@ flags.define("-x", "--exclude",
 
 flags.define("--delete",
              default=None,
-             help="delete photos with match description",
+             help="delete photos with matching description",
              metavar="DESCRIPTION")
 
 flags.define("--other",
