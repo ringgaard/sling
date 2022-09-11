@@ -14,6 +14,7 @@ function normalized(str) {
 }
 
 export async function search(query, backends, options = {}) {
+  query = normalized(query.trim());
   if (query.endsWith(".")) {
     // Do full matching if query ends with period.
     options.full = true;
@@ -102,9 +103,6 @@ export class SearchIndex {
 
   hits(query, options = {}) {
     let it = function* (names, ids, topics) {
-      // Normalize query.
-      let normalized_query = normalized(query);
-
       // Add matching id.
       let topic = ids.get(query);
       if (topic) yield {topic, full: true};
@@ -115,7 +113,7 @@ export class SearchIndex {
       while (lo < hi) {
         let mid = (lo + hi) >> 1;
         let entry = names[mid];
-        if (entry.name < normalized_query) {
+        if (entry.name < query) {
           lo = mid + 1;
         } else {
           hi = mid;
@@ -126,11 +124,11 @@ export class SearchIndex {
       for (let index = lo; index < names.length; ++index) {
         // Stop if the current name does not match (the prefix).
         let entry = names[index];
-        let full = entry.name == normalized_query;
+        let full = entry.name == query;
         if (options.full) {
           if (!full) break;
         } else {
-          if (!entry.name.startsWith(normalized_query)) break;
+          if (!entry.name.startsWith(query)) break;
         }
 
         yield {topic: entry.topic, alias: entry.alias, full};
@@ -140,12 +138,12 @@ export class SearchIndex {
       if (options.keyword) {
         for (let topic of topics) {
           for (let name of topic.all(n_name)) {
-            if (normalized(name).includes(normalized_query)) {
+            if (normalized(name).includes(query)) {
               yield {topic, sub: true};
             }
           }
           for (let name of topic.all(n_alias)) {
-            if (normalized(name).includes(normalized_query)) {
+            if (normalized(name).includes(query)) {
               yield {topic, sub: true, alias: true};
             }
           }
@@ -172,11 +170,10 @@ export class OmniBox extends Component {
   }
 
   async onquery(e) {
-    let detail = e.detail
+    let query = e.detail
     let target = e.target;
-    let query = detail.trim();
     let results = await search(query, this.backends);
-    target.populate(detail, results);
+    target.populate(query, results);
   }
 
   async set(query) {

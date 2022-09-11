@@ -77,7 +77,7 @@ class KbRef extends Component {
   onclick(e) {
     e.preventDefault();
     e.stopPropagation();
-    this.dispatch("navigate", {ref: this.state, event: e}, true);
+    window.open(`${settings.kbservice}/kb/${this.state}`, "_blank");
   }
 
   render() {

@@ -340,7 +340,7 @@ class CaseApp extends Component {
         match = true;
       } else {
         let normalized = caserec.name.toLowerCase();
-        if (options.ful) {
+        if (options.full) {
           match = normalized == query;
         } else if (options.keyword) {
           match = normalized.includes(query);

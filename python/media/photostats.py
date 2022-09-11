@@ -114,7 +114,8 @@ if flags.arg.cases:
         num_photos += 1
         count += 1
         if type(m) is sling.Frame:
-          if m[n_subject_of] == n_nsfw or m[n_has_quality] == n_nsfw: num_nsfw += 1
+          if m[n_subject_of] == n_nsfw or m[n_has_quality] == n_nsfw:
+            num_nsfw += 1
 
       b = int(count / bin_size)
       profile_bins[b] += 1
@@ -126,9 +127,10 @@ if flags.arg.cases:
   casedb.close()
 
 print(num_profiles, "profiles")
-pct = int(num_nsfw * 100 / num_photos)
+pct = num_nsfw * 100 / num_photos
 num_sfw = num_photos - num_nsfw
-print("%d photos, %s sfw, %s nsfw (%d%%)" % (num_photos, num_sfw, num_nsfw, pct))
+print("%d photos, %s sfw, %s nsfw (%f%%)" %
+  (num_photos, num_sfw, num_nsfw, pct))
 print(len(topics), "topics")
 if num_new > 0: print(num_new, "new")
 print(max_photos, "photos in largest profile")

@@ -100,6 +100,7 @@ class XRefBuilder : public task::FrameProcessor {
     MutexLock lock(&mu_);
     XRef::Identifier *anchor = nullptr;
     Store *store = frame.store();
+    bool redirect_is = false;
     for (const Slot &s : frame) {
       if (s.name == Handle::id()) {
         // Add id to cross reference.
@@ -109,12 +110,13 @@ class XRefBuilder : public task::FrameProcessor {
       } else if (s.name == Handle::is()) {
         // Redirect ids.
         Text ref = store->FrameId(store->Resolve(s.value));
-        XRef::Identifier *id = xref_.GetIdentifier(ref);
+        XRef::Identifier *id = xref_.GetIdentifier(ref, redirect_is);
         XRef::Identifier *merged = Merge(anchor, id);
         if (merged == nullptr) {
           conflicts_.emplace_back(anchor, id);
         } else {
           anchor = merged;
+          redirect_is = true;
         }
         num_redirects_->Increment();
       } else if (s.name.IsGlobalRef() && s.name != Handle::isa()) {

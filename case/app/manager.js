@@ -223,12 +223,10 @@ class CaseSearchBox extends Component {
   }
 
   async onquery(e) {
-    let detail = e.detail
+    let query = e.detail
     let target = e.target;
-    let query = detail.trim();
-
     let results = await search(query, [app.search.bind(app), kbsearch]);
-    target.populate(detail, results);
+    target.populate(query, results);
   }
 
   onitem(e) {
