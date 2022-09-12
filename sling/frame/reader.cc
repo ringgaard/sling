@@ -150,6 +150,10 @@ Handle Reader::ParseObject() {
       handle = ParseArray();
       break;
 
+    case '$':
+      handle = ParseQuotedSymbol();
+      break;
+
     case QSTRING_TOKEN:
       handle = ParseQString();
       break;
@@ -339,6 +343,18 @@ Handle Reader::ParseQString() {
 
   // Return handle to qualified string.
   return handle;
+}
+
+Handle Reader::ParseQuotedSymbol() {
+  NextToken();
+  if (token() == STRING_TOKEN) {
+    Handle handle = store_->Symbol(token_text());
+    NextToken();
+    return handle;
+  } else {
+    SetError("invalid quoted symbol");
+    return Handle::error();
+  }
 }
 
 Handle Reader::ParseId() {

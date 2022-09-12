@@ -77,18 +77,13 @@ int Tokenizer::NextToken() {
         }
         return Token(';');
 
-      case '\\':  // escaped symbol name
-        NextChar();
-        if (!ParseName('\\')) return Error("Invalid symbol name");
-        return Token(SYMBOL_TOKEN);
-
       case '{': case '}':  // frame delimiter
       case '[': case ']':  // array delimiter
       case '(': case ')':  // parentheses
       case ',': case '~': case '?': case ':':  // operator: , ~ ? :
         return Select(current_);
 
-      case '\'':  // literal symbol or character constant
+      case '\'':  // character constant
         if (func_mode_) {
           // Parse character constant.
           if (ParseString() == ERROR) return ERROR;
@@ -99,12 +94,7 @@ int Tokenizer::NextToken() {
           }
           return Token(CHARACTER_TOKEN);
         } else {
-          // Parse literal symbol.
-          NextChar();
-          int first = current_;
-          NextChar();
-          if (!ParseName(first)) return Error("Invalid symbol name");
-          return Token(LITERAL_TOKEN);
+          return Select('\'');
         }
 
       case '<':  // operator: < <= << <<=
@@ -336,21 +326,7 @@ int Tokenizer::ParseNumber(bool negative, bool fractional) {
 
 bool Tokenizer::ParseName(int first) {
   // Save first character in symbol name.
-  int ch;
-  if (first == '\\') {
-    if (current_ == -1) return false;
-    Append(current_);
-    NextChar();
-  } else if (first == '%') {
-    ch = HexToDigit(current_);
-    NextChar();
-    ch = (ch << 4) + HexToDigit(current_);
-    NextChar();
-    if (ch < 0) return Error("Invalid hex escape in symbol");
-    Append(ch);
-  } else {
-    Append(first);
-  }
+  Append(first);
 
   // Parse remaining part of symbol name.
   for (;;) {
@@ -370,23 +346,6 @@ bool Tokenizer::ParseName(int first) {
         if (func_mode_) return true;
         Append(current_);
         NextChar();
-        break;
-
-      case '\\':
-        NextChar();
-        if (current_ == -1) return false;
-        Append(current_);
-        NextChar();
-        break;
-
-      case '%':
-        NextChar();
-        ch = HexToDigit(current_);
-        NextChar();
-        ch = (ch << 4) + HexToDigit(current_);
-        NextChar();
-        if (ch < 0) return Error("Invalid hex escape in symbol");
-        Append(ch);
         break;
 
       default:

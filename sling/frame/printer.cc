@@ -85,7 +85,7 @@ void Printer::PrintAll() {
   }
 }
 
-void Printer::PrintString(const StringDatum *str) {
+void Printer::WriteString(const char *str, size_t size) {
   // Escape types.
   enum Escaping {NONE, NEWLINE, RETURN, TAB, QUOTE, BSLASH, UTF, HEX};
 
@@ -127,11 +127,11 @@ void Printer::PrintString(const StringDatum *str) {
 
   WriteChar('"');
   bool done = false;
-  unsigned char *s = str->payload();
-  unsigned char *end = s + str->length();
+  const unsigned char *s = reinterpret_cast<const unsigned char *>(str);
+  const unsigned char *end = s + size;
   while (!done) {
     // Search forward until first character that needs escaping.
-    unsigned char *t = s;
+    const unsigned char *t = s;
     Escaping escape = NONE;
     while (t != end) {
       escape = escaping[*t];
@@ -167,8 +167,10 @@ void Printer::PrintString(const StringDatum *str) {
     s = t;
   }
   WriteChar('"');
+}
 
-  // Output optional qualifier.
+void Printer::PrintString(const StringDatum *str) {
+  WriteString(str->data(), str->length());
   if (str->qualified()) {
     WriteChar('@');
     PrintLink(str->qualifier());
@@ -255,54 +257,24 @@ void Printer::PrintArray(const ArrayDatum *array) {
   WriteChar(']');
 }
 
+bool Printer::ValidName(const char *name, size_t size) {
+  if (size == 0) return false;
+  if (!ascii_isalpha(*name) && *name != '/' && *name != '_') return false;
+  for (const char *p = name + 1; p < name + size; ++p) {
+    if (!ascii_isalnum(*p) && *p != '/' && *p != '_' && *p != '-') return false;
+  }
+  return true;
+}
+
 void Printer::PrintSymbol(const SymbolDatum *symbol, bool reference) {
   if (!reference && symbol->bound()) WriteChar('\'');
-
-  const char *p = symbol->data();
-  const char *end = p + symbol->length();
-  DCHECK(p != end);
-  if (utf8_) {
-    if (*p & 0x80) {
-      int n = WriteUTF8(p, end);
-      if (n < 0) {
-        WriteChar('%');
-        WriteHex(*p++);
-      } else {
-        p += n;
-      }
-    } else {
-      if (!ascii_isalpha(*p) && *p != '/' && *p != '_') {
-        WriteChar('\\');
-      }
-      WriteChar(*p++);
-    }
-    while (p < end) {
-      if (*p & 0x80) {
-        int n = WriteUTF8(p, end);
-        if (n < 0) {
-          WriteChar('%');
-          WriteHex(*p++);
-        } else {
-          p += n;
-        }
-      } else {
-        char c = *p++;
-        if (!ascii_isalnum(c) && c != '/' && c != '_' && c != '-') {
-          WriteChar('\\');
-        }
-        WriteChar(c);
-      }
-    }
+  const char *name = symbol->data();
+  size_t size = symbol->length();
+  if (ValidName(name, size)) {
+    output_->Write(name, size);
   } else {
-    if (!ascii_isalpha(*p) && *p != '/' && *p != '_') WriteChar('\\');
-    WriteChar(*p++);
-    while (p < end) {
-      char c = *p++;
-      if (!ascii_isalnum(c) && c != '/' && c != '_' && c != '-') {
-        WriteChar('\\');
-      }
-      WriteChar(c);
-    }
+    WriteChar('$');
+    WriteString(name, size);
   }
 }
 

@@ -8,6 +8,7 @@ var strencoder = new TextEncoder();
 var numbuf = new ArrayBuffer(4);
 var intbuf = new Int32Array(numbuf);
 var fltbuf = new Float32Array(numbuf);
+var namepat = /^[A-Za-z_\/][A-Za-z0-9_\-\/]*$/;
 
 // Convert binary 32-bit IEEE-754 float to number.
 function bitsToFloat(bits) {
@@ -1106,6 +1107,13 @@ export class Reader {
           while (this.ch != -1 && this.ch != 10) this.read();
           break;
 
+        case 36:  // '$'
+          // Quoted symbol.
+          this.read();
+          this.parseString();
+          this.token = -8;
+          return;
+
         default:
           // Parse keyword or symbol.
           this.parseName();
@@ -1184,15 +1192,7 @@ export class Reader {
         case 95:  // '_'
         case 47:  // '/'
         case 45:  // '-'
-        case 46:  // '.'
-        case 33:  // '!'
           end = this.pos;
-          this.read();
-          break;
-
-        case 92:  // '\'
-          // TODO: handle escapes.
-          this.read();
           this.read();
           break;
 
@@ -1504,8 +1504,12 @@ export class Printer {
 
   // Print symbol.
   printSymbol(symbol) {
-    // TODO: escape symbol names.
-    this.write(symbol);
+    if (namepat.test(symbol)) {
+      this.write(symbol);
+    } else {
+      this.write("$");
+      this.write(JSON.stringify(symbol));
+    }
   }
 }
 

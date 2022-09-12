@@ -333,7 +333,7 @@ class CaseApp extends Component {
 
   search(query, results, options = {}) {
     if (!this.caselist) return;
-
+    query = query.toLowerCase();
     for (let caserec of this.caselist) {
       let match = false;
       if (query == caserec.id || query == `c/${caserec.id}`) {

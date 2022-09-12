@@ -246,6 +246,8 @@ class ItemMerger : public task::Reducer {
  public:
   void Start(task::Task *task) override {
     task::Reducer::Start(task);
+    names_.Bind(&commons_);
+    commons_.Freeze();
 
     // Statistics.
     num_orig_statements_ = task->GetCounter("original_statements");
@@ -264,6 +266,7 @@ class ItemMerger : public task::Reducer {
 
     // Merge all item sources.
     Statements statements(&store);
+    bool prune = false;
     for (task::Message *message : input.messages()) {
       // Decode item.
       Frame item = DecodeMessage(&store, message);
@@ -277,20 +280,33 @@ class ItemMerger : public task::Reducer {
         if (s->value == self) s->value = proxy;
       });
 
-      // Add new statements skipping duplicates.
       statements.Ensure(item.size());
       for (const Slot &s : item) {
+        // Skip redirects.
         if (s.name == Handle::is()) continue;
-        if (statements.Insert(s.name, s.value)) {
-         builder.Add(s.name, s.value);
+
+        if (s.name == n_unname_) {
+          // Remove existing name.
+          for (int i = 0; i < builder.size(); ++i) {
+            if (builder[i].name == n_name_ &&
+                store.Equal(builder[i].value, s.value)) {
+              builder[i].name = Handle::nil();
+              prune = true;
+            }
+          }
         } else {
-          num_dup_statements_->Increment();
+          if (statements.Insert(s.name, s.value)) {
+           // Add new statement.
+           builder.Add(s.name, s.value);
+          } else {
+            // Skip duplicate statement.
+            num_dup_statements_->Increment();
+          }
         }
       }
     }
 
     // Remove unqualified statements which have qualified counterparts.
-    bool prune = false;
     for (int i = 0; i < builder.size(); ++i) {
       // Check if statement is qualified.
       Handle value = builder[i].value;
@@ -347,6 +363,12 @@ class ItemMerger : public task::Reducer {
   // Property ids.
   std::vector<string> properties_;
   Mutex mu_;
+
+  // Commons store.
+  Store commons_;
+  Names names_;
+  Name n_name_{names_, "name"};
+  Name n_unname_{names_, "PUNME"};
 
   // Statistics.
   task::Counter *num_orig_statements_ = nullptr;

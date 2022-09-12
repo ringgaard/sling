@@ -71,17 +71,19 @@ class Printer {
   void WriteHex(unsigned char c);
 
   // Prints UTF-8 encoded character from input buffer.
-  int WriteUTF8(const unsigned char *str, const unsigned char *end);
-  int WriteUTF8(const char *str, const char *end) {
-    return WriteUTF8(reinterpret_cast<unsigned const char *>(str),
-                     reinterpret_cast<unsigned const char *>(end));
-  }
+  int WriteUTF8(const unsigned char *s, const unsigned char *end);
+
+  // Check if symbol name is valid, i.e. requires no escape.
+  static bool ValidName(const char *name, size_t size);
 
   // Prints quoted string with escapes.
-  void PrintString(const StringDatum *str);
+  void WriteString(const char *str, size_t size);
 
   // Prints object.
   void Print(Handle handle, bool reference);
+
+  // Prints string object.
+  void PrintString(const StringDatum *str);
 
   // Prints frame.
   void PrintFrame(const FrameDatum *frame);

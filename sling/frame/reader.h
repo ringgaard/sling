@@ -60,6 +60,9 @@ class Reader : public Tokenizer {
   // Parse qualified string from input.
   Handle ParseQString();
 
+  // Parse quoted symbol from input.
+  Handle ParseQuotedSymbol();
+
   // Parse id symbol from input.
   Handle ParseId();
 
