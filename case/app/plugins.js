@@ -263,6 +263,18 @@ function parse_url(url) {
   }
 }
 
+async function load_plugin(module) {
+  let module_url = `/case/plugin/${module}`;
+  console.log(`Load ${module_url}`);
+  try {
+    const { default: component } = await import(module_url);
+    return component;
+  } catch (e) {
+    console.log(e);
+    throw `error loading ${module}`;
+  }
+}
+
 export class Context {
   constructor(topic, casefile, editor) {
     this.topic = topic;
@@ -358,17 +370,7 @@ export async function process(action, query, context) {
     if (!match) continue;
 
     // Load module if not already done.
-    if (!plugin.instance) {
-      let module_url = `/case/plugin/${plugin.module}`;
-      console.log(`Load plugin ${plugin.name} from ${module_url}`);
-      try {
-        const { default: component } = await import(module_url);
-        plugin.instance = new component();
-      } catch (e) {
-        console.log(e);
-        throw `error loading plugin from ${module_url}`;
-      }
-    }
+    if (!plugin.instance) plugin.instance = await load_plugin(plugin.module);
 
     // Let plugin process the query.
     console.log(`Run plugin ${plugin.name} for '${query}'`);
@@ -392,5 +394,36 @@ export async function search_plugins(context, query, results) {
   } else if (result) {
     results.push(result);
   }
+}
+
+// Topic widgets.
+var topic_widgets = [
+
+// Graph widget.
+{
+  module: "graph.js",
+  type: store.lookup("Q141488"),
+},
+
+];
+
+const topic_widget_map = new Map(topic_widgets.map(w => [w.type, w]));
+
+const n_instance_of = store.lookup("P31");
+
+export async function get_widget(topic) {
+  // Get topic type.
+  let type = store.resolve(topic.get(n_instance_of));
+  if (!type) return null;
+
+  // Find widget type for topic type.
+  let widget = topic_widget_map.get(type);
+  if (!widget) return null;
+
+  // Load widget if not already done.
+  if (!widget.factory) widget.factory = await load_plugin(widget.module);
+
+  // Return new instance of widget.
+  return new widget.factory(topic);
 }
 

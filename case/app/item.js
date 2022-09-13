@@ -6,6 +6,7 @@ import {inform} from "/common/lib/material.js";
 import {Frame, QString} from "/common/lib/frame.js";
 import {store, settings} from "./global.js";
 import {Time, LabelCollector, latlong} from "./value.js";
+import {get_widget} from "./plugins.js";
 import {PhotoGallery, censor, imageurl, mediadb} from "/common/lib/gallery.js";
 
 mediadb.thumb = false;
@@ -726,6 +727,26 @@ class SubtopicPanel extends Component {
 
 Component.register(SubtopicPanel);
 
+class WidgetPanel extends Component {
+  visible() {
+    return this.state;
+  }
+
+  render() {
+    return this.state;
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        display: block;
+      }
+    `;
+  }
+}
+
+Component.register(WidgetPanel);
+
 class ItemPanel extends Component {
   visible() {
     return this.state && this.state.length > 0;
@@ -735,7 +756,7 @@ class ItemPanel extends Component {
     if (this.state) this.onupdated();
   }
 
-  onupdated() {
+  async onupdated() {
     // Split item into properties, media, xrefs, and subtopics.
     let item = this.state;
     if (!item) return;
@@ -778,11 +799,15 @@ class ItemPanel extends Component {
     // Censor photos.
     gallery = censor(gallery, settings.nsfw);
 
+    // Get widget.
+    let widget = await get_widget(item);
+
     // Update panels.
     this.find("#identifier").update(id);
     this.find("#names").update(names.join(" • "));
     this.find("#description").update(description);
     this.find("#properties").update(props);
+    this.find("#widget").update(widget);
     this.find("#picture").update(gallery);
     this.find("#xrefs").update(xrefs);
     this.find("#subtopics").update(subtopics);
@@ -816,6 +841,7 @@ class ItemPanel extends Component {
         <div id="vruler"></div>
 
         <div class="right">
+          <widget-panel id="widget"></widget-panel>
           <picture-panel id="picture">
             <md-image class="photo"></md-image>
             <md-text class="caption"></md-text>
