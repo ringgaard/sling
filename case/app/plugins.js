@@ -370,7 +370,12 @@ export async function process(action, query, context) {
     if (!match) continue;
 
     // Load module if not already done.
-    if (!plugin.instance) plugin.instance = await load_plugin(plugin.module);
+    if (!plugin.instance) {
+      let component = await load_plugin(plugin.module);
+      plugin.instance = new component();
+    }
+
+console.log("plugin", plugin.instance);
 
     // Let plugin process the query.
     console.log(`Run plugin ${plugin.name} for '${query}'`);
