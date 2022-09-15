@@ -122,6 +122,11 @@ cc_library(
 )
 
 cc_library(
+  name = "queue",
+  hdrs = ["queue.h"],
+)
+
+cc_library(
   name = "vocabulary",
   srcs = ["vocabulary.cc"],
   hdrs = ["vocabulary.h"],

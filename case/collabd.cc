@@ -34,6 +34,7 @@
 #include "sling/stream/file.h"
 #include "sling/stream/memory.h"
 #include "sling/util/mutex.h"
+#include "sling/util/queue.h"
 #include "sling/util/thread.h"
 
 using namespace sling;
@@ -76,6 +77,9 @@ const int CREDENTIAL_BYTES = CREDENTIAL_BITS / 8;
 class CollabCase;
 class CollabClient;
 class CollabService;
+
+// Global mutex for serializing access to collaboration server.
+Mutex mu;
 
 // HTTP server.
 HTTPServer *httpd = nullptr;
@@ -193,7 +197,6 @@ class CollabCase {
 
   // Read case file from input packet.
   bool Parse(CollabReader *reader) {
-    MutexLock lock(&mu_);
     casefile_ = reader->ReadObjects(&store_).AsFrame();
     if (casefile_.IsNil()) return false;
 
@@ -218,7 +221,6 @@ class CollabCase {
 
   // Encode case to output packet.
   void EncodeCase(CollabWriter *writer) {
-    MutexLock lock(&mu_);
     Encoder encoder(&store_, writer->output(), false);
     Serialize(&encoder);
   }
@@ -231,13 +233,11 @@ class CollabCase {
 
   // Get main author id for case.
   Text Author() const {
-    MutexLock lock(&mu_);
     return store_.FrameId(author_);
   }
 
   // Add participant.
   void AddParticipant(const string &id, const string &credentials) {
-    MutexLock lock(&mu_);
     participants_.emplace_back(id, credentials);
   }
 
@@ -245,8 +245,6 @@ class CollabCase {
   bool Login(CollabClient *client,
              const string &id,
              const string &credentials) {
-    MutexLock lock(&mu_);
-
     // Check user access.
     bool valid = false;
     for (const User &user : participants_) {
@@ -267,7 +265,6 @@ class CollabCase {
 
   // Logout user.
   void Logout(CollabClient *client) {
-    MutexLock lock(&mu_);
     auto it = std::find(clients_.begin(), clients_.end(), client);
     if (it != clients_.end()) {
       clients_.erase(it);
@@ -276,8 +273,6 @@ class CollabCase {
 
   // Invite participant and return invite key.
   string Invite(const string &id) {
-    MutexLock lock(&mu_);
-
     // Check that user is a participant.
     if (!IsParticipant(id)) return "";
 
@@ -289,8 +284,6 @@ class CollabCase {
 
   // Join collaboration using invite key.
   string Join(const string &id, const string &key) {
-    MutexLock lock(&mu_);
-
     // Check that user is a participant.
     if (!IsParticipant(id)) return "";
 
@@ -323,7 +316,6 @@ class CollabCase {
 
   // Return new topic id.
   int NewTopicId() {
-    MutexLock lock(&mu_);
     int next = casefile_.GetInt(n_next);
     casefile_.Set(n_next, Handle::Integer(next + 1));
     return next;
@@ -331,7 +323,6 @@ class CollabCase {
 
   // Update collaboration.
   bool Update(CollabReader *reader) {
-    MutexLock lock(&mu_);
     int type = reader->ReadInt();
     switch (type) {
       case CCU_TOPIC: {
@@ -446,8 +437,6 @@ class CollabCase {
 
   // Read case from file.
   bool ReadCase() {
-    MutexLock lock(&mu_);
-
     // Open case file.
     File *f;
     Status st = File::Open(CaseFileName(caseid_), "r", &f);
@@ -479,8 +468,6 @@ class CollabCase {
 
   // Read participants from file.
   bool ReadParticipants() {
-    MutexLock lock(&mu_);
-
     // Read user file.
     string content;
     Status st = File::ReadContents(UserFileName(caseid_), &content);
@@ -501,7 +488,6 @@ class CollabCase {
 
   // Write participants to file.
   void WriteParticipants() {
-    MutexLock lock(&mu_);
     File *f = File::OpenOrDie(UserFileName(caseid_), "w");
     for (const User &user : participants_) {
       f->WriteLine(user.id + " " + user.credentials);
@@ -510,9 +496,8 @@ class CollabCase {
   }
 
   // Flush changes to disk.
-  void Flush() {
-    if (!dirty_) return;
-    mu_.Lock();
+  bool Flush(string *timestamp) {
+    if (!dirty_) return false;
 
     // Update modification timestamp in case.
     time_t now = time(nullptr);
@@ -526,14 +511,8 @@ class CollabCase {
     LOG(INFO) << "Save case #" << caseid_;
     WriteCase();
     dirty_ = false;
-
-    // Broadcast save.
-    CollabWriter writer;
-    writer.WriteInt(COLLAB_UPDATE);
-    writer.WriteInt(CCU_SAVE);
-    writer.WriteString(modtime);
-    mu_.Unlock();
-    Broadcast(nullptr, writer.packet());
+    if (timestamp) *timestamp = modtime;
+    return true;
   }
 
   // Check for existing case.
@@ -622,9 +601,6 @@ class CollabCase {
 
   // Users invited as participants in collaboration.
   std::vector<User> invites_;
-
-  // Mutex for serializing access.
-  mutable Mutex mu_;
 };
 
 // A collaboration service manages a number of collaboration cases with
@@ -640,10 +616,11 @@ class CollabService {
   ~CollabService() {
     // Stop monitor thread.
     terminate_ = true;
+    notifications_.put(nullptr);
     monitor_.Join();
 
     // Flush changes to disk.
-    Flush();
+    Flush(false);
   }
 
   // Register collaboration service in HTTP server.
@@ -656,14 +633,18 @@ class CollabService {
 
   // Add case to collaboration.
   void Add(CollabCase *collab) {
-    MutexLock lock(&mu_);
     collaborations_.push_back(collab);
+  }
+
+  // Send notification to other participants.
+  void Notify(CollabCase *collab,
+              CollabClient *source,
+              const Slice &packet) {
+    notifications_.put(new Message(collab, source, packet));
   }
 
   // Find case.
   CollabCase *FindCase(int caseid) {
-    MutexLock lock(&mu_);
-
     // Try to find case that has already been loaded.
     for (auto *collab : collaborations_) {
       if (collab->caseid() == caseid) return collab;
@@ -684,7 +665,6 @@ class CollabService {
 
   // Re-read data from disk.
   void Refresh() {
-    MutexLock lock(&mu_);
     LOG(INFO) << "Refresh collaborations from disk";
     for (auto *collab : collaborations_) {
       if (!collab->ReadCase() || !collab->ReadParticipants()) {
@@ -694,18 +674,25 @@ class CollabService {
   }
 
  private:
-  void Checkpoint() {
+  void Monitor() {
     time_t last_flush = time(nullptr);
     time_t last_ping = time(nullptr);
     for (;;) {
-      // Wait.
-      sleep(1);
+      // Wait for next update.
+      Message *msg = notifications_.get(1000);
       if (terminate_) return;
-      time_t now = time(nullptr);
+
+      // Broadcast notification to participants.
+      if (msg) {
+        MutexLock lock(&mu);
+        msg->collab->Broadcast(msg->source, msg->packet());
+        delete msg;
+      }
 
       // Flush changes to disk.
+      time_t now = time(nullptr);
       if (now - last_flush >= FLAGS_flush) {
-        Flush();
+        Flush(true);
         last_flush = now;
       }
 
@@ -717,16 +704,24 @@ class CollabService {
     }
   }
 
-  void Flush() {
+  void Flush(bool notify) {
     // Flush changes to disk.
-    MutexLock lock(&mu_);
+    MutexLock lock(&mu);
+    string timestamp;
     for (CollabCase *collab : collaborations_) {
-      collab->Flush();
+      if (collab->Flush(&timestamp) && notify) {
+        // Broadcast save.
+        CollabWriter writer;
+        writer.WriteInt(COLLAB_UPDATE);
+        writer.WriteInt(CCU_SAVE);
+        writer.WriteString(timestamp);
+        Notify(collab, nullptr, writer.packet());
+      }
     }
   }
 
   void SendKeepAlivePings() {
-    MutexLock lock(&mu_);
+    MutexLock lock(&mu);
     for (CollabCase *collab : collaborations_) {
       collab->SendKeepAlivePings();
     }
@@ -735,14 +730,33 @@ class CollabService {
   // Active collaboration cases.
   std::vector<CollabCase *> collaborations_;
 
-  // Monitor thread for flushing changes to disk.
-  ClosureThread monitor_{[&]() { Checkpoint(); }};
+  // Notification queue.
+  struct Message {
+    Message(CollabCase *collab,
+            CollabClient *source,
+            const Slice &packet) : collab(collab), source(source) {
+      size = packet.size();
+      message = static_cast<char *>(malloc(size));
+      memcpy(message, packet.data(), size);
+    }
+
+    ~Message() { free(message); }
+
+    const Slice packet() { return Slice(message, size); }
+
+    CollabCase *collab;
+    CollabClient *source;
+    char *message;
+    size_t size;
+  };
+
+  Queue<Message *> notifications_;
+
+  // Monitor thread for distributing notifications and flushing changes to disk.
+  ClosureThread monitor_{[&]() { Monitor(); }};
 
   // Termination flag.
   bool terminate_ = false;
-
-  // Mutex for serializing access.
-  Mutex mu_;
 };
 
 // A collaboration client is a participant in a collaboration.
@@ -756,11 +770,13 @@ class CollabClient : public WebSocket {
     if (collab_) {
       LOG(INFO) << "Logout user " << userid_
                 << " from case #" << collab_->caseid();
+      MutexLock lock(&mu);
       collab_->Logout(this);
     }
   }
 
   void Receive(const uint8 *data, uint64 size, bool binary) override {
+    MutexLock lock(&mu);
     CollabReader reader(data, size);
     int op = reader.ReadInt();
     switch (op) {
@@ -813,7 +829,7 @@ class CollabClient : public WebSocket {
 
     // Flush to disk.
     collab->WriteParticipants();
-    collab->Flush();
+    collab->Flush(nullptr);
 
     // Return reply which signals to the client that the collaboration server
     // has taken ownership of the case.
@@ -950,8 +966,8 @@ class CollabClient : public WebSocket {
       return;
     }
 
-    // Broadcast update to all other clients.
-    collab_->Broadcast(this, reader->packet());
+    // Broadcast update to all other participants.
+    service_->Notify(collab_, this, reader->packet());
   }
 
   // Return error message to client.
@@ -983,7 +999,6 @@ void CollabService::Process(HTTPRequest *request, HTTPResponse *response) {
 }
 
 void CollabCase::Broadcast(CollabClient *source, const Slice &packet) {
-  MutexLock lock(&mu_);
   for (CollabClient *client : clients_) {
     if (client != source) {
       client->Send(packet);
@@ -992,7 +1007,6 @@ void CollabCase::Broadcast(CollabClient *source, const Slice &packet) {
 }
 
 void CollabCase::SendKeepAlivePings() {
-  MutexLock lock(&mu_);
   time_t now = time(nullptr);
   for (CollabClient *client : clients_) {
     if (now - client->last() > FLAGS_ping) {

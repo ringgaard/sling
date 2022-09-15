@@ -15,6 +15,7 @@ cc_binary(
     "//sling/stream:file",
     "//sling/stream:memory",
     "//sling/util:mutex",
+    "//sling/util:queue",
     "//sling/util:thread",
   ],
 )

@@ -162,7 +162,7 @@ def is_video(url):
   for suffix in video_suffixes:
     if url.endswith(suffix): return True
   for prefix in video_prefixes:
-    if url.startswith(suffix): return True
+    if url.startswith(prefix): return True
   return False
 
 # Image hashing.
@@ -769,20 +769,16 @@ class Profile:
           if bigger or (caption is not None and dupcaption is None):
             # Remove previous duplicate.
             duplicates.add(dup.url)
+            msg = "replacement duplicate of"
           else:
             # Remove this duplicate.
             duplicates.add(photo.url)
+            msg = "duplicate of"
 
           if nsfw:
-            if dup not in naughty:
-              msg = "nsfw duplicate of"
-            else:
-              msg = "duplicate of"
+            if dup not in naughty: msg = "nsfw " + msg
           else:
-            if dup in naughty:
-              msg = "sfw duplicate of"
-            else:
-              msg = "duplicate of"
+            if dup in naughty: msg = "sfw " + msg
 
           if caption is not None: msg = "captioned " + msg
           if dupcaption is not None: msg = msg + " captioned"

@@ -375,8 +375,6 @@ export async function process(action, query, context) {
       plugin.instance = new component();
     }
 
-console.log("plugin", plugin.instance);
-
     // Let plugin process the query.
     console.log(`Run plugin ${plugin.name} for '${query}'`);
     let r = await plugin.instance.process(action, query, context);
