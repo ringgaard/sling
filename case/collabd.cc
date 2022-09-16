@@ -666,6 +666,7 @@ class CollabService {
   // Re-read data from disk.
   void Refresh() {
     LOG(INFO) << "Refresh collaborations from disk";
+    MutexLock lock(&mu);
     for (auto *collab : collaborations_) {
       if (!collab->ReadCase() || !collab->ReadParticipants()) {
         LOG(ERROR) << "Unable to refresh case #" << collab->caseid();
@@ -775,8 +776,15 @@ class CollabClient : public WebSocket {
     }
   }
 
+  void Lock() override {
+    mu.Lock();
+  }
+
+  void Unlock() override {
+    mu.Unlock();
+  }
+
   void Receive(const uint8 *data, uint64 size, bool binary) override {
-    MutexLock lock(&mu);
     CollabReader reader(data, size);
     int op = reader.ReadInt();
     switch (op) {

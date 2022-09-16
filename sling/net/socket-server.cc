@@ -387,6 +387,16 @@ SocketConnection::~SocketConnection() {
   if (file_ != nullptr) file_->Close();
 }
 
+void SocketConnection::Lock() {
+  session_->Lock();
+  mu_.Lock();
+}
+
+void SocketConnection::Unlock() {
+  mu_.Unlock();
+  session_->Unlock();
+}
+
 Status SocketConnection::Process() {
   SocketSession *session = session_;
   switch (state_) {
@@ -599,7 +609,7 @@ void SocketConnection::Shutdown() {
 void SocketConnection::Push(const void *hdr, size_t hdrlen,
                             const void *data, size_t datalen) {
   bool self = pthread_self() == worker_;
-  if (!self) Lock();
+  if (!self) mu_.Lock();
 
   IOBuffer *out = response_body();
   if (hdr) out->Write(hdr, hdrlen);
@@ -608,7 +618,7 @@ void SocketConnection::Push(const void *hdr, size_t hdrlen,
   if (!self) {
     state_ = SOCKET_STATE_SEND;
     Process();
-    Unlock();
+    mu_.Unlock();
   }
 }
 

@@ -190,8 +190,8 @@ class SocketConnection {
   const char *State() const;
 
   // Lock/unlock access to connection.
-  void Lock() { mu_.Lock(); }
-  void Unlock() { mu_.Unlock(); }
+  void Lock();
+  void Unlock();
 
   // Last time event was received on connection.
   time_t last() const { return last_; }
@@ -289,6 +289,10 @@ class SocketSession {
 
   // Return idle timeout in seconds for session.
   virtual int IdleTimeout() { return -1; }
+
+  // Lock/unlock session.
+  virtual void Lock() {}
+  virtual void Unlock() {}
 
   // Process the request in the request buffer and return the response header
   // and body. Return false to terminate the session.
