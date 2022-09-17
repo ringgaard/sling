@@ -41,15 +41,13 @@ enum SocketState {
   SOCKET_STATE_PROCESS,
   SOCKET_STATE_SEND,
   SOCKET_STATE_TERMINATE,
+  SOCKET_STATE_SHUTDOWN,
 };
 
 // Socket server configuration.
 struct SocketServerOptions {
   // Number of worker threads.
   int num_workers = 16;
-
-  // Maximum number of worker threads.
-  int max_workers = 0;
 
   // Number of events per worker poll.
   int max_events = 1;
@@ -158,7 +156,6 @@ class SocketConnection {
  public:
   // Initialize new socket connection on socket.
   SocketConnection(SocketServer *server, int sock, SocketProtocol *protocol);
-  ~SocketConnection();
 
   // Process I/O for connection.
   Status Process();
@@ -204,6 +201,11 @@ class SocketConnection {
   // Send data from buffer until all data has been sent or all the data that can
   // be sent without blocking has been sent.
   Status Send(IOBuffer *buffer, bool *done);
+
+  // Reference counting.
+  void AddRef() const { refs_.fetch_add(1); };
+  void Release() const { if (refs_.fetch_sub(1) == 1) delete this; }
+  ~SocketConnection();
 
   // Shut down connection.
   void Shutdown();
@@ -251,6 +253,9 @@ class SocketConnection {
 
   // Mutex for serializing access to connection state.
   Mutex mu_;
+
+  // Reference count.
+  mutable std::atomic<int> refs_{1};
 
   friend class SocketServer;
 };

@@ -183,7 +183,7 @@ class MonitorApp extends MdApp {
     if (alarms == 0) {
       status.update("ALL SYSTEMS GO");
       status.className = "success"
-    } else if (failures == 1) {
+    } else if (alarms == 1) {
       status.update("1 ALARM");
       status.className = "failure";
     } else {

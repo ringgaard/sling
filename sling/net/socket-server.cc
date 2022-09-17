@@ -143,18 +143,8 @@ void SocketServer::Worker() {
       continue;
     }
 
-    // Start new worker if all workers are busy.
-    if (++active_ == workers_.size() && options_.max_workers > 0) {
-      MutexLock lock(&mu_);
-      if (workers_.size() < options_.max_workers) {
-        VLOG(3) << "Starting new worker thread " << workers_.size();
-        workers_.Start(1, [this](int index) { this->Worker(); });
-      } else {
-        LOG(WARNING) << "All socket worker threads are busy";
-      }
-    }
-
     // Process events.
+    active_++;
     for (int i = 0; i < rc; ++i) {
       struct epoll_event *ev = &events[i];
 
@@ -182,28 +172,33 @@ void SocketServer::Worker() {
             // Delete client connection.
             VLOG(3) << "Close socket " << conn->sock_;
             RemoveConnection(conn);
-            delete conn;
+            conn->Release();
           }
         } else {
           // Process connection data.
+          conn->Lock();
           VLOG(5) << "Begin " << conn->sock_ << " in state " << conn->State();
-          do {
-            conn->Lock();
-            Status s = conn->Process();
-            conn->Unlock();
-            if (!s.ok()) {
-              LOG(ERROR) << "Socket error: " << s;
-              conn->state_ = SOCKET_STATE_TERMINATE;
-            }
-          } while (conn->state_ == SOCKET_STATE_PROCESS);
-          VLOG(5) << "End " << conn->sock_ << " in state " << conn->State();
+
+          if (conn->state_ < SOCKET_STATE_TERMINATE) {
+            do {
+              Status s = conn->Process();
+              if (!s.ok()) {
+                LOG(ERROR) << "Socket error: " << s;
+                conn->state_ = SOCKET_STATE_TERMINATE;
+              }
+            } while (conn->state_ == SOCKET_STATE_PROCESS);
+          }
 
           if (conn->state_ == SOCKET_STATE_TERMINATE) {
             conn->Shutdown();
-            VLOG(5) << "Shutdown connection";
+            conn->state_ = SOCKET_STATE_SHUTDOWN;
+            VLOG(5) << "Shutdown socket " << conn->sock_;
           } else {
             conn->last_ = time(0);
           }
+
+          VLOG(5) << "End " << conn->sock_ << " in state " << conn->State();
+          conn->Unlock();
         }
       }
     }
@@ -375,8 +370,6 @@ SocketConnection::SocketConnection(SocketServer *server, int sock,
 }
 
 SocketConnection::~SocketConnection() {
-  MutexLock lock(&mu_);
-
   // Delete session.
   delete session_;
 
@@ -388,6 +381,7 @@ SocketConnection::~SocketConnection() {
 }
 
 void SocketConnection::Lock() {
+  AddRef();
   session_->Lock();
   mu_.Lock();
 }
@@ -395,6 +389,7 @@ void SocketConnection::Lock() {
 void SocketConnection::Unlock() {
   mu_.Unlock();
   session_->Unlock();
+  Release();
 }
 
 Status SocketConnection::Process() {
@@ -531,11 +526,8 @@ Status SocketConnection::Process() {
       }
 
       state_ = SOCKET_STATE_TERMINATE;
-      FALLTHROUGH_INTENDED;
-    }
-
-    case SOCKET_STATE_TERMINATE:
       return Status::OK;
+    }
 
     default:
       return Status(1, "Invalid socket state");
@@ -629,6 +621,7 @@ const char *SocketConnection::State() const {
     case SOCKET_STATE_PROCESS: return "PROCESS";
     case SOCKET_STATE_SEND: return "SEND";
     case SOCKET_STATE_TERMINATE: return "TERMINATE";
+    case SOCKET_STATE_SHUTDOWN: return "SHUTDOWN";
   }
   return "???";
 }
