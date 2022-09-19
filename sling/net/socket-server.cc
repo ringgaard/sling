@@ -600,6 +600,7 @@ void SocketConnection::Shutdown() {
 
 void SocketConnection::Push(const void *hdr, size_t hdrlen,
                             const void *data, size_t datalen) {
+  AddRef();
   bool self = pthread_self() == worker_;
   if (!self) mu_.Lock();
 
@@ -612,6 +613,7 @@ void SocketConnection::Push(const void *hdr, size_t hdrlen,
     Process();
     mu_.Unlock();
   }
+  Release();
 }
 
 const char *SocketConnection::State() const {

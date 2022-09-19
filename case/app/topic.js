@@ -922,7 +922,7 @@ class TopicCard extends Component {
         top: -8px;
         display: flex;
       }
-      $ md-icon-button {
+      $ md-card-toolbar md-icon-button {
         margin-left: -8px;
       }
 

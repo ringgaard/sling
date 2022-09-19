@@ -740,6 +740,7 @@ class WidgetPanel extends Component {
     return `
       $ {
         display: block;
+        padding: 0px;
       }
     `;
   }

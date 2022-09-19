@@ -167,13 +167,18 @@ class CaseEditor extends MdApp {
     }
   }
 
+  get_index() {
+    if (!this.index) this.index = new SearchIndex(this.topics);
+    return this.index;
+  }
+
   async onnavigate(e) {
     e.preventDefault();
     e.stopPropagation();
     let ref = e.detail.ref;
 
-    if (!this.index) this.index = new SearchIndex(this.topics);
-    let topic = this.index.ids.get(ref);
+    let index = this.get_index();
+    let topic = index.ids.get(ref);
     if (topic) {
       // Navigate to existing topic.
       this.navigate_to(topic);
@@ -202,8 +207,8 @@ class CaseEditor extends MdApp {
 
   async search(query, results, options = {}) {
     // Search topcis in case file.
-    if (!this.index) this.index = new SearchIndex(this.topics);
-    for (let hit of this.index.hits(query, options)) {
+    let index = this.get_index();
+    for (let hit of index.hits(query, options)) {
       let topic = hit.topic;
       let name = topic.get(n_name);
       results.push({
@@ -1003,8 +1008,8 @@ class CaseEditor extends MdApp {
   }
 
   oncopyall(e) {
-    // Copy all topics to clipboard.
-    write_to_clipboard(this.topics);
+    // Copy all topics (except the main topic) to clipboard.
+    write_to_clipboard(this.topics.filter(topic => topic != this.main));
   }
 
   async onpaste(e) {

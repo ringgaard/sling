@@ -404,8 +404,8 @@ var topic_widgets = [
 
 // Graph widget.
 {
-  module: "graph.js",
-  type: store.lookup("Q141488"),
+  module: "network.js",
+  type: store.lookup("Q1900326"),
 },
 
 ];

@@ -769,7 +769,7 @@ class Profile:
           if bigger or (caption is not None and dupcaption is None):
             # Remove previous duplicate.
             duplicates.add(dup.url)
-            msg = "replacement duplicate of"
+            msg = "replacement for"
           else:
             # Remove this duplicate.
             duplicates.add(photo.url)
