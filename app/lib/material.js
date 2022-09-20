@@ -245,7 +245,8 @@ export class MdDialog extends Component {
       }
 
       $ {
-        display: block;
+        display: flex;
+        flex-direction: column;
         padding-left: 16px;
         padding-right: 16px;
       }
