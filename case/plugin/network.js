@@ -6,20 +6,49 @@
 import {Component} from "/common/lib/component.js";
 import {MdDialog} from "/common/lib/material.js";
 import {store, settings} from "/case/app/global.js";
-import {Frame} from "/common/lib/frame.js";
+import {Time} from "/case/app/value.js";
+import {Frame, QString} from "/common/lib/frame.js";
+
 
 const n_name = store.lookup("name");
+const n_description = store.lookup("description");
+const n_type = store.lookup("P31");
 const n_start_point = store.lookup("P1427");
+const n_human = store.lookup("Q5");
+const n_gender = store.lookup("P21");
+const n_male = store.lookup("Q6581097");
+const n_female = store.lookup("Q6581072");
+const n_born = store.lookup("P569");
+const n_died = store.lookup("P570");
+
+const descriptors = [
+  n_description,
+  store.lookup("P19"),   // place of birth
+  store.lookup("P20"),   // place of death
+  store.lookup("P551"),  // residence
+  store.lookup("P276"),  // location
+  n_type,
+];
 
 const BOX_WIDTH = 180;
 const BOX_HEIGHT = 40;
 const GRID_SIZE = 20;
 const MARGIN = 25;
 
+const STRAIGHT_CONNECTOR = 0;
+const ELBOW_CONNECTOR = 1;
+const FORK_CONNECTOR = 2;
+
 var nextz = 1;
 
 function snap(p) {
   return Math.round(p / GRID_SIZE) * GRID_SIZE;
+}
+
+function date(d) {
+  let t = new Time(store.resolve(d));
+  if (t.precision > 4) t.precision = 4;
+  return t.text();
 }
 
 class Point {
@@ -33,22 +62,43 @@ class Point {
   }
 }
 
-// Node in graph.
 class Node {
   constructor(topic) {
     this.topic = topic;
+    this.edges = new Array();
+
+    // Node label.
     this.label = topic.get(n_name);
     if (this.label) this.label = this.label.toString();
     if (!this.label) this.label = topic.id;
-    this.edges = new Array();
-  }
 
-  add(relation, target) {
-    this.edges.push(new Edge(this, relation, target));
+    // Node description.
+    if (topic.get(n_type) == n_human) {
+      let s = "";
+      let gender = topic.get(n_gender);
+      let born = topic.get(n_born);
+      let died = topic.get(n_died);
+      if (gender == n_male) s += "♂ ";
+      if (gender == n_female) s += "♀ ";
+      if (born) s += "* " + date(born) + " ";
+      if (died) s += "† " + date(died) + " ";
+      if (s.length > 0) this.description = s.trim();
+    }
+    if (!this,description) {
+      for (let prop of descriptors) {
+        let value = store.resolve(topic.get(prop));
+        if (value instanceof Frame) value = value.get(n_name);
+        if (value instanceof QString) value = value.toString();
+        if (value) {
+          this.description = value;
+          break;
+        }
+      }
+    }
+
   }
 }
 
-// Directed edge in graph.
 class Edge {
   constructor(source, relation, target) {
     this.source = source;
@@ -61,6 +111,42 @@ class Edge {
     if (name) name = name.toString();
     if (!name) name = this.relation.id;
     return name;
+  }
+}
+
+class Graph {
+  constructor(seed, neighborhood) {
+    this.nodes = new Map();
+    this.edges = new Array();
+    let visit = [];
+    for (let topic of seed.all(n_start_point)) {
+      topic = store.resolve(topic);
+      if (this.nodes.has(topic)) continue;
+      if (!neighborhood.includes(topic)) continue;
+      let node = new Node(topic);
+      this.nodes.set(topic, node);
+      visit.push(node);
+    }
+    while (visit.length > 0) {
+      let node = visit.pop();
+      for (let [name, value] of node.topic) {
+        value = store.resolve(value);
+        if (value instanceof Frame) {
+          if (neighborhood.includes(value)) {
+            let target = this.nodes.get(value);
+            if (!target) {
+              target = new Node(value);
+              this.nodes.set(value, target);
+              visit.push(target);
+            }
+
+            let edge = new Edge(node, name, target);
+            node.edges.push(edge);
+            this.edges.push(edge);
+          }
+        }
+      }
+    }
   }
 }
 
@@ -92,6 +178,11 @@ class NodeBox extends Component {
     h.push('<div class="title">');
     h.push(Component.escape(node.label));
     h.push('</div>');
+    if (node.description) {
+      h.push('<div class="description">');
+      h.push(Component.escape(node.description));
+      h.push('</div>');
+    }
     for (let e of node.edges) {
       h.push('<div class="rel"><b>');
       h.push(Component.escape(e.relname()));
@@ -126,17 +217,22 @@ class NodeBox extends Component {
         border: 2px solid lightgrey;
         background: white;
         overflow: hidden;
+        background: #eeeeee;
       }
 
       $:hover {
         max-height: initial;
+        background: white;
       }
 
       $ .title {
         font-weight: bold;
         text-align: center;
         padding-top: 2px;
-        padding-bottom: 8px;
+      }
+      $ .description {
+        text-align: center;
+        font-size: 14px;
       }
       $ .rel {
         display: none;
@@ -154,29 +250,77 @@ Component.register(NodeBox);
 class NetworkDialog extends MdDialog {
   constructor(graph) {
     super(graph);
-    this.nodes = Array.from(graph.values());
   }
 
   onconnected() {
-    this.attach(this.submit, "click", ".close");
+    this.attach(this.submit, "click", "#close");
+
+    this.layout = STRAIGHT_CONNECTOR;
+    this.bind("#straight", "click", e => this.onlayout(STRAIGHT_CONNECTOR));
+    this.bind("#elbow", "click", e => this.onlayout(ELBOW_CONNECTOR));
+    this.bind("#forked", "click", e => this.onlayout(FORK_CONNECTOR));
   }
 
   submit() {
     this.close();
   }
 
+  onlayout(layout) {
+    if (layout != this.layout) {
+      this.layout = layout;
+      this.draw();
+    }
+  }
+
   render() {
     return `
       <canvas id="canvas"></canvas>
-      <md-icon-button class="close" icon="close"></md-icon-button>
+      <div class="toolbar">
+        <div class="toolbox">
+          <md-icon-button icon="zoom_in"></md-icon-button>
+          <md-icon-button icon="zoom_out"></md-icon-button>
+          <md-icon-button icon="grid_on"></md-icon-button>
+          <md-icon-button icon="grid_4x4"></md-icon-button>
+
+          <md-icon-button
+            id="straight"
+            icon="straight"
+            tooltip="Straight connectors">
+          </md-icon-button>
+
+          <md-icon-button
+            id="elbow"
+            icon="turn_right"
+            tooltip="Elbow connectors">
+          </md-icon-button>
+
+          <md-icon-button
+            id="forked"
+            icon="merge"
+            tooltip="Forked connectors">
+          </md-icon-button>
+
+          <md-icon-button
+            id="close"
+            icon="close"
+            tooltip="Close">
+          </md-icon-button>
+        </div>
+      </div>
     `;
   }
 
   onrendered() {
+    // Resize canvas.
+    let graph = this.state;
+    let canvas = this.find("#canvas");
+    canvas.width = this.scrollWidth;
+    canvas.height = this.scrollHeight;
+
     // Assign random positions to nodes.
     let w = this.scrollWidth - MARGIN * 2 - BOX_WIDTH;
     let h = this.scrollHeight - MARGIN * 2 - BOX_HEIGHT;
-    for (let n of this.nodes) {
+    for (let n of graph.nodes.values()) {
       let box = new NodeBox(n);
       let x = Math.random() * w + MARGIN;
       let y = Math.random() * h + MARGIN;
@@ -185,30 +329,31 @@ class NetworkDialog extends MdDialog {
       this.appendChild(box);
     }
 
-    // Resize canvas.
-    let canvas = this.find("#canvas");
-    canvas.width = this.scrollWidth;
-    canvas.height = this.scrollHeight;
-
     // Draw edges.
     this.draw();
   }
 
   draw() {
+    let graph = this.state;
     let canvas = this.find("#canvas");
     let ctx = canvas.getContext("2d");
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let e of graph.edges) {
+      let a = e.source.box.center();
+      let b = e.target.box.center();
 
-    for (let n of this.nodes) {
-      let a = n.box.center();
-      for (let e of n.edges) {
-        let b = e.target.box.center();
-        ctx.beginPath();
-        ctx.moveTo(a.x, a.y);
-        ctx.lineTo(b.x, b.y);
-        ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      if (this.layout == ELBOW_CONNECTOR && a.x != b.x && a.y != b.y) {
+        if (a.y > b.y) {
+          ctx.lineTo(a.x, b.y);
+        } else {
+          ctx.lineTo(b.x, a.y);
+        }
       }
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
     }
   }
 
@@ -219,7 +364,7 @@ class NetworkDialog extends MdDialog {
         padding: 0px;
         width: 95vw;
         height: 95vh;
-        background-color: #eeeeee;
+        background-color: white;
         overflow: hidden;
       }
 
@@ -228,13 +373,27 @@ class NetworkDialog extends MdDialog {
         height: 100%;
       }
 
-      $ .close {
+      $ .toolbar {
         position: absolute;
         top: 0;
+        left: 0;
         right: 0;
+        display: flex;
+        justify-content: center;
+      }
 
-        padding: 8px;
-        color: black;
+      $ .toolbox {
+        visibility: hidden;
+        display: flex;
+        color: white;
+        background: #808080;
+        padding: 4px 12px 4px 12px;
+        margin: 8px;
+        border-radius: 12px;
+      }
+
+      $ .toolbar:hover .toolbox {
+        visibility: initial;
       }
     `;
   }
@@ -247,51 +406,9 @@ export default class NetworkWidget extends Component {
     this.attach(this.onclick, "click");
   }
 
-  graph() {
-    // Build graph nodes reachable from the start nodes.
-    let locals = this.match("#editor").topics;
-    let graph = new Map();
-    let visit = [];
-    for (let topic of this.state.all(n_start_point)) {
-      topic = store.resolve(topic);
-      if (graph.has(topic)) continue;
-      if (!locals.includes(topic)) continue;
-      let node = new Node(topic);
-      graph.set(topic, node);
-      visit.push(node);
-    }
-    while (visit.length > 0) {
-      let node = visit.pop();
-      for (let [name, value] of node.topic) {
-        value = store.resolve(value);
-        if (value instanceof Frame) {
-          if (locals.includes(value)) {
-            let target = graph.get(value);
-            if (!target) {
-              target = new Node(value);
-              graph.set(value, target);
-              visit.push(target);
-            }
-            node.add(name, target);
-          }
-        }
-      }
-    }
-
-    return graph;
-  }
-
   async onclick(e) {
-    let graph = this.graph();
-
-    /*
-    for (let n of this.graph.values()) {
-      console.log("Node", n.topic.id, n.label);
-      for (let e of n.edges) {
-        console.log("  Edge", e.relation.get("name").toString(), e.target.label);
-      }
-    }
-    */
+    let topics = this.match("#editor").topics;
+    let graph = new Graph(this.state, topics);
 
     let dialog = new NetworkDialog(graph);
     let result = await dialog.show();
