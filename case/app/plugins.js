@@ -115,6 +115,16 @@ var plugins = [
   ],
 },
 
+// Listal profiles.
+{
+  name: "listal",
+  module: "listal.js",
+  actions: [PASTEURL, SEARCHURL],
+  patterns: [
+    /https:\/\/www.listal.com\//,
+  ],
+},
+
 // Babepedia profiles.
 {
   name: "babepedia",
