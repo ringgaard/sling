@@ -20,6 +20,16 @@ const n_male = store.lookup("Q6581097");
 const n_female = store.lookup("Q6581072");
 const n_born = store.lookup("P569");
 const n_died = store.lookup("P570");
+const n_inverse_property = store.lookup("P1696");
+const n_parent = store.lookup("P8810");
+const n_father = store.lookup("P22");
+const n_mother = store.lookup("P25");
+const n_child = store.lookup("P40");
+const n_spouse = store.lookup("P26");
+const n_partner = store.lookup("P451");
+
+const inferior = new Set([n_parent, n_father, n_mother]);
+const couples = new Set([n_spouse, n_partner]);
 
 const descriptors = [
   n_description,
@@ -30,14 +40,21 @@ const descriptors = [
   n_type,
 ];
 
+var inverse_cache = new Map();
+
+function inverse(relation) {
+  let inverse = inverse_cache.get(relation);
+  if (inverse === undefined) {
+    inverse = relation.get(n_inverse_property) || null;
+    inverse_cache.set(relation, inverse);
+  }
+  return inverse;
+}
+
 const BOX_WIDTH = 180;
 const BOX_HEIGHT = 40;
 const GRID_SIZE = 20;
 const MARGIN = 25;
-
-const STRAIGHT_CONNECTOR = 0;
-const ELBOW_CONNECTOR = 1;
-const FORK_CONNECTOR = 2;
 
 var nextz = 1;
 
@@ -95,7 +112,20 @@ class Node {
         }
       }
     }
+  }
 
+  connected_to(node) {
+    for (let e of this.edges) {
+      if (e.source == node || e.target == node) return true;
+    }
+    return false;
+  }
+
+  edge(relation, target) {
+    for (let e of this.edges) {
+      if (e.relation == relation && e.target == target) return e;
+    }
+    return null;
   }
 }
 
@@ -112,12 +142,75 @@ class Edge {
     if (!name) name = this.relation.id;
     return name;
   }
+
+  toString() {
+    return `${this.source.label} --${this.relname()}--> ${this.target.label}`;
+  }
+}
+
+class Bundle {
+  constructor(relation) {
+    this.relation = relation;
+    this.edges = new Array();
+    this.parents = new Set();
+    this.children = new Set();
+  }
+
+  compatible(edge) {
+    // Must be same relation.
+    if (edge.relation != this.relation) return false;
+
+    // All parents must be in relation to target.
+    for (let p of this.parents) {
+      if (!p.edge(this.relation, edge.target)) return false;
+    }
+
+    // Source must be in relation to all children.
+    for (let c of this.children) {
+      if (!edge.source.edge(this.relation, c)) return false;
+    }
+
+    return true;
+  }
+
+  couple(edge) {
+    if (this.parents.size != 2 || this.children.size != 0) return false;
+    if (!this.parents.has(edge.source)) return false;
+    if (!this.parents.has(edge.target)) return false;
+    return true;
+  }
+
+  add(edge) {
+    this.edges.push(edge);
+    this.parents.add(edge.source);
+    this.children.add(edge.target);
+  }
+
+  trivial() {
+    if (this.parents.size == 0 || this.children.size == 0) return true;
+    return this.parents.size == 1 && this.children.size == 1;
+  }
+
+  toString() {
+    let s = this.relation.get(n_name);
+    for (let p of this.parents) {
+      s += `  '${p.label}'`;
+    }
+    s += " -> ";
+    for (let c of this.children) {
+      s += `  '${c.label}'`;
+    }
+    return s;
+  }
 }
 
 class Graph {
   constructor(seed, neighborhood) {
     this.nodes = new Map();
     this.edges = new Array();
+    this.bundles = new Array();
+
+    // Add seeds to graph.
     let visit = [];
     for (let topic of seed.all(n_start_point)) {
       topic = store.resolve(topic);
@@ -127,25 +220,91 @@ class Graph {
       this.nodes.set(topic, node);
       visit.push(node);
     }
+
+    // Transitively traverse links from seeds.
     while (visit.length > 0) {
       let node = visit.pop();
-      for (let [name, value] of node.topic) {
+      for (let [property, value] of node.topic) {
         value = store.resolve(value);
-        if (value instanceof Frame) {
-          if (neighborhood.includes(value)) {
-            let target = this.nodes.get(value);
-            if (!target) {
-              target = new Node(value);
-              this.nodes.set(value, target);
-              visit.push(target);
-            }
+        if (!(value instanceof Frame)) continue;
+        if (!neighborhood.includes(value)) continue;
 
-            let edge = new Edge(node, name, target);
-            node.edges.push(edge);
-            this.edges.push(edge);
+        let target = this.nodes.get(value);
+        if (!target) {
+          target = new Node(value);
+          this.nodes.set(value, target);
+          visit.push(target);
+        }
+
+        let edge = new Edge(node, property, target);
+        node.edges.push(edge);
+        this.edges.push(edge);
+      }
+    }
+
+    // Mark inverse relations.
+    for (let e of this.edges) {
+      if (!inferior.has(e.relation)) continue;
+      let inverse_relation = inverse(e.relation);
+      if (!inverse_relation) continue;
+      let inverse_edge = e.target.edge(inverse_relation, e.source);
+      if (inverse_edge) {
+        e.inverse = inverse_edge;
+      }
+    }
+
+    // Add bundles for couples.
+    let bundles = new Array();
+    for (let e of this.edges) {
+      if (couples.has(e.relation)) {
+        let found = false;
+        for (let b of bundles) {
+          if (b.couple(e)) {
+            b.edges.push(e);
+            found = true;
+            break;
           }
         }
+        if (!found) {
+          let b = new Bundle(n_child);
+          b.edges.push(e);
+          b.parents.add(e.source);
+          b.parents.add(e.target);
+          bundles.push(b);
+        }
       }
+    }
+
+    // Build remaining edge bundles.
+    for (let n of this.nodes.values()) {
+      for (let e of n.edges) {
+        if (e.inverse) continue;
+        if (couples.has(e.relation)) continue;
+        let found = false;
+        for (let b of bundles) {
+          if (b.compatible(e)) {
+            b.add(e);
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          let b = new Bundle(e.relation);
+          b.add(e);
+          bundles.push(b);
+        }
+      }
+    }
+
+    // Only keep non-trivial bundles.
+    this.bundles = new Array();
+    for (let b of bundles) {
+      if (b.trivial()) continue;
+      for (let e of b.edges) {
+        e.bundle = b;
+        if (e.inverse) e.inverse.bundle = b;
+      }
+      this.bundles.push(b);
     }
   }
 }
@@ -158,13 +317,14 @@ class NodeBox extends Component {
     this.setAttribute("draggable", "true");
   }
 
+  onmouseover(e) {
+    this.style.zIndex = nextz++;
+    this.parentElement.active = this;
+  }
+
   ondragstart(e) {
     this.dragx = e.x;
     this.dragy = e.y;
-  }
-
-  onmouseover(e) {
-    this.style.zIndex = nextz++;
   }
 
   ondragend(e) {
@@ -250,25 +410,52 @@ Component.register(NodeBox);
 class NetworkDialog extends MdDialog {
   constructor(graph) {
     super(graph);
+    this.active = null;
+    this.elbow = false;
+    this.bundle = false;
+    this.grid = false;
   }
 
   onconnected() {
+    this.attach(this.onkeydown, "keydown");
     this.attach(this.submit, "click", "#close");
 
-    this.layout = STRAIGHT_CONNECTOR;
-    this.bind("#straight", "click", e => this.onlayout(STRAIGHT_CONNECTOR));
-    this.bind("#elbow", "click", e => this.onlayout(ELBOW_CONNECTOR));
-    this.bind("#forked", "click", e => this.onlayout(FORK_CONNECTOR));
+    this.bind("#elbow", "click", e => {
+      this.elbow = !this.elbow;
+      e.target.classList.toggle("active");
+      this.draw();
+    });
+    this.bind("#bundle", "click", e => {
+      this.bundle = !this.bundle;
+      e.target.classList.toggle("active");
+      this.draw();
+    });
+    this.bind("#grid", "click", e => {
+      this.grid = !this.grid;
+      e.target.classList.toggle("active");
+      this.draw();
+    });
   }
 
   submit() {
     this.close();
   }
 
-  onlayout(layout) {
-    if (layout != this.layout) {
-      this.layout = layout;
-      this.draw();
+  onkeydown(e) {
+    if (this.active) {
+      if (e.code === "ArrowDown") {
+        this.active.move(0, GRID_SIZE);
+        this.draw();
+      } else if (e.code === "ArrowUp") {
+        this.active.move(0, -GRID_SIZE);
+        this.draw();
+      } else if (e.code === "ArrowLeft") {
+        this.active.move(-GRID_SIZE, 0);
+        this.draw();
+      } else if (e.code === "ArrowRight") {
+        this.active.move(GRID_SIZE, 0);
+        this.draw();
+      }
     }
   }
 
@@ -277,17 +464,6 @@ class NetworkDialog extends MdDialog {
       <canvas id="canvas"></canvas>
       <div class="toolbar">
         <div class="toolbox">
-          <md-icon-button icon="zoom_in"></md-icon-button>
-          <md-icon-button icon="zoom_out"></md-icon-button>
-          <md-icon-button icon="grid_on"></md-icon-button>
-          <md-icon-button icon="grid_4x4"></md-icon-button>
-
-          <md-icon-button
-            id="straight"
-            icon="straight"
-            tooltip="Straight connectors">
-          </md-icon-button>
-
           <md-icon-button
             id="elbow"
             icon="turn_right"
@@ -295,9 +471,15 @@ class NetworkDialog extends MdDialog {
           </md-icon-button>
 
           <md-icon-button
-            id="forked"
+            id="bundle"
             icon="merge"
-            tooltip="Forked connectors">
+            tooltip="Budle connectors">
+          </md-icon-button>
+
+          <md-icon-button
+            id="grid"
+            icon="grid_4x4"
+            tooltip="Show/hide grid">
           </md-icon-button>
 
           <md-icon-button
@@ -338,14 +520,77 @@ class NetworkDialog extends MdDialog {
     let canvas = this.find("#canvas");
     let ctx = canvas.getContext("2d");
 
+    function line(a, b) {
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+    }
+
+    function dot(p) {
+      let r = 2;
+      ctx.beginPath();
+      ctx.fillRect(p.x - r, p.y - r, r * 2, r * 2);
+      ctx.stroke();
+    }
+
+    function mid(a, b) {
+      return new Point((a.x + b.x) / 2, (a.y + b.y) / 2);
+    }
+
+    function midpoint(nodes) {
+      let count = 0;
+      let x = 0;
+      let y = 0;
+      for (let n of nodes) {
+        let p = n.box.center();
+        x += p.x;
+        y += p.y;
+        count++;
+      }
+      return new Point(x / count, y / count);
+    }
+
+    function bbox(nodes) {
+      let minx = Infinity;
+      let maxx = 0;
+      let miny = Infinity;
+      let maxy = 0;
+      for (let n of nodes) {
+        let p = n.box.center();
+        minx = Math.min(minx, p.x);
+        maxx = Math.max(maxx, p.x);
+        miny = Math.min(miny, p.y);
+        maxy = Math.max(maxy, p.y);
+      }
+      return {minx, maxx, miny, maxy};
+    }
+
+    // Clear canvas.
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw grid.
+    if (this.grid) {
+      ctx.strokeStyle = "#eeeeee";
+      for (let y = GRID_SIZE; y < canvas.height; y += GRID_SIZE) {
+        line(new Point(0, y), new Point(canvas.width, y));
+      }
+      for (let x = GRID_SIZE; x < canvas.width; x += GRID_SIZE) {
+        line(new Point(x, 0), new Point(x, canvas.height));
+      }
+    }
+
+    // Draw simple edges.
+    ctx.strokeStyle = "#000000";
     for (let e of graph.edges) {
+      if (e.inverse) continue;
+      if (this.bundle && e.bundle) continue;
       let a = e.source.box.center();
       let b = e.target.box.center();
 
       ctx.beginPath();
       ctx.moveTo(a.x, a.y);
-      if (this.layout == ELBOW_CONNECTOR && a.x != b.x && a.y != b.y) {
+      if (this.elbow && a.x != b.x && a.y != b.y) {
         if (a.y > b.y) {
           ctx.lineTo(a.x, b.y);
         } else {
@@ -354,6 +599,51 @@ class NetworkDialog extends MdDialog {
       }
       ctx.lineTo(b.x, b.y);
       ctx.stroke();
+    }
+
+    // Draw edge bundles.
+    if (this.bundle) {
+      for (let b of graph.bundles) {
+        let s = midpoint(b.parents)
+        let d = midpoint(b.children);
+        let p = mid(s, d);
+
+        for (let parent of b.parents) line(parent.box.center(), s);
+        dot(s);
+
+        if (b.children.size == 1) {
+          line(s, d);
+        } else if (this.elbow) {
+          let {minx, maxx, miny, maxy} = bbox(b.children);
+          let w = maxx - minx;
+          let h = maxy - miny;
+          line(s, p);
+          dot(p);
+          if (h < w) {
+            // Horizontal layout.
+            line(new Point(minx, p.y), new Point(maxx, p.y));
+            for (let child of b.children) {
+              let c = child.box.center();
+              let d = new Point(c.x, p.y);
+              line(d, c);
+              dot(d);
+            }
+          } else {
+            // Vertial layout.
+            line(new Point(p.x, miny), new Point(p.x, maxy));
+            for (let child of b.children) {
+              let c = child.box.center();
+              let d = new Point(p.x, c.y);
+              line(d, c);
+              dot(d);
+            }
+          }
+        } else {
+          line(s, p);
+          dot(p);
+          for (let child of b.children) line(p, child.box.center());
+        }
+      }
     }
   }
 
@@ -394,6 +684,10 @@ class NetworkDialog extends MdDialog {
 
       $ .toolbar:hover .toolbox {
         visibility: initial;
+      }
+
+      $ .toolbar md-icon.active {
+        border: 2px inset #aaaaaa;
       }
     `;
   }

@@ -186,7 +186,7 @@ export class MdDialog extends Component {
   onconnected() {
     // Set focus to first input.
     let active = this.find("input,textarea");
-    if (active) active.focus();
+    (active || this).focus();
   }
 
   show() {
@@ -194,6 +194,7 @@ export class MdDialog extends Component {
     document.body.insertAdjacentHTML("beforeend", "<dialog></dialog>");
     this.dialog = document.body.lastChild;
     this.dialog.addEventListener("close", e => this.cancel());
+    this.tabIndex = 0;
     this.dialog.appendChild(this);
 
     // Open dialog.
