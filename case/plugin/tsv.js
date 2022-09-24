@@ -26,7 +26,7 @@ export default class TSVImporter {
     for (let name of fields) {
       let resolve = name.endsWith("#");
       if (resolve) name = name.slice(0, -1);
-      let match = propidx.match(name, 1, false);
+      let match = await propidx.match(name, {limit: 1, full: true});
       if (match.length > 0) {
         let property = match[0];
         let dt = property.get(n_target);

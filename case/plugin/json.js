@@ -27,6 +27,19 @@ export default class JSONImporter {
       }
     }
 
+    function parse_value(prop, value) {
+      var value;
+      if (prop.parser && typeof(value) === 'string') {
+        let results = new Array();
+        prop.parser(value, results);
+        if (results.length > 0) value = results[0].value;
+      }
+      if (prop.resolve) {
+        value = store.lookup(value);
+      }
+      return value;
+    }
+
     // Add objects new topics.
     let propidx = await get_property_index();
     let properties = new Map();
@@ -43,7 +56,7 @@ export default class JSONImporter {
           let name = key;
           let resolve = name.endsWith("#");
           if (resolve) name = name.slice(0, -1);
-          let match = propidx.match(name, 1, false);
+          let match = await propidx.match(name, {limit: 1, full: true});
           if (match.length > 0) {
             let property = match[0];
             let dt = property.get(n_target);
@@ -58,16 +71,15 @@ export default class JSONImporter {
         }
 
         // Parse value.
-        if (prop.parser && typeof(value) === 'string') {
-          let results = new Array();
-          prop.parser(value, results);
-          if (results.length > 0) value = results[0].value;
+        if (Array.isArray(value)) {
+          for (let i = 0; i < value.length; i++) {
+            let elem = parse_value(prop, value[i]);
+            topic.put(prop.property, elem);
+          }
+        } else {
+          value = parse_value(prop, value);
+          topic.put(prop.property, value);
         }
-        if (prop.resolve) {
-          value = store.lookup(value);
-        }
-
-        topic.put(prop.property, value);
       }
     }
   }

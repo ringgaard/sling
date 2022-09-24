@@ -186,7 +186,7 @@ export class MdDialog extends Component {
   onconnected() {
     // Set focus to first input.
     let active = this.find("input,textarea");
-    (active || this).focus();
+    if (active) active.focus();
   }
 
   show() {

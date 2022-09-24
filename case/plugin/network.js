@@ -435,6 +435,8 @@ class NetworkDialog extends MdDialog {
       e.target.classList.toggle("active");
       this.draw();
     });
+
+    this.focus();
   }
 
   submit() {

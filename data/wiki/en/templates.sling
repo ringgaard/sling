@@ -8203,11 +8203,11 @@
     "opening ceremony": /wp/info/opening_ceremony
     "closing ceremony": /wp/info/closing_ceremony
     "officially opened by": /wp/info/officially_opened_by
-    "athlete's oath": /wp/info/athlete's_oath
-    "judge's oath": /wp/info/judge's_oath
+    "athlete's oath": /wp/info/athletes_oath
+    "judge's oath": /wp/info/judges_oath
     "torch lighter": /wp/info/torch_lighter
     "Paralympic torch": /wp/info/paralympic_torch
-    "Queen's Baton": /wp/info/queen's_baton
+    "Queen's Baton": /wp/info/queens_baton
     "stadium": /wp/info/stadium
     "Paralympic stadium": /wp/info/paralympic_stadium
     "length": /wp/info/length
@@ -8774,7 +8774,7 @@
 
 "Infobox NCAA Division I Women's Volleyball Tournament": {
   type: "infobox"
-  class: /wp/infobox/ncaa_division_i_women's_volleyball_tournament
+  class: /wp/infobox/ncaa_division_i_womens_volleyball_tournament
   fields: {
     "Year": /wp/info/year
     "FinalFourArena": /wp/info/finalfourarena
