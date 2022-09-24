@@ -436,6 +436,7 @@ class NetworkDialog extends MdDialog {
       this.draw();
     });
 
+    this.tabIndex = 1;
     this.focus();
   }
 

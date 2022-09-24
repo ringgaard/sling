@@ -43,23 +43,47 @@ const tagsdir = {
   "Fashion Model": stmt(n_occupation, "Q3357567"),
   "Supermodel": stmt(n_occupation, "Q865851"),
   "Social Media Star": stmt(n_occupation, "Q2045208"),
-  "Instagram Model": stmt(n_occupation, "Q110990999"),
   "Fitness Model": stmt(n_occupation, "Q58891836"),
   "Fitness Athlete": stmt(n_occupation, "Q58891836"),
   "Fitness Celebrity": stmt(n_occupation, "Q58891836"),
   "Naked": stmt(n_occupation, "Q161850"),
   "Nude": stmt(n_occupation, "Q161850"),
+  "Erotic Model": stmt(n_occupation, "Q3286043"),
   "Twitch Streamer": stmt(n_occupation, "Q50279140"),
   "TikTok Star": stmt(n_occupation, "Q94791573"),
+  "Instagram Model": stmt(n_occupation, "Q110990999"),
   "Insta": stmt(n_occupation, "Q110990999"),
   "InstaModel": stmt(n_occupation, "Q110990999"),
+  "Instagram Star": stmt(n_occupation, "Q110990999"),
+  "Youtuber": stmt(n_occupation, "Q17125263"),
+  "Comedian": stmt(n_occupation, "Q245068"),
+  "Pageant Contestant": stmt(n_occupation, "Q18581305"),
+  "Beauty Queen": stmt(n_occupation, "Q18581305"),
 
   "Blonde": stmt(n_hair_color, "Q202466"),
+  "Dark Blonde": stmt(n_hair_color, "Q28868833"),
+  "Strawberry Blonde": stmt(n_hair_color, "Q18661358"),
   "Brunette": stmt(n_hair_color, "Q2367101"),
+  "Hair Brown": stmt(n_hair_color, "Q2367101"),
+  "Brown-Haired": stmt(n_hair_color, "Q2367101"),
+  "Pink Hair": stmt(n_hair_color, "Q28962042"),
+  "Black Hair": stmt(n_hair_color, "Q1922956"),
+  "Raven-black Haired": stmt(n_hair_color, "Q1922956"),
+  "Redhead": stmt(n_hair_color, "Q152357"),
+  "Red Head": stmt(n_hair_color, "Q152357"),
+  "Red Hair": stmt(n_hair_color, "Q152357"),
+  "Ginger": stmt(n_hair_color, "Q152357"),
 
   "Blue Eyes": stmt(n_eye_color, "Q17122834"),
+  "Eyes Blue": stmt(n_eye_color, "Q17122834"),
   "Green Eyes": stmt(n_eye_color, "Q17122854"),
+  "Eyes Green": stmt(n_eye_color, "Q17122854"),
+  "Brown Eyes": stmt(n_eye_color, "Q17122705"),
+  "Eyes Brown": stmt(n_eye_color, "Q17122705"),
+  "Brown-eyed": stmt(n_eye_color, "Q17122705"),
+  "Brown Eyed": stmt(n_eye_color, "Q17122705"),
   "Hazel Eyes": stmt(n_eye_color, "Q17122740"),
+  "Eyes Hazel": stmt(n_eye_color, "Q17122740"),
 
   "Suicide": stmt(n_manner_of_death, "Q10737"),
 }
@@ -162,7 +186,7 @@ export default class ListalPlugin {
     // Gender.
     if (tags.has("Female")) {
       topic.put(n_gender, n_female);
-    } else if (tags.has("Male")) {
+    } else if (tags.has("Male") || tags.has("Male Model")) {
       topic.put(n_gender, n_male);
     } else {
       topic.put(n_gender, n_female);
@@ -219,7 +243,7 @@ export default class ListalPlugin {
 
     // Height.
     let height = fields.get("Height");
-    if (height) {
+    if (height && !topic.has(n_height)) {
       let m = height.match(/^(\d+)' (\d+)"$/);
       if (m) {
         let feet = parseFloat(m[1]);
