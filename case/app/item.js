@@ -157,7 +157,7 @@ class PropertyPanel extends Component {
       if (born) {
         if (prop == n_date_of_birth) {
           if (!died) {
-            let age = born.age(new Time(new Date()));
+            let age = t.age(new Time(new Date()));
             if (age) {
               h.push(` <span class="prop-age">(${age} yo)</span>`);
             }

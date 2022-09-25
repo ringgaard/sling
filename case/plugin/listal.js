@@ -31,6 +31,7 @@ const n_occupation = store.lookup("P106");
 const n_hair_color = store.lookup("P1884");
 const n_eye_color = store.lookup("P1340");
 const n_manner_of_death = store.lookup("P1196");
+const n_sexual_orientation = store.lookup("P91");
 
 function stmt(prop, value) {
   return [prop, store.lookup(value)];
@@ -59,16 +60,24 @@ const tagsdir = {
   "Comedian": stmt(n_occupation, "Q245068"),
   "Pageant Contestant": stmt(n_occupation, "Q18581305"),
   "Beauty Queen": stmt(n_occupation, "Q18581305"),
+  "Plus Size": stmt(n_occupation, "Q3286049"),
+  "Dancer": stmt(n_occupation, "Q5716684"),
+  "Blogger": stmt(n_occupation, "Q8246794"),
+  "Influencer": stmt(n_occupation, "Q2906862"),
 
   "Blonde": stmt(n_hair_color, "Q202466"),
+  "Blond": stmt(n_hair_color, "Q202466"),
+  "Blonde Hair": stmt(n_hair_color, "Q202466"),
   "Dark Blonde": stmt(n_hair_color, "Q28868833"),
   "Strawberry Blonde": stmt(n_hair_color, "Q18661358"),
   "Brunette": stmt(n_hair_color, "Q2367101"),
   "Hair Brown": stmt(n_hair_color, "Q2367101"),
   "Brown-Haired": stmt(n_hair_color, "Q2367101"),
+  "Light Brown Hair": stmt(n_hair_color, "Q79483632"),
   "Pink Hair": stmt(n_hair_color, "Q28962042"),
   "Black Hair": stmt(n_hair_color, "Q1922956"),
   "Raven-black Haired": stmt(n_hair_color, "Q1922956"),
+  "Raven Haired": stmt(n_hair_color, "Q1922956"),
   "Redhead": stmt(n_hair_color, "Q152357"),
   "Red Head": stmt(n_hair_color, "Q152357"),
   "Red Hair": stmt(n_hair_color, "Q152357"),
@@ -84,7 +93,10 @@ const tagsdir = {
   "Brown Eyed": stmt(n_eye_color, "Q17122705"),
   "Hazel Eyes": stmt(n_eye_color, "Q17122740"),
   "Eyes Hazel": stmt(n_eye_color, "Q17122740"),
+  "Blue/green Eyes": stmt(n_eye_color, "Q3375649"),
+  "Blue/grey Eyes": stmt(n_eye_color, "Q42845936"),
 
+  "Lesbian": stmt(n_sexual_orientation, "Q6649"),
   "Suicide": stmt(n_manner_of_death, "Q10737"),
 }
 
@@ -184,7 +196,7 @@ export default class ListalPlugin {
     topic.put(n_instance_of, n_human);
 
     // Gender.
-    if (tags.has("Female")) {
+    if (tags.has("Female") || tags.has("Female Model")) {
       topic.put(n_gender, n_female);
     } else if (tags.has("Male") || tags.has("Male Model")) {
       topic.put(n_gender, n_male);
