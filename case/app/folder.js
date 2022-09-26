@@ -68,10 +68,10 @@ class CaseFolder extends Component {
           <md-icon icon="drive_file_rename_outline"></md-icon>Rename
         </md-menu-item>
         <md-menu-item id="moveup">
-          <md-icon icon="move-up"></md-icon>Move up
+          <md-icon icon="move_up"></md-icon>Move up
         </md-menu-item>
         <md-menu-item id="movedown">
-          <md-icon icon="move-down"></md-icon>Move down
+          <md-icon icon="move_down"></md-icon>Move down
         </md-menu-item>
         <md-menu-item id="delete">
          <md-icon icon="delete"></md-icon>Delete

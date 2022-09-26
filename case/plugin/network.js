@@ -28,6 +28,14 @@ const n_child = store.lookup("P40");
 const n_spouse = store.lookup("P26");
 const n_partner = store.lookup("P451");
 
+const n_internal = store.lookup("internal");
+const n_elbow = store.lookup("elbow");
+const n_bundle = store.lookup("bundle");
+const n_grid = store.lookup("grid");
+const n_nodes = store.lookup("nodes");
+const n_x = store.lookup("x");
+const n_y = store.lookup("y");
+
 const inferior = new Set([n_parent, n_father, n_mother]);
 const couples = new Set([n_spouse, n_partner]);
 
@@ -37,6 +45,7 @@ const descriptors = [
   store.lookup("P20"),   // place of death
   store.lookup("P551"),  // residence
   store.lookup("P276"),  // location
+  store.lookup("P106"),  // occupation
   n_type,
 ];
 
@@ -101,7 +110,7 @@ class Node {
       if (died) s += "† " + date(died) + " ";
       if (s.length > 0) this.description = s.trim();
     }
-    if (!this,description) {
+    if (!this.description) {
       for (let prop of descriptors) {
         let value = store.resolve(topic.get(prop));
         if (value instanceof Frame) value = value.get(n_name);
@@ -328,7 +337,7 @@ class NodeBox extends Component {
   }
 
   ondragend(e) {
-    this.move(e.x - this.dragx, e.y - this.dragy);
+    this.move(e.x - this.dragx, e.y - this.dragy, this.parentElement.grid);
     this.parentElement.draw();
   }
 
@@ -353,13 +362,21 @@ class NodeBox extends Component {
     return h.join("");
   }
 
-  move(dx, dy) {
-    this.moveto(this.offsetLeft + dx, this.offsetTop + dy);
+  move(dx, dy, grid) {
+    this.moveto(this.offsetLeft + dx, this.offsetTop + dy, grid);
   }
 
-  moveto(x, y) {
-    this.style.left = snap(x) + "px";
-    this.style.top = snap(y) + "px";
+  moveto(x, y, grid) {
+    if (grid) {
+      x = snap(x);
+      y = snap(y);
+    }
+    this.style.left = x + "px";
+    this.style.top = y + "px";
+  }
+
+  position() {
+    return new Point(this.offsetLeft, this.offsetTop);
   }
 
   center() {
@@ -408,12 +425,23 @@ class NodeBox extends Component {
 Component.register(NodeBox);
 
 class NetworkDialog extends MdDialog {
-  constructor(graph) {
+  constructor(graph, network) {
     super(graph);
+    this.network = network;
     this.active = null;
-    this.elbow = false;
-    this.bundle = false;
-    this.grid = false;
+    this.internal = network.get(n_internal);
+    if (!this.internal) this.internal = store.frame();
+
+    this.elbow = this.internal.get(n_elbow);
+    this.bundle = this.internal.get(n_bundle);
+    this.grid = this.internal.get(n_grid);
+
+    new ResizeObserver(e => {
+      let canvas = this.find("#canvas");
+      canvas.width = this.scrollWidth;
+      canvas.height = this.scrollHeight;
+      this.draw();
+    }).observe(this);
   }
 
   onconnected() {
@@ -441,22 +469,39 @@ class NetworkDialog extends MdDialog {
   }
 
   submit() {
-    this.close();
+    // Save state.
+    this.network.set(n_internal, this.internal);
+    this.internal.set(n_elbow, this.elbow);
+    this.internal.set(n_bundle, this.bundle);
+    this.internal.set(n_grid, this.grid);
+    let nodes = store.frame();
+    this.internal.set(n_nodes, nodes);
+    let graph = this.state;
+    for (let [topic, node] of graph.nodes) {
+      let p = node.box.position();
+      let n = store.frame();
+      n.add(n_x, p.x);
+      n.add(n_y, p.y);
+      nodes.add(topic, n);
+    }
+
+    this.close(true);
   }
 
   onkeydown(e) {
+    let delta = !this.grid && e.ctrlKey ? 1 : GRID_SIZE;
     if (this.active) {
       if (e.code === "ArrowDown") {
-        this.active.move(0, GRID_SIZE);
+        this.active.move(0, delta, this.grid);
         this.draw();
       } else if (e.code === "ArrowUp") {
-        this.active.move(0, -GRID_SIZE);
+        this.active.move(0, -delta, this.grid);
         this.draw();
       } else if (e.code === "ArrowLeft") {
-        this.active.move(-GRID_SIZE, 0);
+        this.active.move(-delta, 0, this.grid);
         this.draw();
       } else if (e.code === "ArrowRight") {
-        this.active.move(GRID_SIZE, 0);
+        this.active.move(delta, 0, this.grid);
         this.draw();
       }
     }
@@ -502,14 +547,36 @@ class NetworkDialog extends MdDialog {
     canvas.width = this.scrollWidth;
     canvas.height = this.scrollHeight;
 
-    // Assign random positions to nodes.
+    // Update toolbox.
+    if (this.elbow) {
+      this.find("#elbow button md-icon").classList.toggle("active");
+    }
+    if (this.bundle) {
+      this.find("#bundle button md-icon").classList.toggle("active");
+    }
+    if (this.grid) {
+      this.find("#grid button md-icon").classList.toggle("active");
+    }
+
+    // Set node positions. Assign random positions to new nodes.
     let w = this.scrollWidth - MARGIN * 2 - BOX_WIDTH;
     let h = this.scrollHeight - MARGIN * 2 - BOX_HEIGHT;
-    for (let n of graph.nodes.values()) {
-      let box = new NodeBox(n);
-      let x = Math.random() * w + MARGIN;
-      let y = Math.random() * h + MARGIN;
-      n.box = box;
+    let nodes = this.internal.get(n_nodes);
+    for (let [topic, node] of graph.nodes) {
+      let box = new NodeBox(node);
+      var x, y;
+      if (nodes) {
+        let n = nodes.get(topic);
+        if (n) {
+          x = n.get(n_x);
+          y = n.get(n_y);
+        }
+      }
+
+      if (!x) x = Math.random() * w + MARGIN;
+      if (!y) y = Math.random() * h + MARGIN;
+
+      node.box = box;
       box.moveto(x, y);
       this.appendChild(box);
     }
@@ -707,8 +774,12 @@ export default class NetworkWidget extends Component {
     let topics = this.match("#editor").topics;
     let graph = new Graph(this.state, topics);
 
-    let dialog = new NetworkDialog(graph);
-    let result = await dialog.show();
+    let dialog = new NetworkDialog(graph, this.state);
+    let updated = await dialog.show();
+    if (updated) {
+      console.log("update");
+      this.match("topic-card").mark_dirty();
+    }
   }
 
   render() {

@@ -19,7 +19,9 @@ const photo_sources = {
   "redd.it": "reddit.com",
   "pinimg.com": "pinterest.com",
   "live.staticflickr.com": "flickr.com",
+  "iv1.lisimg.com": "listal.com",
   "ilarge.lisimg.com": "listal.com",
+  "lthumb.lisimg.com": "listal.com",
   "gstatic.com": "google.com",
   "media-amazon.com": "imdb.com",
 }

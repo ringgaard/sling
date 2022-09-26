@@ -49,6 +49,8 @@ n_main = commons["main"]
 n_publish = commons["publish"]
 n_modified = commons["modified"]
 n_topics = commons["topics"]
+n_internal = commons["internal"]
+n_media = commons["media"]
 n_has_part = commons["P527"]
 n_publication_date = commons["P577"]
 n_described_by_source = commons["P1343"]
@@ -97,12 +99,14 @@ for rec in casedb.values():
 
   # Build topic items.
   num_new = 0
+  num_photos = 0
   for topic in topics:
     # Do not publish main topic.
     if topic == main: continue
 
-    # Remove notes.
+    # Remove notes and internals.
     del topic[None]
+    del topic[n_internal]
 
     # Add case source to topic.
     topic.append(n_described_by_source, main)
@@ -111,6 +115,7 @@ for rec in casedb.values():
     topic.append(n_topic_id, topic[n_id][2:])
 
     num_topics += 1
+    num_photos += topic.count(n_media)
     if topic.get(n_is) is None:
       num_new += 1
       num_new_topics += 1
@@ -131,7 +136,7 @@ for rec in casedb.values():
     recout.write(topic.id, topic.data(binary=True))
 
   print(f"Publish case #{caseid}: {main[n_name]}",
-        f"({num_new}/{len(topics)} new topics)")
+        f"({num_new}/{len(topics)} new topics, {num_photos} photos)")
 
 recout.close()
 

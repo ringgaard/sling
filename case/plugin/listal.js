@@ -64,6 +64,11 @@ const tagsdir = {
   "Dancer": stmt(n_occupation, "Q5716684"),
   "Blogger": stmt(n_occupation, "Q8246794"),
   "Influencer": stmt(n_occupation, "Q2906862"),
+  "Cosplayer": stmt(n_occupation, "Q18810049"),
+  "Singer-songwriter": stmt(n_occupation, "Q488205"),
+  "Journalist": stmt(n_occupation, "Q1930187"),
+  "Reporter": stmt(n_occupation, "Q42909"),
+  "TV Presenter": stmt(n_occupation, "Q947873"),
 
   "Blonde": stmt(n_hair_color, "Q202466"),
   "Blond": stmt(n_hair_color, "Q202466"),
@@ -228,12 +233,16 @@ export default class ListalPlugin {
     let country = fields.get("Country of origin");
     if (country) {
       country = await lookup(context, country);
-      topic.put(n_country_of_citizenship, country);
+      if (!topic.has(n_place_of_birth, country)) {
+        topic.put(n_country_of_citizenship, country);
+      }
     }
     let place = fields.get("Born and residing in");
     if (place) {
       place = await lookup(context, place);
-      topic.put(n_place_of_birth, place);
+      if (!topic.has(n_country_of_citizenship, country)) {
+        topic.put(n_place_of_birth, place);
+      }
     }
 
     // Residence.

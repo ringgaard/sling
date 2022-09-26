@@ -14,6 +14,7 @@ const n_id = store.id;
 const n_is = store.is;
 const n_name = store.lookup("name");
 const n_media = store.lookup("media");
+const n_internal = store.lookup("internal");
 const n_target = store.lookup("target");
 const n_item_type = store.lookup("/w/item");
 const n_quantity_type = store.lookup("/w/quantity");
@@ -796,6 +797,13 @@ class FactEditor extends Component {
       s.push(id);
     }
 
+    // Add internals.
+    let internal = topic.get(n_internal);
+    if (internal) {
+      s.push(n_internal);
+      s.push(internal);
+    }
+
     return s;
   }
 
@@ -806,7 +814,7 @@ class FactEditor extends Component {
     let h = new Array();
     for (let i = 0; i < topic.length; ++i) {
       let prop = topic.name(i);
-      if (prop == n_id || prop == n_media) continue;
+      if (prop == n_id || prop == n_media || prop == n_internal) continue;
       let value = topic.value(i);
       if (qualified(value)) {
         h.push(new FactStatement({property: prop, value: value.get(n_is)}));

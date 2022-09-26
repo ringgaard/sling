@@ -333,12 +333,12 @@ class TopicToolbox extends MdToolbox {
           </md-icon-button>
           <md-icon-button
             id="moveup"
-            icon="move-up"
+            icon="move_up"
             tooltip="Move topic up\n(Ctrl+Up)">
           </md-icon-button>
           <md-icon-button
             id="movedown"
-            icon="move-down"
+            icon="move_down"
             tooltip="Move topic down\n(Ctrl+Down)">
           </md-icon-button>
           <md-icon-button
@@ -1104,16 +1104,4 @@ class DedupDialog extends MdDialog {
 }
 
 Component.register(DedupDialog);
-
-MdIcon.custom("move-down", `
-<svg width="24" height="24" viewBox="0 0 32 32">
-  <g><polygon points="30,16 22,16 22,2 10,2 10,16 2,16 16,30"/></g>
-</svg>
-`);
-
-MdIcon.custom("move-up", `
-<svg width="24" height="24" viewBox="0 0 32 32">
-  <g><polygon points="30,14 22,14 22,28 10,28 10,14 2,14 16,0"/></g>
-</svg>
-`);
 

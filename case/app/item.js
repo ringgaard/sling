@@ -20,6 +20,7 @@ const n_description = store.lookup("description");
 
 const n_target = store.lookup("target");
 const n_media = store.lookup("media");
+const n_internal = store.lookup("internal");
 const n_casefile = store.lookup("casefile");
 const n_main = store.lookup("main");
 
@@ -790,6 +791,8 @@ class ItemPanel extends Component {
         if (!top || n != title) names.push(n);
       } else if (name === n_description) {
         description = value;
+      } else if (name === n_internal) {
+        // Skip internals.
       } else if ((name instanceof Frame) && name.get(n_target) == n_xref_type) {
         xrefs.add(name, value);
       } else {
