@@ -45,9 +45,12 @@
   value: /lang/eu
   value: /lang/fi
   value: /lang/fr
+  value: /lang/he
   value: /lang/hu
   value: /lang/id
   value: /lang/it
+  value: /lang/ja
+  value: /lang/ko
   value: /lang/la
   value: /lang/lt
   value: /lang/ms
@@ -210,6 +213,14 @@
   /lang/wikilang/wikipedia: Q8447
 }
 
+{=/lang/he
+  :language :/lang/wikilang
+  name: "Hebrew"
+  code: "he"
+
+  /lang/wikilang/wikipedia: Q199913
+}
+
 {=/lang/hu
   :language :/lang/wikilang
   name: "Hungarian"
@@ -241,6 +252,22 @@
   /lang/wikilang/wiki_image: "Immagine"
   /lang/wikilang/wiki_template: "Template"
   /lang/wikilang/wikipedia: Q11920
+}
+
+{=/lang/ja
+  :language :/lang/wikilang
+  name: "Japanese"
+  code: "ja"
+
+  /lang/wikilang/wikipedia: Q177837
+}
+
+{=/lang/ko
+  :language :/lang/wikilang
+  name: "Korean"
+  code: "ko"
+
+  /lang/wikilang/wikipedia: Q17985
 }
 
 {=/lang/la

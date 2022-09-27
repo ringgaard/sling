@@ -1042,6 +1042,45 @@ export class MdIconButton extends MdRippleButton {
 
 Component.register(MdIconButton);
 
+class MdIconToggle extends MdIconButton {
+  set active(on) {
+    let icon = this.find("button md-icon");
+    if (on) {
+      icon.classList.add("active");
+    } else {
+      icon.classList.remove("active");
+    }
+  }
+
+  get active() {
+    let icon = this.find("button md-icon");
+    return icon.classList.contains("active");
+  }
+
+  toggle() {
+    let icon = this.find("button md-icon");
+    if (icon.classList.contains("active")) {
+      icon.classList.remove("active");
+      return false;
+    } else {
+      icon.classList.add("active");
+      return true;
+    }
+
+  }
+
+  static stylesheet() {
+    return `
+      $ md-icon.active {
+          border: 2px inset #aaaaaa;
+        }
+      }
+    `;
+  }
+}
+
+Component.register(MdIconToggle);
+
 //-----------------------------------------------------------------------------
 // Text
 //-----------------------------------------------------------------------------

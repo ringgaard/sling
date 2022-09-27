@@ -100,6 +100,9 @@ class KnowledgeService {
   // Handle KB stubs requests.
   void HandleGetStubs(HTTPRequest *request, HTTPResponse *response);
 
+  // Handle KB topics requests.
+  void HandleGetTopics(HTTPRequest *request, HTTPResponse *response);
+
   // Get item from id. This also resolves cross-reference and loads offline
   // items from the item database.
   Handle RetrieveItem(Store *store, Text id, bool offline = true) const;
@@ -116,6 +119,9 @@ class KnowledgeService {
 
   // Pre-load proxies into store from offline database.
   void Preload(const Frame &item, Store *store);
+
+  // Return item as topic.
+  Frame GetTopic(Store *store, Text id);
 
   // Get standard properties (ref, name, and optinally description).
   void GetStandardProperties(Frame &item, Builder *builder, bool full) const;

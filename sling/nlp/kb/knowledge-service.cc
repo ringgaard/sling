@@ -303,6 +303,7 @@ void KnowledgeService::Register(HTTPServer *http) {
   http->Register("/kb/frame", this, &KnowledgeService::HandleGetFrame);
   http->Register("/kb/topic", this, &KnowledgeService::HandleGetTopic);
   http->Register("/kb/stubs", this, &KnowledgeService::HandleGetStubs);
+  http->Register("/kb/topics", this, &KnowledgeService::HandleGetTopics);
   common_.Register(http);
   app_.Register(http);
 }
@@ -871,7 +872,15 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
   // Add media to gallery.
   for (Handle media : external_media) {
     string url = store->GetString(store->Resolve(media))->str().str();
+    if (url.empty()) continue;
+    bool nsfw = false;
+    if (url[0] == '!') {
+      nsfw = true;
+      url.erase(0, 1);
+    }
+
     if (media_urls.count(url) > 0) continue;
+    media_urls.insert(url);
 
     Builder m(store);
     m.Add(n_url_, url);
@@ -882,10 +891,10 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
 
       Handle quality = image.GetHandle(n_has_quality_);
       if (quality.IsNil()) quality = image.GetHandle(n_statement_subject_of_);
-      if (quality == n_not_safe_for_work_) m.Add(n_nsfw_, true);
+      if (quality == n_not_safe_for_work_) nsfw = true;
     }
+    if (nsfw) m.Add(n_nsfw_, true);
     info->gallery.push_back(m.Create().handle());
-    media_urls.insert(url);
   }
 }
 
@@ -1052,34 +1061,10 @@ string KnowledgeService::UnitName(const Frame &unit) {
   return unit.GetString(n_name_);
 }
 
-void KnowledgeService::HandleGetFrame(HTTPRequest *request,
-                                      HTTPResponse *response) {
-  WebService ws(kb_, request, response);
-
-  // Look up frame in knowledge base.
-  Text id = ws.Get("id");
-  Handle handle = RetrieveItem(ws.store(), id);
-  if (handle.IsNil()) {
-    response->SendError(404, nullptr, "Item not found");
-    return;
-  }
-
-  // Return frame as response.
-  ws.set_output(Object(ws.store(), handle));
-}
-
-void KnowledgeService::HandleGetTopic(HTTPRequest *request,
-                                      HTTPResponse *response) {
-  WebService ws(kb_, request, response);
-  Store *store = ws.store();
-
-  // Look up frame in knowledge base.
-  Text id = ws.Get("id");
+Frame KnowledgeService::GetTopic(Store *store, Text id) {
+  // Look up item frame in knowledge base.
   Handle handle = RetrieveItem(store, id);
-  if (handle.IsNil()) {
-    response->SendError(404, nullptr, "Topic not found");
-    return;
-  }
+  if (handle.IsNil()) return Frame::nil();
 
   // Collect properties.
   Frame item(store, handle);
@@ -1133,7 +1118,7 @@ void KnowledgeService::HandleGetTopic(HTTPRequest *request,
       }
     });
 
-  // Build display frame.
+  // Build topic frame.
   Builder b(store);
   Text itemid = item.Id();
   if (itemid != id) b.AddId(itemid);
@@ -1181,8 +1166,40 @@ void KnowledgeService::HandleGetTopic(HTTPRequest *request,
     b.Add(n_media_, m);
   }
 
+  return b.Create();
+}
+
+void KnowledgeService::HandleGetFrame(HTTPRequest *request,
+                                      HTTPResponse *response) {
+  WebService ws(kb_, request, response);
+
+  // Look up frame in knowledge base.
+  Text id = ws.Get("id");
+  Handle handle = RetrieveItem(ws.store(), id);
+  if (handle.IsNil()) {
+    response->SendError(404, nullptr, "Item not found");
+    return;
+  }
+
   // Return frame as response.
-  ws.set_output(b.Create());
+  ws.set_output(Object(ws.store(), handle));
+}
+
+void KnowledgeService::HandleGetTopic(HTTPRequest *request,
+                                      HTTPResponse *response) {
+  WebService ws(kb_, request, response);
+  Store *store = ws.store();
+
+  // Look up frame in knowledge base.
+  Text id = ws.Get("id");
+  Frame topic = GetTopic(store, id);
+  if (topic.invalid()) {
+    response->SendError(404, nullptr, "Topic not found");
+    return;
+  };
+
+  // Return topic as response.
+  ws.set_output(topic);
 }
 
 void KnowledgeService::HandleGetStubs(HTTPRequest *request,
@@ -1217,6 +1234,35 @@ void KnowledgeService::HandleGetStubs(HTTPRequest *request,
     }
   }
   encoder.Encode(stubs);
+}
+
+void KnowledgeService::HandleGetTopics(HTTPRequest *request,
+                                       HTTPResponse *response) {
+  WebService ws(kb_, request, response);
+  Store *store = ws.store();
+
+  // Expected input is an array of frames.
+  if (!ws.input().IsArray()) {
+    response->set_status(400);
+    return;
+  }
+  Array frames = ws.input().AsArray();
+  int size = frames.length();
+
+  // Return array of topics.
+  IOBufferOutputStream stream(response->buffer());
+  Output out(&stream);
+  response->set_content_type("application/sling");
+  Encoder encoder(store, &out);
+  Array topics(store, size);
+  for (int i = 0; i < size; ++i) {
+    Text id = store->FrameId(frames.get(i));
+    Frame topic = GetTopic(store, id);
+    if (topic.IsNil()) continue;
+    topics.set(i, topic.handle());
+    encoder.Encode(topic);
+  }
+  encoder.Encode(topics);
 }
 
 string KnowledgeService::GetImage(const Frame &item) {

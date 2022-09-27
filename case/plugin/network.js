@@ -449,18 +449,15 @@ class NetworkDialog extends MdDialog {
     this.attach(this.submit, "click", "#close");
 
     this.bind("#elbow", "click", e => {
-      this.elbow = !this.elbow;
-      e.target.classList.toggle("active");
+      this.elbow = this.find("#elbow").toggle();
       this.draw();
     });
     this.bind("#bundle", "click", e => {
-      this.bundle = !this.bundle;
-      e.target.classList.toggle("active");
+      this.bundle = this.find("#bundle").toggle();
       this.draw();
     });
     this.bind("#grid", "click", e => {
-      this.grid = !this.grid;
-      e.target.classList.toggle("active");
+      this.grid = this.find("#grid").toggle();
       this.draw();
     });
 
@@ -512,23 +509,23 @@ class NetworkDialog extends MdDialog {
       <canvas id="canvas"></canvas>
       <div class="toolbar">
         <div class="toolbox">
-          <md-icon-button
+          <md-icon-toggle
             id="elbow"
             icon="turn_right"
             tooltip="Elbow connectors">
-          </md-icon-button>
+          </md-icon-toggle>
 
-          <md-icon-button
+          <md-icon-toggle
             id="bundle"
             icon="merge"
             tooltip="Budle connectors">
-          </md-icon-button>
+          </md-icon-toggle>
 
-          <md-icon-button
+          <md-icon-toggle
             id="grid"
             icon="grid_4x4"
             tooltip="Show/hide grid">
-          </md-icon-button>
+          </md-icon-toggle>
 
           <md-icon-button
             id="close"
@@ -548,15 +545,9 @@ class NetworkDialog extends MdDialog {
     canvas.height = this.scrollHeight;
 
     // Update toolbox.
-    if (this.elbow) {
-      this.find("#elbow button md-icon").classList.toggle("active");
-    }
-    if (this.bundle) {
-      this.find("#bundle button md-icon").classList.toggle("active");
-    }
-    if (this.grid) {
-      this.find("#grid button md-icon").classList.toggle("active");
-    }
+    this.find("#elbow").active = this.elbow;
+    this.find("#bundle").active = this.bundle;
+    this.find("#grid").active = this.grid;
 
     // Set node positions. Assign random positions to new nodes.
     let w = this.scrollWidth - MARGIN * 2 - BOX_WIDTH;
@@ -755,10 +746,6 @@ class NetworkDialog extends MdDialog {
       $ .toolbar:hover .toolbox {
         visibility: initial;
       }
-
-      $ .toolbar md-icon.active {
-        border: 2px inset #aaaaaa;
-      }
     `;
   }
 }
@@ -777,7 +764,6 @@ export default class NetworkWidget extends Component {
     let dialog = new NetworkDialog(graph, this.state);
     let updated = await dialog.show();
     if (updated) {
-      console.log("update");
       this.match("topic-card").mark_dirty();
     }
   }

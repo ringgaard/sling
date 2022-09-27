@@ -773,14 +773,14 @@ class ItemPanel extends Component {
     let subtopics = new Array();
     for (let [name, value] of item) {
       if (name === n_media) {
+        let url = store.resolve(value);
+        let nsfw = url.startsWith('!');
+        if (nsfw) url = url.slice(1);
         if (value instanceof Frame) {
-          gallery.push({
-            url: store.resolve(value),
-            text: value.get(n_media_legend),
-            nsfw: value.has(n_has_quality, n_not_safe_for_work),
-          });
+          if (value.has(n_has_quality, n_not_safe_for_work)) nsfw = true;
+          gallery.push({url, nsfw, text: value.get(n_media_legend)});
         } else {
-          gallery.push({url: value});
+          gallery.push({url, nsfw});
         }
       } else if (name === n_id) {
         id = value;
