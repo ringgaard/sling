@@ -470,20 +470,19 @@ Handle Store::AllocateArray(const Handle *begin, const Handle *end) {
 
 void Store::ResizeArray(Handle array, Word length) {
   // Allocate new array.
-  int size = length * sizeof(Handle);
-  ArrayDatum *replacement = AllocateDatum(ARRAY, size)->AsArray();
+  size_t newsize = length * sizeof(Handle);
+  ArrayDatum *replacement = AllocateDatum(ARRAY, newsize)->AsArray();
 
   // Get array.
   ArrayDatum *datum = GetArray(array);
   CHECK(datum->IsArray());
 
   // Copy payload from old array to replacement.
-  if (size > datum->size()) {
-    memcpy(replacement->begin(), datum->begin(), datum->size());
-    memset(replacement->begin() + datum->size(), 0, size - datum->size());
-  } else {
-    memcpy(replacement->begin(), datum->begin(), size);
-  }
+  Address src = datum->payload();
+  Address dst = replacement->payload();
+  size_t size = datum->size();
+  memcpy(dst, src, size);
+  if (newsize > size) memset(dst + size, 0, newsize - size);
 
   // Replace array.
   Replace(array, replacement);
