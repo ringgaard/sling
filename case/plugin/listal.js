@@ -88,6 +88,7 @@ const tagsdir = {
   "Red Head": stmt(n_hair_color, "Q152357"),
   "Red Hair": stmt(n_hair_color, "Q152357"),
   "Ginger": stmt(n_hair_color, "Q152357"),
+  "Auburn Hair": stmt(n_hair_color, "Q2419551"),
 
   "Blue Eyes": stmt(n_eye_color, "Q17122834"),
   "Eyes Blue": stmt(n_eye_color, "Q17122834"),

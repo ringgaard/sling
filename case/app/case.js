@@ -395,6 +395,7 @@ class CaseEditor extends MdApp {
       this.casefile.set(n_userid, this.main.get(n_author).id);
       this.casefile.set(n_credentials, credentials);
       this.casefile.remove(n_topics);
+      this.casefile.remove(n_folders);
       this.casefile.remove(n_next);
 
       // Save and reload.

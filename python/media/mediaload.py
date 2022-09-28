@@ -115,6 +115,7 @@ def get_media_files():
         # Add media url.
         v = kb.resolve(v)
         if type(v) == str:
+          if v.startswith('!'): v = v[1:]
           media.append(v)
         else:
           print("Bad media url:", item.id, v)

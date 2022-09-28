@@ -78,6 +78,11 @@ flags.define("--dryrun",
              default=False,
              action="store_true")
 
+flags.define("--dump",
+             help="dump updated profile",
+             default=False,
+             action="store_true")
+
 flags.define("--batch",
              default=None,
              help="batch file for bulk import")
@@ -241,4 +246,6 @@ else:
           num_added, "added")
     photo.store.coalesce()
     profile.write()
+  if flags.arg.dump:
+    print(profile.frame.data(pretty=True))
 

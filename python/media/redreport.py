@@ -590,14 +590,11 @@ def photos(request):
   # Return extracted photos.
   photos = []
   for media in profile.frame(photo.n_media):
-    if type(media) is sling.Frame:
-      photos.append({
-        "url": media.resolve(),
-        "nsfw": media[photo.n_has_quality] == photo.n_nsfw,
-        "text": media[photo.n_legend],
-      })
-    else:
-      photos.append({"url": media})
+    photos.append({
+      "url": profile.url(media),
+      "nsfw": profile.isnsfw((media),
+      "text": profile.caption(media),
+    })
   return {"photos": photos}
 
 @app.route("/redreport/picedit", method="POST")
@@ -630,19 +627,19 @@ def picedit(request):
   # Apply changes to profile.
   keep = []
   for media in profile.media():
+    url = profile.url(media)
+    if url in deleted: continue
     if type(media) is sling.Frame:
-      url = media.resolve()
-      if url in deleted: continue
-      if url in nsfw: media[photo.n_has_quality] = photo.n_nsfw
-      if url in sfw: del media[photo.n_has_quality]
+      if url in nsfw:
+        media[n_is] = '!' + url
+        del media[photo.n_has_quality]
+      if url in sfw:
+        media[n_is] = url
+        del media[photo.n_has_quality]
       if len(media) == 1: media = media.resolve()
     else:
-      if media in deleted: continue
-      if media in nsfw:
-        media = photo.store.frame([
-          (photo.n_is, media),
-          (photo.n_has_quality, photo.n_nsfw),
-        ])
+      if url in nsfw: media = '!' + url
+      if url in sfw: media = url
 
     keep.append(media)
 

@@ -7,13 +7,18 @@ import {store, settings} from "/case/app/global.js";
 
 const n_media = store.lookup("media");
 
+function photourl(url) {
+  if (url.startsWith('!') return url.slice(1);
+  return url;
+}
+
 export default class ImagePlugin {
   process(action, url, context) {
     if (!context.topic) return false;
 
     // Check for duplicate.
     for (let media of context.topic.all(n_media)) {
-      if (store.resolve(media) == url) {
+      if (photourl(store.resolve(media)) == url) {
         console.log("skip duplicate", url);
         return false;
       }

@@ -82,6 +82,8 @@ if flags.arg.profiles:
       if type(m) is sling.Frame:
         if m[n_subject_of] == n_nsfw or m[n_has_quality] == n_nsfw:
           num_nsfw += 1
+      elif m.startswith('!'):
+        num_nsfw += 1
 
     b = int(count / bin_size)
     profile_bins[b] += 1
@@ -116,6 +118,8 @@ if flags.arg.cases:
         if type(m) is sling.Frame:
           if m[n_subject_of] == n_nsfw or m[n_has_quality] == n_nsfw:
             num_nsfw += 1
+        elif m.startswith('!'):
+          num_nsfw += 1
 
       b = int(count / bin_size)
       profile_bins[b] += 1

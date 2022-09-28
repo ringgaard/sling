@@ -317,8 +317,18 @@ class Profile:
 
   # Return url for media.
   def url(self, media):
-    if type(media) is sling.Frame: return media[n_is]
+    if type(media) is sling.Frame: media = media[n_is]
+    if media.startswith('!'): media = media[1:]
     return media
+
+  # Return nsfw status for media.
+  def isnsfw(self, media):
+    if type(media) is sling.Frame:
+      if media[n_is].startswith('!'): return True
+      if media[n_has_quality] == n_nsfw: return True
+      return False
+    else:
+      return media.startswith('!')
 
   # Return caption for photo.
   def caption(self, media):
@@ -338,22 +348,19 @@ class Profile:
   def preload_fingerprints(self):
     urls = []
     for media in self.media():
-      if type(media) is sling.Frame: media = media[n_is]
-      if is_video(media): continue
-      urls.append(media)
+      url = self.url(media)
+      if is_video(url): continue
+      urls.append(url)
     load_fingerprints(urls)
 
   # Import all photos from another profile.
   def copy(self, other):
     num_added = 0
     for media in other.media():
-      if type(media) is sling.Frame:
-        url = media[n_is]
-        caption = media[n_legend]
-        nsfw = media[n_has_quality] == n_nsfw
-        num_added += self.add_photo(url, caption, None, nsfw)
-      else:
-        num_added += self.add_photo(media, None, None, False)
+      url = self.url(media)
+      nsfw = self.isnsfw(media)
+      caption = self.caption(media)
+      num_added += self.add_photo(url, caption, None, nsfw)
     return num_added
 
   # Replace photos in profile:
@@ -367,15 +374,14 @@ class Profile:
   def urls(self):
     urls = []
     for media in self.media():
-      if type(media) is sling.Frame: media = media[n_is]
-      urls.append(media)
+      urls.append(self.url(media))
     return urls
 
   # Check if photo already in profile.
   def has(self, url, alturl=None):
     for media in self.media():
-      if type(media) is sling.Frame: media = media[n_is]
-      if media == url or media == alturl: return True
+      u = self.url(media)
+      if u == url or u == alturl: return True
     return False
 
   # Add photo to profile.
@@ -429,16 +435,12 @@ class Profile:
       print("Skip existing photo", url)
       return 0
 
-    #print("Photo", url,
-    #      caption if caption != None else "",
-    #      "NSFW" if nsfw else "")
-
     # Add media to profile.
+    if nsfw: url = "!" + url
     slots = [(n_is, url)]
     if flags.arg.fixedcaption: caption = flags.arg.fixedcaption
     if caption and flags.arg.captions: slots.append((n_legend, caption))
     if source: slots.append((n_stated_in, store[source]))
-    if nsfw: slots.append((n_has_quality, n_nsfw))
     if len(slots) == 1:
       self.frame.append(n_media, url)
     else:
@@ -727,6 +729,10 @@ class Profile:
       q = urllib.parse.parse_qs(m.group(1))
       url = "https://%s/%s" % (q["server"][0], q["file"][0])
 
+    # Listal thumb.
+    m = re.match("(https://lthumb.lisimg.com/[0-9\/].jpg)\?.+", url)
+    if m != None: url = m.group(1)
+
     # Add media to profile.
     return self.add_photo(url, caption, flags.arg.source, nsfw)
 
@@ -743,11 +749,11 @@ class Profile:
     naughty = set()
     num_photos = 0
     for media in self.media():
-      url = store.resolve(media)
+      url = self.url(media)
       if is_video(url): continue
-      nsfw = type(media) is sling.Frame and media[n_has_quality] == n_nsfw
-      captioned = type(media) is sling.Frame and n_legend in media
-      if captioned: captions[url] = media[n_legend]
+      nsfw = self.isnsfw(media)
+      captioned = self.captioned(media)
+      if captioned: captions[url] = self.caption(media)
 
       # Get photo information.
       photo = get_photo(self.itemid, url)
@@ -802,7 +808,7 @@ class Profile:
       # Find photos to keep.
       keep = []
       for media in self.media():
-        url = store.resolve(media)
+        url = self.url(media)
         if url not in duplicates and url not in missing: keep.append(media)
       self.replace(keep)
 

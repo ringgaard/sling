@@ -106,6 +106,7 @@ if flags.arg.cases:
       urls = []
       for media in topic(n_media):
         url = store.resolve(media)
+        if url.startswith('!'): url = url[1:]
         urls.append(url)
 
       # Get fingerprints for photos in topic.

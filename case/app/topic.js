@@ -488,25 +488,21 @@ class TopicCard extends Component {
       if (topic.name(n) != n_media) continue;
       let v = topic.value(n);
       if (v instanceof Frame) {
-        if (v.get(n_is) == url) {
+        let media = v.get(n_is);
+        if (media.startsWith('!')) media = media.slice(1);
+        if (media == url) {
           if (nsfw) {
-            v.set(n_has_quality, n_not_safe_for_work);
+            v.set(n_is, "!" + url);
           } else {
-            v.remove(n_has_quality);
+            v.set(n_is, url);
           }
-          if (v.length == 1) {
-            topic.set_value(n, v.get(n_is));
-          }
+          v.remove(n_has_quality);
+          if (v.length == 1) topic.set_value(n, v.get(n_is));
           this.mark_dirty();
         }
-      } else if (v == url) {
-        if (nsfw) {
-          let qualified = store.frame();
-          qualified.add(n_is, v);
-          qualified.add(n_has_quality, n_not_safe_for_work);
-          topic.set_value(n, qualified);
-          this.mark_dirty();
-        }
+      } else if (v == url || (v.startsWith('!') && v.slice(1) == url)) {
+        topic.set_value(n, (nsfw ? "!" : "") + url);
+        this.mark_dirty();
       }
     }
   }
@@ -518,7 +514,7 @@ class TopicCard extends Component {
     for (let n = 0; n < topic.length; ++n) {
       if (topic.name(n) != n_media) continue;
       let v = store.resolve(topic.value(n));
-      if (v == url) {
+      if (v == url || (v.startsWith('!') && v.slice(1) == url)) {
         topic.remove(n);
         this.mark_dirty();
         break;
@@ -715,6 +711,7 @@ class TopicCard extends Component {
     let seen = new Set();
     for (let m of topic.all(n_media)) {
       let url = store.resolve(m);
+      if (url.startsWith('!')) url = url.slice(1);
       if (seen.has(url)) {
         console.log("dup url", url);
         continue;
@@ -751,6 +748,7 @@ class TopicCard extends Component {
         topic.remove(n_media);
         for (let m of media) {
           let url = store.resolve(m);
+          if (url.startsWith('!')) url = url.slice(1);
           if (!result.includes(url)) topic.add(n_media, m)
         }
 

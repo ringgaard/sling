@@ -29,8 +29,6 @@ const n_unit = store.lookup("/w/unit");
 const n_award_received = store.lookup("P166");
 const n_point_in_time = store.lookup("P585");
 const n_sh_girl = store.lookup("t/1052/1");
-const n_has_quality = store.lookup("P1552");
-const n_not_safe_for_work = store.lookup("Q2716583");
 
 // First day of week in year.
 function date_of_week(y, w) {
@@ -352,10 +350,7 @@ export default class HjemmestrikPlugin {
           let src = img.getAttribute("src");
           let qpos = src.indexOf("?");
           if (qpos > 0) src = src.substr(0, qpos);
-          let media = store.frame();
-          media.add(n_is, src);
-          media.add(n_has_quality, n_not_safe_for_work);
-          topic.put(n_media, media);
+          topic.put(n_media, "!" + src);
         }
       } else {
         let primary = doc.querySelector("div.primary-media");
@@ -366,10 +361,7 @@ export default class HjemmestrikPlugin {
           let src = img.getAttribute("src");
           let qpos = src.indexOf("?");
           if (qpos > 0) src = src.substr(0, qpos);
-          let media = store.frame();
-          media.add(n_is, src);
-          media.add(n_has_quality, n_not_safe_for_work);
-          topic.put(n_media, media);
+          topic.put(n_media, "!" + src);
         }
       }
     }

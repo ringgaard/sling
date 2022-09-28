@@ -387,12 +387,9 @@ def handle_albums(request):
   # Return extracted photos.
   photos = []
   for media in profile.media():
-    if type(media) is sling.Frame:
-      url = media[photolib.n_is]
-      nsfw = media[photolib.n_has_quality] == photolib.n_nsfw
-      if nsfw: url = "!" + url
-    else:
-      url = media
+    url = profile.url(media)
+    nsfw = profile.isnsfw(media)
+    if nsfw: url = "!" + url
     photos.append(url)
 
   # Return gallery url.

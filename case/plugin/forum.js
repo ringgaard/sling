@@ -7,8 +7,6 @@ import {store, settings} from "/case/app/global.js";
 
 const n_is = store.lookup("is");
 const n_media = store.lookup("media");
-const n_has_quality = store.lookup("P1552");
-const n_not_safe_for_work = store.lookup("Q2716583");
 
 // Image downloaders for image hosts.
 const images_services = [
@@ -338,14 +336,8 @@ export default class AlbumPlugin {
 
           // Add image to topic.
           if (!dup) {
-            if (service.nsfw) {
-              let media = store.frame();
-              media.add(n_is, photo);
-              media.add(n_has_quality, n_not_safe_for_work);
-              context.topic.add(n_media, media);
-            } else {
-              context.topic.add(n_media, photo);
-            }
+            if (service.nsfw) photo = "!" + photo;
+            context.topic.add(n_media, photo);
             num_images++;
           }
         }
