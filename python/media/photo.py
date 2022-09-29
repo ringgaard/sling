@@ -230,14 +230,11 @@ def fetch_image(url):
   # Fetch image from source if it is not in the media database.
   try:
     print("fetch", url)
-    if pool:
-      r = pool.request("GET", url, timeout=60)
-      if r.status != 200: return None
-      return r.data
-    else:
-      r = session.get(url)
-      if r.status_code != 200: return None
-      return r.content
+    r = pool.request("GET", url, timeout=60)
+    for h in r.retries.history:
+      if h.redirect_location.endswith("/removed.png"): return None
+    if r.status != 200: return None
+    return r.data
   except Exception as e:
     print("fail", e, url)
     return None

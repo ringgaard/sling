@@ -8,7 +8,7 @@ import {store, settings} from "/case/app/global.js";
 const n_media = store.lookup("media");
 
 function photourl(url) {
-  if (url.startsWith('!') return url.slice(1);
+  if (url.startsWith('!')) return url.slice(1);
   return url;
 }
 

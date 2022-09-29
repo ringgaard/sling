@@ -592,7 +592,7 @@ def photos(request):
   for media in profile.frame(photo.n_media):
     photos.append({
       "url": profile.url(media),
-      "nsfw": profile.isnsfw((media),
+      "nsfw": profile.isnsfw(media),
       "text": profile.caption(media),
     })
   return {"photos": photos}

@@ -9,7 +9,7 @@ const n_is = store.lookup("is");
 const n_media = store.lookup("media");
 
 function photourl(url) {
-  if (url.startsWith('!') return url.slice(1);
+  if (url.startsWith('!')) return url.slice(1);
   return url;
 }
 
