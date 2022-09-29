@@ -555,7 +555,7 @@ class NetworkDialog extends MdDialog {
     let nodes = this.internal.get(n_nodes);
     for (let [topic, node] of graph.nodes) {
       let box = new NodeBox(node);
-      var x, y;
+      let x, y;
       if (nodes) {
         let n = nodes.get(topic);
         if (n) {

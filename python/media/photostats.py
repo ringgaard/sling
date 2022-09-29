@@ -45,6 +45,7 @@ num_profiles = 0
 num_photos = 0
 num_nsfw = 0
 num_new = 0
+hum_legacy = 0
 
 store = sling.Store()
 n_id = store["id"]
@@ -76,11 +77,16 @@ if flags.arg.profiles:
     topics.add(id)
 
     count = 0
+    legacy = False
     for m in profile(n_media):
       num_photos += 1
       count += 1
       if type(m) is sling.Frame:
         if m[n_subject_of] == n_nsfw or m[n_has_quality] == n_nsfw:
+          num_nsfw += 1
+          hum_legacy += 1
+          legacy = True
+        elif m[n_is].startswith('!'):
           num_nsfw += 1
       elif m.startswith('!'):
         num_nsfw += 1
@@ -90,6 +96,7 @@ if flags.arg.profiles:
     photo_bins[b] += count
     if count > flags.arg.large: large_profiles[str(key)] = count;
     if count > max_photos: max_photos = count
+    if legacy: print(key, "has legacy nsfw")
   photodb.close()
 
 if flags.arg.cases:
@@ -118,6 +125,9 @@ if flags.arg.cases:
         if type(m) is sling.Frame:
           if m[n_subject_of] == n_nsfw or m[n_has_quality] == n_nsfw:
             num_nsfw += 1
+            hum_legacy += 1
+          elif m[n_is].startswith('!'):
+            num_nsfw += 1
         elif m.startswith('!'):
           num_nsfw += 1
 
@@ -138,6 +148,7 @@ print("%d photos, %s sfw, %s nsfw (%f%%)" %
 print(len(topics), "topics")
 if num_new > 0: print(num_new, "new")
 print(max_photos, "photos in largest profile")
+if hum_legacy > 0: print(hum_legacy, "photos with legacy nsfw")
 print()
 
 acc_profiles = 0

@@ -890,7 +890,6 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
       if (!legend.IsNil()) m.Add(n_text_, legend);
 
       Handle quality = image.GetHandle(n_has_quality_);
-      if (quality.IsNil()) quality = image.GetHandle(n_statement_subject_of_);
       if (quality == n_not_safe_for_work_) nsfw = true;
     }
     if (nsfw) m.Add(n_nsfw_, true);
