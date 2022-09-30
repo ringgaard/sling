@@ -506,7 +506,10 @@ class NetworkDialog extends MdDialog {
 
   render() {
     return `
-      <canvas id="canvas"></canvas>
+      <div class="titlebar">
+        <md-text id="title"></md-text>
+        <md-text id="subtitle"></md-text>
+      </div>
       <div class="toolbar">
         <div class="toolbox">
           <md-icon-toggle
@@ -534,6 +537,7 @@ class NetworkDialog extends MdDialog {
           </md-icon-button>
         </div>
       </div>
+      <canvas id="canvas"></canvas>
     `;
   }
 
@@ -543,6 +547,12 @@ class NetworkDialog extends MdDialog {
     let canvas = this.find("#canvas");
     canvas.width = this.scrollWidth;
     canvas.height = this.scrollHeight;
+
+    // Update title.
+    let title = this.network.get(n_name);
+    if (title) this.find("#title").update(title);
+    let subtitle = this.network.get(n_description);
+    if (subtitle) this.find("#subtitle").update(subtitle);
 
     // Update toolbox.
     this.find("#elbow").active = this.elbow;
@@ -724,13 +734,36 @@ class NetworkDialog extends MdDialog {
         height: 100%;
       }
 
-      $ .toolbar {
+      $ .titlebar {
+        position: absolute;
         position: absolute;
         top: 0;
         left: 0;
         right: 0;
+      }
+
+      $ .toolbar {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
         display: flex;
         justify-content: center;
+      }
+
+      $ #title {
+        font-size: 24px;
+        font-weight: 500;
+        text-align: center;
+        padding-top: 24px;
+        display: flex;
+        justify-content: center;
+      }
+
+      $ #subtitle {
+        display: flex;
+        justify-content: center;
+        font-size: 16px;
       }
 
       $ .toolbox {
@@ -739,7 +772,7 @@ class NetworkDialog extends MdDialog {
         color: white;
         background: #808080;
         padding: 4px 12px 4px 12px;
-        margin: 8px;
+        margin: 12px;
         border-radius: 12px;
       }
 

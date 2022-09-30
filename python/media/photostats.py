@@ -106,6 +106,7 @@ if flags.arg.cases:
     if n_topics not in casefile: continue
     if flags.arg.published and not casefile[n_publish]: continue
 
+    legacy = False
     for topic in casefile[n_topics]:
       num_profiles += 1
       count = 0
@@ -125,7 +126,8 @@ if flags.arg.cases:
         if type(m) is sling.Frame:
           if m[n_subject_of] == n_nsfw or m[n_has_quality] == n_nsfw:
             num_nsfw += 1
-            hum_legacy += 1
+            hum_legacy += True
+            legacy = True
           elif m[n_is].startswith('!'):
             num_nsfw += 1
         elif m.startswith('!'):
@@ -138,6 +140,7 @@ if flags.arg.cases:
         large_profiles[topic.id] = count;
         topic_names[topic.id] = topic.name
       if count > max_photos: max_photos = count
+    if legacy: print("Case #", key, "has legacy nsfw")
   casedb.close()
 
 print(num_profiles, "profiles")

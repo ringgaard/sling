@@ -71,6 +71,7 @@ const tagsdir = {
   "TV Presenter": stmt(n_occupation, "Q947873"),
   "Athlete": stmt(n_occupation, "Q2066131"),
   "Golfer": stmt(n_occupation, "Q11303721"),
+  "Standup Comedian": stmt(n_occupation, "Q18545066"),
 
   "Blonde": stmt(n_hair_color, "Q202466"),
   "Blond": stmt(n_hair_color, "Q202466"),

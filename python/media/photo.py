@@ -233,6 +233,7 @@ def fetch_image(url):
     r = pool.request("GET", url, timeout=60)
     for h in r.retries.history:
       if h.redirect_location.endswith("/removed.png"): return None
+      if h.redirect_location.endswith("/no_image.jpg"): return None
     if r.status != 200: return None
     return r.data
   except Exception as e:

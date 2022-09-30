@@ -418,6 +418,12 @@ var topic_widgets = [
   type: store.lookup("Q1900326"),
 },
 
+// Chart widget.
+{
+  module: "chart.js",
+  type: store.lookup("Q28923"),
+},
+
 ];
 
 const topic_widget_map = new Map(topic_widgets.map(w => [w.type, w]));
