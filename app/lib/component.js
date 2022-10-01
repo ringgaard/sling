@@ -105,14 +105,14 @@ export class Component extends HTMLElement {
       if (end > 0 && this.firstChild) {
         // Find unchanged head.
         let head = this.firstChild;
-        while (begin < end && content[begin] == head) {
+        while (head && content[begin] == head) {
           head = head.nextSibling;
           begin++;
         }
 
         // Find unchanged tail.
         let tail = this.lastChild;
-        while (begin < end && content[end - 1] == tail) {
+        while (tail != head && content[end - 1] == tail) {
           tail = tail.previousSibling;
           end--;
         }

@@ -198,6 +198,15 @@ class TopicList extends Component {
     return selected;
   }
 
+  selection_start() {
+    let n = 0;
+    for (let e = this.firstChild; e; e = e.nextSibling) {
+      if (e.classList.contains("selected")) return n;
+      if (e == document.activeElement) return n;
+      n++;
+    }
+  }
+
   refresh(state) {
     this.innerHTML = "";
     return this.update(state);

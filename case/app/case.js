@@ -770,7 +770,7 @@ class CaseEditor extends MdApp {
     }
   }
 
-  add_topic(topic) {
+  add_topic(topic, position) {
     // Add topic to current folder.
     if (this.readonly) return;
     if (this.folder == this.scraps) {
@@ -778,15 +778,21 @@ class CaseEditor extends MdApp {
       return;
     }
     this.topic_updated(topic);
-    if (!this.topics.includes(topic)) this.topics.push(topic);
+    if (!this.topics.includes(topic)) {
+      this.topics.push(topic);
+    }
     if (!this.folder.includes(topic)) {
-      this.folder.push(topic);
+      if (position >= 0) {
+        this.folder.splice(position, 0, topic);
+      } else {
+        this.folder.push(topic);
+      }
       this.folder_updated(this.folder);
     }
     this.mark_dirty();
   }
 
-  async new_topic(topic) {
+  async new_topic(topic, position) {
     // Create frame for new topic.
     if (this.readonly) return;
     let topicno = await this.next_topic();
@@ -798,7 +804,7 @@ class CaseEditor extends MdApp {
     }
 
     // Add topic to current folder.
-    this.add_topic(topic);
+    this.add_topic(topic, position);
 
     return topic;
   }
@@ -1002,7 +1008,6 @@ class CaseEditor extends MdApp {
     let selected = list.selection();
     if (selected.length == 0) return;
     e.stopPropagation();
-    console.log(`copy ${selected.length} topics to clipboard`);
 
     // Copy selected topics to clipboard.
     await write_to_clipboard(selected);
@@ -1034,6 +1039,8 @@ class CaseEditor extends MdApp {
     if (clip instanceof Array) {
       let first = null;
       let last = null;
+      let position = this.find("topic-list").selection_start();
+      if (position === undefined) position = this.folder.length;
       let scraps_before = this.scraps.length > 0;
       let import_mapping = new Map();
       for (let t of clip) {
@@ -1044,15 +1051,13 @@ class CaseEditor extends MdApp {
           let in_topics = this.topics.includes(topic);
           if (in_topics) {
             // Add link to topic in current folder.
-            console.log("paste topic link", t.id);
-            this.add_topic(topic);
+            this.add_topic(topic, position++);
             external = false;
           } else {
             let draft_pos = this.scraps.indexOf(topic);
             if (draft_pos != -1) {
               // Move topic from scraps to current folder.
-              console.log("undelete", topic.id);
-              this.add_topic(topic);
+              this.add_topic(topic, position++);
               this.scraps.splice(draft_pos, 1);
               external = false;
             }
@@ -1061,9 +1066,8 @@ class CaseEditor extends MdApp {
 
         // Copy topic if it is external.
         if (external) {
-          topic = await this.new_topic();
+          topic = await this.new_topic(null, position);
           import_mapping.set(t.id, topic);
-          console.log("paste external topic", t.id, topic.id);
           for (let [name, value] of t) {
             if (name != t.store.id) {
               topic.add(store.transfer(name), store.transfer(value));

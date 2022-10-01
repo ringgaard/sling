@@ -72,6 +72,8 @@ const tagsdir = {
   "Athlete": stmt(n_occupation, "Q2066131"),
   "Golfer": stmt(n_occupation, "Q11303721"),
   "Standup Comedian": stmt(n_occupation, "Q18545066"),
+  "Camgirl": stmt(n_occupation, "Q1027930"),
+  "Tv Host": stmt(n_occupation, "Q947873"),
 
   "Blonde": stmt(n_hair_color, "Q202466"),
   "Blond": stmt(n_hair_color, "Q202466"),
@@ -178,7 +180,6 @@ export default class ListalPlugin {
       let field = txt.substring(0, colon).trim();
       let value = txt.substring(colon + 1).trim();
       fields.set(field, value);
-      console.log("field", field, value);
     }
 
     // Tags.
@@ -188,7 +189,6 @@ export default class ListalPlugin {
       for (let link of alltags.getElementsByTagName("a")) {
         let tag = link.innerText;
         tags.add(tag);
-        console.log("tag", tag);
       }
     }
 
@@ -244,8 +244,8 @@ export default class ListalPlugin {
     let place = fields.get("Born and residing in");
     if (place) {
       place = await lookup(context, place);
-      if (!topic.has(n_country_of_citizenship, country)) {
-        topic.put(n_place_of_birth, place);
+      if (!topic.has(n_place_of_birth, country)) {
+        topic.put(n_country_of_citizenship, place);
       }
     }
 
@@ -266,6 +266,12 @@ export default class ListalPlugin {
       }
     }
 
+    // Add tag properties.
+    for (let tag of tags) {
+      let m = tagsdir[tag];
+      if (m) topic.put(m[0], m[1]);
+    }
+
     // Height.
     let height = fields.get("Height");
     if (height && !topic.has(n_height)) {
@@ -279,12 +285,6 @@ export default class ListalPlugin {
         v.add(n_unit, n_cm);
         topic.put(n_height, v);
       }
-    }
-
-    // Add tag properties.
-    for (let tag of tags) {
-      let m = tagsdir[tag];
-      if (m) topic.put(m[0], m[1]);
     }
 
     // Listal model ID.

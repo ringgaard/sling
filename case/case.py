@@ -208,6 +208,7 @@ non_proxy_headers = set([
   "content-encoding",
   "content-security-policy",
   "transfer-encoding",
+  "strict-transport-security",
 ])
 
 checked_hostnames = set()
