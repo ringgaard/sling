@@ -9,7 +9,6 @@ import {store, settings} from "/case/app/global.js";
 import {Time} from "/case/app/value.js";
 import {Frame, QString} from "/common/lib/frame.js";
 
-
 const n_name = store.lookup("name");
 const n_description = store.lookup("description");
 const n_type = store.lookup("P31");
@@ -328,7 +327,7 @@ class NodeBox extends Component {
 
   onmouseover(e) {
     this.style.zIndex = nextz++;
-    this.parentElement.active = this;
+    this.dialog().active = this;
   }
 
   ondragstart(e) {
@@ -337,8 +336,12 @@ class NodeBox extends Component {
   }
 
   ondragend(e) {
-    this.move(e.x - this.dragx, e.y - this.dragy, this.parentElement.grid);
-    this.parentElement.draw();
+    this.move(e.x - this.dragx, e.y - this.dragy, this.dialog().grid);
+    this.dialog().draw();
+  }
+
+  dialog() {
+    return this.match("network-dialog");
   }
 
   render() {
@@ -380,6 +383,7 @@ class NodeBox extends Component {
   }
 
   center() {
+    //return this.position(); // TODO: remove
     return new Point(this.offsetLeft + BOX_WIDTH / 2,
                      this.offsetTop + BOX_HEIGHT / 2);
   }
@@ -392,9 +396,8 @@ class NodeBox extends Component {
         min-height: ${BOX_HEIGHT}px;
         max-height: ${BOX_HEIGHT}px;
         border: 2px solid lightgrey;
-        background: white;
-        overflow: hidden;
         background: #eeeeee;
+        overflow: hidden;
       }
 
       $:hover {
@@ -437,9 +440,7 @@ class NetworkDialog extends MdDialog {
     this.grid = this.internal.get(n_grid);
 
     new ResizeObserver(e => {
-      let canvas = this.find("#canvas");
-      canvas.width = this.scrollWidth;
-      canvas.height = this.scrollHeight;
+      this.recalculate();
       this.draw();
     }).observe(this);
   }
@@ -506,6 +507,9 @@ class NetworkDialog extends MdDialog {
 
   render() {
     return `
+      <div class="diagram">
+        <canvas id="canvas"></canvas>
+      </div>
       <div class="titlebar">
         <md-text id="title"></md-text>
         <md-text id="subtitle"></md-text>
@@ -537,16 +541,11 @@ class NetworkDialog extends MdDialog {
           </md-icon-button>
         </div>
       </div>
-      <canvas id="canvas"></canvas>
     `;
   }
 
   onrendered() {
-    // Resize canvas.
     let graph = this.state;
-    let canvas = this.find("#canvas");
-    canvas.width = this.scrollWidth;
-    canvas.height = this.scrollHeight;
 
     // Update title.
     let title = this.network.get(n_name);
@@ -559,10 +558,11 @@ class NetworkDialog extends MdDialog {
     this.find("#bundle").active = this.bundle;
     this.find("#grid").active = this.grid;
 
-    // Set node positions. Assign random positions to new nodes.
+    // Create node boxes. Assign random positions to new nodes.
     let w = this.scrollWidth - MARGIN * 2 - BOX_WIDTH;
     let h = this.scrollHeight - MARGIN * 2 - BOX_HEIGHT;
     let nodes = this.internal.get(n_nodes);
+    let diagram = this.find(".diagram");
     for (let [topic, node] of graph.nodes) {
       let box = new NodeBox(node);
       let x, y;
@@ -579,11 +579,35 @@ class NetworkDialog extends MdDialog {
 
       node.box = box;
       box.moveto(x, y);
-      this.appendChild(box);
+      diagram.appendChild(box);
     }
+
+    // Resize canvas.
+    this.recalculate();
 
     // Draw edges.
     this.draw();
+  }
+
+  recalculate() {
+    let diagram = this.find(".diagram");
+    let width = this.scrollWidth;
+    let height = this.scrollHeight;
+    for (let box of  this.querySelectorAll("node-box")) {
+      let p = box.position();
+      width = Math.max(width, p.x + BOX_WIDTH + MARGIN);
+      height = Math.max(height, p.y + BOX_HEIGHT + MARGIN);
+    }
+    console.log(width, height);
+
+    diagram.style.width = width;
+    diagram.style.height = height;
+
+    let canvas = this.find("#canvas");
+    canvas.width = width;
+    canvas.height = height;
+
+    //canvas.style.zIndex = 10000; // TODO: remove
   }
 
   draw() {
@@ -726,16 +750,17 @@ class NetworkDialog extends MdDialog {
         width: 95vw;
         height: 95vh;
         background-color: white;
-        overflow: hidden;
       }
 
-      $ canvas {
+      $ .diagram {
+        position: relative;
+        display: flex;
+        overflow: auto;
         width: 100%;
         height: 100%;
       }
 
       $ .titlebar {
-        position: absolute;
         position: absolute;
         top: 0;
         left: 0;
@@ -802,12 +827,7 @@ export default class NetworkWidget extends Component {
   }
 
   render() {
-    return `
-      <md-icon-button
-        icon="hub"
-        tooltip="Show network"
-        tooltip-align="right">
-      </md-icon-button>`;
+    return `<md-button label="Show network"></md-button>`;
   }
 
   static stylesheet() {

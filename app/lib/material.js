@@ -47,6 +47,11 @@ body {
   position: relative;
   overflow: hidden;
 }
+
+dialog {
+  overflow: hidden;
+}
+
 `);
 
 //-----------------------------------------------------------------------------

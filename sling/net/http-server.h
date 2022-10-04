@@ -56,6 +56,10 @@ class HTTPProtocol : public SocketProtocol {
   // Find handler for request.
   Handler FindHandler(HTTPRequest *request) const;
 
+  // Cross-Origin Resource Sharing.
+  bool cors() const { return cors_; }
+  void set_cors(bool cors) { cors_ = cors; }
+
   // Service availability.
   bool available() const { return available_; }
   void set_available(bool available) { available_ = available; }
@@ -81,6 +85,9 @@ class HTTPProtocol : public SocketProtocol {
 
   // Registered HTTP handlers.
   std::vector<Context> contexts_;
+
+  // Allow Cross-Origin Resource Sharing.
+  bool cors_ = false;
 
   // Return 503 if service not currently available.
   bool available_ = true;
@@ -117,6 +124,10 @@ class HTTPServer : public SocketServer {
     if (started()) return Status::OK;
     return SocketServer::Start();
   }
+
+  // Cross-Origin Resource Sharing.
+  bool cors() const { return http_.cors(); }
+  void set_cors(bool cors) { http_.set_cors(cors); }
 
  private:
   // HTTP protocol handler.

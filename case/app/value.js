@@ -411,6 +411,34 @@ export class LabelCollector {
   }
 }
 
+export class ItemCollector {
+  constructor(store) {
+    this.store = store;
+    this.items = new Set();
+  }
+
+  add(item) {
+    if (item.isproxy() || item.isstub()) this.items.add(item);
+  }
+
+  async retrieve() {
+    // Skip if all items has already been fetched.
+    if (this.items.size == 0) return null;
+
+    // Retrieve items from knowledge service.
+    let response = await fetch(settings.kbservice + "/kb/topics", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/sling',
+      },
+      body: this.store.encode(Array.from(this.items)),
+    });
+    let topics = await this.store.parse(response);
+
+    return topics;
+  }
+}
+
 function add_date_result(results, year, month, day, precision) {
   let t = Time.value(year, month, day, precision);
   if (t) {

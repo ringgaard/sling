@@ -264,11 +264,17 @@ SocketSession::Continuation HTTPSession::Process(SocketConnection *conn) {
 }
 
 void HTTPSession::Dispatch() {
-  // Find handler for request.
-  HTTPProtocol::Handler handler = http_->FindHandler(request_);
+  if (http_->cors() && strcmp(request_->method(), "OPTIONS") == 0) {
+    // Handle preflight CORS request.
+    response_->Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    response_->Set("Access-Control-Allow-Headers", "Content-Type");
+  } else {
+    // Find handler for request.
+    HTTPProtocol::Handler handler = http_->FindHandler(request_);
 
-  // Dispatch request to handler.
-  handler(request_, response_);
+    // Dispatch request to handler.
+    handler(request_, response_);
+  }
 
   // Use response body size as content length if it has not been set.
   if (response_->content_length() == 0 && !response_buffer()->empty()) {
@@ -280,6 +286,11 @@ void HTTPSession::Dispatch() {
   response_->Set("Server", HTTP_SERVER_NAME, false);
   response_->Set("Date", RFCTime(time(nullptr), datebuf), false);
   response_->Set("Content-Length", response_->content_length());
+
+  // Add CORS headers.
+  if (http_->cors()) {
+    response_->Set("Access-Control-Allow-Origin", "*");
+  }
 
   // Return status code 204 (No Content) if response body is empty.
   if (response_->status() == 200 && response_->content_length() == 0) {

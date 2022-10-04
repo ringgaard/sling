@@ -148,16 +148,11 @@ void RefineService::HandleManifest(HTTPRequest *req, HTTPResponse *rsp) {
 
   // Output as JSON.
   WriteJSON(manifest.Create(), rsp);
-
-  // Add CORS headers.
-  rsp->Add("Access-Control-Allow-Methods", "GET, POST");
-  rsp->Add("Access-Control-Allow-Headers", "Origin, Accept, Content-Type");
-  rsp->Add("Access-Control-Allow-Origin", "*");
 }
 
 void RefineService::HandleQuery(Text queries, HTTPResponse *rsp) {
   // Parse queries.
-  LOG(INFO) << "query: " << queries;
+  VLOG(1) << "query: " << queries;
   Store store(commons_);
   String n_id(&store, "id");
   Frame input = ReadJSON(&store, queries.slice()).AsFrame();
@@ -248,16 +243,13 @@ void RefineService::HandleQuery(Text queries, HTTPResponse *rsp) {
     response.Add(q.name, result.Create());
   }
 
-  // Add CORS headers.
-  rsp->Add("Access-Control-Allow-Origin", "*");
-
   // Output response.
   WriteJSON(response.Create(), rsp);
 }
 
 void RefineService::HandleExtend(Text extend, HTTPResponse *rsp) {
   // Parse extension request.
-  LOG(INFO) << "extend: " << extend;
+  VLOG(1) << "extend: " << extend;
   Store store(commons_);
   String n_id(&store, "id");
 
@@ -338,9 +330,6 @@ void RefineService::HandleExtend(Text extend, HTTPResponse *rsp) {
     rows.Add(id, row.Create());
   }
   response.Add(n_rows_, rows.Create());
-
-  // Add CORS headers.
-  rsp->Add("Access-Control-Allow-Origin", "*");
 
   // Output response.
   WriteJSON(response.Create(), rsp);
@@ -443,9 +432,6 @@ void RefineService::HandleSuggest(HTTPRequest *req, HTTPResponse *rsp) {
   Builder response(&store);
   response.Add(n_result_, results);
 
-  // Add CORS headers.
-  rsp->Add("Access-Control-Allow-Origin", "*");
-
   // Output response.
   WriteJSON(response.Create(), rsp);
 }
@@ -475,9 +461,6 @@ void RefineService::HandlePropose(HTTPRequest *req, HTTPResponse *rsp) {
     }
     response.Add(n_properties_, properties);
   }
-
-  // Add CORS headers.
-  rsp->Add("Access-Control-Allow-Origin", "*");
 
   // Output response.
   WriteJSON(response.Create(), rsp);

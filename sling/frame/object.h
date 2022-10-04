@@ -255,10 +255,11 @@ class Object : public Root {
   float AsFloat() const { return handle_.AsFloat(); }
 
   // Type checking.
-  bool IsString() const { return IsRef() && datum()->IsString(); }
-  bool IsFrame() const { return IsRef() && datum()->IsFrame(); }
-  bool IsSymbol() const { return IsRef() && datum()->IsSymbol(); }
-  bool IsArray() const { return IsRef() && datum()->IsArray(); }
+  bool IsObject() const { return IsRef() && !IsNil(); }
+  bool IsString() const { return IsObject() && datum()->IsString(); }
+  bool IsFrame() const { return IsObject() && datum()->IsFrame(); }
+  bool IsSymbol() const { return IsObject() && datum()->IsSymbol(); }
+  bool IsArray() const { return IsObject() && datum()->IsArray(); }
 
   // Converts to specific types. If the type does not match, nil is returned.
   String AsString() const;

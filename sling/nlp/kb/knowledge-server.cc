@@ -24,6 +24,7 @@
 
 DEFINE_string(host, "", "HTTP server host address");
 DEFINE_int32(port, 8080, "HTTP server port");
+DEFINE_bool(cors, false, "Allow Cross-Origin Resource Sharing");
 DEFINE_string(kb, "data/e/kb/kb.sling", "Knowledge base");
 DEFINE_string(names, "data/e/kb/en/name-table.repo", "Name table");
 DEFINE_string(xref, "", "Cross-reference table");
@@ -45,6 +46,7 @@ int main(int argc, char *argv[]) {
   LOG(INFO) << "Start HTTP server on port " << FLAGS_port;
   SocketServerOptions options;
   HTTPServer http(options, FLAGS_host.c_str(), FLAGS_port);
+  http.set_cors( FLAGS_cors);
   CHECK(http.Start(false));
 
   // Initialize knowledge service.

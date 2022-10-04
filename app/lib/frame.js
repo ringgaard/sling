@@ -259,6 +259,11 @@ export class Frame {
     return this.state == PROXY;
   }
 
+  // Check if frame is a stub.
+  isstub() {
+    return this.state == STUB;
+  }
+
   // Check if frame is public.
   ispublic() {
     return this.state == PUBLIC;
