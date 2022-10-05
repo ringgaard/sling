@@ -53,7 +53,7 @@ struct SocketServerOptions {
   int max_events = 1;
 
   // Timeout (in milliseconds) for event polling.
-  int timeout = 2000;
+  int timeout = 1000;
 
   // Maximum idle time (in seconds) before connection is shut down.
   int max_idle = 600;
@@ -119,6 +119,12 @@ class SocketServer {
 
   // Remove connection from server.
   void RemoveConnection(SocketConnection *conn);
+
+  // Find endpoint. Return null if endpoint is not known.
+  Endpoint *FindEndpoint(void *ep);
+
+  // Lock connection. Return null if connection is not known.
+  SocketConnection *LockConnection(void *conn);
 
   // Shut down idle connections.
   void ShutdownIdleConnections();

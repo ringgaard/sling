@@ -62,7 +62,7 @@ function inverse(relation) {
 const BOX_WIDTH = 180;
 const BOX_HEIGHT = 40;
 const GRID_SIZE = 20;
-const MARGIN = 25;
+const MARGIN = GRID_SIZE;
 
 var nextz = 1;
 
@@ -383,7 +383,6 @@ class NodeBox extends Component {
   }
 
   center() {
-    //return this.position(); // TODO: remove
     return new Point(this.offsetLeft + BOX_WIDTH / 2,
                      this.offsetTop + BOX_HEIGHT / 2);
   }
@@ -590,7 +589,6 @@ class NetworkDialog extends MdDialog {
   }
 
   recalculate() {
-    let diagram = this.find(".diagram");
     let width = this.scrollWidth;
     let height = this.scrollHeight;
     for (let box of  this.querySelectorAll("node-box")) {
@@ -598,16 +596,12 @@ class NetworkDialog extends MdDialog {
       width = Math.max(width, p.x + BOX_WIDTH + MARGIN);
       height = Math.max(height, p.y + BOX_HEIGHT + MARGIN);
     }
-    console.log(width, height);
-
-    diagram.style.width = width;
-    diagram.style.height = height;
 
     let canvas = this.find("#canvas");
+    canvas.style.width = width + "px";
+    canvas.style.height = height + "px";
     canvas.width = width;
     canvas.height = height;
-
-    //canvas.style.zIndex = 10000; // TODO: remove
   }
 
   draw() {
@@ -699,7 +693,7 @@ class NetworkDialog extends MdDialog {
     // Draw edge bundles.
     if (this.bundle) {
       for (let b of graph.bundles) {
-        let s = midpoint(b.parents)
+        let s = midpoint(b.parents);
         let d = midpoint(b.children);
         let p = mid(s, d);
 
@@ -712,10 +706,13 @@ class NetworkDialog extends MdDialog {
           let {minx, maxx, miny, maxy} = bbox(b.children);
           let w = maxx - minx;
           let h = maxy - miny;
-          line(s, p);
-          dot(p);
           if (h < w) {
             // Horizontal layout.
+            p.x = s.x;
+            if (p.x < minx) minx = p.x;
+            if (p.x > maxx) maxx = p.x;
+            line(s, p);
+            dot(p);
             line(new Point(minx, p.y), new Point(maxx, p.y));
             for (let child of b.children) {
               let c = child.box.center();
@@ -725,6 +722,11 @@ class NetworkDialog extends MdDialog {
             }
           } else {
             // Vertial layout.
+            p.y = s.y;
+            if (p.y < miny) miny = p.y;
+            if (p.y > maxy) maxy = p.y;
+            line(s, p);
+            dot(p);
             line(new Point(p.x, miny), new Point(p.x, maxy));
             for (let child of b.children) {
               let c = child.box.center();

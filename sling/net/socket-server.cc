@@ -149,17 +149,19 @@ void SocketServer::Worker() {
       struct epoll_event *ev = &events[i];
 
       // Check for new connection.
-      Endpoint *ep = endpoints_;
-      while (ep != nullptr) {
-        if (ep == ev->data.ptr) break;
-        ep = ep->next;
-      }
+      Endpoint *ep = FindEndpoint(ev->data.ptr);
       if (ep != nullptr) {
         // New connection.
         AcceptConnection(ep);
       } else {
+        // Find and lock connection for event.
+        SocketConnection *conn = LockConnection(ev->data.ptr);
+        if (conn == nullptr) {
+          LOG(ERROR) << "No connection for socket";
+          continue;
+        }
+
         // Check if connection has been closed.
-        auto *conn = reinterpret_cast<SocketConnection *>(ev->data.ptr);
         if (ev->events & (EPOLLHUP | EPOLLERR)) {
           // Detach socket from poll descriptor.
           if (ev->events & EPOLLERR) {
@@ -176,7 +178,6 @@ void SocketServer::Worker() {
           }
         } else {
           // Process connection data.
-          conn->Lock();
           VLOG(5) << "Begin " << conn->sock_ << " in state " << conn->State();
 
           if (conn->state_ < SOCKET_STATE_TERMINATE) {
@@ -198,8 +199,8 @@ void SocketServer::Worker() {
           }
 
           VLOG(5) << "End " << conn->sock_ << " in state " << conn->State();
-          conn->Unlock();
         }
+        conn->Unlock();
       }
     }
     active_--;
@@ -255,6 +256,13 @@ void SocketServer::AcceptConnection(Endpoint *ep) {
   ep->num_connects++;
 }
 
+SocketServer::Endpoint *SocketServer::FindEndpoint(void *ep) {
+  for (Endpoint *e = endpoints_; e; e = e->next) {
+    if (e == ep) return e;
+  }
+  return nullptr;
+}
+
 void SocketServer::AddConnection(SocketConnection *conn) {
   MutexLock lock(&mu_);
   conn->next_ = connections_;
@@ -269,6 +277,17 @@ void SocketServer::RemoveConnection(SocketConnection *conn) {
   if (conn->next_ != nullptr) conn->next_->prev_ = conn->prev_;
   if (conn == connections_) connections_ = conn->next_;
   conn->next_ = conn->prev_ = nullptr;
+}
+
+SocketConnection *SocketServer::LockConnection(void *conn) {
+  MutexLock lock(&mu_);
+  for (SocketConnection *c = connections_; c; c = c->next_) {
+    if (c == conn) {
+      c->Lock();
+      return c;
+    }
+  }
+  return nullptr;
 }
 
 void SocketServer::ShutdownIdleConnections() {
