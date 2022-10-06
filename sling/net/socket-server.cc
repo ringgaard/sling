@@ -160,7 +160,6 @@ void SocketServer::Worker() {
           LOG(ERROR) << "No connection for socket";
           continue;
         }
-        conn->Lock();
 
         // Check if connection has been closed.
         if (ev->events & (EPOLLHUP | EPOLLERR)) {
@@ -179,6 +178,7 @@ void SocketServer::Worker() {
           }
         } else {
           // Process connection data.
+          conn->Lock();
           VLOG(5) << "Begin " << conn->sock_ << " in state " << conn->State();
 
           if (conn->state_ < SOCKET_STATE_TERMINATE) {
@@ -200,8 +200,8 @@ void SocketServer::Worker() {
           }
 
           VLOG(5) << "End " << conn->sock_ << " in state " << conn->State();
+          conn->Unlock();
         }
-        conn->Unlock();
         conn->Release();
       }
     }

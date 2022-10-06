@@ -260,7 +260,7 @@
     "style": /wp/info/style
     "genre": /wp/info/genre
     "activités autres": /wp/info/activites_autres
-    "lieux d'activité": /wp/info/lieux_d'activite
+    "lieux d'activité": /wp/info/lieux_d_activite
     "années actives": /wp/info/annees_actives
     "collaborations": /wp/info/collaborations
     "éditeurs": /wp/info/editeurs
@@ -613,7 +613,7 @@
     "commandement": /wp/info/commandement
     "gouvernement militaire": /wp/info/gouvernement_militaire
     "conflits": /wp/info/conflits
-    "faits d'armes": /wp/info/faits_d'armes
+    "faits d'armes": /wp/info/faits_d_armes
     "distinctions": /wp/info/distinctions
     "autres fonctions": /wp/info/autres_fonctions
     "nom de naissance": /wp/info/nom_de_naissance
@@ -662,7 +662,7 @@
     "commandement": /wp/info/commandement
     "investiture": /wp/info/investiture
     "conflits": /wp/info/conflits
-    "faits d'armes": /wp/info/faits_d'armes
+    "faits d'armes": /wp/info/faits_d_armes
     "distinctions": /wp/info/distinctions
     "autres fonctions": /wp/info/autres_fonctions
     "nom de naissance": /wp/info/nom_de_naissance
@@ -732,7 +732,7 @@
     "date de décès": /wp/info/date_de_deces
     "lieu de décès": /wp/info/lieu_de_deces
     "première incarcération": /wp/info/premiere_incarceration
-    "lieu d'incarcération": /wp/info/lieu_d'incarceration
+    "lieu d'incarcération": /wp/info/lieu_d_incarceration
     "origine": /wp/info/origine
     "allégeance": /wp/info/allegeance
     "cause défendue": /wp/info/cause_defendue
@@ -954,7 +954,7 @@
     "fin de carrière": /wp/info/fin_de_carriere
     "commandement": /wp/info/commandement
     "conflit": /wp/info/conflit
-    "faits d'armes": /wp/info/faits_d'armes
+    "faits d'armes": /wp/info/faits_d_armes
     "distinctions": /wp/info/distinctions
     "hommages": /wp/info/hommages
     "autres fonctions": /wp/info/autres_fonctions
@@ -1032,7 +1032,7 @@
     "sociétaires": /wp/info/societaires
     "effectif": /wp/info/effectif
     "SIREN": /wp/info/siren
-    "chiffre d'affaires": /wp/info/chiffre_d'affaires
+    "chiffre d'affaires": /wp/info/chiffre_d_affaires
     "évolution du CA": /wp/info/evolution_du_ca
     "actifs sous gestion (banques)": /wp/info/actifs_sous_gestion_banques
     "somme du bilan (banques)": /wp/info/somme_du_bilan_banques
@@ -1119,7 +1119,7 @@
     "upright": /wp/info/upright
     "association_type": /wp/info/association_type
     "but": /wp/info/but
-    "zone d'influence": /wp/info/zone_d'influence
+    "zone d'influence": /wp/info/zone_d_influence
     "date_de_fondation": /wp/info/date_de_fondation
     "fondateur": /wp/info/fondateur
     "fondatrice": /wp/info/fondatrice
@@ -1440,7 +1440,7 @@
     "société sœur": /wp/info/societe_saur
     "filiales": /wp/info/filiales
     "nb_employés": /wp/info/nb_employes
-    "chiffre d'affaires": /wp/info/chiffre_d'affaires
+    "chiffre d'affaires": /wp/info/chiffre_d_affaires
     "bénéfice": /wp/info/benefice
     "dirigeants": /wp/info/dirigeants
     "website": /wp/info/website
@@ -1549,7 +1549,7 @@
     "maître distillateur": /wp/info/maitre_distillateur
     "maître mélangeur": /wp/info/maitre_melangeur
     "provenance de l'orge": /wp/info/provenance_de_l_orge
-    "source d'eau": /wp/info/source_d'eau
+    "source d'eau": /wp/info/source_d_eau
     "cuves de brassage": /wp/info/cuves_de_brassage
     "cuves de fermentation": /wp/info/cuves_de_fermentation
     "alambics de distillation": /wp/info/alambics_de_distillation
@@ -1686,7 +1686,7 @@
     "statut": /wp/info/statut
     "maison de disques": /wp/info/maison_de_disques
     "genre": /wp/info/genre
-    "pays d'origine": /wp/info/pays_d'origine
+    "pays d'origine": /wp/info/pays_d_origine
     "siège": /wp/info/siege
     "site web": /wp/info/site_web
   }
@@ -2370,7 +2370,7 @@
     "surnom": /wp/info/surnom
     "club(s)": /wp/info/club
     "entraîneur(s)": /wp/info/entraineur
-    "type d'arc": /wp/info/type_d'arc
+    "type d'arc": /wp/info/type_d_arc
     "prise en main": /wp/info/prise_en_main
     "records": /wp/info/records
     "jeux olympiques": /wp/info/jeux_olympiques
