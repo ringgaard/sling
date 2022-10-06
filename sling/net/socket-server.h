@@ -123,8 +123,9 @@ class SocketServer {
   // Find endpoint. Return null if endpoint is not known.
   Endpoint *FindEndpoint(void *ep);
 
-  // Lock connection. Return null if connection is not known.
-  SocketConnection *LockConnection(void *conn);
+  // Return connection with new reference count that must be released by the
+  // caller. Return null if connection is not known.
+  SocketConnection *GetConnection(void *conn);
 
   // Shut down idle connections.
   void ShutdownIdleConnections();

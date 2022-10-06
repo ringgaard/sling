@@ -155,11 +155,12 @@ void SocketServer::Worker() {
         AcceptConnection(ep);
       } else {
         // Find and lock connection for event.
-        SocketConnection *conn = LockConnection(ev->data.ptr);
+        SocketConnection *conn = GetConnection(ev->data.ptr);
         if (conn == nullptr) {
           LOG(ERROR) << "No connection for socket";
           continue;
         }
+        conn->Lock();
 
         // Check if connection has been closed.
         if (ev->events & (EPOLLHUP | EPOLLERR)) {
@@ -201,6 +202,7 @@ void SocketServer::Worker() {
           VLOG(5) << "End " << conn->sock_ << " in state " << conn->State();
         }
         conn->Unlock();
+        conn->Release();
       }
     }
     active_--;
@@ -279,11 +281,11 @@ void SocketServer::RemoveConnection(SocketConnection *conn) {
   conn->next_ = conn->prev_ = nullptr;
 }
 
-SocketConnection *SocketServer::LockConnection(void *conn) {
+SocketConnection *SocketServer::GetConnection(void *conn) {
   MutexLock lock(&mu_);
   for (SocketConnection *c = connections_; c; c = c->next_) {
     if (c == conn) {
-      c->Lock();
+      c->AddRef();
       return c;
     }
   }
