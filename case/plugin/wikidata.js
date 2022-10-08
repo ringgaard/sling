@@ -21,7 +21,7 @@ export default class WikidataPlugin {
   }
 
   async select(item) {
-    // Retrieve profile from twitter service.
+    // Retrieve profile from wikidata service.
     let r = await fetch(item.context.service("wikidata", {qid: item.ref}));
     let data = await store.parse(r)
 

@@ -157,10 +157,6 @@ let xrefs = [
     property: store.lookup("P3899"),
   },
   {
-    pattern: /https?:\/\/muckrack\.com\/([^\/]+)\/?/i,
-    property: store.lookup("P6005"),
-  },
-  {
     pattern: /^https?:\/\/pinterest\.com\/([^\/\?]+)/i,
     property: store.lookup("P3836"),
   },
@@ -281,7 +277,7 @@ let xrefs = [
     property: store.lookup("P3408"),
   },
   {
-    pattern: /^https?:\/\/muckrack\.com\/(.+)/,
+    pattern: /https?:\/\/muckrack\.com\/([^\/]+)\/?/i,
     property: store.lookup("P6005"),
   },
   {
