@@ -24,7 +24,6 @@ function isMobile() {
     is_mobile = true;
   }
   mobile_ckecked = true;
-  if (qs.get("nsfw") == "1") settings.nsfw = true;
   return is_mobile;
 }
 
@@ -59,6 +58,15 @@ class KbApp extends MdApp {
     if (itemid) {
       let id = itemid.content;
       if (id.length > 0) this.navigate(id);
+    }
+
+    let qs = new URLSearchParams(window.location.search);
+    if (qs.get("nsfw") == "1") settings.nsfw = true;
+    let q = qs.get("q");
+    if (q) {
+      let search = this.find("md-search");
+      search.set(q);
+      this.find("#search").onquery({detail: q, target: search});
     }
   }
 

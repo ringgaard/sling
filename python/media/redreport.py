@@ -60,7 +60,8 @@ app.page("/redreport",
       <md-toolbar-logo></md-toolbar-logo>
       <md-text id="title">Reddit photo report</md-text>
       <md-spacer></md-spacer>
-      <md-icon-button id="imgsearch" icon="image_search"></<md-icon-button>
+      <md-icon-button id="search" icon="search"></md-icon-button>
+      <md-icon-button id="imgsearch" icon="image_search"></md-icon-button>
     </md-toolbar>
 
     <md-content>
@@ -90,7 +91,8 @@ function current_date() {
 class PhotoReportApp extends MdApp {
   onconnected() {
     // Image search.
-    this.bind("#imgsearch", "click", e => this.onsearch(e));
+    this.attach(this.onsearch, "click", "#search");
+    this.attach(this.onimgsearch, "click", "#imgsearch");
 
     // Get date from request; default to current date.
     let path = window.location.pathname;
@@ -113,6 +115,13 @@ class PhotoReportApp extends MdApp {
   }
 
   onsearch(e) {
+    let selection = window.getSelection();
+    let query = selection.toString();
+    let url = `https://ringgaard.com/kb/?q=${encodeURIComponent(query)}`;
+    window.open(url, "knolbase");
+  }
+
+  onimgsearch(e) {
     let selection = window.getSelection();
     let query = selection.toString();
     let url = `/photosearch?q="${encodeURIComponent(query)}"`;
@@ -316,7 +325,7 @@ class RedditPosting extends Component {
         }
         if (item.dup.item && item.itemid != item.dup.item) {
           photomsg += `
-            in <a href="${kburl}" target="_blank">${item.dup.item}</a>
+            in <a href="${kburl}" target="knolbase">${item.dup.item}</a>
           `;
         }
         if (item.dup.sr) {
@@ -340,7 +349,7 @@ class RedditPosting extends Component {
       if (item.itemid) {
         let kburl = `https://ringgaard.com/kb/${item.itemid}`;
         if (!sfw) kburl += "?nsfw=1";
-        match += `<a href="${kburl}" target="_blank">${item.itemid}</a>`;
+        match += `<a href="${kburl}" target="knolbase">${item.itemid}</a>`;
       }
     } else if (item.matches == 0) {
       match = `No matches for <em>${item.query}</em>`
@@ -349,7 +358,7 @@ class RedditPosting extends Component {
       if (!sfw) kburl += "?nsfw=1";
       match = `
          <b>${item.query}</b>:
-         <a href="${kburl}" target="_blank">${item.match}</a>
+         <a href="${kburl}" target="knolbase">${item.match}</a>
        `;
     } else {
       match = `${item.matches} matches for <b>${item.query}</b>`
