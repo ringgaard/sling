@@ -541,8 +541,9 @@ PyObject *PyStartTaskMonitor(PyObject *self, PyObject *args) {
 
 PyObject *PyGetJobStatistics() {
   if (dashboard == nullptr) Py_RETURN_NONE;
-  string stats = dashboard->GetStatus();
-  return PyUnicode_FromStringAndSize(stats.data(), stats.size());
+  IOBuffer buffer;
+  dashboard->GetStatus(&buffer);
+  return PyUnicode_FromStringAndSize(buffer.begin(), buffer.available());
 }
 
 PyObject *PyFinalizeDashboard() {

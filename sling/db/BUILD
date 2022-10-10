@@ -73,6 +73,7 @@ cc_library(
   deps = [
     ":dbprotocol",
     "//sling/base",
+    "//sling/base:perf",
     "//sling/util:iobuffer",
   ],
 )

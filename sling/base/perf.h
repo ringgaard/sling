@@ -15,6 +15,8 @@
 #ifndef SLING_BASE_PERF_H_
 #define SLING_BASE_PERF_H_
 
+#include <atomic>
+
 #include "sling/base/types.h"
 
 namespace sling {
@@ -61,6 +63,20 @@ class Perf {
   // Address of FLOP counter (used by Myelin instrumentation).
   static int64 *flopptr() { return &flop; }
 
+  // File I/O.
+  static int64 file_read() { return filerd; }
+  static int64 file_write() { return filewr; }
+
+  static void add_file_read(int64 bytes) { filerd += bytes; }
+  static void add_file_write(int64 bytes) { filewr += bytes; }
+
+  // Network I/O.
+  static int64 network_receive() { return netrx; }
+  static int64 network_transmit() { return nettx; }
+
+  static void add_network_receive(int64 bytes) { netrx  += bytes; }
+  static void add_network_transmit(int64 bytes) { nettx += bytes; }
+
  private:
   int64 utime_;        // user CPU time used (microseconds)
   int64 stime_;        // system CPU time used (microseconds)
@@ -69,6 +85,14 @@ class Perf {
   int64 iowrite_;      // I/O write rate (bytes/sec)
   int64 flops_;        // floating-point operations
   float cputemp_;      // CPU temperature (celsius)
+
+  // File I/O.
+  static std::atomic<int64> filerd;       // file read (bytes)
+  static std::atomic<int64> filewr;       // file write (bytes)
+
+  // Network I/O.
+  static std::atomic<int64> netrx;        // network received
+  static std::atomic<int64> nettx;        // network transmitted
 
   // Peak memory usage (bytes).
   static int64 peak_memory;

@@ -137,6 +137,8 @@ class DashboardApp extends MdApp {
     res.gflops = status.flops / 1e9;
     res.ram = status.mem;
     res.io = status.ioread + status.iowrite;
+    res.disk = status.filerd + status.filewr;
+    res.net = status.netrx + status.nettx;
     var census = {};
     census.hours = Math.floor(runtime / 3600);
     census.mins = Math.floor((runtime % 3600) / 60);
@@ -147,12 +149,16 @@ class DashboardApp extends MdApp {
       census.gflops = res.gflops / runtime;
       census.ram = res.ram;
       census.io = res.io / runtime;
+      census.disk = res.disk / runtime;
+      census.net = res.net / runtime;
     } else if (this.resources) {
       let dt = res.time - this.resources.time;
       census.cpu = (res.cpu - this.resources.cpu) / dt;
       census.gflops = (res.gflops - this.resources.gflops) / dt;
       census.ram = res.ram;
       census.io = (res.io - this.resources.io) / dt;
+      census.disk = (res.disk - this.resources.disk) / dt;
+      census.net = (res.net - this.resources.net) / dt;
     }
     this.census = census;
     this.resources = res;
@@ -354,6 +360,16 @@ class DashboardPerf extends Component {
           <tr>
             <td>I/O</td>
             <td class="lcd">${int(c.io / 1000)}</td>
+            <td>MB/s</td>
+          </tr>
+          <tr>
+            <td>DISK</td>
+            <td class="lcd">${int(c.disk / 1000000)}</td>
+            <td>MB/s</td>
+          </tr>
+          <tr>
+            <td>NET</td>
+            <td class="lcd">${int(c.net / 1000000)}</td>
             <td>MB/s</td>
           </tr>
           <tr>

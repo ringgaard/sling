@@ -7878,6 +7878,7 @@
   url: "https://www.brreg.no/the-bronnoysund-register-centre/"
 
   opencorporates_jurisdiction: "no"
+  company_property: P2333
   format: "(\\d{9}|\\d{3} \\d{3} \\d{3})"
 }
 {

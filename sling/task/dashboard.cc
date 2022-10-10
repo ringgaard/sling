@@ -19,6 +19,7 @@
 #include <sstream>
 
 #include "sling/base/perf.h"
+#include "sling/util/json.h"
 
 namespace sling {
 namespace task {
@@ -37,83 +38,72 @@ void Dashboard::Register(HTTPServer *http) {
   app_.Register(http);
 }
 
-string Dashboard::GetStatus() {
+void Dashboard::GetStatus(IOBuffer *output) {
   MutexLock lock(&mu_);
-  std::stringstream out;
 
   // Output current time and status.
   bool running = (status_ < FINAL);
-  out << "{\"time\":" << (running ? time(0) : end_time_);
-  out << ",\"started\":" << start_time_;
-  out << ",\"finished\":" << (running ? 0 : 1);
+  JSON::Object json;
+  json.Add("time", running ? time(0) : end_time_);
+  json.Add("started", start_time_);
+  json.Add("finished", running ? 0 : 1);
 
   // Output jobs.
-  out << ",\"jobs\":[";
-  bool first_job = true;
+  JSON::Array *jobs = json.AddArray("jobs");
   for (JobStatus *status : jobs_) {
-    if (!first_job) out << ",";
-    first_job = false;
-    out << "{\"name\":\"" << status->name << "\"";
-    out << ",\"started\":" << status->started;
-    if (status->ended != 0) out << ",\"ended\":" << status->ended;
+    JSON::Object *job = jobs->AddObject();
+    job->Add("name", status->name);
+    job->Add("started", status->started);
+    if (status->ended != 0) job->Add("ended", status->ended);
 
     if (status->job != nullptr) {
       // Output stages for running job.
-      out << ",\"stages\":[";
-      bool first_stage = true;
+      JSON::Array *stages = job->AddArray("stages");
       for (Stage *stage : status->job->stages()) {
-        if (!first_stage) out << ",";
-        first_stage = false;
-        out << "{\"tasks\":" << stage->num_tasks()
-            << ",\"done\":" << stage->num_completed_tasks() << "}";
+        JSON::Object *st = stages->AddObject();
+        st->Add("tasks", stage->num_tasks());
+        st->Add("done", stage->num_completed_tasks());
       }
-      out << "],";
 
-      // Output counters for running job.
-      out << "\"counters\":{";
-      bool first_counter = true;
+      // Output counters for job.
+      JSON::Object *counters = job->AddObject("counters");
       status->job->IterateCounters(
-        [&out, &first_counter](const string &name, Counter *counter) {
-          if (!first_counter) out << ",";
-          first_counter = false;
-          out << "\"" << name << "\":" << counter->value();
+        [counters](const string &name, Counter *counter) {
+          counters->Add(name, counter->value());
         }
       );
-      out << "}";
     } else {
-      // Output counters for completed job.
-      out << ",\"counters\":{";
-      bool first_counter = true;
-      for (auto &counter : status->counters) {
-        if (!first_counter) out << ",";
-        first_counter = false;
-        out << "\"" << counter.first << "\":" << counter.second;
+      // Output counters for job.
+      JSON::Object *counters = json.AddObject("counters");
+      for (const auto &c : status->counters) {
+        counters->Add(c.first, c.second);
       }
-      out << "}";
     }
-    out << "}";
   }
-  out << "]";
 
   // Output resource usage.
   Perf perf;
   perf.Sample();
-  out << ",\"utime\":" << perf.utime();
-  out << ",\"stime\":" << perf.stime();
-  out << ",\"mem\":" << (running ? perf.memory() : Perf::peak_memory_usage());
-  out << ",\"ioread\":" << perf.ioread();
-  out << ",\"iowrite\":" << perf.iowrite();
-  out << ",\"flops\":" << perf.flops();
-  out << ",\"temperature\":"
-      << (running ? perf.cputemp() : Perf::peak_cpu_temperature());
 
-  out << "}";
-  return out.str();
+  json.Add("utime", perf.utime());
+  json.Add("stime", perf.stime());
+  json.Add("mem", running ? perf.memory() : Perf::peak_memory_usage());
+  json.Add("ioread", perf.ioread());
+  json.Add("iowrite", perf.iowrite());
+  json.Add("filerd", Perf::file_read());
+  json.Add("filewr", Perf::file_write());
+  json.Add("netrx", Perf::network_receive());
+  json.Add("nettx", Perf::network_transmit());
+  json.Add("flops", perf.flops());
+  json.Add("temperature",
+           running ? perf.cputemp() : Perf::peak_cpu_temperature());
+
+  json.Write(output);
 }
 
 void Dashboard::HandleStatus(HTTPRequest *request, HTTPResponse *response) {
   response->set_content_type("text/json; charset=utf-8");
-  response->Append(GetStatus());
+  GetStatus(response->buffer());
   if (status_ == IDLE) status_ = MONITORED;
   if (status_ == FINAL) status_ = SYNCHED;
 }

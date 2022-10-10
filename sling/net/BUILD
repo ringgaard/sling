@@ -6,6 +6,7 @@ cc_library(
   hdrs = ["socket-server.h"],
   deps = [
     "//sling/base",
+    "//sling/base:perf",
     "//sling/file",
     "//sling/util:iobuffer",
     "//sling/util:json",

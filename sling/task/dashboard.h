@@ -53,7 +53,7 @@ class Dashboard : public Monitor {
   void Finalize(int timeout);
 
   // Get job status in JSON format.
-  string GetStatus();
+  void GetStatus(IOBuffer *output);
 
   // Handle job status queries.
   void HandleStatus(HTTPRequest *request, HTTPResponse *response);

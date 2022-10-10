@@ -26,6 +26,7 @@
 #include <string>
 
 #include "sling/base/logging.h"
+#include "sling/base/perf.h"
 #include "sling/util/json.h"
 
 namespace sling {
@@ -577,6 +578,7 @@ Status SocketConnection::Recv(IOBuffer *buffer, bool *done) {
   VLOG(6) << "Recv " << sock_ << ", " << rc << " bytes";
   buffer->Append(rc);
   rx_bytes_ += rc;
+  Perf::add_network_receive(rc);
   return Status::OK;
 }
 
@@ -603,6 +605,7 @@ Status SocketConnection::Send(IOBuffer *buffer, bool *done) {
   VLOG(6) << "Send " << sock_ << ", " << rc << " bytes";
   buffer->Consume(rc);
   tx_bytes_ += rc;
+  Perf::add_network_transmit(rc);
   return Status::OK;
 }
 

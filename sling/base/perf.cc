@@ -31,6 +31,11 @@ int64 Perf::flop = 0;
 int64 Perf::peak_memory = 0;
 float Perf::peak_cputemp = 0;
 
+std::atomic<int64> Perf::filerd{0};
+std::atomic<int64> Perf::filewr{0};
+std::atomic<int64> Perf::netrx{0};
+std::atomic<int64> Perf::nettx{0};
+
 // Thermal devices for measuring CPU temperature.
 static std::vector<string> thermal_devices;
 

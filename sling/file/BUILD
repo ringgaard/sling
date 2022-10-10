@@ -22,6 +22,7 @@ cc_library(
   deps = [
     ":file",
     "//sling/base",
+    "//sling/base:perf",
   ],
   alwayslink = 1,
 )

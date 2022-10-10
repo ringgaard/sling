@@ -19,6 +19,8 @@
 #include <sys/uio.h>
 #include <sys/socket.h>
 
+#include "sling/base/perf.h"
+
 namespace sling {
 
 // Return system error.
@@ -403,6 +405,7 @@ Status DBClient::Do(DBVerb verb, IOBuffer *buffer) {
   if (rc == 0) return Status(EPIPE, "Connection closed");
   if (rc < 0) return Error("send");
   if (rc != bufsize) return Status(EMSGSIZE, "Send truncated");
+  Perf::add_network_transmit(rc);
 
   // Receive response.
   if (buffer == nullptr) buffer = &response_;
@@ -414,6 +417,7 @@ Status DBClient::Do(DBVerb verb, IOBuffer *buffer) {
     if (rc == 0) return Status(EPIPE, "Connection closed");
     if (rc < 0) return Error("recv");
     buffer->Append(rc);
+    Perf::add_network_receive(rc);
     if (size < 0 && buffer->available() >= sizeof(DBHeader)) {
       auto *hdr = DBHeader::from(buffer->begin());
       size = sizeof(DBHeader) + hdr->size;

@@ -27,6 +27,7 @@
 
 #include <string>
 
+#include "sling/base/perf.h"
 #include "sling/file/file.h"
 
 namespace sling {
@@ -77,6 +78,7 @@ class PosixFile : public File {
   Status PRead(uint64 pos, void *buffer, size_t size, uint64 *read) override {
     ssize_t rc = pread(fd_, buffer, size, pos);
     if (rc < 0) return IOError(filename_, errno);
+    Perf::add_file_read(rc);
     if (read) *read = rc;
     return Status::OK;
   }
@@ -84,6 +86,7 @@ class PosixFile : public File {
   Status Read(void *buffer, size_t size, uint64 *read) override {
     ssize_t rc = ::read(fd_, buffer, size);
     if (rc < 0) return IOError(filename_, errno);
+    Perf::add_file_read(rc);
     if (read) *read = rc;
     return Status::OK;
   }
@@ -91,6 +94,7 @@ class PosixFile : public File {
   Status PWrite(uint64 pos, const void *buffer, size_t size) override {
     ssize_t rc = pwrite(fd_, buffer, size, pos);
     if (rc < 0) return IOError(filename_, errno);
+    Perf::add_file_write(rc);
     if (rc < size) return IOError(filename_, EIO);
     return Status::OK;
   }
@@ -100,6 +104,7 @@ class PosixFile : public File {
     if (size <= 0x7ffff000) {
       ssize_t rc = write(fd_, buffer, size);
       if (rc < 0) return IOError(filename_, errno);
+      Perf::add_file_write(rc);
       if (rc != size) return IOError(filename_, EIO);
     } else {
       while (size > 0) {
@@ -107,6 +112,7 @@ class PosixFile : public File {
         if (bytes > 0x7ffff000) bytes = 0x7ffff000;
         ssize_t rc = write(fd_, buffer, bytes);
         if (rc < 0) return IOError(filename_, errno);
+        Perf::add_file_write(rc);
         size -= bytes;
       }
     }

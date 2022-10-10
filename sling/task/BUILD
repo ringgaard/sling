@@ -74,6 +74,7 @@ cc_library(
     "//sling/file:embed",
     "//sling/net:http-server",
     "//sling/net:static-content",
+    "//sling/util:json",
     "//sling/util:mutex",
   ],
 )
