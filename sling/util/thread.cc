@@ -41,9 +41,9 @@ void Thread::Start() {
 void Thread::Join() {
   if (!running_) return;
   if (joinable_) {
+    running_ = false;
     void *unused;
     pthread_join(thread_, &unused);
-    running_ = false;
   } else {
     LOG(WARNING) << "Thread " << thread_ << " is not joinable";
   }
@@ -61,6 +61,30 @@ bool Thread::IsSelf() const {
 void ClosureThread::Run() {
   // Run closure.
   closure_();
+}
+
+void TimerThread::Start(int interval) {
+  interval_ = interval;
+  SetJoinable(true);
+  Thread::Start();
+}
+
+void TimerThread::Stop() {
+  {
+    std::lock_guard<std::mutex> lock(mu_);
+    done_ = true;
+    stop_.notify_one();
+  }
+  Join();
+}
+
+void TimerThread::Run() {
+  std::unique_lock<std::mutex> lock(mu_);
+  for (;;) {
+    stop_.wait_for(lock, std::chrono::milliseconds(interval_));
+    if (done_) break;
+    closure_();
+  }
 }
 
 WorkerPool::~WorkerPool() {

@@ -16,6 +16,9 @@
 #define SLING_UTIL_THREAD_H_
 
 #include <pthread.h>
+
+#include <chrono>
+#include <condition_variable>
 #include <functional>
 #include <vector>
 
@@ -83,6 +86,41 @@ class ClosureThread : public Thread {
   void operator =(const ClosureThread &) = delete;
 
   Closure closure_;
+};
+
+// A TimerThread periodically runs a closure until it is stopped.
+class TimerThread : public Thread {
+ public:
+  // A closure is a void functional.
+  typedef std::function<void()> Closure;
+
+  // Initialize closure thread.
+  explicit TimerThread(Closure &&closure)
+      : closure_(std::move(closure)) {}
+
+  // Start timer thread.
+  void Start(int interval);
+
+  // Stop timer thread. Waits for thread to finish.
+  void Stop();
+
+ protected:
+  void Run() override;
+
+ private:
+  // Disallow copy and assign.
+  TimerThread(const ClosureThread &) = delete;
+  void operator =(const ClosureThread &) = delete;
+
+  // Closure to run periodically.
+  Closure closure_;
+
+  // Interval in milliseconds between ticks.
+  int interval_;
+
+  bool done_ = false;
+  std::mutex mu_;
+  std::condition_variable stop_;
 };
 
 // A worker pool runs a closure in a set of worker threads.

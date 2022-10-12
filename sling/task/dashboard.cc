@@ -24,6 +24,60 @@
 namespace sling {
 namespace task {
 
+PerformanceMonitor::PerformanceMonitor(int interval) {
+  // Sample initial I/O values.
+  last_rd_ = Perf::file_read();
+  last_wr_= Perf::file_write();
+  last_rx_= Perf::network_receive();
+  last_tx_= Perf::network_transmit();
+  clock_.start();
+
+  // Start timer thread.
+  timer_.Start(interval);
+}
+
+PerformanceMonitor::~PerformanceMonitor() {
+  // Stop timer thread.
+  timer_.Stop();
+}
+
+void PerformanceMonitor::Collect() {
+  // Get number of microseconds since last collection.
+  clock_.stop();
+  int64 us = clock_.us();
+  clock_.restart();
+
+  // Sample performance data.
+  Perf perf;
+  perf.Sample();
+  int64 rd = Perf::file_read();
+  int64 wr = Perf::file_write();
+  int64 rx = Perf::network_receive();
+  int64 tx = Perf::network_transmit();
+
+  // Make new sample record.
+  Sample sample;
+  sample.time = time(0);
+  sample.cpu = perf.cputime() * 100 / us;
+  sample.ram = perf.memory();
+  sample.io = perf.io();
+  sample.temp = perf.cputemp();
+  sample.read = (rd - last_rd_) * 1000000 / us;
+  sample.write = (wr - last_wr_) * 1000000 / us;
+  sample.receive = (rx - last_rx_) * 1000000 / us;
+  sample.transmit = (tx - last_tx_) * 1000000 / us;
+
+  // Store I/O value for next delta calculation.
+  last_rd_ = rd;
+  last_wr_ = wr;
+  last_rx_ = rx;
+  last_tx_ = tx;
+
+  // Add sample.
+  MutexLock lock(&mu_);
+  samples_.push_back(sample);
+}
+
 Dashboard::Dashboard() {
   start_time_ = time(0);
 }
@@ -38,18 +92,17 @@ void Dashboard::Register(HTTPServer *http) {
   app_.Register(http);
 }
 
-void Dashboard::GetStatus(IOBuffer *output) {
+void Dashboard::GetStatus(JSON::Object *json) {
   MutexLock lock(&mu_);
 
   // Output current time and status.
   bool running = (status_ < FINAL);
-  JSON::Object json;
-  json.Add("time", running ? time(0) : end_time_);
-  json.Add("started", start_time_);
-  json.Add("finished", running ? 0 : 1);
+  json->Add("time", running ? time(0) : end_time_);
+  json->Add("started", start_time_);
+  json->Add("finished", running ? 0 : 1);
 
   // Output jobs.
-  JSON::Array *jobs = json.AddArray("jobs");
+  JSON::Array *jobs = json->AddArray("jobs");
   for (JobStatus *status : jobs_) {
     JSON::Object *job = jobs->AddObject();
     job->Add("name", status->name);
@@ -74,7 +127,7 @@ void Dashboard::GetStatus(IOBuffer *output) {
       );
     } else {
       // Output counters for job.
-      JSON::Object *counters = json.AddObject("counters");
+      JSON::Object *counters = job->AddObject("counters");
       for (const auto &c : status->counters) {
         counters->Add(c.first, c.second);
       }
@@ -85,24 +138,43 @@ void Dashboard::GetStatus(IOBuffer *output) {
   Perf perf;
   perf.Sample();
 
-  json.Add("utime", perf.utime());
-  json.Add("stime", perf.stime());
-  json.Add("mem", running ? perf.memory() : Perf::peak_memory_usage());
-  json.Add("ioread", perf.ioread());
-  json.Add("iowrite", perf.iowrite());
-  json.Add("filerd", Perf::file_read());
-  json.Add("filewr", Perf::file_write());
-  json.Add("netrx", Perf::network_receive());
-  json.Add("nettx", Perf::network_transmit());
-  json.Add("flops", perf.flops());
-  json.Add("temperature",
-           running ? perf.cputemp() : Perf::peak_cpu_temperature());
+  json->Add("utime", perf.utime());
+  json->Add("stime", perf.stime());
+  json->Add("mem", running ? perf.memory() : Perf::peak_memory_usage());
+  json->Add("ioread", perf.ioread());
+  json->Add("iowrite", perf.iowrite());
+  json->Add("filerd", Perf::file_read());
+  json->Add("filewr", Perf::file_write());
+  json->Add("netrx", Perf::network_receive());
+  json->Add("nettx", Perf::network_transmit());
+  json->Add("flops", perf.flops());
+  json->Add("temperature",
+            running ? perf.cputemp() : Perf::peak_cpu_temperature());
 
+  // Output performance history.
+  JSON::Array *history = json->AddArray("history");
+  for (auto &sample : perfmon_.samples()) {
+    JSON::Object *h = history->AddObject();
+    h->Add("t", sample.time);
+    h->Add("cpu", sample.cpu);
+    h->Add("ram", sample.ram);
+    h->Add("io", sample.io);
+    h->Add("temp", sample.temp);
+    h->Add("rd", sample.read);
+    h->Add("wr", sample.write);
+    h->Add("rx", sample.receive);
+    h->Add("tx", sample.transmit);
+  }
+}
+
+void Dashboard::GetStatus(IOBuffer *output) {
+  JSON::Object json;
+  GetStatus(&json);
   json.Write(output);
 }
 
 void Dashboard::HandleStatus(HTTPRequest *request, HTTPResponse *response) {
-  response->set_content_type("text/json; charset=utf-8");
+  response->set_content_type("application/json");
   GetStatus(response->buffer());
   if (status_ == IDLE) status_ = MONITORED;
   if (status_ == FINAL) status_ = SYNCHED;
@@ -117,6 +189,7 @@ void Dashboard::OnJobStart(Job *job) {
   status->name = job->name();
   status->started = time(0);
   active_jobs_[job] = status;
+  perfmon_.Collect();
 }
 
 void Dashboard::OnJobDone(Job *job) {
@@ -133,6 +206,7 @@ void Dashboard::OnJobDone(Job *job) {
   job->IterateCounters([status](const string &name, Counter *counter) {
     status->counters.emplace_back(name, counter->value());
   });
+  perfmon_.Collect();
 
   // Remove job from active job list.
   active_jobs_.erase(job);

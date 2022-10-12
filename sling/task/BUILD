@@ -70,12 +70,14 @@ cc_library(
     "//app:roboto-font",
     "//app:material-icons",
     "//sling/base",
+    "//sling/base:clock",
     "//sling/base:perf",
     "//sling/file:embed",
     "//sling/net:http-server",
     "//sling/net:static-content",
     "//sling/util:json",
     "//sling/util:mutex",
+    "//sling/util:thread",
   ],
 )
 

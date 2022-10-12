@@ -44,6 +44,9 @@ class Clock {
   // Stop clock.
   void stop() { end_ = now(); }
 
+  // Restart clock.
+  void restart() { start_ = end_; }
+
   // Return clock cycles elapsed since start.
   Timestamp elapsed() const { return now() - start_; }
 

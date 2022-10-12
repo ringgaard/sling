@@ -530,7 +530,7 @@ void DBService::Options(HTTPRequest *request, HTTPResponse *response) {
   }
 
   json.Write(response->buffer());
-  response->set_content_type("text/json");
+  response->set_content_type("application/json");
 }
 
 void DBService::Create(HTTPRequest *request, HTTPResponse *response) {
@@ -683,7 +683,7 @@ void DBService::Statusz(HTTPRequest *request, HTTPResponse *response) {
   }
 
   json.Write(response->buffer());
-  response->set_content_type("text/json");
+  response->set_content_type("application/json");
 }
 
 bool DBService::ValidDatabaseName(const string &name) {

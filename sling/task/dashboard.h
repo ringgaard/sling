@@ -20,14 +20,68 @@
 #include <utility>
 #include <vector>
 
+#include "sling/base/clock.h"
 #include "sling/base/types.h"
 #include "sling/net/http-server.h"
 #include "sling/net/static-content.h"
 #include "sling/task/job.h"
+#include "sling/util/json.h"
 #include "sling/util/mutex.h"
+#include "sling/util/thread.h"
 
 namespace sling {
 namespace task {
+
+// Monitor for collecting performance data.
+class PerformanceMonitor {
+ public:
+  // Start monitor collecting data every 'interval' ms.
+  PerformanceMonitor(int interval);
+
+  // Stop monitor.
+  ~PerformanceMonitor();
+
+  // Performance sample.
+  struct Sample {
+    time_t time;     // sample time
+    int64 cpu;       // cpu usage (percent)
+    int64 ram;       // memory usage (bytes)
+    int64 io;        // io activity (bytes/sec)
+    int64 temp;      // temperature (celsius)
+    int64 read;      // disk read (bytes/sec)
+    int64 write;     // disk written (bytes/sec)
+    int64 receive;   // network received (bytes/sec)
+    int64 transmit;  // network transmitted (bytes/sec)
+  };
+
+  // Return sampled performace records.
+  std::vector<Sample> samples() {
+    MutexLock lock(&mu_);
+    return samples_;
+  }
+
+  // Collect performance sample.
+  void Collect();
+
+ private:
+  // Collected performance data.
+  std::vector<Sample> samples_;
+
+  // Last sampled I/O values.
+  int64 last_rd_;
+  int64 last_wr_;
+  int64 last_rx_;
+  int64 last_tx_;
+
+  // High-precision clock.
+  Clock clock_;
+
+  // Timer for collecting performance data.
+  TimerThread timer_{[&]() { Collect(); }};
+
+  // Mutex for serializing access to performance data.
+  Mutex mu_;
+};
 
 // Dashboard for monitoring jobs.
 class Dashboard : public Monitor {
@@ -53,6 +107,7 @@ class Dashboard : public Monitor {
   void Finalize(int timeout);
 
   // Get job status in JSON format.
+  void GetStatus(JSON::Object *json);
   void GetStatus(IOBuffer *output);
 
   // Handle job status queries.
@@ -92,6 +147,9 @@ class Dashboard : public Monitor {
 
   // Completion time.
   int64 end_time_;
+
+  // Performance monitor.
+  PerformanceMonitor perfmon_{20000};
 
   // Mutex for serializing access to dashboard.
   Mutex mu_;
