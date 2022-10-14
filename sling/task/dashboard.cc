@@ -26,6 +26,10 @@ namespace task {
 
 PerformanceMonitor::PerformanceMonitor(int interval) {
   // Sample initial I/O values.
+  Perf perf;
+  perf.Sample();
+  last_cpu_ = perf.cputime();
+  last_io_ = perf.io();
   last_rd_ = Perf::file_read();
   last_wr_= Perf::file_write();
   last_rx_= Perf::network_receive();
@@ -50,6 +54,8 @@ void PerformanceMonitor::Collect() {
   // Sample performance data.
   Perf perf;
   perf.Sample();
+  int64 cpu = perf.cputime();
+  int64 io = perf.io();
   int64 rd = Perf::file_read();
   int64 wr = Perf::file_write();
   int64 rx = Perf::network_receive();
@@ -58,16 +64,18 @@ void PerformanceMonitor::Collect() {
   // Make new sample record.
   Sample sample;
   sample.time = time(0);
-  sample.cpu = perf.cputime() * 100 / us;
+  sample.cpu = (cpu - last_cpu_) * 1000000 / us;
   sample.ram = perf.memory();
-  sample.io = perf.io();
   sample.temp = perf.cputemp();
+  sample.io = (io - last_io_) * 1000000 / us;
   sample.read = (rd - last_rd_) * 1000000 / us;
   sample.write = (wr - last_wr_) * 1000000 / us;
   sample.receive = (rx - last_rx_) * 1000000 / us;
   sample.transmit = (tx - last_tx_) * 1000000 / us;
 
   // Store I/O value for next delta calculation.
+  last_cpu_ = perf.cputime();
+  last_io_ = io;
   last_rd_ = rd;
   last_wr_ = wr;
   last_rx_ = rx;
@@ -158,8 +166,8 @@ void Dashboard::GetStatus(JSON::Object *json) {
     h->Add("t", sample.time);
     h->Add("cpu", sample.cpu);
     h->Add("ram", sample.ram);
-    h->Add("io", sample.io);
     h->Add("temp", sample.temp);
+    h->Add("io", sample.io);
     h->Add("rd", sample.read);
     h->Add("wr", sample.write);
     h->Add("rx", sample.receive);

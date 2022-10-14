@@ -24,6 +24,10 @@ import sling.flags as flags
 flags.define("--subreddit",
              help="Subreddit to retrieve submissions from")
 
+flags.define("--output",
+             default=None,
+             help="Output record file")
+
 flags.define("--outdir",
              default=None,
              help="Output directory")
@@ -39,8 +43,13 @@ flags.define("--ids",
 flags.parse()
 
 session = requests.Session()
-baseurl = "http://api.pushshift.io/reddit/search/submission"
+baseurl = "https://api.pushshift.io/reddit/search/submission"
 batchsize = 100
+
+if flags.arg.output != None:
+  output = sling.RecordWriter(flags.arg.output)
+else:
+  output = None
 
 if flags.arg.outdir != None:
   fout = open(flags.arg.outdir + "/" + flags.arg.subreddit.lower(), "w")
@@ -83,11 +92,13 @@ while True:
   created = 0
   for submission in result["data"]:
     created = submission["created_utc"]
+    key = "t3_" + submission["id"]
+    if output != None:
+      output.write(key, json.dumps(submission))
     if fout != None:
       fout.write(json.dumps(submission))
       fout.write("\n")
     if redditdb != None:
-      key = "t3_" + submission["id"]
       res = redditdb.put(key, json.dumps(submission), mode=sling.DBADD)
       if res == sling.DBEXISTS: num_dups += 1
     num_submissions += 1
@@ -99,6 +110,7 @@ while True:
   if flags.arg.ids: break
   after = created
 
+if output != None: output.close()
 if fout != None: fout.close()
 if redditdb != None: redditdb.close()
 print(flags.arg.subreddit, dt, num_submissions, "submissions", num_dups, "dups")

@@ -43,6 +43,11 @@ flags.define("--posting",
              default=None,
              metavar="SID")
 
+flags.define("--postings",
+             help="input record file with postings",
+             default=None,
+             metavar="FILE")
+
 flags.define("--checkpoint",
              help="file with latest checkpoint for scanning reddit db",
              default=None,
@@ -251,6 +256,8 @@ num_selfies = 0
 
 if flags.arg.posting:
   postings = [(flags.arg.posting, redditdb[flags.arg.posting])]
+elif flags.arg.postings:
+  postings = sling.RecordReader(flags.arg.postings)
 else:
   postings = redditdb.items(chkpt.checkpoint)
 
@@ -259,6 +266,7 @@ for key, value in postings:
   store = sling.Store(commons)
   posting = store.parse(value, json=True)
   title = posting[n_title]
+  if type(key) is bytes: key = key.decode()
 
   # Discard self-posts.
   if posting[n_is_self]: continue
@@ -283,7 +291,9 @@ for key, value in postings:
 
   # Refetch posting from Reddit to check if it has been deleted.
   posting = fetch_posting(store, key)
-  if posting is None or posting["removed_by_category"]:
+  if posting is None or \
+     posting["removed_by_category"] or \
+     posting["title"] == "[deleted by user]":
     print(sr, key, "REMOVED", title)
     num_removed += 1
     continue

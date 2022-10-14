@@ -68,6 +68,8 @@ class PerformanceMonitor {
   std::vector<Sample> samples_;
 
   // Last sampled I/O values.
+  int64 last_cpu_;
+  int64 last_io_;
   int64 last_rd_;
   int64 last_wr_;
   int64 last_rx_;
@@ -149,7 +151,7 @@ class Dashboard : public Monitor {
   int64 end_time_;
 
   // Performance monitor.
-  PerformanceMonitor perfmon_{20000};
+  PerformanceMonitor perfmon_{10000};
 
   // Mutex for serializing access to dashboard.
   Mutex mu_;

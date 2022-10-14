@@ -113,7 +113,7 @@ class PosixFile : public File {
         ssize_t rc = write(fd_, buffer, bytes);
         if (rc < 0) return IOError(filename_, errno);
         Perf::add_file_write(rc);
-        size -= bytes;
+        size -= rc;
       }
     }
     return Status::OK;

@@ -39,13 +39,13 @@ class Perf {
   // Memory usage (bytes).
   int64 memory() const { return memory_; }
 
-  // I/O read rate (bytes/sec).
+  // I/O read rate (ops/sec).
   int64 ioread() const { return ioread_; }
 
-  // I/O write rate (bytes/sec).
+  // I/O write rate (ops/sec).
   int64 iowrite() const { return iowrite_; }
 
-  // I/O rate (bytes/sec).
+  // I/O rate (ops/sec).
   int64 io() const { return ioread_ + iowrite_; }
 
   // Number of floating-point operations.
@@ -81,8 +81,8 @@ class Perf {
   int64 utime_;        // user CPU time used (microseconds)
   int64 stime_;        // system CPU time used (microseconds)
   int64 memory_;       // memory used (bytes)
-  int64 ioread_;       // I/O read rate (bytes/sec)
-  int64 iowrite_;      // I/O write rate (bytes/sec)
+  int64 ioread_;       // I/O read rate (ops/sec)
+  int64 iowrite_;      // I/O write rate (ops/sec)
   int64 flops_;        // floating-point operations
   float cputemp_;      // CPU temperature (celsius)
 

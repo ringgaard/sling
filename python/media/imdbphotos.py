@@ -83,7 +83,7 @@ for item in kb:
   if r.status_code == 503:
     print("UNAVAILABLE", item.id, imdbid, item.name)
     continue
-  elif r.status_code == 400:
+  elif r.status_code == 400 or r.status_code == 404:
     print("NOTFOUND", item.id, imdbid, item.name)
     continue
   r.raise_for_status()

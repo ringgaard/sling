@@ -4,14 +4,14 @@
 // Workflow dashboard app.
 
 import {Component} from "/common/lib/component.js";
-import {MdApp} from "/common/lib/material.js";
+import {MdApp, MdCard} from "/common/lib/material.js";
 
 function pad(num, width) {
   return ("0000" + num).slice(-width);
 }
 
 function int(num) {
-  if (!isFinite(num)) return "---";
+  if (!isFinite(num)) return "--";
   return Math.round(num).toString();
 }
 
@@ -29,17 +29,26 @@ function sort(array, key) {
   });
 }
 
+let gcharts_loaded = false;
+
+async function gcharts() {
+  if (gcharts_loaded) return;
+  google.charts.load('current', {'packages':['corechart']});
+  return new Promise((resolve, reject) => {
+    google.charts.setOnLoadCallback(() => {
+      gcharts_loaded = true;
+      console.log("gcharts loaded");
+      resolve();
+    });
+  });
+}
+
 class DashboardApp extends MdApp {
   constructor() {
     super();
     this.auto = false;
     this.freq = 15;
     this.ticks = 0;
-    this.status = null;
-    this.jobs = [];
-    this.selected = 0;
-    this.census = null;
-    this.resources = null;
   }
 
   onconnected() {
@@ -80,27 +89,17 @@ class DashboardApp extends MdApp {
   }
 
   reload() {
+    // Fetch status from server.
     fetch("/status").then(response => response.json()).then((data) => {
-      this.status = data;
-      this.refresh();
+      // Update job status.
+      this.find("#status").update(data);
+
+      // Check for workflow completed.
+      if (data.finished) this.done(true);
     }).catch(err => {
       console.log('Error fetching status', err);
       this.done(false);
     });
-  }
-
-  onupdate() {
-    this.find("#jobs").update(this.state);
-    this.find("#counters").update(this.state);
-    this.find("#channels").update(this.state);
-    this.find("#perf").update(this.census);
-  }
-
-  select(jobid) {
-    this.selected = jobid;
-    this.state.selected = jobid;
-    this.find("#counters").update(this.state);
-    this.find("#channels").update(this.state);
   }
 
   host() {
@@ -125,20 +124,38 @@ class DashboardApp extends MdApp {
       this.find(id).style.display = "none";
     }
   }
+}
 
-  refresh() {
-    let status = this.status
+Component.register(DashboardApp);
+
+class DashboardStatus extends Component {
+  constructor(state) {
+    super(state);
+    this.jobs = [];
+    this.selected = 0;
+    this.resources = null;
+  }
+
+  select(jobid) {
+    this.selected = jobid;
+    this.state.selected = jobid;
+    this.update(this.state);
+  }
+
+  onupdated() {
+    let status = this.state;
 
     // Update resource usage.
     let runtime = status.time - status.started;
-    let res = {};
-    res.time = status.time;
-    res.cpu = (status.utime + status.stime) / 1000000;
-    res.gflops = status.flops / 1e9;
-    res.ram = status.mem;
-    res.io = status.ioread + status.iowrite;
-    res.disk = status.filerd + status.filewr;
-    res.net = status.netrx + status.nettx;
+    let res = {
+      time: status.time,
+      cpu: (status.utime + status.stime) / 1e6,
+      gflops: status.flops / 1e9,
+      ram: status.mem,
+      io: status.ioread + status.iowrite,
+      disk: status.filerd + status.filewr,
+      net: status.netrx + status.nettx,
+    };
     var census = {};
     census.hours = Math.floor(runtime / 3600);
     census.mins = Math.floor((runtime % 3600) / 60);
@@ -160,7 +177,6 @@ class DashboardApp extends MdApp {
       census.disk = (res.disk - this.resources.disk) / dt;
       census.net = (res.net - this.resources.net) / dt;
     }
-    this.census = census;
     this.resources = res;
 
     // Update job list.
@@ -178,7 +194,6 @@ class DashboardApp extends MdApp {
         job.prev_time = null;
         this.jobs[i] = job;
         this.selected = i;
-        this.updateTitle(job.name);
       }
 
       // Compute elapsed time for job.
@@ -277,21 +292,63 @@ class DashboardApp extends MdApp {
       job.prev_counters = jobstatus.counters;
       job.prev_channels = channel_map;
       job.prev_time = status.time;
-
-      // Check for workflow completed.
-      if (status.finished) {
-        this.done(true);
-      }
-
-      // Update dashboard.
-      this.update({jobs: this.jobs, selected: this.selected});
     }
+
+    this.find("#jobs").update({jobs: this.jobs, selected: this.selected});
+    this.find("#counters").update(this.jobs[this.selected].counters);
+    this.find("#channels").update(this.jobs[this.selected].channels);
+    this.find("#perf").update(census);
+    this.find("#charts").update(status.history);
+  }
+
+  prerender() {
+    return `
+      <md-row-layout>
+        <dashboard-jobs id="jobs">
+          <md-data-table id="job-table">
+            <md-data-field field="select" html=true style="padding: 0"></md-data-field>
+            <md-data-field field="job">Job</md-data-field>
+            <md-data-field field="name">Name</md-data-field>
+            <md-data-field field="time" style="text-align: right">Time</md-data-field>
+            <md-data-field field="status" style="word-break: break-all; white-space: normal">Status</md-data-field>
+          </md-data-table>
+        </dashboard-jobs>
+        <md-spacer></md-spacer>
+        <dashboard-perf id="perf"></dashboard-perf>
+      </md-row-layout>
+      <dashboard-counters id="counters">
+        <md-data-table id="counter-table">
+          <md-data-field field="counter">Counter</md-data-field>
+          <md-data-field field="value" style="text-align: right">Value</md-data-field>
+          <md-data-field field="rate" style="text-align: right">Rate (/s)</md-data-field>
+        </md-data-table>
+      </dashboard-counters>
+      <dashboard-channels id="channels">
+        <md-data-table id="channel-table">
+          <md-data-field field="channel">Channel</md-data-field>
+          <md-data-field field="direction">Direction</md-data-field>
+          <md-data-field field="key_bytes" style="text-align: right">Key bytes</md-data-field>
+          <md-data-field field="value_bytes" style="text-align: right">Value bytes</md-data-field>
+          <md-data-field field="bandwidth" style="text-align: right">Bandwidth</md-data-field>
+          <md-data-field field="messages" style="text-align: right">Messages</md-data-field>
+          <md-data-field field="throughput" style="text-align: right">Throughput</md-data-field>
+          <md-data-field field="shards" style="text-align: right">Shards</md-data-field>
+        </md-data-table>
+      </dashboard-channels>
+      <dashboard-charts id="charts">
+        <div id="cpuchart"></div>
+        <div id="ramchart"></div>
+        <div id="tempchart"></div>
+        <div id="iochart"></div>
+        <div id="diskchart"></div>
+      </dashboard-charts>
+    `;
   }
 }
 
-Component.register(DashboardApp);
+Component.register(DashboardStatus);
 
-class DashboardJobs extends Component {
+class DashboardJobs extends MdCard {
   onupdate() {
     // Build data table for job list.
     let table = [];
@@ -320,7 +377,7 @@ class DashboardJobs extends Component {
 
   onchange(e) {
     // Select job.
-    this.match("#app").select(e.target.value);
+    this.match("dashboard-status").select(e.target.value);
   }
 
   static stylesheet() {
@@ -358,12 +415,7 @@ class DashboardPerf extends Component {
             <td>MB</td>
           </tr>
           <tr>
-            <td>I/O</td>
-            <td class="lcd">${int(c.io / 1000)}</td>
-            <td>MB/s</td>
-          </tr>
-          <tr>
-            <td>DISK</td>
+            <td>FILE</td>
             <td class="lcd">${int(c.disk / 1000000)}</td>
             <td>MB/s</td>
           </tr>
@@ -378,9 +430,14 @@ class DashboardPerf extends Component {
             <td>°C</td>
           </tr>
           <tr>
-            <td>FLOPS</td>
+            <td>DISK</td>
+            <td class="lcd">${int(c.io / 1000)}</td>
+            <td>KIOPS</td>
+          </tr>
+          <tr>
+            <td>GPU</td>
             <td class="lcd">${int(c.gflops)}</td>
-            <td>G/s</td>
+            <td>GFLOPS</td>
           </tr>
         </tbody>
       </table>
@@ -432,27 +489,21 @@ class DashboardPerf extends Component {
 
 Component.register(DashboardPerf);
 
-class DashboardCounters extends Component {
-  onupdated() {
-    let job = this.state.jobs[this.state.selected];
-    if (job && job.counters.length > 0) {
-      // Build data table for counter list.
-      let table = [];
-      for (const counter of sort(job.counters, "name")) {
-        table.push({
-          counter: counter.name.replaceAll("_", " "),
-          value: dec(counter.value, 0),
-          rate: dec(counter.rate, 0),
-        });
-      }
+class DashboardCounters extends MdCard {
+  visible() { return this.state && this.state.length > 0; }
 
-      // Update job list table.
-      this.style.display = "block";
-      this.find("#counter-table").update(table);
-    } else {
-      // Hide counter table.
-      this.style.display = "none";
+  onupdated() {
+    // Build data table for counter list.
+    let table = [];
+    for (const counter of sort(this.state, "name")) {
+      table.push({
+        counter: counter.name.replaceAll("_", " "),
+        value: dec(counter.value, 0),
+        rate: dec(counter.rate, 0),
+      });
     }
+
+    this.find("#counter-table").update(table);
   }
 
   static stylesheet() {
@@ -468,32 +519,26 @@ class DashboardCounters extends Component {
 
 Component.register(DashboardCounters);
 
-class DashboardChannels extends Component {
-  onupdated() {
-    let job = this.state.jobs[this.state.selected];
-    if (job && job.channels.length > 0) {
-      // Build data table for counter list.
-      let table = [];
-      for (const channel of sort(job.channels, "name")) {
-        table.push({
-          channel: channel.name,
-          direction: channel.direction,
-          key_bytes: dec(channel.key_bytes, 0),
-          value_bytes: dec(channel.value_bytes, 0),
-          bandwidth: dec(channel.bandwidth / 1000000, 3) + " MB/s",
-          messages: dec(channel.messages, 0),
-          throughput: dec(channel.throughput, 0) + " MPS",
-          shards: `${channel.shards_done}/${channel.shards_total}`,
-        });
-      }
+class DashboardChannels extends MdCard {
+  visible() { return this.state && this.state.length > 0; }
 
-      // Update job list table.
-      this.style.display = "block";
-      this.find("#channel-table").update(table);
-    } else {
-      // Hide counter table.
-      this.style.display = "none";
+  onupdated() {
+    // Build data table for counter list.
+    let table = [];
+    for (const channel of sort(this.state, "name")) {
+      table.push({
+        channel: channel.name,
+        direction: channel.direction,
+        key_bytes: dec(channel.key_bytes, 0),
+        value_bytes: dec(channel.value_bytes, 0),
+        bandwidth: dec(channel.bandwidth / 1e6, 3) + " MB/s",
+        messages: dec(channel.messages, 0),
+        throughput: dec(channel.throughput, 0) + " MPS",
+        shards: `${channel.shards_done}/${channel.shards_total}`,
+      });
     }
+
+    this.find("#channel-table").update(table);
   }
 
   static stylesheet() {
@@ -508,4 +553,73 @@ class DashboardChannels extends Component {
 }
 
 Component.register(DashboardChannels);
+
+class DashboardCharts extends MdCard {
+  visible() { return this.state && this.state.length > 0; }
+
+  async onupdated() {
+    await gcharts();
+    if (!this.cpu_chart) this.cpu_chart = this.linechart("#cpuchart");
+    if (!this.ram_chart) this.ram_chart = this.linechart("#ramchart");
+    if (!this.temp_chart) this.temp_chart = this.linechart("#tempchart");
+    if (!this.io_chart) this.io_chart = this.linechart("#iochart");
+    if (!this.disk_chart) this.disk_chart = this.linechart("#diskchart");
+
+    let history = this.state;
+
+    let cpu = new google.visualization.DataTable();
+    cpu.addColumn("date", "Time");
+    cpu.addColumn("number", "CPU");
+
+    let ram = new google.visualization.DataTable();
+    ram.addColumn("date", "Time");
+    ram.addColumn("number", "RAM");
+
+    let temp = new google.visualization.DataTable();
+    temp.addColumn("date", "Time");
+    temp.addColumn("number", "TEMP");
+
+    let io = new google.visualization.DataTable();
+    io.addColumn("date", "Time");
+    io.addColumn("number", "RD");
+    io.addColumn("number", "WR");
+    io.addColumn("number", "RX");
+    io.addColumn("number", "TX");
+
+    let disk = new google.visualization.DataTable();
+    disk.addColumn("date", "Time");
+    disk.addColumn("number", "I/O OPS");
+
+    for (let h of history) {
+      let d = new Date(h.t * 1000);
+      cpu.addRow([d, h.cpu / 1e6]);
+      ram.addRow([d, h.ram]);
+      temp.addRow([d, h.temp]);
+      io.addRow([d, h.rd, h.wr, h.rx, h.tx]);
+      disk.addRow([d, h.io]);
+    }
+
+    this.cpu_chart.draw(cpu);
+    this.ram_chart.draw(ram);
+    this.temp_chart.draw(temp);
+    this.io_chart.draw(io);
+    this.disk_chart.draw(disk);
+  }
+
+  linechart(parent) {
+    return new google.visualization.LineChart(this.find(parent));
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        display: block;
+        margin-left: 10px;
+        margin-right: 10px;
+      }
+    `;
+  }
+}
+
+Component.register(DashboardCharts);
 

@@ -75,6 +75,9 @@ const tagsdir = {
   "Camgirl": stmt(n_occupation, "Q1027930"),
   "Tv Host": stmt(n_occupation, "Q947873"),
   "Reality Tv": stmt(n_occupation, "Q27658988"),
+  "Erotic Model": stmt(n_occupation, "Q3286043"),
+  "Erotic Actress": stmt(n_occupation, "Q488111"),
+  "P*rn Star": stmt(n_occupation, "Q488111"),
 
   "Blonde": stmt(n_hair_color, "Q202466"),
   "Blond": stmt(n_hair_color, "Q202466"),
