@@ -104,3 +104,10 @@ embed_data(
   ],
 )
 
+embed_data(
+  name = "digital-font",
+  srcs = [
+    "font/digital-7.mono.ttf",
+  ],
+)
+

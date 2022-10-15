@@ -52,10 +52,8 @@ cc_library(
 embed_data(
   name = "app",
   srcs = [
-    "app/appicon.ico",
     "app/index.html",
     "app/dashboard.js",
-    "app/digital-7.mono.ttf",
   ],
 )
 
@@ -69,6 +67,7 @@ cc_library(
     "//app",
     "//app:roboto-font",
     "//app:material-icons",
+    "//app:digital-font",
     "//sling/base",
     "//sling/base:clock",
     "//sling/base:perf",

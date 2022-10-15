@@ -398,6 +398,7 @@ refresh_task_list()
 # Initialize web server.
 app = sling.net.HTTPServer(flags.arg.port)
 app.static("/common", "app", internal=True)
+app.static("/dashboard", "sling/task/app", internal=True)
 
 # Main page.
 app.page("/",
@@ -524,6 +525,46 @@ Component.register(SchedulerApp);
 document.body.style = null;
 """)
 
+# Job report page.
+app.page("/report",
+"""
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name=viewport content="width=device-width, initial-scale=1">
+  <title>SLING Job Report</title>
+  <link rel="icon" href="/common/image/appicon.ico" type="image/x-icon" />
+  <script src="https://www.gstatic.com/charts/loader.js"></script>
+  <script type="module" src="/common/lib/material.js"></script>
+  <script type="module" src="/dashboard/dashboard.js"></script>
+</head>
+<body style="display: none">
+  <md-app id="app">
+    <md-toolbar>
+      <md-toolbar-logo></md-toolbar-logo>
+      <div id="title">
+        SLING Job Report for <md-text id="jobid"></md-text>
+      </div>
+    </md-toolbar>
+
+    <md-content>
+      <dashboard-status id="status"></dashboard-status>
+    </md-content>
+  </md-app>
+</body>
+<script type="module">
+  let jobid = window.location.pathname.match(/\/report\/(\d+)/)[1];
+  fetch("/status/" + jobid)
+  .then(response => response.json())
+  .then((data) => {
+    document.getElementById("jobid").update(jobid);
+    document.getElementById("status").update(data);
+  });
+</script>
+</html>
+""")
+
 @app.route("/jobs")
 def jobs_request(request):
   running = []
@@ -572,7 +613,7 @@ def jobs_request(request):
       if job.stderr:
         status += '<a href="/errors/%s" target="_blank">errors</a> ' % job.id
       if job.status:
-        status += '<a href="/status/%s" target="_blank">status</a> ' % job.id
+        status += '<a href="/report/%s" target="_blank">report</a> ' % job.id
       if job.error:
         status += str(job.error)
 
@@ -631,7 +672,7 @@ def status_page(request):
   job = get_job(jobid)
   if job is None: return 500
   if job.status is None: return 404;
-  return sling.net.HTTPFile(job.status, "text/plain; charset=utf-8")
+  return sling.net.HTTPFile(job.status, "application/json")
 
 @app.route("/submit", method="POST")
 def submit_command(request):

@@ -37,7 +37,6 @@ async function gcharts() {
   return new Promise((resolve, reject) => {
     google.charts.setOnLoadCallback(() => {
       gcharts_loaded = true;
-      console.log("gcharts loaded");
       resolve();
     });
   });
@@ -448,7 +447,7 @@ class DashboardPerf extends Component {
     return `
       @font-face {
         font-family: lcd;
-        src: url(digital-7.mono.ttf);
+        src: url(/common/font/digital-7.mono.ttf);
       }
 
       $ {
