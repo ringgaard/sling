@@ -104,6 +104,7 @@ photosites = set([
   "media.gettyimages.com",
   "i.pinimg.com",
   "pbs.twimg.com",
+  "iv1.lisimg.com",
 ])
 
 # Name delimiters.
@@ -326,6 +327,7 @@ for key, value in postings:
     if " &amp; " in title: continue
     if " vs. " in title: continue
     if " vs " in title: continue
+    if " og " in title: continue
 
     # Try to match title to name.
     name = title

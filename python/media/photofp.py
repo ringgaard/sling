@@ -30,6 +30,11 @@ flags.define("--cases",
              default=False,
              action="store_true")
 
+flags.define("--dryrun",
+             help="do not update database",
+             default=False,
+             action="store_true")
+
 flags.parse()
 
 fpdb = sling.Database(flags.arg.fpdb)
@@ -70,7 +75,7 @@ if flags.arg.profiles:
       fpinfo[flags.arg.hash] = p.fingerprint
 
       # Write fingerprint info to database.
-      fpdb[url] = json.dumps(fpinfo)
+      if not flags.arg.dryrun: fpdb[url] = json.dumps(fpinfo)
       new_photos += 1
       num_fingerprints += 1
 
@@ -116,6 +121,9 @@ if flags.arg.cases:
       new_photos = 0
       for url, fpdata in fingerprints.items():
         # Skip videos.
+        if url is None:
+          print("empty url in topic", topicid)
+          continue
         if photo.is_video(url): continue
 
         # Parse fingerprint info.
@@ -138,7 +146,7 @@ if flags.arg.cases:
         fpinfo[flags.arg.hash] = p.fingerprint
 
         # Write fingerprint info to database.
-        fpdb[url] = json.dumps(fpinfo)
+        if not flags.arg.dryrun: fpdb[url] = json.dumps(fpinfo)
         new_photos += 1
         num_fingerprints += 1
 

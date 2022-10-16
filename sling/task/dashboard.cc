@@ -222,9 +222,9 @@ void Dashboard::OnJobDone(Job *job) {
 }
 
 void Dashboard::Finalize(int timeout) {
+  end_time_ = time(0);
   if (status_ == MONITORED) {
     // Signal that all jobs are done.
-    end_time_ = time(0);
     status_ = FINAL;
 
     // Wait until final status has been sent back.
