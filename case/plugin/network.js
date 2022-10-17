@@ -20,6 +20,7 @@ const n_female = store.lookup("Q6581072");
 const n_born = store.lookup("P569");
 const n_died = store.lookup("P570");
 const n_inverse_property = store.lookup("P1696");
+const n_relation = store.lookup("P2309");
 const n_parent = store.lookup("P8810");
 const n_father = store.lookup("P22");
 const n_mother = store.lookup("P25");
@@ -229,12 +230,22 @@ class Graph {
       visit.push(node);
     }
 
+    // Construct set of relation to follow.
+    let relations = null;
+    if (seed.has(n_relation)) {
+      relations = new Set();
+      for (let r of seed.all(n_relation)) {
+        relations.add(r);
+      }
+    }
+
     // Transitively traverse links from seeds.
     while (visit.length > 0) {
       let node = visit.pop();
       for (let [property, value] of node.topic) {
         value = store.resolve(value);
         if (!(value instanceof Frame)) continue;
+        if (relations && !relations.has(property)) continue;
         if (!neighborhood.includes(value)) continue;
 
         let target = this.nodes.get(value);

@@ -587,7 +587,7 @@ class DashboardCharts extends MdCard {
 
     let disk = new google.visualization.DataTable();
     disk.addColumn("date", "Time");
-    disk.addColumn("number", "I/O OPS");
+    disk.addColumn("number", "IOPS");
 
     for (let h of history) {
       let d = new Date(h.t * 1000);

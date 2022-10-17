@@ -255,6 +255,7 @@ class ItemMerger : public task::Reducer {
     num_dup_statements_ = task->GetCounter("duplicate_statements");
     num_pruned_statements_ = task->GetCounter("pruned_statements");
     num_merged_items_ = task->GetCounter("merged_items");
+    num_unnames_ = task->GetCounter("unnames");
   }
 
   void Reduce(const task::ReduceInput &input) override {
@@ -267,6 +268,7 @@ class ItemMerger : public task::Reducer {
     // Merge all item sources.
     Statements statements(&store);
     bool prune = false;
+    bool unname = false;
     for (task::Message *message : input.messages()) {
       // Decode item.
       Frame item = DecodeMessage(&store, message);
@@ -284,23 +286,28 @@ class ItemMerger : public task::Reducer {
       for (const Slot &s : item) {
         // Skip redirects.
         if (s.name == Handle::is()) continue;
+        if (s.name == n_unname_) unname = true;
 
-        if (s.name == n_unname_) {
-          // Remove existing name.
-          for (int i = 0; i < builder.size(); ++i) {
-            if (builder[i].name == n_name_ &&
-                store.Equal(builder[i].value, s.value)) {
-              builder[i].name = Handle::nil();
-              prune = true;
-            }
-          }
+        if (statements.Insert(s.name, s.value)) {
+         // Add new statement.
+         builder.Add(s.name, s.value);
         } else {
-          if (statements.Insert(s.name, s.value)) {
-           // Add new statement.
-           builder.Add(s.name, s.value);
-          } else {
-            // Skip duplicate statement.
-            num_dup_statements_->Increment();
+          // Skip duplicate statement.
+          num_dup_statements_->Increment();
+        }
+      }
+    }
+
+    // Convert names to aliases if item has unname statements.
+    if (unname) {
+      for (int i = 0; i < builder.size(); ++i) {
+        if (builder[i].name == n_unname_) {
+          for (int j = 0; j < builder.size(); ++j) {
+            if (builder[j].name == n_name_ &&
+                store.Equal(builder[i].value, builder[j].value)) {
+              builder[j].name = n_alias_.handle();
+              num_unnames_->Increment();
+            }
           }
         }
       }
@@ -368,6 +375,7 @@ class ItemMerger : public task::Reducer {
   Store commons_;
   Names names_;
   Name n_name_{names_, "name"};
+  Name n_alias_{names_, "alias"};
   Name n_unname_{names_, "PUNME"};
 
   // Statistics.
@@ -376,6 +384,7 @@ class ItemMerger : public task::Reducer {
   task::Counter *num_dup_statements_ = nullptr;
   task::Counter *num_pruned_statements_ = nullptr;
   task::Counter *num_merged_items_ = nullptr;
+  task::Counter *num_unnames_ = nullptr;
 };
 
 REGISTER_TASK_PROCESSOR("item-merger", ItemMerger);
