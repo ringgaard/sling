@@ -286,6 +286,7 @@ class Profile:
     self.itemid = itemid
     self.excluded = None
     self.isnew = False
+    self.captions = flags.arg.captions
     if data is None and itemid is not None:
       data, _ = photodb().get(itemid)
     if data is None:
@@ -437,7 +438,7 @@ class Profile:
     if nsfw: url = "!" + url
     slots = [(n_is, url)]
     if flags.arg.fixedcaption: caption = flags.arg.fixedcaption
-    if caption and flags.arg.captions: slots.append((n_legend, caption))
+    if caption and self.captions: slots.append((n_legend, caption))
     if source: slots.append((n_stated_in, store[source]))
     if len(slots) == 1:
       self.frame.append(n_media, url)
@@ -574,7 +575,7 @@ class Profile:
 
       title = reply["title"]
       if title is None: title = caption
-      if not flags.arg.captions: title = None
+      if not self.captions: title = None
       nsfw = tri(reply["over_18"], nsfw_override)
 
       count = 0
@@ -622,7 +623,7 @@ class Profile:
         title = caption
       elif caption is not None and caption.startswith(title):
         title = caption
-      if not flags.arg.captions: title = None
+      if not self.captions: title = None
 
       if title != None and flags.arg.numbering:
         title = "%s (%d/%d)" % (title, serial, len(items))
@@ -734,6 +735,28 @@ class Profile:
     # Add media to profile.
     return self.add_photo(url, caption, flags.arg.source, nsfw)
 
+  # Add albums in comments.
+  def add_albums_in_comments(self, url, nsfw=None):
+    print("Redit albums in commens", url)
+    r = requests.get(url + ".json",
+                     headers = {"User-agent": "SLING Bot 1.0"})
+    r.raise_for_status()
+    comments = r.json()[1]["data"]["children"]
+    count = 0
+    for comment in comments:
+      comment = comment["data"]
+      body = comment["body"]
+      m = re.match("https?:\/\/imgur\.com/(\w+)", body)
+      if m:
+        print("Album", body)
+        count += self.add_media(body, None, nsfw)
+      for m in re.finditer("\[(.+)\]\((https?://imgur.com/a/\w+)\)", body):
+        print("Album", m[2], m[1])
+        count += self.add_media(m[2], m[1], nsfw)
+
+    return count
+
+  # Remove duplicate photos.
   def dedup(self):
     # Add photo fingerprints to cache.
     self.preload_fingerprints()

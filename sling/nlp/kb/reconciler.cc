@@ -246,8 +246,6 @@ class ItemMerger : public task::Reducer {
  public:
   void Start(task::Task *task) override {
     task::Reducer::Start(task);
-    names_.Bind(&commons_);
-    commons_.Freeze();
 
     // Statistics.
     num_orig_statements_ = task->GetCounter("original_statements");
@@ -268,7 +266,6 @@ class ItemMerger : public task::Reducer {
     // Merge all item sources.
     Statements statements(&store);
     bool prune = false;
-    bool unname = false;
     for (task::Message *message : input.messages()) {
       // Decode item.
       Frame item = DecodeMessage(&store, message);
@@ -286,7 +283,6 @@ class ItemMerger : public task::Reducer {
       for (const Slot &s : item) {
         // Skip redirects.
         if (s.name == Handle::is()) continue;
-        if (s.name == n_unname_) unname = true;
 
         if (statements.Insert(s.name, s.value)) {
          // Add new statement.
@@ -299,13 +295,16 @@ class ItemMerger : public task::Reducer {
     }
 
     // Convert names to aliases if item has unname statements.
-    if (unname) {
+    if (!store.LookupExisting("PUNME").IsNil()) {
+      Handle n_name = store.Lookup("name");
+      Handle n_alias = store.Lookup("alias");
+      Handle n_unname = store.Lookup("PUNME");
       for (int i = 0; i < builder.size(); ++i) {
-        if (builder[i].name == n_unname_) {
+        if (builder[i].name == n_unname) {
           for (int j = 0; j < builder.size(); ++j) {
-            if (builder[j].name == n_name_ &&
+            if (builder[j].name == n_name &&
                 store.Equal(builder[i].value, builder[j].value)) {
-              builder[j].name = n_alias_.handle();
+              builder[j].name = n_alias;
               num_unnames_->Increment();
             }
           }
@@ -370,13 +369,6 @@ class ItemMerger : public task::Reducer {
   // Property ids.
   std::vector<string> properties_;
   Mutex mu_;
-
-  // Commons store.
-  Store commons_;
-  Names names_;
-  Name n_name_{names_, "name"};
-  Name n_alias_{names_, "alias"};
-  Name n_unname_{names_, "PUNME"};
 
   // Statistics.
   task::Counter *num_orig_statements_ = nullptr;

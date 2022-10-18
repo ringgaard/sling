@@ -22,6 +22,7 @@
 #include "sling/frame/object.h"
 #include "sling/frame/store.h"
 #include "sling/stream/input.h"
+#include "sling/stream/output.h"
 
 namespace sling {
 
@@ -152,6 +153,69 @@ class TurtleParser : public TurtleTokenizer {
 
   // Namespace map for prefixed names.
   std::unordered_map<string, string> namespaces_;
+};
+
+// The Turtle writer outputs objects in RDF Turtle format.
+class TurtleWriter {
+ public:
+  // Initializes writer with store and output.
+  TurtleWriter(const Store *store, Output *output)
+      : store_(store), output_(output) {}
+
+  // Write object on output.
+  void Write(const Object &object);
+  void Write(Handle handle, bool reference = false);
+
+  // Configuration parameters.
+  void set_indent(int indent) { indent_ = indent; }
+
+ private:
+  // Returns true if the output should be pretty-printed.
+  bool pretty() const { return indent_ > 0; }
+
+  // Writes character on output.
+  void WriteChar(char ch) {
+    output_->WriteChar(ch);
+  }
+
+  // Writes two character on output.
+  void WriteChars(char ch1, char ch2) {
+    output_->WriteChar(ch1);
+    output_->WriteChar(ch2);
+  }
+
+  // Writes quoted string with escapes.
+  void WriteString(Text str);
+  void WriteString(const StringDatum *str) { WriteString(str->str()); }
+
+  // Writes frame.
+  void WriteFrame(const FrameDatum *frame, bool reference);
+
+  // Writes array.
+  void WriteArray(const ArrayDatum *array);
+
+  // Writes symbol.
+  void WriteSymbol(const SymbolDatum *symbol);
+
+  // Writes integer.
+  void WriteInt(int number);
+
+  // Writes floating-point number.
+  void WriteFloat(float number);
+
+  // Object store.
+  const Store *store_;
+
+  // Output for writer.
+  Output *output_;
+
+  // Amount by which output would be indented. Zero means no indentation.
+  int indent_ = 0;
+
+  // Current indentation (number of spaces).
+  int current_indentation_ = 0;
+
+  DISALLOW_IMPLICIT_CONSTRUCTORS(TurtleWriter);
 };
 
 }  // namespace sling

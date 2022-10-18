@@ -15,6 +15,7 @@
 #include "sling/pyapi/pyframe.h"
 
 #include "sling/frame/json.h"
+#include "sling/frame/turtle.h"
 #include "sling/pyapi/pystore.h"
 
 namespace sling {
@@ -385,6 +386,15 @@ PyObject *PyFrame::Data(PyObject *args, PyObject *kw) {
     writer.Write(handle());
     output.Flush();
     return PyUnicode_FromStringAndSize(json.data(), json.size());
+  } else if (flags.ttl) {
+    string ttl;
+    StringOutputStream stream(&ttl);
+    Output output(&stream);
+    TurtleWriter writer(pystore->store, &output);
+    writer.set_indent(flags.pretty ? 2 : 0);
+    writer.Write(handle());
+    output.Flush();
+    return PyUnicode_FromStringAndSize(ttl.data(), ttl.size());
   } else {
     StringPrinter printer(pystore->store);
     flags.InitPrinter(printer.printer());

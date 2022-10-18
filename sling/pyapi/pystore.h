@@ -171,6 +171,7 @@ struct SerializationFlags {
   bool pretty = false;  // pretty print with indentation
   bool utf8 = false;    // output strings in utf-8 encoding
   bool json = false;    // output in JSON notation
+  bool ttl = false;     // output in RFD Turtle notation
 };
 
 }  // namespace sling

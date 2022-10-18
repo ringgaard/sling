@@ -93,6 +93,7 @@ class PhotoReportApp extends MdApp {
     // Image search.
     this.attach(this.onsearch, "click", "#search");
     this.attach(this.onimgsearch, "click", "#imgsearch");
+    this.attach(this.onkeydown, "keydown");
 
     // Get date from request; default to current date.
     let path = window.location.pathname;
@@ -112,6 +113,13 @@ class PhotoReportApp extends MdApp {
         this.find("subreddit-list").update(report);
         this.find("#title").update(`Reddit photo report for ${date}`);
       });
+  }
+
+  onkeydown(e) {
+    if (e.code === "KeyS") {
+      e.preventDefault();
+      this.onsearch(e);
+    }
   }
 
   onsearch(e) {
@@ -137,7 +145,11 @@ class PhotoDialog extends MdDialog {
     this.close({
       id: this.find("#id").value.trim(),
       name: this.find("#name").value.trim(),
+      legend: this.find("#legend").value.trim(),
       nsfw: this.find("#nsfw").checked,
+      aic: this.find("#aic").checked,
+      captions: this.find("#captions").checked,
+      dedup: this.find("#dedup").checked,
     });
   }
 
@@ -156,8 +168,20 @@ class PhotoDialog extends MdDialog {
           value="${Component.escape(p.name)}"
           label="Name">
         </md-text-field>
-        <md-checkbox id="nsfw" label="NSFW" checked="${p.nsfw}">
-        </md-checkbox>
+        <md-text-field
+          id="legend"
+          label="Legend">
+        </md-text-field>
+        <div id="options">
+          <md-checkbox id="nsfw" label="NSFW" checked="${p.nsfw}">
+          </md-checkbox>
+          <md-checkbox id="aic" label="AIC">
+          </md-checkbox>
+          <md-checkbox id="captions" label="captions">
+          </md-checkbox>
+          <md-checkbox id="dedup" label="dedup">
+          </md-checkbox>
+        </div>
       </div>
       <md-dialog-bottom>
         <button id="cancel">Cancel</button>
@@ -178,6 +202,10 @@ class PhotoDialog extends MdDialog {
       }
       #name {
         width: 400px;
+      }
+      #options {
+        display: flex;
+        gap: 8px;
       }
     `;
   }
@@ -235,12 +263,16 @@ class RedditPosting extends Component {
     dialog.show().then(result => {
       if (result) {
         console.log("Add image", posting.url, result);
-        this.add(posting.url, result.name, result.id, result.nsfw);
+        this.add(posting.url, result);
       }
     });
   }
 
-  add(url, name, id, nsfw) {
+  add(url, options) {
+    if (options.aic) {
+      url = `https://reddit.com${this.state.posting.permalink}`;
+    }
+
     fetch("/redreport/addmedia", {
       method: "POST",
       headers: {
@@ -248,9 +280,13 @@ class RedditPosting extends Component {
       },
       body: JSON.stringify({
         url: url,
-        name: name,
-        id: id,
-        nsfw: nsfw,
+        name: options.name,
+        id: options.id,
+        legend: options.legend,
+        nsfw: options.nsfw,
+        aic: options.aic,
+        captions: options.captions,
+        dedup: options.dedup,
       }),
     })
     .then((response) => {
@@ -260,14 +296,19 @@ class RedditPosting extends Component {
     .then((response) => {
       let msg = "";
       if (response.images == 0) {
-        msg = "(no image added)";
+        msg = "no image added";
       } else if (response.images == 1) {
-        msg = "(image added)";
+        msg = "image added";
       } else {
-        msg = `(${response.images} images added)`;
+        msg = `${response.images} images added`;
+      }
+      if (response.dups == 1) {
+        msg += ", one duplicate";
+      } else if (response.dups > 1) {
+        msg += `, ${response.dups} duplicates`;
       }
 
-      this.find("#msg").update(msg);
+      this.find("#msg").update("(" + msg + ")");
     })
     .catch(error => {
       console.log("Server error", error.message, error.stack);
@@ -568,21 +609,36 @@ def add_media(request):
   url = r.get("url")
   name = r.get("name")
   id = r.get("id")
+  legend = r.get("legend")
   nsfw = r.get("nsfw")
+  aic = r.get("aic")
+  captions = r.get("captions")
+  dedup = r.get("dedup")
+
   print("***", id, name, url, "NSFW" if nsfw else "")
   if id is None or id == "" or " " in id: return 400
   if url is None or url == "": return 400
 
   # Add media to profile.
   profile = photo.Profile(id)
-  n = profile.add_media(url, None, nsfw)
+  profile.captions = captions
+  if aic:
+    n = profile.add_albums_in_comments(url, nsfw)
+  else:
+    n = profile.add_media(url, legend, nsfw)
+
+  # Dedup if requested.
+  dups = 0
+  if dedup: dups = profile.dedup()
+
+  # Write profile.
   if n > 0: profile.write()
 
   # Add name mapping to celeb map.
   add_celeb(name, id)
 
   sys.stdout.flush()
-  return {"images": n}
+  return {"images": n, "dups": dups}
 
 @app.route("/redreport/photos", method="POST")
 def photos(request):

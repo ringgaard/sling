@@ -762,11 +762,11 @@ char *SerializationFlags::ParseArgs(PyObject *args, PyObject *kw) {
 bool SerializationFlags::ParseFlags(PyObject *args, PyObject *kw) {
   static const char *kwlist[] = {
     "binary", "global", "shallow", "byref", "pretty",
-    "utf8", "json", nullptr
+    "utf8", "json", "ttl", nullptr
   };
   return PyArg_ParseTupleAndKeywords(
-      args, kw, "|bbbbbbb", const_cast<char **>(kwlist),
-      &binary, &global, &shallow, &byref, &pretty, &utf8, &json);
+      args, kw, "|bbbbbbbb", const_cast<char **>(kwlist),
+      &binary, &global, &shallow, &byref, &pretty, &utf8, &json, &ttl);
 }
 
 }  // namespace sling

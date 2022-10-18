@@ -803,4 +803,151 @@ bool TurtleParser::IsRelativeURI(const string &uri) {
   return true;
 }
 
+void TurtleWriter::Write(const Object &object) {
+  Write(object.handle());
+}
+
+void TurtleWriter::Write(Handle handle, bool reference) {
+  if (handle.IsNil()) {
+    output_->Write("()");
+  } else if (handle.IsRef()) {
+    const Datum *datum = store_->GetObject(handle);
+    switch (datum->type()) {
+      case STRING:
+      case QSTRING:
+        WriteString(datum->AsString());
+        break;
+
+      case FRAME:
+        WriteFrame(datum->AsFrame(), reference);
+        break;
+
+      case SYMBOL:
+        WriteSymbol(datum->AsSymbol());
+        break;
+
+      case ARRAY:
+        WriteArray(datum->AsArray());
+        break;
+
+      default:
+        LOG(FATAL) << "unknown object type";
+    }
+  } else if (handle.IsInt()) {
+    WriteInt(handle.AsInt());
+  } else if (handle.IsFloat()) {
+    WriteFloat(handle.AsFloat());
+  } else {
+    LOG(FATAL) << "unknown handle type";
+  }
+}
+
+void TurtleWriter::WriteString(Text str) {
+  const char *s = str.data();
+  const char *end = s + str.size();
+  WriteChar('"');
+  while (s < end) {
+    switch (*s) {
+      case '"': WriteChars('"', '"'); s++; break;
+      case '\\': WriteChars('\\', '\\'); s++; break;
+      case '\n': WriteChars('\\', 'n'); s++; break;
+      case '\t': WriteChars('\\', 't'); s++; break;
+      case '\b': WriteChars('\\', 'b'); s++; break;
+      case '\f': WriteChars('\\', 'f'); s++; break;
+      case '\r': WriteChars('\\', 'r'); s++; break;
+      default:   WriteChar(*s++);
+    }
+  }
+  WriteChar('"');
+  // TODO: output qualifier
+}
+
+void TurtleWriter::WriteFrame(const FrameDatum *frame, bool reference) {
+  // Increase indentation for nested frames.
+  if (pretty()) current_indentation_ += indent_;
+
+  Handle subject = Handle::nil();
+  if (frame->IsAnonymous()) {
+    // Output nested blank node.
+    WriteChar('[');
+  } else {
+    // Output subject.
+    subject = frame->get(Handle::id());
+    Write(subject);
+    if (frame->IsPublic() && reference) return;
+  }
+
+  // Output slots.
+  bool first = true;
+  for (const Slot *slot = frame->begin(); slot < frame->end(); ++slot) {
+    if (slot->name == Handle::id() && slot->value == subject) continue;
+
+    if (!first) WriteChar(';');
+    if (pretty()) {
+      WriteChar('\n');
+      for (int i = 0; i < current_indentation_; ++i) WriteChar(' ');
+    }
+
+    WriteChar(' ');
+    if (slot->name == Handle::id()) {
+      WriteChar('=');
+    } else if (slot->name == Handle::isa()) {
+      WriteChar('a');
+    } else if (slot->name == Handle::is()) {
+      WriteChars('=', '>');
+    } else {
+      Write(slot->name, true);
+    }
+    WriteChar(' ');
+    if (pretty()) WriteChar(' ');
+    Write(slot->value, true);
+
+    first = false;
+  }
+
+  if (pretty()) {
+    // Restore indentation.
+    current_indentation_ -= indent_;
+    if (frame->begin() != frame->end()) {
+      WriteChar('\n');
+      for (int i = 0; i < current_indentation_; ++i) WriteChar(' ');
+    }
+  }
+
+  if (frame->IsAnonymous()) {
+    WriteChars(' ', ']');
+  } else {
+    WriteChar('.');
+  }
+}
+
+void TurtleWriter::WriteArray(const ArrayDatum *array) {
+  WriteChar('(');
+  bool first = true;
+  for (Handle *element = array->begin(); element < array->end(); ++element) {
+    if (!first) WriteChar(' ');
+    Write(*element, true);
+    first = false;
+  }
+  WriteChar(')');
+}
+
+void TurtleWriter::WriteSymbol(const SymbolDatum *symbol) {
+  WriteChar('<');
+  output_->Write(symbol->data(), symbol->length());
+  WriteChar('>');
+}
+
+void TurtleWriter::WriteInt(int number) {
+  char buffer[kFastToBufferSize];
+  char *str = FastInt32ToBuffer(number, buffer);
+  output_->Write(str, strlen(str));
+}
+
+void TurtleWriter::WriteFloat(float number) {
+  char str[32];
+  snprintf(str, 32, "%.6g", number);
+  output_->Write(str, strlen(str));
+}
+
 }  // namespace sling

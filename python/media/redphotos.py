@@ -325,6 +325,7 @@ for key, value in postings:
     if " And " in title: continue
     if " & " in title: continue
     if " &amp; " in title: continue
+    if " or " in title: continue
     if " vs. " in title: continue
     if " vs " in title: continue
     if " og " in title: continue

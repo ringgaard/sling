@@ -158,6 +158,7 @@ cc_library(
     ":store",
     "//sling/base",
     "//sling/stream:input",
+    "//sling/stream:output",
     "//sling/string:ctype",
     "//sling/string:numbers",
   ],
