@@ -538,10 +538,11 @@ Handle TurtleParser::ParseCollection() {
   // Skip ')'.
   NextToken();
 
-  // Create new array.
+  // Create new array. Empty collection means nil.
   Handle *begin =  stack_.address(mark);
   Handle *end =  stack_.end();
-  Handle handle = store_->AllocateArray(begin, end);
+  Handle handle =
+    begin == end ? Handle::nil() : store_->AllocateArray(begin, end);
 
   // Remove slots from stack.
   Release(mark);
@@ -842,9 +843,9 @@ void TurtleWriter::Write(Handle handle, bool reference) {
   }
 }
 
-void TurtleWriter::WriteString(Text str) {
-  const char *s = str.data();
-  const char *end = s + str.size();
+void TurtleWriter::WriteString(const StringDatum *str) {
+  const char *s = str->data();
+  const char *end = s + str->length();
   WriteChar('"');
   while (s < end) {
     switch (*s) {
@@ -859,13 +860,26 @@ void TurtleWriter::WriteString(Text str) {
     }
   }
   WriteChar('"');
-  // TODO: output qualifier
+  Handle qualifier = str->qualifier();
+  if (!qualifier.IsNil()) {
+    if (store_->IsFrame(qualifier)) {
+      Text id = store_->FrameId(qualifier);
+      if (id.starts_with("/lang/")) {
+        id.remove_prefix(6);
+        WriteChar('@');
+        output_->Write(id);
+      } else {
+        WriteChars('^', '^');
+        Write(qualifier, true);
+      }
+    } else {
+      WriteChars('^', '^');
+      Write(qualifier, true);
+    }
+  }
 }
 
 void TurtleWriter::WriteFrame(const FrameDatum *frame, bool reference) {
-  // Increase indentation for nested frames.
-  if (pretty()) current_indentation_ += indent_;
-
   Handle subject = Handle::nil();
   if (frame->IsAnonymous()) {
     // Output nested blank node.
@@ -877,32 +891,41 @@ void TurtleWriter::WriteFrame(const FrameDatum *frame, bool reference) {
     if (frame->IsPublic() && reference) return;
   }
 
+  // Increase indentation for nested frames.
+  if (pretty()) current_indentation_ += indent_;
+
   // Output slots.
-  bool first = true;
+  Handle last = Handle::nil();
   for (const Slot *slot = frame->begin(); slot < frame->end(); ++slot) {
     if (slot->name == Handle::id() && slot->value == subject) continue;
 
-    if (!first) WriteChar(';');
-    if (pretty()) {
-      WriteChar('\n');
-      for (int i = 0; i < current_indentation_; ++i) WriteChar(' ');
-    }
-
-    WriteChar(' ');
-    if (slot->name == Handle::id()) {
-      WriteChar('=');
-    } else if (slot->name == Handle::isa()) {
-      WriteChar('a');
-    } else if (slot->name == Handle::is()) {
-      WriteChars('=', '>');
+    if (slot->name == last) {
+      WriteChars(',', ' ');
+      Write(slot->value, true);
     } else {
-      Write(slot->name, true);
-    }
-    WriteChar(' ');
-    if (pretty()) WriteChar(' ');
-    Write(slot->value, true);
+      if (!last.IsNil()) WriteChar(';');
 
-    first = false;
+      if (pretty()) {
+        WriteChar('\n');
+        for (int i = 0; i < current_indentation_; ++i) WriteChar(' ');
+      } else {
+        WriteChar(' ');
+      }
+
+      if (slot->name == Handle::id()) {
+        WriteChar('=');
+      } else if (slot->name == Handle::isa()) {
+        WriteChar('a');
+      } else if (slot->name == Handle::is()) {
+        WriteChars('=', '>');
+      } else {
+        Write(slot->name, true);
+      }
+      WriteChar(' ');
+      Write(slot->value, true);
+    }
+
+    last = slot->name;
   }
 
   if (pretty()) {

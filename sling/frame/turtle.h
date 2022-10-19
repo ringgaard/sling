@@ -184,9 +184,8 @@ class TurtleWriter {
     output_->WriteChar(ch2);
   }
 
-  // Writes quoted string with escapes.
-  void WriteString(Text str);
-  void WriteString(const StringDatum *str) { WriteString(str->str()); }
+  // Writes string.
+  void WriteString(const StringDatum *str);
 
   // Writes frame.
   void WriteFrame(const FrameDatum *frame, bool reference);

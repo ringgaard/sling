@@ -508,7 +508,7 @@ class Profile:
     return count
 
   # Add Imgur image.
-  def add_imgur_image(self, imageid, nsfw_override=None):
+  def add_imgur_image(self, imageid, caption=None, nsfw_override=None):
     print("Imgur image", imageid)
     auth = {'Authorization': "Client-ID " + imgurkeys["clientid"]}
     r = session.get("https://api.imgur.com/3/image/" + imageid, headers=auth)
@@ -530,10 +530,11 @@ class Profile:
       return 0
 
     # Image caption.
-    caption = reply["title"]
+    if caption is None:
+      caption = reply["title"]
     if caption is None:
       caption = reply["description"]
-    if caption != None:
+    if caption is not None:
       caption = caption.replace("\n", " ").strip()
 
     # NSFW flag.
@@ -698,7 +699,7 @@ class Profile:
     m = re.match("https://imgur\.com/(\w+)$", url)
     if m != None:
       imageid = m.group(1)
-      return self.add_imgur_image(imageid, nsfw)
+      return self.add_imgur_image(imageid, caption, nsfw)
 
     # Reddit gallery.
     m = re.match("https://reddit\.com/gallery/(\w+)", url)

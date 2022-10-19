@@ -90,10 +90,14 @@ function current_date() {
 
 class PhotoReportApp extends MdApp {
   onconnected() {
-    // Image search.
+    // Search.
     this.attach(this.onsearch, "click", "#search");
     this.attach(this.onimgsearch, "click", "#imgsearch");
     this.attach(this.onkeydown, "keydown");
+
+    // Focus app.
+    this.tabIndex = 0;
+    this.focus();
 
     // Get date from request; default to current date.
     let path = window.location.pathname;
@@ -132,7 +136,7 @@ class PhotoReportApp extends MdApp {
   onimgsearch(e) {
     let selection = window.getSelection();
     let query = selection.toString();
-    let url = `/photosearch?q="${encodeURIComponent(query)}"`;
+    let url = `https://ringgaard.com/photosearch?q="${encodeURIComponent(query)}"`;
     if (!sfw) url += "&nsfw=1";
     window.open(url, "_blank");
   }
@@ -140,12 +144,16 @@ class PhotoReportApp extends MdApp {
 
 Component.register(PhotoReportApp);
 
+function trimmed(s) {
+  if (s) return s.trim();
+}
+
 class PhotoDialog extends MdDialog {
   submit() {
     this.close({
-      id: this.find("#id").value.trim(),
-      name: this.find("#name").value.trim(),
-      legend: this.find("#legend").value.trim(),
+      id: trimmed(this.find("#id").value),
+      name: trimmed(this.find("#name").value),
+      legend: trimmed(this.find("#legend").value),
       nsfw: this.find("#nsfw").checked,
       aic: this.find("#aic").checked,
       captions: this.find("#captions").checked,
@@ -615,13 +623,13 @@ def add_media(request):
   captions = r.get("captions")
   dedup = r.get("dedup")
 
-  print("***", id, name, url, "NSFW" if nsfw else "")
+  print("***", r)
   if id is None or id == "" or " " in id: return 400
   if url is None or url == "": return 400
 
   # Add media to profile.
   profile = photo.Profile(id)
-  profile.captions = captions
+  profile.captions = captions or legend is not None
   if aic:
     n = profile.add_albums_in_comments(url, nsfw)
   else:
