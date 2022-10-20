@@ -294,17 +294,28 @@ class ItemMerger : public task::Reducer {
       }
     }
 
-    // Convert names to aliases if item has unname statements.
+    // Replace names if item has unname statements.
     if (!store.LookupExisting("PUNME").IsNil()) {
       Handle n_name = store.Lookup("name");
       Handle n_alias = store.Lookup("alias");
       Handle n_unname = store.Lookup("PUNME");
+
       for (int i = 0; i < builder.size(); ++i) {
         if (builder[i].name == n_unname) {
+          Handle old_name = store.Resolve(builder[i].value);
+          Handle new_name = Handle::nil();
+          if (old_name != builder[i].value) {
+            new_name = Frame(&store, builder[i].value).GetHandle(n_name);
+          }
+
           for (int j = 0; j < builder.size(); ++j) {
             if (builder[j].name == n_name &&
-                store.Equal(builder[i].value, builder[j].value)) {
-              builder[j].name = n_alias;
+                store.Equal(old_name, builder[j].value)) {
+              if (new_name.IsNil()) {
+                builder[j].name = n_alias;
+              } else {
+                builder[j].value = new_name;
+              }
               num_unnames_->Increment();
             }
           }
