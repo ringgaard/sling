@@ -120,6 +120,7 @@ delimiters = [
   " aka ", " a.k.a. ", " IG ", " on/off", " On/Off", " Circa "
   " having ", " performing ", " during ", " being ",
   " posing ", " photographed ", " dressed ", " former ", " formerly ",
+  " Collection ",
 
   # For jounalists.
   "FoxWeather", "News", "Fox13", "Weather Channel", "Court TV", "Fox News",
@@ -372,7 +373,12 @@ for key, value in postings:
   # Get photos for posting.
   posting_profile = photo.Profile(None)
   try:
-    n = posting_profile.add_media(url, None, nsfw)
+    n = 0
+    if "(AIC)" in title:
+      post_url = "https://www.reddit.com" + posting[n_permalink]
+      n += posting_profile.add_albums_in_comments(post_url, nsfw)
+    if n == 0:
+      n += posting_profile.add_media(url, None, nsfw)
   except:
     print("Error processing", url, "for", itemid)
     traceback.print_exc(file=sys.stdout)

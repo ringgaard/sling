@@ -747,13 +747,15 @@ class Profile:
     for comment in comments:
       comment = comment["data"]
       body = comment["body"]
-      m = re.match("https?:\/\/imgur\.com/(\w+)", body)
-      if m:
-        print("Album", body)
-        count += self.add_media(body, None, nsfw)
-      for m in re.finditer("\[(.+)\]\((https?://imgur.com/a/\w+)\)", body):
-        print("Album", m[2], m[1])
+
+      for m in re.finditer("\[(.+)\]\((https?:\/\/imgur.com\/a\/\w+)\)", body):
+        print("Album link", m[2], m[1])
         count += self.add_media(m[2], m[1], nsfw)
+
+      if count == 0:
+        for m in re.finditer("(https?:\/\/imgur\.com\/a\/\w+)", body):
+          print("Album", m[1])
+          count += self.add_media(m[1], None, nsfw)
 
     return count
 
