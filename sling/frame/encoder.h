@@ -47,6 +47,7 @@ class Encoder {
     UNRESOLVED,  // object has not been encoded in the output
     LINKED,      // only a link to the object has been encoded in the output
     ENCODED,     // object has been encoded in the output
+    SPECIAL,     // pre-defined special handle
   };
 
   // Reference to previously encoded or linked object.
@@ -55,10 +56,10 @@ class Encoder {
     Reference() : status(UNRESOLVED), index(0) {}
 
     // Creates  resolved reference for pre-defined values.
-    explicit Reference(int idx) : status(ENCODED), index(idx) {}
+    explicit Reference(int idx) : status(SPECIAL), index(idx) {}
 
-    Status status;  // reference status
-    int index;      // reference number
+    Status status: 2;  // reference status
+    int32 index: 30;   // reference number
   };
 
   // Encodes object for handle.
@@ -86,7 +87,7 @@ class Encoder {
 
   // Hash table mapping handles to object reference numbers for all objects that
   // have been encoded so far.
-  HandleMap<Reference> references_;
+  handle_map<Reference> references_;
 
   // Next available reference index.
   int next_index_ = 0;

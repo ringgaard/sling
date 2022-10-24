@@ -59,11 +59,13 @@ class FrameStoreWriter : public Processor {
 
     // Compact store.
     bool snapshot = task->Get("snapshot", false);
+    LOG(INFO) << "Coalesce strings";
     store_->CoalesceStrings();
     if (snapshot) store_->AllocateSymbolHeap();
     if (task->Get("suppress_gc", true)) {
       store_->UnlockGC();
     }
+    LOG(INFO) << "Garbage collection";
     store_->GC();
 
     // Save store to output file.
@@ -75,10 +77,13 @@ class FrameStoreWriter : public Processor {
     encoder.EncodeAll();
     output.Flush();
     CHECK(stream.Close());
+    LOG(INFO) << "Store written";
 
     // Write snapshot if requested.
     if (snapshot) {
+      LOG(INFO) << "Snapshot";
       CHECK(Snapshot::Write(store_, file->resource()->name()));
+      LOG(INFO) << "Snapshot done";
     }
 
     // Output statistics.
@@ -102,6 +107,7 @@ class FrameStoreWriter : public Processor {
     task->GetCounter("symbol_buckets")->Increment(usage.num_symbol_buckets);
 
     // Delete store.
+    LOG(INFO) << "Clean up";
     delete store_;
     store_ = nullptr;
   }

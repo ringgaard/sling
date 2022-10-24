@@ -1392,7 +1392,7 @@ bool Store::IsValidReference(Handle handle) const {
     if (handle.IsGlobalRef()) {
       table = &handles_;
     } else {
-      LOG(ERROR) << "Local handle in global store";
+      LOG(ERROR) << "Local handle in global store: " << handle.raw();
       return false;
     }
   } else {

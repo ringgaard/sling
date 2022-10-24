@@ -28,10 +28,9 @@ Encoder::Encoder(const Store *store, Output *output, bool marker)
     : store_(store), output_(output),
       global_(store != nullptr && store->globals() == nullptr) {
   // Insert special values in reference mapping.
-  references_[Handle::nil()] = Reference(-WIRE_NIL);
-  references_[Handle::id()] = Reference(-WIRE_ID);
-  references_[Handle::isa()] = Reference(-WIRE_ISA);
-  references_[Handle::is()] = Reference(-WIRE_IS);
+  references_[Handle::id()] = Reference(WIRE_ID);
+  references_[Handle::isa()] = Reference(WIRE_ISA);
+  references_[Handle::is()] = Reference(WIRE_IS);
 
   // Output binary encoding mark.
   if (marker) output_->WriteChar(WIRE_BINARY_MARKER);
@@ -52,10 +51,12 @@ void Encoder::EncodeAll() {
 }
 
 void Encoder::EncodeObject(Handle handle) {
-  if (handle.IsRef()) {
+  if (handle.IsNil()) {
+    WriteTag(WIRE_SPECIAL, WIRE_NIL);
+  } else if (handle.IsRef()) {
     // Check if object has already been output.
     Reference &ref = references_[handle];
-    if (ref.status == ENCODED) {
+    if (ref.status == ENCODED || ref.status == SPECIAL) {
       WriteReference(ref);
     } else if (ref.status == LINKED) {
       // A link to this frame has already been encoded.
@@ -201,9 +202,8 @@ void Encoder::EncodeSymbol(const SymbolDatum *symbol, int type) {
 }
 
 void Encoder::WriteReference(const Reference &ref) {
-  if (ref.index < 0) {
-    // Special handles are stored with negative reference numbers.
-    WriteTag(WIRE_SPECIAL, -ref.index);
+  if (ref.status == SPECIAL) {
+    WriteTag(WIRE_SPECIAL, ref.index);
   } else {
     // Output reference to previous object.
     WriteTag(WIRE_REF, ref.index);

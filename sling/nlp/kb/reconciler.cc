@@ -176,6 +176,7 @@ class Statements {
     mask_ = limit_ - 1;
     slots_.resize(limit_);
     for (int i = 0; i < slots.size(); ++i) {
+      if (slots[i].name.IsNil()) continue;
       int pos = NameHash(slots[i].name) & mask_;
       for (;;) {
         Slot &s = slots_[pos];
@@ -284,7 +285,7 @@ class ItemMerger : public task::Reducer {
         // Skip redirects.
         if (s.name == Handle::is()) continue;
 
-        if (statements.Insert(s.name, s.value)) {
+        if (s.name.IsNil() || statements.Insert(s.name, s.value)) {
          // Add new statement.
          builder.Add(s.name, s.value);
         } else {

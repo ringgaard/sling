@@ -101,6 +101,121 @@ struct HandlePairHash {
 template<typename T> using HandlePairMap =
   std::unordered_map<HandlePair, T, HandlePairHash>;
 
+// Handle map implemented as hash table with linear probing.
+template<typename T> class handle_map {
+ public:
+  // Hash table node.
+  struct node {
+    Handle key;
+    T value;
+  };
+
+  // Initialize handle map. The limit must be a power-of-two.
+  handle_map(int limit = 1024, float fill_factor = 0.5) {
+    limit_ = limit;
+    mask_ = limit_ - 1;
+    fill_factor_ = fill_factor;
+    capacity_ = limit * fill_factor;
+    size_ = 0;
+    nodes_ = allocate(limit_);
+  }
+
+  // Release storage for handle map.
+  ~handle_map() {
+    free(nodes_);
+  }
+
+  // Find existing node in handle map or add a new.
+  T &operator [](Handle key) {
+    // The key cannot be nil since this is used for empty elements.
+    CHECK(!key.IsNil());
+
+    // Try to find element with matching key.
+    int pos = hash(key) & mask_;
+    for (;;) {
+      node &n = nodes_[pos];
+      if (n.key == key) {
+        // Match found.
+        return n.value;
+      } else if (n.key.IsNil()) {
+        if (size_ < capacity_) {
+          n.key = key;
+          size_++;
+          return n.value;
+        } else {
+          reserve(limit_ * 2);
+          return insert(key);
+        }
+      }
+      pos = (pos + 1) & mask_;
+    }
+  }
+
+  // Return size of hash table.
+  size_t size() const { return size_; }
+
+  // Reserve space in handle map. New limit must be power-of-two.
+  void reserve(int limit) {
+    mask_ = limit - 1;
+    node *nodes = allocate(limit);
+
+    for (int i = 0; i < limit_; ++i) {
+      node &ni = nodes_[i];
+      if (ni.key.IsNil()) continue;
+      int pos = hash(ni.key) & mask_;
+      for (;;) {
+        node &n = nodes[pos];
+        if (n.key.IsNil()) {
+          n = ni;
+          break;
+        }
+        pos = (pos + 1) & mask_;
+      }
+    }
+
+    free(nodes_);
+    nodes_ = nodes;
+    limit_ = limit;
+    capacity_ = limit_ * fill_factor_;
+  }
+
+ private:
+  // Hash value for handle.
+  static Word hash(Handle handle) {
+    return handle.raw();
+  }
+
+  // Insert new element. Assumes that table is not full.
+  T &insert(Handle key) {
+    Word pos = hash(key) & mask_;
+    for (;;) {
+      node &n = nodes_[pos];
+      if (n.key.IsNil()) {
+        n.key = key;
+        size_++;
+        return n.value;
+      }
+      pos = (pos + 1) & mask_;
+    }
+  }
+
+  // Allocate and initialize node array.
+  static node *allocate(int size) {
+    size_t bytes = size * sizeof(node);
+    void *data = malloc(bytes);
+    memset(data, 0, bytes);
+    return static_cast<node *>(data);
+  }
+
+  // Hash table with linear probing.
+  node *nodes_;        // array with hash table nodes
+  Word size_;          // number of used nodes in table
+  Word capacity_;      // maximum size without exceeding fill factor
+  Word limit_;         // number of elements in table array
+  Word mask_;          // key mask
+  float fill_factor_;  // fill factor for expanding table
+};
+
 // Name with lazy lookup that can be initialized as static variables and
 // then later be resolved using a Names object, e.g.:
 //
