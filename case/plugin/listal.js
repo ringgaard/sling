@@ -78,6 +78,7 @@ const tagsdir = {
   "Erotic Model": stmt(n_occupation, "Q3286043"),
   "Erotic Actress": stmt(n_occupation, "Q488111"),
   "P*rn Star": stmt(n_occupation, "Q488111"),
+  "PMOM": stmt(n_occupation, "Q728711"),
 
   "Blonde": stmt(n_hair_color, "Q202466"),
   "Blond": stmt(n_hair_color, "Q202466"),
@@ -150,7 +151,11 @@ export default class ListalPlugin {
         onitem: item => this.select(item),
       };
     } else if (action == PASTEURL) {
-      await this.populate(context, context.topic, url.href, modelid);
+      if (url.pathname.match(/^\/[^\/]+\/pictures/)) {
+        await this.gallery(context, context.topic, url.href, modelid);
+      } else {
+        await this.populate(context, context.topic, url.href, modelid);
+      }
       return true;
     }
   }
@@ -314,6 +319,41 @@ export default class ListalPlugin {
         topic.put(n_media, src);
       }
     }
+
+    context.updated(topic);
+  }
+
+  async gallery(context, topic, url, modelid) {
+    // Fetch all picture pages.
+    let images = new Array();
+    let done = false;
+    for (let page = 1; !done; ++page) {
+      let pageurl = `https://www.listal.com/${modelid}/pictures/${page}`;
+      let r = await fetch(context.proxy(pageurl), {
+        headers: {
+          "XUser-Agent": navigator.userAgent,
+        },
+      });
+      let html = await r.text();
+      let doc = new DOMParser().parseFromString(html, "text/html");
+
+      let imageboxes = doc.querySelectorAll("div.imagebox");
+      for (let imagebox of imageboxes.values()) {
+        let img = imagebox.querySelector("img");
+        if (!img) continue;
+        let src = img.getAttribute("src");
+        if (!src) continue;
+        let pos = src.indexOf('?');
+        if (pos > 0) src = src.substring(0, pos);
+        if (images.includes(src)) continue;
+        images.push(src);
+      }
+      done = imageboxes.length == 0;
+    }
+
+    // Add pictures to topic.
+    topic.put(n_listal, modelid);
+    for (let image of images) topic.put(n_media, image);
 
     context.updated(topic);
   }

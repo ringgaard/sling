@@ -128,7 +128,7 @@ class Printer {
   bool utf8_ = false;
 
   // Mapping of frames that have been printed mapped to their ids.
-  HandleMap<Handle> references_;
+  handle_map<Handle> references_;
 
   // Next index reference.
   int next_index_ = 1;

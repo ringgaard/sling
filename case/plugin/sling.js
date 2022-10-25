@@ -6,7 +6,7 @@
 import {Frame, Reader, Decoder} from "/common/lib/frame.js";
 import {store} from "/case/app/global.js";
 
-export default class SLINGmporter {
+export default class SLINGImporter {
   async process(file, context) {
     // Parse SLING data.
     let data = await file.arrayBuffer();

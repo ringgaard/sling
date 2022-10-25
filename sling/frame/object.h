@@ -151,8 +151,26 @@ template<typename T> class handle_map {
     }
   }
 
+  // Check if key is in handle map.
+  bool contains(Handle key) const {
+    // Try to find element with matching key.
+    int pos = hash(key) & mask_;
+    for (;;) {
+      node &n = nodes_[pos];
+      if (n.key == key) {
+        return true;
+      } else if (n.key.IsNil()) {
+        return false;
+      }
+      pos = (pos + 1) & mask_;
+    }
+  }
+
   // Return size of hash table.
   size_t size() const { return size_; }
+
+  // Check if handle map is empty.
+  bool empty() const { return size_ == 0; }
 
   // Reserve space in handle map. New limit must be power-of-two.
   void reserve(int limit) {
