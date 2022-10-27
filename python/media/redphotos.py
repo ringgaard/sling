@@ -362,6 +362,7 @@ for key, value in postings:
     subreddit = {}
     subreddit["total"] = 0
     subreddit["matches"] = 0
+    subreddit["general"] = general
     subreddit["matched"] = []
     subreddit["unmatched"] = []
     report["subreddits"][sr] = subreddit

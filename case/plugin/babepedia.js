@@ -179,7 +179,7 @@ export default class BabepediaPlugin {
           let v = store.frame();
           v.add(n_amount, parseInt(m[1]));
           v.add(n_unit, n_cm);
-          topic.put(n_height, v);
+          if (!topic.has(n_height)) topic.add(n_height, v);
         }
       } else if (field == "Weight") {
         let m = value.match(/\(or (\d+) kg\)/);
@@ -187,7 +187,7 @@ export default class BabepediaPlugin {
           let v = store.frame();
           v.add(n_amount, parseInt(m[1]));
           v.add(n_unit, n_kg);
-          topic.put(n_weight, v);
+          if (!topic.has(n_weight)) topic.add(n_weight, v);
         }
       } else if (field == "Hair color") {
         let color = value.toLowerCase();
@@ -209,8 +209,6 @@ export default class BabepediaPlugin {
             topic.put(n_work_peroid_end, parseInt(m[2]));
           }
         }
-      } else {
-        console.log("field", field, "value", value);
       }
     }
 

@@ -101,7 +101,9 @@ struct HandlePairHash {
 template<typename T> using HandlePairMap =
   std::unordered_map<HandlePair, T, HandlePairHash>;
 
-// Handle map implemented as hash table with linear probing.
+// Handle map implemented as hash table with linear probing. Unlike a HandleMap,
+// constructors and destructors are not called on values. Instead they are just
+// zero-initialized.
 template<typename T> class handle_map {
  public:
   // Hash table node.
@@ -112,12 +114,12 @@ template<typename T> class handle_map {
 
   // Initialize handle map. The limit must be a power-of-two.
   handle_map(int limit = 1024, float fill_factor = 0.5) {
-    limit_ = limit;
-    mask_ = limit_ - 1;
+    mask_ = limit - 1;
     fill_factor_ = fill_factor;
     capacity_ = limit * fill_factor;
     size_ = 0;
-    nodes_ = allocate(limit_);
+    nodes_ = allocate(limit);
+    end_ = nodes_ + limit;
   }
 
   // Release storage for handle map.
@@ -128,7 +130,7 @@ template<typename T> class handle_map {
   // Find existing node in handle map or add a new.
   T &operator [](Handle key) {
     // The key cannot be nil since this is used for empty elements.
-    CHECK(!key.IsNil());
+    DCHECK(!key.IsNil());
 
     // Try to find element with matching key.
     int pos = hash(key) & mask_;
@@ -143,7 +145,7 @@ template<typename T> class handle_map {
           size_++;
           return n.value;
         } else {
-          reserve(limit_ * 2);
+          reserve((end_ - nodes_) * 2);
           return insert(key);
         }
       }
@@ -177,14 +179,13 @@ template<typename T> class handle_map {
     mask_ = limit - 1;
     node *nodes = allocate(limit);
 
-    for (int i = 0; i < limit_; ++i) {
-      node &ni = nodes_[i];
-      if (ni.key.IsNil()) continue;
-      int pos = hash(ni.key) & mask_;
+    for (node *n = nodes_; n != end_; n++) {
+      if (n->key.IsNil()) continue;
+      int pos = hash(n->key) & mask_;
       for (;;) {
-        node &n = nodes[pos];
-        if (n.key.IsNil()) {
-          n = ni;
+        node &np = nodes[pos];
+        if (np.key.IsNil()) {
+          np = *n;
           break;
         }
         pos = (pos + 1) & mask_;
@@ -193,9 +194,34 @@ template<typename T> class handle_map {
 
     free(nodes_);
     nodes_ = nodes;
-    limit_ = limit;
-    capacity_ = limit_ * fill_factor_;
+    end_ = nodes_ + limit;
+    capacity_ = limit * fill_factor_;
   }
+
+  // Iterator for iterating over all nodes in handle map.
+  struct iterator {
+   public:
+    bool operator !=(const iterator &other) const {
+      return n != other.n;
+    }
+
+    const node &operator *() const { return *n; }
+
+    const iterator &operator ++() {
+      n = next(n + 1);
+      return *this;
+    }
+
+    static const node *next(const node *n) {
+      while (!n->key.IsError() && n->key.IsNil()) n++;
+      return n;
+    }
+
+    const node *n;
+  };
+
+  const iterator begin() const { return iterator{iterator::next(nodes_)}; }
+  const iterator end() const { return iterator{end_}; }
 
  private:
   // Hash value for handle.
@@ -203,7 +229,7 @@ template<typename T> class handle_map {
     return handle.raw();
   }
 
-  // Insert new element. Assumes that table is not full.
+  // Insert new element. Assumes that key is not already in table.
   T &insert(Handle key) {
     Word pos = hash(key) & mask_;
     for (;;) {
@@ -217,19 +243,22 @@ template<typename T> class handle_map {
     }
   }
 
-  // Allocate and initialize node array.
+  // Allocate and initialize node array. An extra sentinel node is allocated
+  // at the end of the array.
   static node *allocate(int size) {
-    size_t bytes = size * sizeof(node);
+    size_t bytes = (size + 1) * sizeof(node);
     void *data = malloc(bytes);
     memset(data, 0, bytes);
-    return static_cast<node *>(data);
+    node *nodes = static_cast<node *>(data);
+    nodes[size].key = Handle::error();
+    return nodes;
   }
 
   // Hash table with linear probing.
   node *nodes_;        // array with hash table nodes
+  node *end_;          // end of array
   Word size_;          // number of used nodes in table
   Word capacity_;      // maximum size without exceeding fill factor
-  Word limit_;         // number of elements in table array
   Word mask_;          // key mask
   float fill_factor_;  // fill factor for expanding table
 };

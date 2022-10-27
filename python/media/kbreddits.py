@@ -22,16 +22,21 @@ kb.load("data/e/kb/kb.sling")
 n_subreddit = kb["P3984"]
 n_instance_of = kb["P31"]
 n_human = kb["Q5"]
+n_gender = kb["P21"]
+n_male = kb["Q6581097"]
 
 def is_human(item):
   for t in item(n_instance_of):
     if t == n_human: return True
   return False
 
+def is_male(item):
+  return item[n_gender] == n_male
+
 for item in kb:
   if n_subreddit in item:
     for sr in item(n_subreddit):
       sr = kb.resolve(sr)
-      if is_human(item):
+      if is_human(item) and not is_male(item):
         print(sr, item.id)
 

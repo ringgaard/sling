@@ -82,6 +82,7 @@ import {reddit_thumbnail} from "/common/lib/reddit.js";
 var sfw = false;
 var hits = false;
 var xpost = false;
+var general = false;
 mediadb.enabled = false;
 
 function current_date() {
@@ -108,6 +109,7 @@ class PhotoReportApp extends MdApp {
     if (qs.get("sfw") == "1") sfw = true;
     if (qs.get("hits") == "1") hits = true;
     if (qs.get("xpost") == "1") xpost = true;
+    if (qs.get("general") == "1") general = true;
 
     // Retrieve report.
     let url = `https://ringgaard.com/reddit/report/${date}.json`;
@@ -526,6 +528,7 @@ class SubredditCard extends MdCard {
     for (let item of items) {
       if (sfw && item.posting.over_18) continue;
       if (xpost && !item.posting.crosspost_parent_list) continue;
+      if (general && !item.query) continue;
       h.push(new RedditPosting(item));
       empty = false;
     }
@@ -579,12 +582,13 @@ class SubredditList extends Component {
     let cards = [];
     for (let name of srnames) {
       let report = subreddits[name]
+      //if (general && !report.general) continue;
       if (hits) {
         if (report.matched.length == 0) continue;
       } else {
         if (report.unmatched.length == 0) continue;
       }
-      report["name"] = name;
+      report.name = name;
       let card = new SubredditCard(report);
       cards.push(card);
     }
