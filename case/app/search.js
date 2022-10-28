@@ -9,8 +9,12 @@ import {store, settings} from "./global.js";
 const n_name = store.lookup("name");
 const n_alias = store.lookup("alias");
 
-function normalized(str) {
-  return str.toString().toLowerCase();
+export function normalized(str) {
+  return str
+    .toString()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
 }
 
 export async function search(query, backends, options = {}) {
@@ -60,12 +64,19 @@ export async function kbsearch(query, results, options) {
 
     let response = await fetch(`${settings.kbservice}${path}?${params}`);
     let data = await response.json();
+    let twiddle = true;
     for (let item of data.matches) {
-      results.push({
+      let result = {
         ref: item.ref,
         name: item.text,
         description: item.description,
-      });
+      };
+      if (twiddle && item.score > 1000000) {
+        results.unshift(result);
+        twiddle = false;
+      } else {
+        results.push(result);
+      }
     }
   } catch (error) {
     console.log("Query error", query, error.message, error.stack);

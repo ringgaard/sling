@@ -5,10 +5,12 @@
 
 import {Component} from "/common/lib/component.js";
 import {StdDialog, inform} from "/common/lib/material.js";
+
 import {store, settings} from "./global.js";
 import {casedb} from "./database.js";
 import {Collaboration} from "./collab.js";
 import {decrypt} from "./crypto.js";
+import {normalized} from "./search.js";
 import {oauth_callback} from "./wikibase.js";
 
 import "./manager.js";
@@ -333,19 +335,19 @@ class CaseApp extends Component {
 
   search(query, results, options = {}) {
     if (!this.caselist) return;
-    query = query.toLowerCase();
+    query = normalized(query);
     for (let caserec of this.caselist) {
       let match = false;
       if (query == caserec.id || query == `c/${caserec.id}`) {
         match = true;
       } else {
-        let normalized = caserec.name.toLowerCase();
+        let name = normalized(caserec.name);
         if (options.full) {
-          match = normalized == query;
+          match = name == query;
         } else if (options.keyword) {
-          match = normalized.includes(query);
+          match = name.includes(query);
         } else {
-          match =  normalized.startsWith(query);
+          match =  name.startsWith(query);
         }
       }
 
