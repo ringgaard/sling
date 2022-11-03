@@ -385,7 +385,9 @@ export class LabelCollector {
   }
 
   add_item(item) {
-    if (item.isproxy()) this.items.add(item);
+    if ((item instanceof Frame) && item.isproxy()) {
+      this.items.add(item);
+    }
   }
 
   async retrieve() {
@@ -418,7 +420,13 @@ export class ItemCollector {
   }
 
   add(item) {
-    if (item.isproxy() || item.isstub()) this.items.add(item);
+    if (item && (item.isproxy() || item.isstub())) this.items.add(item);
+  }
+
+  add_links(item) {
+    if (item) {
+      for (let link of item.links()) this.add(link);
+    }
   }
 
   async retrieve() {
@@ -478,10 +486,25 @@ export function date_parser(value, results) {
     add_date_result(results, m[1], m[2], null);
   }
 
+
   // Parse YYYY.
   m = value.match(/^(\d{4})$/);
   if (m) {
     add_date_result(results, m[1], null, null);
+  }
+
+  // Parse DD MMM YY.
+  m = value.match(/^(\d\d?) (\w+) (\d\d)$/);
+  if (m) {
+    let month = monthnum(m[2]);
+    if (month) add_date_result(results, "19" + m[3], month, m[1]);
+  }
+
+  // Parse MMM YY.
+  m = value.match(/^(\w+) (\d\d)$/);
+  if (m) {
+    let month = monthnum(m[1]);
+    if (month) add_date_result(results, "19" + m[2], month);
   }
 
   // Parse decade as YYY0s.

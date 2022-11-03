@@ -418,6 +418,12 @@ var topic_widgets = [
   type: store.lookup("Q1900326"),
 },
 
+// Timeline widget.
+{
+  module: "timeline.js",
+  type: store.lookup("Q186117"),
+},
+
 // Chart widget.
 {
   module: "chart.js",

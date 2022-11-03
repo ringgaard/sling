@@ -483,8 +483,9 @@ export class Frame {
   }
 
   // Get all resolved links.
-  links() {
-    let it = function* (store, slots) {
+  links(self = false) {
+    let it = function* (store, self, slots) {
+      if (self) yield self;
       if (slots) {
         for (let pos = 0; pos < slots.length; pos += 2) {
           if (slots[pos] === store.is) {
@@ -495,7 +496,7 @@ export class Frame {
         }
       }
     };
-    return it(this.store, this.slots);
+    return it(this.store, self ? this : null, this.slots);
   }
 
   // Assign id to frame.

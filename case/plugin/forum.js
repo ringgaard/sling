@@ -229,6 +229,7 @@ const images_services = [
 ];
 
 let gallery_containers = [
+  "ul.images",
   "div.gallery",
   "div.image-gallery",
   "div.actual-gallery-container",

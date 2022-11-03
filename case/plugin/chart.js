@@ -29,7 +29,7 @@ function gchart() {
 }
 
 class ChartDialog extends MdDialog {
-  async initialize() {
+  async init() {
     // Get all topics for chart.
     let widget = this.state;
     let topics = new ItemCollector(store);
@@ -42,7 +42,7 @@ class ChartDialog extends MdDialog {
 
   render() {
     return `
-      <div id="chart></div>
+      <div id="chart"></div>
     `;
   }
 }
@@ -60,7 +60,7 @@ export default class ChartWidget extends Component {
 
     // Show chart dialog.
     let dialog = new ChartDialog(this.state);
-    await dialog.initialize();
+    await dialog.init();
     let updated = await dialog.show();
     if (updated) {
       this.match("topic-card").mark_dirty();
