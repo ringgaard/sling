@@ -10,6 +10,7 @@ import {ItemCollector, LabelCollector} from "/case/app/value.js";
 import {qualified} from "/case/app/schema.js";
 
 const n_name = store.lookup("name");
+const n_description = store.lookup("description");
 const n_depicts = store.lookup("P180");
 const n_type = store.lookup("P31");
 const n_target = store.lookup("target");
@@ -94,18 +95,124 @@ class TimelineDialog extends MdDialog {
         this.sections.push({topic, begin, end, events});
       }
     }
+  }
 
-    for (let s of this.sections) {
-      console.log(s.topic.id, name(s.topic), s.begin, s.end);
-      for (let e of s.events) {
-        console.log("  event", name(e.prop), name(e.value), e.begin, e.end);
-      }
-    }
+  onconnected() {
+    this.bind("#close", "click", e => this.cancel());
   }
 
   render() {
+    let widget = this.state;
+    let h = "";
+    h += '<md-icon-button id="close" icon="close"></md-icon-button>';
+
+    let title = widget.get(n_name);
+    let subtitle = widget.get(n_description);
+    if (title || subtitle) {
+      h += '<div class="titlebar">';
+      if (title) {
+        h += `<div class="title">${Component.escape(title)}</div>`;
+      }
+      if (subtitle) {
+        h += `<div class="subtitle">${Component.escape(subtitle)}</div>`;
+      }
+      h += '</div>';
+    }
+
+    h += '<div class="container">';
+    h += '<table>';
+    for (let s of this.sections) {
+      h += `<tr>
+        <td class="sn">${name(s.topic)}</td>
+        <td class="sv">${s.begin} ${s.end}</td>
+      </tr>`;
+      for (let e of s.events) {
+        h += `<tr>
+          <td class="en">${name(e.prop)}: ${name(e.value)}</td>
+          <td class="ev">${e.begin} ${e.end}</td>
+        </tr>`;
+      }
+    }
+    h += '</table>';
+    h += '</div>';
+    return h;
+  }
+
+  static stylesheet() {
     return `
-      <div id="timeline">Timeline</div>
+      $ {
+        position: relative;
+        width: 95vw;
+        height: 95vh;
+        padding: 0;
+      }
+
+      $ #close {
+        position: absolute;
+        top: 0;
+        right: 0;
+        padding: 4px 4px;
+      }
+
+      $ .titlebar {
+        padding: 8px;
+      }
+
+      $ .title {
+        font-size: 24px;
+        font-weight: 500;
+        text-align: center;
+        display: flex;
+        justify-content: center;
+      }
+
+      $ .subtitle {
+        display: flex;
+        justify-content: center;
+        font-size: 16px;
+      }
+
+      $ .container {
+        position: relative;
+        height: 100%;
+        overflow: auto;
+        margin-bottom: 8px;
+        white-space: nowrap;
+      }
+
+      $ .container table {
+        table-layout: fixed;
+        width: 100%;
+      }
+
+      $ .sn {
+        position: sticky;
+        left: 0px;
+        padding-left: 8px;
+        font-weight: bold;
+        width: 30%;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        background-color: white;
+      }
+
+      $ .sv {
+      }
+
+      $ .en {
+        position: sticky;
+        left: 0px;
+        padding-left: 16px;
+        width: 30%;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        background-color: white;
+      }
+
+      $ .ev {
+      }
     `;
   }
 }
