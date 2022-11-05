@@ -58,7 +58,11 @@ const occupations = {
 }
 
 function date2sling(d) {
-  return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+  if (d.getMonth() == 0 && d.getDate() == 1) {
+    return d.getFullYear();
+  } else {
+    return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+  }
 }
 
 async function lookup(context, name) {

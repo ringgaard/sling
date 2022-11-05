@@ -1279,7 +1279,7 @@ class FactProperty extends FactField {
 
 Component.register(FactProperty);
 
-function newtopic(query, editor, results) {
+function newtopic(query, editor, field, results) {
   results.push({
     ref: query,
     name: query,
@@ -1288,7 +1288,8 @@ function newtopic(query, editor, results) {
     context: new Context(null, editor.casefile, editor),
     onitem: async item => {
       // Create new topic stub.
-      let topic = await item.context.new_topic();
+      let position = field.match("topic-card").state;
+      let topic = await item.context.new_topic(position);
       if (!topic) return;
       topic.put(n_name, item.name.trim());
       item.context.select = false;
@@ -1308,7 +1309,7 @@ class FactValue extends FactField {
         (query, results, options) => value_parser(query, results),
         editor.search.bind(editor),
         kbsearch,
-        (query, results, options) => newtopic(query, editor, results),
+        (query, results, options) => newtopic(query, editor, this, results),
       ],
     };
   }

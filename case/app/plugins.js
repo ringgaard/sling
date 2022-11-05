@@ -135,6 +135,16 @@ var plugins = [
   ],
 },
 
+// Actresses from glamourgirlsofthesilverscreen.com.
+{
+  name: "ggss",
+  module: "ggss.js",
+  actions: [PASTEURL],
+  patterns: [
+    /^http:\/\/www\.glamourgirlsofthesilverscreen\.com\//,
+  ],
+},
+
 // Se & Hør profiles from hjemmestrik.dk.
 {
   name: "hjemmestrik",
@@ -295,8 +305,8 @@ export class Context {
     this.updates = null;
   }
 
-  async new_topic() {
-    let topic = await this.editor.new_topic();
+  async new_topic(position) {
+    let topic = await this.editor.new_topic(null, position);
     if (!topic) return null;
     this.added = topic;
     return topic;

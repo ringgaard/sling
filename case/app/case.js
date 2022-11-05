@@ -782,6 +782,9 @@ class CaseEditor extends MdApp {
       this.topics.push(topic);
     }
     if (!this.folder.includes(topic)) {
+      if (position && this.folder.includes(position)) {
+        position = this.folder.indexOf(position) + 1;
+      }
       if (position >= 0) {
         this.folder.splice(position, 0, topic);
       } else {
