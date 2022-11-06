@@ -359,6 +359,7 @@ export class Frame {
 
   // Remove all slots with name or nth slot.
   remove(n) {
+    if (!this.slots) return;
     if (n instanceof Frame) {
       let slots = this.slots;
       let i = 0;
@@ -1460,32 +1461,34 @@ export class Printer {
 
     // Print slots.
     let slots = frame.slots;
-    for (let n = 0; n < slots.length; n += 2) {
-      // Indent.
-      if (this.indent) {
-        this.write("\n");
-        for (let l = 0; l < this.level; ++l) this.write(this.indent);
-      } else if (n > 0) {
-        this.write(" ");
-      }
+    if (slots) {
+      for (let n = 0; n < slots.length; n += 2) {
+        // Indent.
+        if (this.indent) {
+          this.write("\n");
+          for (let l = 0; l < this.level; ++l) this.write(this.indent);
+        } else if (n > 0) {
+          this.write(" ");
+        }
 
-      // Output slot.
-      let name = slots[n];
-      let value = slots[n + 1];
-      if (name == this.store.id) {
-        this.write("=");
-        this.printSymbol(value);
-        if (this.refs) this.refs.set(frame, value);
-      } else if (name === this.store.isa) {
-        this.write(":");
-        this.print(value);
-      } else if (name === this.store.is) {
-        this.write("+");
-        this.print(value);
-      } else {
-        this.print(name);
-        this.write(this.indent ? ": " : ":");
-        this.print(value);
+        // Output slot.
+        let name = slots[n];
+        let value = slots[n + 1];
+        if (name == this.store.id) {
+          this.write("=");
+          this.printSymbol(value);
+          if (this.refs) this.refs.set(frame, value);
+        } else if (name === this.store.isa) {
+          this.write(":");
+          this.print(value);
+        } else if (name === this.store.is) {
+          this.write("+");
+          this.print(value);
+        } else {
+          this.print(name);
+          this.write(this.indent ? ": " : ":");
+          this.print(value);
+        }
       }
     }
 

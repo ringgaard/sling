@@ -176,6 +176,7 @@ class CaseEditor extends MdApp {
     e.preventDefault();
     e.stopPropagation();
     let ref = e.detail.ref;
+    let position = e.detail.position;
 
     let index = this.get_index();
     let topic = index.ids.get(ref);
@@ -185,7 +186,7 @@ class CaseEditor extends MdApp {
     } else if (e.detail.event.ctrlKey) {
       // Add new linked topic and navigate to it.
       let item = store.lookup(ref);
-      let link = await this.add_topic_link(item);
+      let link = await this.add_topic_link(item, position);
       this.redirect(item, link);
       this.navigate_to(link);
     } else {
@@ -844,9 +845,9 @@ class CaseEditor extends MdApp {
     this.navigate_to(topic);
   }
 
-  async add_topic_link(topic) {
+  async add_topic_link(topic, position) {
     // Create new topic with reference to topic in external case.
-    let link = await this.new_topic();
+    let link = await this.new_topic(null, position);
     link.add(n_is, topic.id);
     let name = topic.get(n_name);
     if (name) link.add(n_name, name);

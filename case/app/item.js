@@ -53,7 +53,12 @@ class KbLink extends Component {
   onclick(e) {
     e.preventDefault();
     e.stopPropagation();
-    this.dispatch("navigate", {ref: this.attrs.ref, event: e}, true);
+    var position;
+    if (e.ctrlKey) {
+      let source = this.match("topic-card");
+      if (source) position = source.state;
+    }
+    this.dispatch("navigate", {ref: this.attrs.ref, position, event: e}, true);
   }
 
   static stylesheet() {
