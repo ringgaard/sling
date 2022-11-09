@@ -8,6 +8,7 @@ import {MdDialog} from "/common/lib/material.js";
 import {store, settings} from "/case/app/global.js";
 import {Time} from "/case/app/value.js";
 import {Frame, QString} from "/common/lib/frame.js";
+import {ItemCollector} from "/case/app/value.js";
 
 const n_name = store.lookup("name");
 const n_description = store.lookup("description");
@@ -88,22 +89,29 @@ class Point {
   }
 }
 
+function get_property(topic, prop) {
+  for (let link of topic.links(true)) {
+    let value = link.get(prop);
+    if (value) return value;
+  }
+}
+
 class Node {
   constructor(topic) {
     this.topic = topic;
     this.edges = new Array();
 
     // Node label.
-    this.label = topic.get(n_name);
+    this.label = get_property(topic, n_name);
     if (this.label) this.label = this.label.toString();
     if (!this.label) this.label = topic.id;
 
     // Node description.
-    if (topic.get(n_type) == n_human) {
+    if (get_property(topic, n_type) == n_human) {
       let s = "";
-      let gender = topic.get(n_gender);
-      let born = topic.get(n_born);
-      let died = topic.get(n_died);
+      let gender = get_property(topic, n_gender);
+      let born = get_property(topic, n_born);
+      let died = get_property(topic, n_died);
       if (gender == n_male) s += "♂ ";
       if (gender == n_female) s += "♀ ";
       if (born) s += "* " + date(born) + " ";
@@ -112,7 +120,7 @@ class Node {
     }
     if (!this.description) {
       for (let prop of descriptors) {
-        let value = store.resolve(topic.get(prop));
+        let value = store.resolve(get_property(topic, prop));
         if (value instanceof Frame) value = value.get(n_name);
         if (value instanceof QString) value = value.toString();
         if (value) {
@@ -224,7 +232,8 @@ class Graph {
     for (let topic of seed.all(n_start_point)) {
       topic = store.resolve(topic);
       if (this.nodes.has(topic)) continue;
-      if (!neighborhood.includes(topic)) continue;
+      topic = neighborhood.get(topic);
+      if (!topic) continue;
       let node = new Node(topic);
       this.nodes.set(topic, node);
       visit.push(node);
@@ -246,7 +255,8 @@ class Graph {
         value = store.resolve(value);
         if (!(value instanceof Frame)) continue;
         if (relations && !relations.has(property)) continue;
-        if (!neighborhood.includes(value)) continue;
+        value = neighborhood.get(value);
+        if (!value) continue;
 
         let target = this.nodes.get(value);
         if (!target) {
@@ -830,7 +840,18 @@ export default class NetworkWidget extends Component {
 
   async onclick(e) {
     let topics = this.match("#editor").topics;
-    let graph = new Graph(this.state, topics);
+    let neighborhood = new Map();
+    let collector = new ItemCollector(store);
+    for (let topic of topics) {
+      neighborhood.set(topic, topic);
+      collector.add(topic);
+      for (let link of topic.links()) {
+        neighborhood.set(link, topic)
+        collector.add(link);
+      }
+    }
+    await collector.retrieve();
+    let graph = new Graph(this.state, neighborhood);
 
     let dialog = new NetworkDialog(graph, this.state);
     let updated = await dialog.show();

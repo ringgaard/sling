@@ -330,10 +330,11 @@ TurtleParser::TurtleParser(Store *store, Input *input)
   references_.push_back(Handle::nil());
 }
 
-Object TurtleParser::ReadAll() {
+Object TurtleParser::ReadAll(Handles *objects) {
   Handle handle = Handle::nil();
   while (!done() && !error()) {
     handle = ReadObject();
+    if (objects) objects->push_back(handle);
   }
   return Object(store_, handle);
 }

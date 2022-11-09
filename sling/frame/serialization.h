@@ -52,7 +52,9 @@ class StringReader {
   Object Read() { return reader_.Read(); }
 
   // Reads all objects from the input and returns the last value.
-  Object ReadAll() { return reader_.ReadAll(); }
+  Object ReadAll(Handles *objects = nullptr) {
+    return reader_.ReadAll(objects);
+  }
 
   // Checks if all input has been read.
   bool done() const { return reader_.done(); }
@@ -128,7 +130,9 @@ class StringDecoder {
   Handle DecodeObject() { return decoder_.DecodeObject(); }
 
   // Decodes all objects from the input and returns the last value.
-  Object DecodeAll() { return decoder_.DecodeAll(); }
+  Object DecodeAll(Handles *objects = nullptr) {
+    return decoder_.DecodeAll(objects);
+  }
 
   // Checks if all input has been read.
   bool done() { return decoder_.done(); }
@@ -275,7 +279,9 @@ class FileDecoder {
   Handle DecodeObject() { return decoder_.DecodeObject(); }
 
   // Decodes all objects from the input and returns the last value.
-  Object DecodeAll() { return decoder_.DecodeAll(); }
+  Object DecodeAll(Handles *objects = nullptr) {
+    return decoder_.DecodeAll(objects);
+  }
 
   // Checks if all input has been read.
   bool done() { return decoder_.done(); }
@@ -336,7 +342,7 @@ class InputParser {
   Object Read();
 
   // Reads all objects from the input and returns the last value.
-  Object ReadAll();
+  Object ReadAll(Handles *objects = nullptr);
 
   // Checks if all input has been read.
   bool done() const { return binary() ? decoder_->done() : reader_->done(); }

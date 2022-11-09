@@ -195,17 +195,18 @@ PyObject *PyStore::Save(PyObject *args, PyObject *kw) {
 PyObject *PyStore::Parse(PyObject *args, PyObject *kw) {
   // Parse arguments.
   static const char *kwlist[] = {
-    "data", "binary", "json", "xml", "ttl", "idsym", nullptr
+    "data", "binary", "json", "xml", "ttl", "all", "idsym", nullptr
   };
   PyObject *object = nullptr;
   bool force_binary = false;
   bool json = false;
   bool xml = false;
   bool ttl = false;
+  bool all = false;
   PyObject *idsym = nullptr;
   bool ok = PyArg_ParseTupleAndKeywords(
                 args, kw, "O|bbbbO", const_cast<char **>(kwlist),
-                &object, &force_binary, &json, &xml, &ttl, &idsym);
+                &object, &force_binary, &json, &xml, &ttl, &all, &idsym);
   if (!ok) return nullptr;
 
   // Pass-through empty data.
@@ -242,24 +243,50 @@ PyObject *PyStore::Parse(PyObject *args, PyObject *kw) {
     // Parse input as TTL.
     Input input(&stream);
     TurtleParser parser(store, &input);
-    Object result = parser.ReadAll();
-    if (parser.error()) {
-      PyErr_SetString(PyExc_IOError, parser.error_message().c_str());
-      return nullptr;
+    if (all) {
+      Handles objects(store);
+      parser.ReadAll(&objects);
+      if (parser.error()) {
+        PyErr_SetString(PyExc_IOError, parser.error_message().c_str());
+        return nullptr;
+      }
+      Array array(store, objects);
+      return PyValue(array.handle());
+    } else {
+      Object result = parser.ReadAll();
+      if (parser.error()) {
+        PyErr_SetString(PyExc_IOError, parser.error_message().c_str());
+        return nullptr;
+      }
+      return PyValue(result.handle());
     }
-    return PyValue(result.handle());
   } else {
     // Load frames from memory buffer.
     InputParser parser(store, &stream, force_binary, json);
-    Object result = parser.ReadAll();
-    if (parser.error()) {
-      PyErr_SetString(PyExc_IOError, parser.error_message().c_str());
-      return nullptr;
-    } else if (result.IsError()) {
-      PyErr_SetString(PyExc_IOError, "Error decoding object");
-      return nullptr;
+
+    if (all) {
+      Handles objects(store);
+      Object result = parser.ReadAll(&objects);
+      if (parser.error()) {
+        PyErr_SetString(PyExc_IOError, parser.error_message().c_str());
+        return nullptr;
+      } else if (result.IsError()) {
+        PyErr_SetString(PyExc_IOError, "Error decoding object");
+        return nullptr;
+      }
+      Array array(store, objects);
+      return PyValue(array.handle());
+    } else {
+      Object result = parser.ReadAll();
+      if (parser.error()) {
+        PyErr_SetString(PyExc_IOError, parser.error_message().c_str());
+        return nullptr;
+      } else if (result.IsError()) {
+        PyErr_SetString(PyExc_IOError, "Error decoding object");
+        return nullptr;
+      }
+      return PyValue(result.handle());
     }
-    return PyValue(result.handle());
   }
 }
 

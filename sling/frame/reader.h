@@ -37,8 +37,9 @@ class Reader : public Tokenizer {
   // Reads next object from input.
   Object Read();
 
-  // Reads all objects from the input and returns the last value.
-  Object ReadAll();
+  // Reads all objects from the input and returns the last value. All the
+  // objects are added to the 'objects' array if supplied.
+  Object ReadAll(Handles *objects = nullptr);
 
   // Reads next object from input and return a handle to it.
   Handle ReadObject();

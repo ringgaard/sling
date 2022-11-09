@@ -33,11 +33,12 @@ Object Decoder::Decode() {
   return Object(store_, DecodeObject());
 }
 
-Object Decoder::DecodeAll() {
+Object Decoder::DecodeAll(Handles *objects) {
   Handle handle = Handle::nil();
   while (!done()) {
     handle = DecodeObject();
     if (handle.IsError()) break;
+    if (objects) objects->push_back(handle);
   }
   return Object(store_, handle);
 }

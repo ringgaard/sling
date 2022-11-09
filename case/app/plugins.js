@@ -222,6 +222,16 @@ var plugins = [
   ],
 },
 
+// Photos from instagram.
+{
+  name: "instagram",
+  module: "instagram.js",
+  actions: [PASTEURL],
+  patterns: [
+    /^https:\/\/www\.instagram\.com\/p\//i,
+  ],
+},
+
 // Cross-reference links.
 {
   name: "xref",
@@ -247,6 +257,16 @@ var plugins = [
   actions: [PASTEURL],
   patterns: [
     /^gallery:/,
+  ],
+},
+
+// Cookie installer.
+{
+  name: "cookie",
+  module: "cookie.js",
+  actions: [PASTEURL],
+  patterns: [
+    /^cookie:/,
   ],
 },
 

@@ -27,10 +27,11 @@ Object Reader::Read() {
   return Object(store_, ReadObject());
 }
 
-Object Reader::ReadAll() {
+Object Reader::ReadAll(Handles *objects) {
   Handle handle = Handle::nil();
   while (!done() && !error()) {
     handle = ReadObject();
+    if (objects) objects->push_back(handle);
   }
   return Object(store_, handle);
 }

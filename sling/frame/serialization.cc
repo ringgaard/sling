@@ -42,8 +42,8 @@ Object InputParser::Read() {
   return binary() ? decoder_->Decode() : reader_->Read();
 }
 
-Object InputParser::ReadAll() {
-  return binary() ? decoder_->DecodeAll() : reader_->ReadAll();
+Object InputParser::ReadAll(Handles *objects) {
+  return binary() ? decoder_->DecodeAll(objects) : reader_->ReadAll(objects);
 }
 
 Object FromText(Store *store, Text text) {

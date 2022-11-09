@@ -85,8 +85,9 @@ class TurtleParser : public TurtleTokenizer {
   // Initialize parser with input.
   explicit TurtleParser(Store *store, Input *input);
 
-  // Read all objects from the input and return the last value.
-  Object ReadAll();
+  // Read all objects from the input and return the last value. All the objects
+  // are added to the 'objects' array if supplied.
+  Object ReadAll(Handles *objects = nullptr);
 
   // Read next object from input.
   Object Read();

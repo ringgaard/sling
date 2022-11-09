@@ -13,6 +13,7 @@ export function read_settings() {
   settings = JSON.parse(window.localStorage.getItem("settings") || "{}");
   if (!settings.kbservice) settings.kbservice = "https://ringgaard.com";
   if (!settings.collaburl) settings.collaburl = "wss://ringgaard.com/collab/";
+  if (!settings.cookiejar) settings.cookiejar = {};
 }
 
 export function save_settings() {

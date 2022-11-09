@@ -34,8 +34,9 @@ class Decoder {
   // Decodes the next object from the input.
   Object Decode();
 
-  // Decodes all objects from the input and returns the last value.
-  Object DecodeAll();
+  // Decodes all objects from the input and returns the last value. All the
+  // objects are added to the 'objects' array if supplied.
+  Object DecodeAll(Handles *objects = nullptr);
 
   // Returns true when there are no more objects in the input.
   bool done() { return input_->done(); }
