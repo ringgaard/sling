@@ -45,6 +45,16 @@ var plugins = [
   ],
 },
 
+// IMDB biographies.
+{
+  name: "imdb",
+  module: "imdb.js",
+  actions: [PASTEURL, SEARCHURL],
+  patterns: [
+    /^https:\/\/www.imdb.com\/name\/(nm\d+)\/bio/,
+  ],
+},
+
 // VIAF entity.
 {
   name: "viaf",

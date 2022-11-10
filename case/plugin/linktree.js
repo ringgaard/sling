@@ -21,7 +21,6 @@ export default class LinkTreePlugin {
     if (!username) return;
 
     if (action == SEARCHURL) {
-      console.log("linktree search for", username);
       return {
         ref: username,
         name: username,

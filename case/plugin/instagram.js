@@ -13,7 +13,7 @@ export default class InstagramPlugin {
     if (!context.topic) return false;
 
     // Get photo url.
-    let m = new URL(url).pathname.match(/^\/p\/(\w+)\//);
+    let m = new URL(url).pathname.match(/^\/p\/([A-Za-z0-9_\-]+)\//);
     if (!m) return;
     let photoid = m[1];
     let photourl = `https://www.instagram.com/p/${photoid}/media/?size=l`;

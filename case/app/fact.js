@@ -653,11 +653,18 @@ class FactEditor extends Component {
     labels.add_item(gender);
     await labels.retrieve();
 
-    let t = new FactStatement({property: n_instance_of, value: n_human});
-    let g = new FactStatement({property: n_gender, value: gender});
-    this.insertBefore(t, s.statement);
-    this.insertBefore(g, s.statement);
-    this.dirty = true;
+    if (this.value(n_instance_of.id) != n_human) {
+      let t = new FactStatement({property: n_instance_of, value: n_human});
+      this.insertBefore(t, s.statement);
+      this.dirty = true;
+    }
+
+
+    if (this.value(n_gender.id) != gender) {
+      let g = new FactStatement({property: n_gender, value: gender});
+      this.insertBefore(g, s.statement);
+      this.dirty = true;
+    }
   }
 
   searchbox(field, results) {
@@ -769,8 +776,8 @@ class FactEditor extends Component {
       if (!(e instanceof FactStatement)) continue;
       if (e.empty()) continue;
 
-      let prop = e.firstChild;
-      let value = e.lastChild;
+      let prop = e.property();
+      let value = e.value();
       if (!prop || !value) continue;
       let p = prop.value();
       let v = value.value();
