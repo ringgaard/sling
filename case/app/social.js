@@ -25,7 +25,7 @@ let xrefs = [
     property: store.lookup("P2002"),
   },
   {
-    pattern: /^https?:\/\/(?:www\.)?instagram\.com\/([A-Za-z0-0_\.)]+)\/?(\?.*)?$/i,
+    pattern: /^https?:\/\/(?:www\.)?instagram\.com\/([A-Za-z0-9_\.)]+)\/?(\?.*)?$/i,
     property: store.lookup("P2003"),
   },
   {

@@ -144,8 +144,10 @@ commons.freeze()
 
 # Read subreddit list.
 person_subreddits = {}
-general_subreddits = {}
+general_subreddits = set()
 skipped_subreddits = set()
+aic_subreddits = set()
+
 for fn in flags.arg.subreddits.split(","):
   with open(fn, "r") as f:
     for line in f.readlines():
@@ -153,10 +155,13 @@ for fn in flags.arg.subreddits.split(","):
       sr = f[0]
       itemid = f[1] if len(f) > 1 else None
       if sr in skipped_subreddits: continue
-      if itemid is None:
-        general_subreddits[sr] = itemid
-      elif itemid == "skip":
+      if itemid == "skip":
         skipped_subreddits.add(sr)
+      elif itemid == "aic":
+        general_subreddits.add(sr)
+        aic_subreddits.add(sr)
+      elif itemid is None:
+        general_subreddits.add(sr)
       else:
         person_subreddits[sr] = itemid
 
@@ -349,6 +354,11 @@ for key, value in postings:
         itemid = lookup_name(name)
         query = name
 
+    # Try to match name.
+    if itemid is None:
+      itemid = lookup_name(name)
+      query = name
+
     # Try to match name prefix.
     if itemid is None:
       prefix = name_prefix(name)
@@ -375,7 +385,7 @@ for key, value in postings:
   posting_profile = photo.Profile(None)
   try:
     n = 0
-    if "(AIC)" in title:
+    if sr in aic_subreddits or "(AIC)" in title:
       post_url = "https://www.reddit.com" + posting[n_permalink]
       n += posting_profile.add_albums_in_comments(post_url, nsfw)
     if n == 0:

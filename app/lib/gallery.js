@@ -69,7 +69,8 @@ export class PhotoGallery extends MdModal {
     this.attach(this.onclick, "click", ".photo");
     this.attach(this.onprev, "click", ".prev");
     this.attach(this.onnext, "click", ".next");
-    this.attach(this.close, "click", ".close");
+    this.attach(this.onfullscreen, "click", "#fullscreen");
+    this.attach(this.close, "click", "#close");
     this.attach(this.onsource, "click", ".domain");
     this.attach(this.onkeypress, "keydown");
   }
@@ -103,6 +104,8 @@ export class PhotoGallery extends MdModal {
       this.flipnsfw(e);
     } else if (e.keyCode == 68) {
       this.delimg(e);
+    } else if (e.keyCode == 70) {
+      this.onfullscreen(e);
     }
     this.focus();
   }
@@ -161,6 +164,15 @@ export class PhotoGallery extends MdModal {
     this.move(this.stepsize(e), e.altKey);
     e.stopPropagation();
     if (e.altKey) e.preventDefault();
+  }
+
+  onfullscreen(e) {
+    e.stopPropagation();
+    if (!document.fullscreenElement) {
+      this.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
   }
 
   onclose(e) {
@@ -273,7 +285,12 @@ export class PhotoGallery extends MdModal {
         <div class="photo">
           <img class="image" referrerpolicy="no-referrer">
           <md-text class="size"></md-text>
-          <md-icon-button class="close" icon="close"></md-icon-button>
+          <div class="toolbox">
+            <md-icon-button id="fullscreen" icon="fullscreen">
+            </md-icon-button>
+            <md-icon-button id="close" icon="close">
+            </md-icon-button>
+          </div>
 
           <div class="source">
             <md-text class="domain"></md-text>
@@ -334,14 +351,18 @@ export class PhotoGallery extends MdModal {
         padding: 8px 12px;
       }
 
-      $ .close {
+      $ .toolbox {
+        display: flex;
         position: absolute;
         top: 0;
         right: 0;
-
         color: white;
-        padding: 8px 12px;
-        font-size: 24px;
+      }
+
+      $ .toolbox md-icon-button:hover {
+        color: #999;
+        text-decoration: none;
+        cursor: pointer;
       }
 
       $ .source {
@@ -383,12 +404,6 @@ export class PhotoGallery extends MdModal {
         color: rgb(255, 255, 255);
         font-size: 12px;
         padding: 8px 12px;
-      }
-
-      $ .close:hover, $ .close:focus {
-        color: #999;
-        text-decoration: none;
-        cursor: pointer;
       }
 
       $ .prev, $ .next {
