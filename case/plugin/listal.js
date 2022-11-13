@@ -87,6 +87,8 @@ const tagsdir = {
   "Pin Up Model": stmt(n_occupation, "Q151092"),
   "Pin Up": stmt(n_occupation, "Q151092"),
   "Showgirl": stmt(n_occupation, "Q3482594"),
+  "Stripper": stmt(n_occupation, "Q1141526"),
+  "Burlesque": stmt(n_occupation, "Q107199096"),
 
   "Blonde": stmt(n_hair_color, "Q202466"),
   "Blond": stmt(n_hair_color, "Q202466"),

@@ -18,6 +18,7 @@ const n_internal = store.lookup("internal");
 const n_target = store.lookup("target");
 const n_item_type = store.lookup("/w/item");
 const n_quantity_type = store.lookup("/w/quantity");
+const n_xref_type = store.lookup("/w/xref");
 const n_start_time = store.lookup("P580");
 const n_end_time = store.lookup("P582");
 const n_point_in_time = store.lookup("P585");
@@ -1299,6 +1300,23 @@ function newtopic(query, editor, field, results) {
       let topic = await item.context.new_topic(position);
       if (!topic) return;
       topic.put(n_name, item.name.trim());
+
+      // Move xref qualifiers to new topic.
+      let e = field.parentElement.nextSibling;
+      while (e) {
+        if (!e.qualified) break;
+        let prop = e.property().value();
+        let value = e.value().value();
+        if (prop.get && prop.get(n_target) == n_xref_type) {
+          topic.put(prop, value);
+          let next = e.nextSibling;
+          e.remove();
+          e = next;
+        } else {
+          e = e.nextSibling;
+        }
+      }
+
       item.context.select = false;
       return true;
     },
