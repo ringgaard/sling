@@ -3,12 +3,12 @@
 
 // SLING case plug-in for adding topic from Wikipedia.
 
-import {store} from "/case/app/global.js";
+import {store, frame} from "/case/app/global.js";
 import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 
 const n_is = store.is;
-const n_name = store.lookup("name");
-const n_description = store.lookup("description");
+const n_name = frame("name");
+const n_description = frame("description");
 
 export default class WikipeidaPlugin {
   async process(action, query, context) {

@@ -3,9 +3,9 @@
 
 import {inform} from "/common/lib/material.js";
 import {Encoder, Decoder} from "/common/lib/frame.js";
-import {store} from "./global.js";
+import {store, frame} from "./global.js";
 
-const n_topics = store.lookup("topics");
+const n_topics = frame("topics");
 
 const COLLAB_CREATE  = 1;
 const COLLAB_DELETE  = 2;

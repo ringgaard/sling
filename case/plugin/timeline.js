@@ -5,28 +5,28 @@
 
 import {Component} from "/common/lib/component.js";
 import {MdDialog} from "/common/lib/material.js";
-import {store, settings} from "/case/app/global.js";
+import {store, frame, settings} from "/case/app/global.js";
 import {ItemCollector, LabelCollector} from "/case/app/value.js";
 import {qualified} from "/case/app/schema.js";
 
-const n_name = store.lookup("name");
-const n_description = store.lookup("description");
-const n_depicts = store.lookup("P180");
-const n_type = store.lookup("P31");
-const n_target = store.lookup("target");
-const n_item_type = store.lookup("/w/item");
-const n_point_in_time = store.lookup("P585");
-const n_start_time = store.lookup("P580");
-const n_end_time = store.lookup("P582");
-const n_inception = store.lookup("P571");
-const n_dissolved = store.lookup("P576");
-const n_birth_date = store.lookup("P569");
-const n_death_date = store.lookup("P570");
+const n_name = frame("name");
+const n_description = frame("description");
+const n_depicts = frame("P180");
+const n_type = frame("P31");
+const n_target = frame("target");
+const n_item_type = frame("/w/item");
+const n_point_in_time = frame("P585");
+const n_start_time = frame("P580");
+const n_end_time = frame("P582");
+const n_inception = frame("P571");
+const n_dissolved = frame("P576");
+const n_birth_date = frame("P569");
+const n_death_date = frame("P570");
 
 
 const discarded_topic_types = [
-  store.lookup("Q108673968"), // case file
-  store.lookup("Q186117"),    // time line
+  frame("Q108673968"), // case file
+  frame("Q186117"),    // time line
 ];
 
 function range(topic) {

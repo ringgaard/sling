@@ -3,83 +3,51 @@
 
 // SLING case plug-in for adding topic from OpenCorporates.
 
-import {store} from "/case/app/global.js";
+import {store, frame} from "/case/app/global.js";
 import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 
 const n_is = store.is;
-const n_name = store.lookup("name");
-const n_alias = store.lookup("alias");
-const n_description = store.lookup("description");
-const n_instance_of = store.lookup("P31");
-const n_business = store.lookup("Q4830453");
-const n_legal_form = store.lookup("P1454");
-const n_inception = store.lookup("P571");
-const n_dissolved = store.lookup("P576");
-const n_other_name = store.lookup("P2561");
-const n_start_time = store.lookup("P580");
-const n_end_time = store.lookup("P582");
-const n_headquarters_location = store.lookup("P159")
-const n_located_at_street_address = store.lookup("P6375");
-const n_postal_code = store.lookup("P281");
-const n_country = store.lookup("P17");
-const n_location = store.lookup("P276");
-const n_position_held = store.lookup("P39");
-const n_corporate_officer = store.lookup("P2828");
+const n_name = frame("name");
+const n_alias = frame("alias");
+const n_description = frame("description");
+const n_instance_of = frame("P31");
+const n_business = frame("Q4830453");
+const n_legal_form = frame("P1454");
+const n_inception = frame("P571");
+const n_dissolved = frame("P576");
+const n_other_name = frame("P2561");
+const n_start_time = frame("P580");
+const n_end_time = frame("P582");
+const n_headquarters_location = frame("P159")
+const n_located_at_street_address = frame("P6375");
+const n_postal_code = frame("P281");
+const n_country = frame("P17");
+const n_location = frame("P276");
+const n_position_held = frame("P39");
+const n_corporate_officer = frame("P2828");
 
 const positions = {
-  "director": store.lookup("P1037"),
-  "owner": store.lookup("P127"),
-  "adm. dir.": store.lookup("P169"),
-  "adm. dir": store.lookup("P169"),
-  "reel ejer": store.lookup("P127"),
-  "stiftere": store.lookup("P112"),
-  "formand": store.lookup("P488"),
-  "bestyrelsesmedlem": store.lookup("P3320"),
-  "bestyrelse": store.lookup("P3320"),
-  "direktør": store.lookup("P1037"),
+  "director": frame("P1037"),
+  "owner": frame("P127"),
+  "adm. dir.": frame("P169"),
+  "adm. dir": frame("P169"),
+  "reel ejer": frame("P127"),
+  "stiftere": frame("P112"),
+  "formand": frame("P488"),
+  "bestyrelsesmedlem": frame("P3320"),
+  "bestyrelse": frame("P3320"),
+  "direktør": frame("P1037"),
 
 };
 
-/*
-n_founded_by = kb["P112"]
-n_founder_of = kb["Q65972149"]
-n_owned_by = kb["P127"]
-n_owner_of = kb["P1830"]
-n_subsidiary = kb["P355"]
-n_parent_organization = kb["P749"]
-n_has_part = kb["P527"]
-n_part_of = kb["P361"]
-n_replaces = kb["P1365"]
-n_replaced_by = kb["P1366"]
-n_merged_into = kb["P7888"]
-n_separated_from = kb["P807"]
-n_employer = kb["P108"]
-n_industry = kb["P452"]
-n_chief_executive_officer = kb["P169"]
-n_director_manager = kb["P1037"]
-n_board_member = kb["P3320"]
-n_chairperson = kb["P488"]
-n_manager = kb["Q2462658"]
-n_business_manager = kb["Q832136"]
-n_opencorp = kb["P1320"]
-n_described_by_source = kb["P1343"]
-n_nace_code = kb["P4496"]
-n_cvr = kb["Q795419"]
-n_organization = kb["Q43229"]
-n_foundation = kb["Q157031"]
-n_association = kb["Q48204"]
-n_human = kb["Q5"]
-n_family_name = kb["Q101352"]
-*/
+const n_company = frame("company");
+const n_regauth = frame("regauth");
+const n_country_id = frame("country");
+const n_jurisdiction_id = frame("jurisdiction");
 
-const n_company = store.lookup("company");
-const n_regauth = store.lookup("regauth");
-const n_country_id = store.lookup("country");
-const n_jurisdiction_id = store.lookup("jurisdiction");
-
-const n_opencorporates_id = store.lookup("P1320");
-const n_described_by_source = store.lookup("P1343");
-const n_opencorp = store.lookup("Q7095760");
+const n_opencorporates_id = frame("P1320");
+const n_described_by_source = frame("P1343");
+const n_opencorp = frame("Q7095760");
 
 function date2sling(date) {
   if (!date) return undefined;

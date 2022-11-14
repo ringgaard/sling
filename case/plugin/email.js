@@ -3,9 +3,9 @@
 
 // SLING case plug-in for adding email address.
 
-import {store} from "/case/app/global.js";
+import {store, frame} from "/case/app/global.js";
 
-const n_email_address = store.lookup("P968");
+const n_email_address = frame("P968");
 
 export default class EmailPlugin {
   process(action, email, context) {

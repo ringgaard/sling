@@ -11,7 +11,7 @@ import {
 } from "/common/lib/material.js";
 import {Frame, QString, Printer} from "/common/lib/frame.js";
 import {imageurl} from "/common/lib/gallery.js";
-import {store, settings} from "./global.js";
+import {store, frame, settings} from "./global.js";
 import {get_schema, inverse_property} from "./schema.js";
 import {LabelCollector, value_parser} from "./value.js";
 import "./item.js"
@@ -19,12 +19,12 @@ import "./fact.js"
 
 const n_id = store.id;
 const n_is = store.is;
-const n_name = store.lookup("name");
-const n_case_file = store.lookup("Q108673968");
-const n_instance_of = store.lookup("P31");
-const n_media = store.lookup("media");
-const n_has_quality = store.lookup("P1552");
-const n_not_safe_for_work = store.lookup("Q2716583");
+const n_name = frame("name");
+const n_case_file = frame("Q108673968");
+const n_instance_of = frame("P31");
+const n_media = frame("media");
+const n_has_quality = frame("P1552");
+const n_not_safe_for_work = frame("Q2716583");
 
 // Cross-reference configuration.
 var xrefs;

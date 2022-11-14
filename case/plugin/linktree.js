@@ -3,14 +3,14 @@
 
 // SLING case plug-in for adding topic from LinkTree profile.
 
-import {store} from "/case/app/global.js";
+import {store, frame} from "/case/app/global.js";
 import {SocialTopic, strip_emojis} from "/case/app/social.js";
 import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 
-const n_name = store.lookup("name");
-const n_description = store.lookup("description");
-const n_media = store.lookup("media");
-const n_linktree = store.lookup("PLITR");
+const n_name = frame("name");
+const n_description = frame("description");
+const n_media = frame("media");
+const n_linktree = frame("PLITR");
 
 export default class LinkTreePlugin {
   async process(action, query, context) {

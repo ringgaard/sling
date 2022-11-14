@@ -3,31 +3,31 @@
 
 // SLING importer plug-in for importing data from QuickStatements files.
 
-import {store} from "/case/app/global.js";
+import {store, frame} from "/case/app/global.js";
 import {Time} from "/case/app/value.js";
 
 const n_is = store.is;
 const n_isa = store.isa;
-const n_name = store.lookup("name");
-const n_alias = store.lookup("alias");
-const n_description = store.lookup("description");
-const n_target = store.lookup("target");
+const n_name = frame("name");
+const n_alias = frame("alias");
+const n_description = frame("description");
+const n_target = frame("target");
 
-const n_item_type = store.lookup("/w/item");
-const n_string_type = store.lookup("/w/string");
-const n_text_type = store.lookup("/w/text");
-const n_xref_type = store.lookup("/w/xref");
-const n_time_type = store.lookup("/w/time");
-const n_url_type = store.lookup("/w/url");
-const n_media_type = store.lookup("/w/media");
-const n_quantity_type = store.lookup("/w/quantity");
-const n_geo_type = store.lookup("/w/geo");
+const n_item_type = frame("/w/item");
+const n_string_type = frame("/w/string");
+const n_text_type = frame("/w/text");
+const n_xref_type = frame("/w/xref");
+const n_time_type = frame("/w/time");
+const n_url_type = frame("/w/url");
+const n_media_type = frame("/w/media");
+const n_quantity_type = frame("/w/quantity");
+const n_geo_type = frame("/w/geo");
 
-const n_amount = store.lookup("/w/amount");
-const n_unit = store.lookup("/w/unit");
-const n_geo = store.lookup("/w/geo");
-const n_lat = store.lookup("/w/lat");
-const n_lng = store.lookup("/w/lng");
+const n_amount = frame("/w/amount");
+const n_unit = frame("/w/unit");
+const n_geo = frame("/w/geo");
+const n_lat = frame("/w/lat");
+const n_lng = frame("/w/lng");
 
 function add(topic, name, value, lang) {
   if (value.charAt(0) == '"' && value.slice(-1) == '"') {
@@ -39,7 +39,7 @@ function add(topic, name, value, lang) {
 function convert(value, dt) {
   switch (dt) {
     case n_item_type: {
-      return store.lookup(value);
+      return frame(value);
     }
 
     case n_text_type: {
@@ -70,7 +70,7 @@ function convert(value, dt) {
       let u = value.indexOf("U");
       if (u > 0) {
         let amount = parseFloat(value.slice(0, u));
-        let unit = store.lookup(value.slice(u + 1));
+        let unit = frame(value.slice(u + 1));
         let v = store.frame();
         v.add(n_amount, amount);
         v.add(n_unit, unit);
@@ -140,14 +140,14 @@ export default class QuickStatementsImporter {
         } else if (kind == "D") {
           add(topic, n_description, propval, propid.slice(0));
         } else {
-          let property = store.lookup(propid);
+          let property = frame(propid);
           let dt = property.get(n_target);
           let value = convert(propval, dt);
           if (f.length > 3) {
             let qualifiers = store.frame();
             qualifiers.add(n_is, value);
             for (let i = 3; i < f.length; i += 2) {
-              let qproperty = store.lookup(f[i]);
+              let qproperty = frame(f[i]);
               let dt = qproperty.get(n_target);
               let qvalue = convert(f[i + 1], dt);
               if (qvalue) qualifiers.add(qproperty, qvalue);

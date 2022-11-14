@@ -2,19 +2,19 @@
 // Licensed under the Apache License, Version 2
 
 import {Encoder} from "/common/lib/frame.js";
-import {store} from "./global.js";
+import {store, frame} from "./global.js";
 
-const n_caseid = store.lookup("caseid");
-const n_modified = store.lookup("modified");
-const n_share = store.lookup("share");
-const n_topics = store.lookup("topics");
-const n_secret = store.lookup("secret");
+const n_caseid = frame("caseid");
+const n_modified = frame("modified");
+const n_share = frame("share");
+const n_topics = frame("topics");
+const n_secret = frame("secret");
 
-const n_encryption = store.lookup("encryption");
-const n_hashing = store.lookup("hashing");
-const n_salt = store.lookup("salt");
-const n_digest = store.lookup("digest");
-const n_cipher = store.lookup("cipher");
+const n_encryption = frame("encryption");
+const n_hashing = frame("hashing");
+const n_salt = frame("salt");
+const n_digest = frame("digest");
+const n_cipher = frame("cipher");
 
 // Default encryption: 128 bit AES-CBC with SHA-256 hashing.
 const encryption = "AES-CBC";

@@ -3,10 +3,10 @@
 
 // SLING case plug-in for adding images from gallery.
 
-import {store, settings} from "/case/app/global.js";
+import {store, frame, settings} from "/case/app/global.js";
 
-const n_is = store.lookup("is");
-const n_media = store.lookup("media");
+const n_is = frame("is");
+const n_media = frame("media");
 
 function photourl(url) {
   if (url.startsWith('!')) return url.slice(1);

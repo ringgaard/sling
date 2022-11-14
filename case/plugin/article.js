@@ -3,30 +3,30 @@
 
 // SLING case plug-in for adding topic for web article.
 
-import {store} from "/case/app/global.js";
+import {store, frame} from "/case/app/global.js";
 import {match_link} from "/case/app/social.js";
 import {SEARCHURL} from "/case/app/plugins.js";
 
-const n_name = store.lookup("name");
-const n_description = store.lookup("description");
-const n_instance_of = store.lookup("P31");
-const n_title = store.lookup("P1476");
-const n_publisher = store.lookup("P123");
-const n_publication_date = store.lookup("P577");
-const n_full_work = store.lookup("P953");
-const n_media = store.lookup("media");
-const n_web_page = store.lookup("Q36774");
-const n_author_name_string = store.lookup("P2093");
-const n_creator = store.lookup("P170");
-const n_language = store.lookup("P407");
-const n_video_id = store.lookup("P1651");
+const n_name = frame("name");
+const n_description = frame("description");
+const n_instance_of = frame("P31");
+const n_title = frame("P1476");
+const n_publisher = frame("P123");
+const n_publication_date = frame("P577");
+const n_full_work = frame("P953");
+const n_media = frame("media");
+const n_web_page = frame("Q36774");
+const n_author_name_string = frame("P2093");
+const n_creator = frame("P170");
+const n_language = frame("P407");
+const n_video_id = frame("P1651");
 
 const page_types = {
-  "Article": store.lookup("Q5707594"),
-  "article": store.lookup("Q5707594"),
-  "Text.Article": store.lookup("Q5707594"),
-  "ReportageNewsArticle": store.lookup("Q124922"),
-  "video.other": store.lookup("Q34508"),
+  "Article": frame("Q5707594"),
+  "article": frame("Q5707594"),
+  "Text.Article": frame("Q5707594"),
+  "ReportageNewsArticle": frame("Q124922"),
+  "video.other": frame("Q34508"),
 };
 
 const date_patterns = [
@@ -427,14 +427,14 @@ export default class ArticlePlugin {
       let r = await fetch(context.service("newssite", {site: url.hostname}));
       let site = await r.json();
       if (site.siteid) {
-        topic.put(n_publisher, store.lookup(site.siteid));
+        topic.put(n_publisher, frame(site.siteid));
       }
     }
     if (!topic.has(n_publisher) && article.site) {
       let r = await fetch(context.service("newssite", {site: article.site}));
       let site = await r.json();
       if (site.siteid) {
-        topic.put(n_publisher, store.lookup(site.siteid));
+        topic.put(n_publisher, frame(site.siteid));
       }
     }
     if (!topic.has(n_publisher) && article.publisher) {
@@ -474,7 +474,7 @@ export default class ArticlePlugin {
     if (article.language) {
       let lang = until(until(article.language, '-'), '_').toLowerCase();
       // TODO: use wiki item instead of language frame.
-      topic.put(n_language, store.lookup("/lang/" + lang));
+      topic.put(n_language, frame("/lang/" + lang));
     }
 
     if (article.url) {

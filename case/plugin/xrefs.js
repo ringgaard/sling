@@ -3,12 +3,12 @@
 
 // SLING case plug-in for adding cross-reference links to topics.
 
-import {store, settings} from "/case/app/global.js";
+import {store, frame, settings} from "/case/app/global.js";
 import {match_link} from "/case/app/social.js";
 import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 
-const n_is = store.lookup("is");
-const n_name = store.lookup("name");
+const n_is = frame("is");
+const n_name = frame("name");
 
 export default class XrefPlugin {
   async process(action, url, context) {

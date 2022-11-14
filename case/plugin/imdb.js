@@ -3,42 +3,42 @@
 
 // SLING case plug-in for biographies from imdb.com.
 
-import {store} from "/case/app/global.js";
+import {store, frame} from "/case/app/global.js";
 import {date_parser, ItemCollector} from "/case/app/value.js";
 import {match_link} from "/case/app/social.js";
 import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 
-const n_name = store.lookup("name");
-const n_birth_name = store.lookup("P1477");
-const n_nickname = store.lookup("P1449");
-const n_instance_of = store.lookup("P31");
-const n_human = store.lookup("Q5");
-const n_date_of_birth = store.lookup("P569");
-const n_place_of_birth = store.lookup("P19");
-const n_date_of_death = store.lookup("P570");
-const n_place_of_death = store.lookup("P20");
-const n_cause_of_death = store.lookup("P509");
-const n_country_of_citizenship = store.lookup("P27");
-const n_height = store.lookup("P2048");
-const n_cm = store.lookup("Q174728");
-const n_amount = store.lookup("/w/amount");
-const n_unit = store.lookup("/w/unit");
-const n_start_time = store.lookup("P580");
-const n_end_time = store.lookup("P582");
-const n_imdb = store.lookup("P345");
+const n_name = frame("name");
+const n_birth_name = frame("P1477");
+const n_nickname = frame("P1449");
+const n_instance_of = frame("P31");
+const n_human = frame("Q5");
+const n_date_of_birth = frame("P569");
+const n_place_of_birth = frame("P19");
+const n_date_of_death = frame("P570");
+const n_place_of_death = frame("P20");
+const n_cause_of_death = frame("P509");
+const n_country_of_citizenship = frame("P27");
+const n_height = frame("P2048");
+const n_cm = frame("Q174728");
+const n_amount = frame("/w/amount");
+const n_unit = frame("/w/unit");
+const n_start_time = frame("P580");
+const n_end_time = frame("P582");
+const n_imdb = frame("P345");
 
-const n_parent = store.lookup("P8810");
-const n_father = store.lookup("P22");
-const n_mother = store.lookup("P25");
-const n_sibling = store.lookup("P3373");
-const n_relative = store.lookup("P1038");
-const n_end_cause = store.lookup("P1534");
-const n_divorce = store.lookup("Q93190");
-const n_kinship = store.lookup("P1039");
+const n_parent = frame("P8810");
+const n_father = frame("P22");
+const n_mother = frame("P25");
+const n_sibling = frame("P3373");
+const n_relative = frame("P1038");
+const n_end_cause = frame("P1534");
+const n_divorce = frame("Q93190");
+const n_kinship = frame("P1039");
 
-const n_gender = store.lookup("P21");
-const n_female = store.lookup("Q6581072");
-const n_male = store.lookup("Q6581097");
+const n_gender = frame("P21");
+const n_female = frame("Q6581072");
+const n_male = frame("Q6581097");
 
 const kinships = {
   "Parents": {prop: n_parent, male: "father", female: "mother", rank: 13},
@@ -46,63 +46,63 @@ const kinships = {
   "mother": {prop: n_mother, gender: n_female, rank: 12},
 
   "sibling": {prop: n_sibling, rank: 20},
-  "half sibling": {prop: n_sibling, qual: store.lookup("Q27965041"), rank: 21},
+  "half sibling": {prop: n_sibling, qual: frame("Q27965041"), rank: 21},
 
-  "Spouse": {prop: store.lookup("P26"), rank: 40},
-  "Children": {prop: store.lookup("P40"), rank: 50},
+  "Spouse": {prop: frame("P26"), rank: 40},
+  "Children": {prop: frame("P40"), rank: 50},
 
   "Relatives": {prop: n_relative, rank: 1000},
 
   "grandparent": {
     prop: n_relative,
-    qual: store.lookup("Q167918"),
+    qual: frame("Q167918"),
     male: "grandfather",
     female: "grandmother",
     rank: 102,
 
   },
-  "grandfather": {prop: n_relative, qual: store.lookup("Q9238344"), rank: 101},
-  "grandmother": {prop: n_relative, qual: store.lookup("Q9235758"), rank: 102},
+  "grandfather": {prop: n_relative, qual: frame("Q9238344"), rank: 101},
+  "grandmother": {prop: n_relative, qual: frame("Q9235758"), rank: 102},
 
   "great grandparent": {
     prop: n_relative,
-    qual: store.lookup("Q2500619"),
+    qual: frame("Q2500619"),
     male: "great grandfather",
     female: "great grandmother",
     rank: 106,
   },
   "great grandfather": {
     prop: n_relative,
-    qual: store.lookup("Q2500621"),
+    qual: frame("Q2500621"),
     rank: 104,
   },
   "great grandmother": {
     prop: n_relative,
-    qual: store.lookup("Q2500620"),
+    qual: frame("Q2500620"),
     rank: 105,
   },
 
   "aunt or uncle": {
     prop: n_relative,
-    qual: store.lookup("Q21073936"),
+    qual: frame("Q21073936"),
     male: "uncle",
     female: "aunt",
     rank: 113,
   },
-  "uncle": {prop: n_relative, qual: store.lookup("Q76557"), rank: 111},
-  "aunt": {prop: n_relative, qual: store.lookup("Q76507"), rank: 112},
+  "uncle": {prop: n_relative, qual: frame("Q76557"), rank: 111},
+  "aunt": {prop: n_relative, qual: frame("Q76507"), rank: 112},
 
   "niece or nephew": {
     prop: n_relative,
-    qual: store.lookup("Q76477"),
+    qual: frame("Q76477"),
     male: "nephew",
     female: "niece",
     rank: 123,
   },
-  "nephew": {prop: n_relative, qual: store.lookup("Q15224724"), rank: 121},
-  "niece": {prop: n_relative, qual: store.lookup("Q3403377"), rank: 122},
+  "nephew": {prop: n_relative, qual: frame("Q15224724"), rank: 121},
+  "niece": {prop: n_relative, qual: frame("Q3403377"), rank: 122},
 
-  "cousin": {prop: n_relative, qual: store.lookup("Q23009870"), rank: 130},
+  "cousin": {prop: n_relative, qual: frame("Q23009870"), rank: 130},
 };
 
 const gender_words = {
@@ -118,7 +118,7 @@ async function lookup(context, name) {
   let r = await context.kblookup(name, {fullmatch: 1});
   let data = await r.json();
   if (data.matches.length > 0) {
-    return store.lookup(data.matches[0].ref);
+    return frame(data.matches[0].ref);
   } else {
     return name;
   }

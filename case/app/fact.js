@@ -4,7 +4,7 @@
 import {Component} from "/common/lib/component.js";
 import {MdSearchList} from "/common/lib/material.js";
 import {Frame, QString, Printer} from "/common/lib/frame.js";
-import {store, settings} from "./global.js";
+import {store, frame, settings} from "./global.js";
 import {value_text, value_parser, LabelCollector} from "./value.js";
 import {Context} from "./plugins.js";
 import {search, kbsearch} from "./search.js";
@@ -12,21 +12,21 @@ import {qualified, psearch} from "./schema.js";
 
 const n_id = store.id;
 const n_is = store.is;
-const n_name = store.lookup("name");
-const n_media = store.lookup("media");
-const n_internal = store.lookup("internal");
-const n_target = store.lookup("target");
-const n_item_type = store.lookup("/w/item");
-const n_quantity_type = store.lookup("/w/quantity");
-const n_xref_type = store.lookup("/w/xref");
-const n_start_time = store.lookup("P580");
-const n_end_time = store.lookup("P582");
-const n_point_in_time = store.lookup("P585");
-const n_instance_of = store.lookup("P31");
-const n_human = store.lookup("Q5");
-const n_gender = store.lookup("P21");
-const n_female = store.lookup("Q6581072");
-const n_male = store.lookup("Q6581097");
+const n_name = frame("name");
+const n_media = frame("media");
+const n_internal = frame("internal");
+const n_target = frame("target");
+const n_item_type = frame("/w/item");
+const n_quantity_type = frame("/w/quantity");
+const n_xref_type = frame("/w/xref");
+const n_start_time = frame("P580");
+const n_end_time = frame("P582");
+const n_point_in_time = frame("P585");
+const n_instance_of = frame("P31");
+const n_human = frame("Q5");
+const n_gender = frame("P21");
+const n_female = frame("Q6581072");
+const n_male = frame("Q6581097");
 
 function range(a, b) {
   if (!a || !b || !a.parentNode || a.parentNode != b.parentNode) {
@@ -1160,7 +1160,7 @@ class FactField extends Component {
 
       // Set property for value.
       if (item.ref) {
-        next.state.property = store.lookup(item.ref);
+        next.state.property = frame(item.ref);
       }
     } else {
       // Move cursor to end of field.

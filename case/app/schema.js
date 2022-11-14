@@ -6,23 +6,23 @@
 import {Component} from "/common/lib/component.js";
 import {MdSearchResult} from "/common/lib/material.js";
 import {Frame} from "/common/lib/frame.js";
-import {store, settings} from "./global.js";
+import {store, frame, settings} from "./global.js";
 import {SearchIndex} from "./search.js";
 
 const n_is = store.is;
 const n_id = store.id;
-const n_name = store.lookup("name");
-const n_alias = store.lookup("alias");
-const n_description = store.lookup("description");
-const n_instance_of = store.lookup("P31");
-const n_inverse_property = store.lookup("P1696");
-const n_properties_for_type = store.lookup("P1963");
-const n_property_constraint = store.lookup("P2302");
-const n_allowed_qualifiers_constraint = store.lookup("Q21510851");
-const n_property = store.lookup("P2306");
+const n_name = frame("name");
+const n_alias = frame("alias");
+const n_description = frame("description");
+const n_instance_of = frame("P31");
+const n_inverse_property = frame("P1696");
+const n_properties_for_type = frame("P1963");
+const n_property_constraint = frame("P2302");
+const n_allowed_qualifiers_constraint = frame("Q21510851");
+const n_property = frame("P2306");
 
-const n_properties = store.lookup("properties");
-const n_fanin = store.lookup("/w/item/fanin");
+const n_properties = frame("properties");
+const n_fanin = frame("/w/item/fanin");
 
 const max_fanin = Number.POSITIVE_INFINITY;
 

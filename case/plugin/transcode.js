@@ -3,10 +3,10 @@
 
 // SLING case plug-in for transcoding videos.
 
-import {store, settings} from "/case/app/global.js";
+import {store, frame, settings} from "/case/app/global.js";
 import {Drive} from "/case/app/drive.js";
 
-const n_media = store.lookup("media");
+const n_media = frame("media");
 
 export default class TranscodePlugin {
   async process(action, url, context) {

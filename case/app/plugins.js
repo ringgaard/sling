@@ -3,7 +3,7 @@
 
 // SLING case plug-ins.
 
-import {store, settings} from "./global.js";
+import {store, frame, settings} from "./global.js";
 import {xref_patterns} from "./social.js";
 
 // Actions.
@@ -390,7 +390,7 @@ export class Context {
     let response = await this.kblookup(query, {fullmatch: 1});
     let result = await response.json();
     if (result.matches.length == 1) {
-      return store.lookup(result.matches[0].ref);
+      return frame(result.matches[0].ref);
     }
   }
 };
@@ -455,26 +455,26 @@ var topic_widgets = [
 // Graph widget.
 {
   module: "network.js",
-  type: store.lookup("Q1900326"),
+  type: frame("Q1900326"),
 },
 
 // Timeline widget.
 {
   module: "timeline.js",
-  type: store.lookup("Q186117"),
+  type: frame("Q186117"),
 },
 
 // Chart widget.
 {
   module: "chart.js",
-  type: store.lookup("Q28923"),
+  type: frame("Q28923"),
 },
 
 ];
 
 const topic_widget_map = new Map(topic_widgets.map(w => [w.type, w]));
 
-const n_instance_of = store.lookup("P31");
+const n_instance_of = frame("P31");
 
 export async function get_widget(topic) {
   // Get topic type.

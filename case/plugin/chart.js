@@ -5,12 +5,12 @@
 
 import {Component} from "/common/lib/component.js";
 import {MdDialog} from "/common/lib/material.js";
-import {store, settings} from "/case/app/global.js";
+import {store, frame, settings} from "/case/app/global.js";
 import {ItemCollector} from "/case/app/value.js";
 
-const n_depicts = store.lookup("P180");
-const n_property = store.lookup("P2306");
-const n_qualifier = store.lookup("P8379");
+const n_depicts = frame("P180");
+const n_property = frame("P2306");
+const n_qualifier = frame("P8379");
 
 var gchart_loaded;
 

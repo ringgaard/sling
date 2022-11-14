@@ -3,20 +3,20 @@
 
 // SLING case plug-in for adding topic from r/BeautifulFemales.
 
-import {store} from "/case/app/global.js";
+import {store, frame} from "/case/app/global.js";
 import {match_link} from "/case/app/social.js";
 import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 
-const n_is = store.lookup("is");
-const n_name = store.lookup("name");
-const n_media = store.lookup("media");
-const n_gender = store.lookup("P21");
-const n_female = store.lookup("Q6581072");
-const n_instance_of = store.lookup("P31");
-const n_human = store.lookup("Q5");
-const n_date_of_birth = store.lookup("P569");
-const n_subreddit = store.lookup("P3984");
-const n_homepage = store.lookup("P856");
+const n_is = frame("is");
+const n_name = frame("name");
+const n_media = frame("media");
+const n_gender = frame("P21");
+const n_female = frame("Q6581072");
+const n_instance_of = frame("P31");
+const n_human = frame("Q5");
+const n_date_of_birth = frame("P569");
+const n_subreddit = frame("P3984");
+const n_homepage = frame("P856");
 
 let linkbots = new Set([
   "SocialMediaMonkey",

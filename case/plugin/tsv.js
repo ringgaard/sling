@@ -3,13 +3,13 @@
 
 // SLING importer plug-in for importing data from TSV files.
 
-import {store} from "/case/app/global.js";
+import {store, frame} from "/case/app/global.js";
 import {get_property_index} from "/case/app/schema.js";
 import {parsers} from "/case/app/value.js";
 
 const n_id = store.id;
 const n_is = store.is;
-const n_target = store.lookup("target");
+const n_target = frame("target");
 
 export default class TSVImporter {
   async process(file, context) {
@@ -60,7 +60,7 @@ export default class TSVImporter {
           if (results.length > 0) value = results[0].value;
         }
         if (column.resolve) {
-          value = store.lookup(value);
+          value = frame(value);
         }
 
         topic.put(name, value);

@@ -3,11 +3,11 @@
 
 // SLING case plug-in for adding history from glamourgirlsofthesilverscreen.com.
 
-import {store} from "/case/app/global.js";
+import {store, frame} from "/case/app/global.js";
 import {date_parser} from "/case/app/value.js";
 
 const n_is = store.is;
-const n_time = store.lookup("P585");
+const n_time = frame("P585");
 
 export default class GlamourGirlPlugin {
   async process(action, query, context) {

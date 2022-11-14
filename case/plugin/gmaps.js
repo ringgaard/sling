@@ -3,15 +3,15 @@
 
 // SLING case plug-in for adding geo coordinates from Google Maps.
 
-import {store, settings} from "/case/app/global.js";
+import {store, frame, settings} from "/case/app/global.js";
 import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 
 const n_isa = store.isa;
-const n_name = store.lookup("name");
-const n_coordinate = store.lookup("P625");
-const n_geo = store.lookup("/w/geo");
-const n_lat = store.lookup("/w/lat");
-const n_lng = store.lookup("/w/lng");
+const n_name = frame("name");
+const n_coordinate = frame("P625");
+const n_geo = frame("/w/geo");
+const n_lat = frame("/w/lat");
+const n_lng = frame("/w/lng");
 
 export default class GoogleMapsPlugin {
   async process(action, query, context) {

@@ -4,7 +4,7 @@
 import {Component} from "/common/lib/component.js";
 import {inform} from "/common/lib/material.js";
 import {Frame, QString} from "/common/lib/frame.js";
-import {store, settings} from "./global.js";
+import {store, frame, settings} from "./global.js";
 import {Time, LabelCollector, latlong} from "./value.js";
 import {get_widget} from "./plugins.js";
 import {PhotoGallery, censor, imageurl, mediadb} from "/common/lib/gallery.js";
@@ -14,36 +14,36 @@ mediadb.thumb = false;
 const n_id = store.id;
 const n_is = store.is;
 const n_isa = store.isa;
-const n_name = store.lookup("name");
-const n_alias = store.lookup("alias");
-const n_description = store.lookup("description");
+const n_name = frame("name");
+const n_alias = frame("alias");
+const n_description = frame("description");
 
-const n_target = store.lookup("target");
-const n_media = store.lookup("media");
-const n_internal = store.lookup("internal");
-const n_casefile = store.lookup("casefile");
-const n_main = store.lookup("main");
+const n_target = frame("target");
+const n_media = frame("media");
+const n_internal = frame("internal");
+const n_casefile = frame("casefile");
+const n_main = frame("main");
 
-const n_item_type = store.lookup("/w/item");
-const n_lexeme_type = store.lookup("/w/lexeme");
-const n_string_type = store.lookup("/w/string");
-const n_xref_type = store.lookup("/w/xref");
-const n_time_type = store.lookup("/w/time");
-const n_url_type = store.lookup("/w/url");
-const n_media_type = store.lookup("/w/media");
-const n_quantity_type = store.lookup("/w/quantity");
-const n_geo_type = store.lookup("/w/geo");
+const n_item_type = frame("/w/item");
+const n_lexeme_type = frame("/w/lexeme");
+const n_string_type = frame("/w/string");
+const n_xref_type = frame("/w/xref");
+const n_time_type = frame("/w/time");
+const n_url_type = frame("/w/url");
+const n_media_type = frame("/w/media");
+const n_quantity_type = frame("/w/quantity");
+const n_geo_type = frame("/w/geo");
 
-const n_amount = store.lookup("/w/amount");
-const n_unit = store.lookup("/w/unit");
-const n_lat = store.lookup("/w/lat");
-const n_lng = store.lookup("/w/lng");
-const n_date_of_birth = store.lookup("P569");
-const n_date_of_death = store.lookup("P570");
-const n_formatter_url = store.lookup("P1630");
-const n_media_legend = store.lookup("P2096");
-const n_has_quality = store.lookup("P1552");
-const n_not_safe_for_work = store.lookup("Q2716583");
+const n_amount = frame("/w/amount");
+const n_unit = frame("/w/unit");
+const n_lat = frame("/w/lat");
+const n_lng = frame("/w/lng");
+const n_date_of_birth = frame("P569");
+const n_date_of_death = frame("P570");
+const n_formatter_url = frame("P1630");
+const n_media_legend = frame("P2096");
+const n_has_quality = frame("P1552");
+const n_not_safe_for_work = frame("Q2716583");
 
 class KbLink extends Component {
   onconnected() {
@@ -620,7 +620,7 @@ class TopicExpander extends Component {
 
   async open() {
     let item = this.state;
-    if (typeof(item) === 'string') item = store.lookup(item);
+    if (typeof(item) === 'string') item = frame(item);
 
     // Retrieve item if needed.
     if (!item.ispublic()) {

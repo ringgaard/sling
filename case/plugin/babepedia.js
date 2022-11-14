@@ -3,58 +3,58 @@
 
 // SLING case plug-in for adding topic from babepedia.com.
 
-import {store} from "/case/app/global.js";
+import {store, frame} from "/case/app/global.js";
 import {SocialTopic, strip_emojis} from "/case/app/social.js";
 import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 
-const n_name = store.lookup("name");
-const n_alias = store.lookup("alias");
-const n_media = store.lookup("media");
-const n_instance_of = store.lookup("P31");
-const n_human = store.lookup("Q5");
-const n_gender = store.lookup("P21");
-const n_date_of_birth = store.lookup("P569");
-const n_place_of_birth = store.lookup("P19");
-const n_date_of_death = store.lookup("P570");
-const n_country_of_citizenship = store.lookup("P27");
-const n_occupation = store.lookup("P106");
-const n_height = store.lookup("P2048");
-const n_weight = store.lookup("P2067");
-const n_hair_color = store.lookup("P1884");
-const n_eye_color = store.lookup("P1340");
-const n_work_peroid_start = store.lookup("P2031");
-const n_work_peroid_end = store.lookup("P2032");
-const n_babepedia_id = store.lookup("PBABE");
-const n_female = store.lookup("Q6581072");
-const n_cm = store.lookup("Q174728");
-const n_kg = store.lookup("Q11570");
-const n_amount = store.lookup("/w/amount");
-const n_unit = store.lookup("/w/unit");
+const n_name = frame("name");
+const n_alias = frame("alias");
+const n_media = frame("media");
+const n_instance_of = frame("P31");
+const n_human = frame("Q5");
+const n_gender = frame("P21");
+const n_date_of_birth = frame("P569");
+const n_place_of_birth = frame("P19");
+const n_date_of_death = frame("P570");
+const n_country_of_citizenship = frame("P27");
+const n_occupation = frame("P106");
+const n_height = frame("P2048");
+const n_weight = frame("P2067");
+const n_hair_color = frame("P1884");
+const n_eye_color = frame("P1340");
+const n_work_peroid_start = frame("P2031");
+const n_work_peroid_end = frame("P2032");
+const n_babepedia_id = frame("PBABE");
+const n_female = frame("Q6581072");
+const n_cm = frame("Q174728");
+const n_kg = frame("Q11570");
+const n_amount = frame("/w/amount");
+const n_unit = frame("/w/unit");
 
 const hair_colors = {
-  "brown": store.lookup("Q2367101"),
-  "blonde": store.lookup("Q202466"),
-  "black": store.lookup("Q1922956"),
-  "auburn": store.lookup("Q2419551"),
-  "red": store.lookup("Q152357"),
+  "brown": frame("Q2367101"),
+  "blonde": frame("Q202466"),
+  "black": frame("Q1922956"),
+  "auburn": frame("Q2419551"),
+  "red": frame("Q152357"),
 };
 
 const eye_colors = {
-  "brown": store.lookup("Q17122705"),
-  "blue": store.lookup("Q17122834"),
-  "green": store.lookup("Q17122854"),
-  "hazel": store.lookup("Q17122740"),
-  "grey": store.lookup("Q17245659"),
+  "brown": frame("Q17122705"),
+  "blue": frame("Q17122834"),
+  "green": frame("Q17122854"),
+  "hazel": frame("Q17122740"),
+  "grey": frame("Q17245659"),
 };
 
 const occupations = {
-  "centerfold": store.lookup("Q3286043"),
-  "playboy model": store.lookup("Q728711"),
-  "actress": store.lookup("Q33999"),
-  "milf porn star": store.lookup("Q488111"),
-  "tiktok star": store.lookup("Q94791573"),
-  "escort": store.lookup("Q814356"),
-  "glamour model": store.lookup("Q3286043"),
+  "centerfold": frame("Q3286043"),
+  "playboy model": frame("Q728711"),
+  "actress": frame("Q33999"),
+  "milf porn star": frame("Q488111"),
+  "tiktok star": frame("Q94791573"),
+  "escort": frame("Q814356"),
+  "glamour model": frame("Q3286043"),
 }
 
 function date2sling(d) {
@@ -70,7 +70,7 @@ async function lookup(context, name) {
   let r = await context.kblookup(name, {fullmatch: 1});
   let data = await r.json();
   if (data.matches.length > 0) {
-    return store.lookup(data.matches[0].ref);
+    return frame(data.matches[0].ref);
   } else {
     return name;
   }

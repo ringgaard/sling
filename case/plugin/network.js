@@ -5,48 +5,48 @@
 
 import {Component} from "/common/lib/component.js";
 import {MdDialog} from "/common/lib/material.js";
-import {store, settings} from "/case/app/global.js";
+import {store, frame, settings} from "/case/app/global.js";
 import {Time} from "/case/app/value.js";
 import {Frame, QString} from "/common/lib/frame.js";
 import {ItemCollector} from "/case/app/value.js";
 
-const n_name = store.lookup("name");
-const n_description = store.lookup("description");
-const n_type = store.lookup("P31");
-const n_start_point = store.lookup("P1427");
-const n_human = store.lookup("Q5");
-const n_gender = store.lookup("P21");
-const n_male = store.lookup("Q6581097");
-const n_female = store.lookup("Q6581072");
-const n_born = store.lookup("P569");
-const n_died = store.lookup("P570");
-const n_inverse_property = store.lookup("P1696");
-const n_relation = store.lookup("P2309");
-const n_parent = store.lookup("P8810");
-const n_father = store.lookup("P22");
-const n_mother = store.lookup("P25");
-const n_child = store.lookup("P40");
-const n_spouse = store.lookup("P26");
-const n_partner = store.lookup("P451");
+const n_name = frame("name");
+const n_description = frame("description");
+const n_type = frame("P31");
+const n_start_point = frame("P1427");
+const n_human = frame("Q5");
+const n_gender = frame("P21");
+const n_male = frame("Q6581097");
+const n_female = frame("Q6581072");
+const n_born = frame("P569");
+const n_died = frame("P570");
+const n_inverse_property = frame("P1696");
+const n_relation = frame("P2309");
+const n_parent = frame("P8810");
+const n_father = frame("P22");
+const n_mother = frame("P25");
+const n_child = frame("P40");
+const n_spouse = frame("P26");
+const n_partner = frame("P451");
 
-const n_internal = store.lookup("internal");
-const n_elbow = store.lookup("elbow");
-const n_bundle = store.lookup("bundle");
-const n_grid = store.lookup("grid");
-const n_nodes = store.lookup("nodes");
-const n_x = store.lookup("x");
-const n_y = store.lookup("y");
+const n_internal = frame("internal");
+const n_elbow = frame("elbow");
+const n_bundle = frame("bundle");
+const n_grid = frame("grid");
+const n_nodes = frame("nodes");
+const n_x = frame("x");
+const n_y = frame("y");
 
 const inferior = new Set([n_parent, n_father, n_mother]);
 const couples = new Set([n_spouse, n_partner]);
 
 const descriptors = [
   n_description,
-  store.lookup("P19"),   // place of birth
-  store.lookup("P20"),   // place of death
-  store.lookup("P551"),  // residence
-  store.lookup("P276"),  // location
-  store.lookup("P106"),  // occupation
+  frame("P19"),   // place of birth
+  frame("P20"),   // place of death
+  frame("P551"),  // residence
+  frame("P276"),  // location
+  frame("P106"),  // occupation
   n_type,
 ];
 

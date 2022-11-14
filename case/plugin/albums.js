@@ -3,9 +3,9 @@
 
 // SLING case plug-in for adding photo albums to topics.
 
-import {store, settings} from "/case/app/global.js";
+import {store, frame, settings} from "/case/app/global.js";
 
-const n_media = store.lookup("media");
+const n_media = frame("media");
 
 export default class AlbumPlugin {
   async process(action, url, context) {

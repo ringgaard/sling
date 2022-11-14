@@ -3,38 +3,38 @@
 
 // SLING case plug-in for adding topic from listal.com.
 
-import {store} from "/case/app/global.js";
+import {store, frame} from "/case/app/global.js";
 import {SocialTopic} from "/case/app/social.js";
 import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 
-const n_name = store.lookup("name");
-const n_birth_name = store.lookup("P1477");
-const n_instance_of = store.lookup("P31");
-const n_human = store.lookup("Q5");
-const n_date_of_birth = store.lookup("P569");
-const n_date_of_death = store.lookup("P570");
-const n_place_of_birth = store.lookup("P19");
-const n_country_of_citizenship = store.lookup("P27");
-const n_residence = store.lookup("P551");
-const n_gender = store.lookup("P21");
-const n_female = store.lookup("Q6581072");
-const n_male = store.lookup("Q6581097");
-const n_listal = store.lookup("PLSTL");
-const n_height = store.lookup("P2048");
-const n_amount = store.lookup("/w/amount");
-const n_unit = store.lookup("/w/unit");
-const n_cm = store.lookup("Q174728");
-const n_spouse = store.lookup("P26");
-const n_partner = store.lookup("P451");
-const n_media = store.lookup("media");
-const n_occupation = store.lookup("P106");
-const n_hair_color = store.lookup("P1884");
-const n_eye_color = store.lookup("P1340");
-const n_manner_of_death = store.lookup("P1196");
-const n_sexual_orientation = store.lookup("P91");
+const n_name = frame("name");
+const n_birth_name = frame("P1477");
+const n_instance_of = frame("P31");
+const n_human = frame("Q5");
+const n_date_of_birth = frame("P569");
+const n_date_of_death = frame("P570");
+const n_place_of_birth = frame("P19");
+const n_country_of_citizenship = frame("P27");
+const n_residence = frame("P551");
+const n_gender = frame("P21");
+const n_female = frame("Q6581072");
+const n_male = frame("Q6581097");
+const n_listal = frame("PLSTL");
+const n_height = frame("P2048");
+const n_amount = frame("/w/amount");
+const n_unit = frame("/w/unit");
+const n_cm = frame("Q174728");
+const n_spouse = frame("P26");
+const n_partner = frame("P451");
+const n_media = frame("media");
+const n_occupation = frame("P106");
+const n_hair_color = frame("P1884");
+const n_eye_color = frame("P1340");
+const n_manner_of_death = frame("P1196");
+const n_sexual_orientation = frame("P91");
 
 function stmt(prop, value) {
-  return [prop, store.lookup(value)];
+  return [prop, frame(value)];
 }
 
 const tagsdir = {
@@ -133,7 +133,7 @@ async function lookup(context, name) {
   let r = await context.kblookup(name, {fullmatch: 1});
   let data = await r.json();
   if (data.matches.length > 0) {
-    return store.lookup(data.matches[0].ref);
+    return frame(data.matches[0].ref);
   } else {
     return name;
   }

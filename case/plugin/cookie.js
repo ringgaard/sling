@@ -3,7 +3,7 @@
 
 // SLING case plug-in for adding cookies to the cookie jar.
 
-import {store, settings, save_settings} from "/case/app/global.js";
+import {settings, save_settings} from "/case/app/global.js";
 import {inform} from "/common/lib/material.js";
 
 export default class CookiePlugin {

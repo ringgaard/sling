@@ -4,10 +4,10 @@
 import {Component} from "/common/lib/component.js";
 import {MdSearchResult} from "/common/lib/material.js";
 
-import {store, settings} from "./global.js";
+import {store, frame, settings} from "./global.js";
 
-const n_name = store.lookup("name");
-const n_alias = store.lookup("alias");
+const n_name = frame("name");
+const n_alias = frame("alias");
 
 export function normalized(str) {
   return str

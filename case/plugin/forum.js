@@ -3,10 +3,10 @@
 
 // SLING case plug-in for photos from forum post to topics.
 
-import {store, settings} from "/case/app/global.js";
+import {store, frame, settings} from "/case/app/global.js";
 
-const n_is = store.lookup("is");
-const n_media = store.lookup("media");
+const n_is = frame("is");
+const n_media = frame("media");
 
 // Image downloaders for image hosts.
 const images_services = [

@@ -6,6 +6,10 @@ import {Store} from "/common/lib/frame.js";
 // Global SLING store.
 export var store = new Store();
 
+export function frame(id) {
+  return store.lookup(id);
+}
+
 // Global settings.
 export var settings = {}
 

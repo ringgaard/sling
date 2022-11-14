@@ -6,7 +6,7 @@
 import {store} from "/case/app/global.js";
 import {PASTEURL} from "/case/app/plugins.js";
 
-const n_is = store.lookup("is");
+const n_is = store.is;
 
 export default class KBPlugin {
   async process(action, query, context) {

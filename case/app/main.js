@@ -6,7 +6,7 @@
 import {Component} from "/common/lib/component.js";
 import {StdDialog, inform} from "/common/lib/material.js";
 
-import {store, settings} from "./global.js";
+import {store, frame, settings} from "./global.js";
 import {casedb} from "./database.js";
 import {Collaboration} from "./collab.js";
 import {decrypt} from "./crypto.js";
@@ -19,26 +19,26 @@ import "./case.js";
 const n_id = store.id;
 const n_is = store.is;
 const n_isa = store.isa;
-const n_name = store.lookup("name");
-const n_description = store.lookup("description");
-const n_caseid = store.lookup("caseid");
-const n_main = store.lookup("main");
-const n_created = store.lookup("created");
-const n_modified = store.lookup("modified");
-const n_topics = store.lookup("topics");
-const n_folders = store.lookup("folders");
-const n_next = store.lookup("next");
-const n_link = store.lookup("link");
-const n_encryption = store.lookup("encryption");
-const n_case_file = store.lookup("Q108673968");
-const n_author = store.lookup("P50");
-const n_main_subject = store.lookup("P921");
-const n_instance_of = store.lookup("P31");
-const n_case = store.lookup("PCASE");
-const n_collaborate = store.lookup("collaborate");
-const n_collab = store.lookup("collab");
-const n_userid = store.lookup("userid");
-const n_credentials = store.lookup("credentials");
+const n_name = frame("name");
+const n_description = frame("description");
+const n_caseid = frame("caseid");
+const n_main = frame("main");
+const n_created = frame("created");
+const n_modified = frame("modified");
+const n_topics = frame("topics");
+const n_folders = frame("folders");
+const n_next = frame("next");
+const n_link = frame("link");
+const n_encryption = frame("encryption");
+const n_case_file = frame("Q108673968");
+const n_author = frame("P50");
+const n_main_subject = frame("P921");
+const n_instance_of = frame("P31");
+const n_case = frame("PCASE");
+const n_collaborate = frame("collaborate");
+const n_collab = frame("collab");
+const n_userid = frame("userid");
+const n_credentials = frame("credentials");
 
 // Parse parameters in URL fragment.
 function parse_url_fragment() {
@@ -100,7 +100,7 @@ class CaseApp extends Component {
         if (topicid) {
           // Open case specified and navigate to topic.
           await this.open_case(caseid);
-          this.editor.navigate_to(store.lookup(topicid));
+          this.editor.navigate_to(frame(topicid));
         } else {
           // Open case specified in url.
           this.open_case(caseid);
@@ -205,7 +205,7 @@ class CaseApp extends Component {
     main.add(n_instance_of, n_case_file);
     if (name) main.add(n_name, name);
     if (description) main.add(n_description, description);
-    if (settings.authorid) main.add(n_author, store.lookup(settings.authorid));
+    if (settings.authorid) main.add(n_author, frame(settings.authorid));
     main.add(n_case, caseid.toString());
 
     // Add initial topic.

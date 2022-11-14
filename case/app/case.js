@@ -6,7 +6,7 @@ import {MdApp, MdDialog, StdDialog, MdIcon, MdSearchResult, inform}
        from "/common/lib/material.js";
 import {Store, Frame, Encoder, Printer, Reader} from "/common/lib/frame.js";
 
-import {store, settings} from "./global.js";
+import {store, frame, settings} from "./global.js";
 import * as plugins from "./plugins.js";
 import * as importers from "./importers.js";
 import {NewFolderDialog} from "./folder.js";
@@ -18,40 +18,40 @@ import {SearchIndex, kbsearch} from "./search.js";
 import "./topic.js";
 
 const n_is = store.is;
-const n_name = store.lookup("name");
-const n_alias = store.lookup("alias");
-const n_description = store.lookup("description");
-const n_caseid = store.lookup("caseid");
-const n_main = store.lookup("main");
-const n_topics = store.lookup("topics");
-const n_folders = store.lookup("folders");
-const n_next = store.lookup("next");
-const n_publish = store.lookup("publish");
-const n_share = store.lookup("share");
-const n_collaborate = store.lookup("collaborate");
-const n_secret = store.lookup("secret");
-const n_link = store.lookup("link");
-const n_collab = store.lookup("collab");
-const n_userid = store.lookup("userid");
-const n_credentials = store.lookup("credentials");
-const n_created = store.lookup("created");
-const n_modified = store.lookup("modified");
-const n_shared = store.lookup("shared");
-const n_media = store.lookup("media");
-const n_case_file = store.lookup("Q108673968");
-const n_instance_of = store.lookup("P31");
-const n_author = store.lookup("P50");
-const n_participant = store.lookup("P710");
-const n_has_quality = store.lookup("P1552");
-const n_nsfw = store.lookup("Q2716583");
+const n_name = frame("name");
+const n_alias = frame("alias");
+const n_description = frame("description");
+const n_caseid = frame("caseid");
+const n_main = frame("main");
+const n_topics = frame("topics");
+const n_folders = frame("folders");
+const n_next = frame("next");
+const n_publish = frame("publish");
+const n_share = frame("share");
+const n_collaborate = frame("collaborate");
+const n_secret = frame("secret");
+const n_link = frame("link");
+const n_collab = frame("collab");
+const n_userid = frame("userid");
+const n_credentials = frame("credentials");
+const n_created = frame("created");
+const n_modified = frame("modified");
+const n_shared = frame("shared");
+const n_media = frame("media");
+const n_case_file = frame("Q108673968");
+const n_instance_of = frame("P31");
+const n_author = frame("P50");
+const n_participant = frame("P710");
+const n_has_quality = frame("P1552");
+const n_nsfw = frame("Q2716583");
 
-const n_document = store.lookup("Q49848");
-const n_image = store.lookup("Q478798");
-const n_publication_date = store.lookup("P577");
-const n_retrieved = store.lookup("P813");
-const n_url = store.lookup("P2699");
-const n_data_size = store.lookup("P3575");
-const n_media_type = store.lookup("P1163");
+const n_document = frame("Q49848");
+const n_image = frame("Q478798");
+const n_publication_date = frame("P577");
+const n_retrieved = frame("P813");
+const n_url = frame("P2699");
+const n_data_size = frame("P3575");
+const n_media_type = frame("P1163");
 
 const media_file_types = [
   "image/gif",
@@ -185,7 +185,7 @@ class CaseEditor extends MdApp {
       this.navigate_to(topic);
     } else if (e.detail.event.ctrlKey) {
       // Add new linked topic and navigate to it.
-      let item = store.lookup(ref);
+      let item = frame(ref);
       let link = await this.add_topic_link(item, position);
       this.redirect(item, link);
       this.navigate_to(link);
@@ -414,7 +414,7 @@ class CaseEditor extends MdApp {
     let participant = await dialog.show();
     if (participant) {
       // Add invited user as participant.
-      if (this.main.put(n_participant, store.lookup(participant))) {
+      if (this.main.put(n_participant, frame(participant))) {
         this.update_topic(this.main);
         this.topic_updated(this.main);
       }
@@ -434,7 +434,10 @@ class CaseEditor extends MdApp {
     let media = new Array();
     for (let topic of this.topics) {
       for (let m of topic.all(n_media)) {
-        media.push(store.resolve(m));
+        let url = store.resolve(m);
+        let nsfw = url.startsWith('!');
+        if (nsfw) url = url.slice(1);
+        media.push(url);
       }
     }
 
@@ -829,7 +832,7 @@ class CaseEditor extends MdApp {
   async add_case_link(caserec) {
     // Create new topic with reference to external case.
     let topic = await this.new_topic();
-    topic.add(n_is, store.lookup(`c/${caserec.id}`));
+    topic.add(n_is, frame(`c/${caserec.id}`));
     topic.add(n_instance_of, n_case_file);
     if (caserec.name) topic.add(n_name, `Case #${caserec.id}: ${caserec.name}`);
     this.topic_updated(topic);
@@ -1162,7 +1165,7 @@ class CaseEditor extends MdApp {
         if (name == store.id) continue;
         if (name == store.is) {
           let link = value;
-          if (typeof link === 'string') link = store.lookup(link);
+          if (typeof link === 'string') link = frame(link);
           if (selected.includes(link)) continue;
         }
         target.put(name, value);
@@ -1449,7 +1452,7 @@ class CaseEditor extends MdApp {
 
   remote_topic_delete(topicid) {
     console.log("received topic delete", topicid);
-    let topic = store.lookup(topicid);
+    let topic = frame(topicid);
     let pos = this.topics.indexOf(topic);
     if (pos != -1) this.topics.splice(pos, 1);
   }

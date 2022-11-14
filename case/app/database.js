@@ -4,23 +4,23 @@
 // Local case database.
 
 import {Store, Encoder, Decoder} from "/common/lib/frame.js";
-import {store} from "./global.js";
+import {store, frame} from "./global.js";
 
-const n_name = store.lookup("name");
-const n_description = store.lookup("description");
-const n_main = store.lookup("main");
-const n_caseid = store.lookup("caseid");
-const n_created = store.lookup("created");
-const n_modified = store.lookup("modified");
-const n_shared = store.lookup("shared");
-const n_topics = store.lookup("topics");
-const n_share = store.lookup("share");
-const n_publish = store.lookup("publish");
-const n_collaborate = store.lookup("collaborate");
-const n_secret = store.lookup("secret");
-const n_link = store.lookup("link");
-const n_has_quality = store.lookup("P1552");
-const n_not_safe_for_work = store.lookup("Q2716583");
+const n_name = frame("name");
+const n_description = frame("description");
+const n_main = frame("main");
+const n_caseid = frame("caseid");
+const n_created = frame("created");
+const n_modified = frame("modified");
+const n_shared = frame("shared");
+const n_topics = frame("topics");
+const n_share = frame("share");
+const n_publish = frame("publish");
+const n_collaborate = frame("collaborate");
+const n_secret = frame("secret");
+const n_link = frame("link");
+const n_has_quality = frame("P1552");
+const n_not_safe_for_work = frame("Q2716583");
 
 class CaseDatabase {
   // Open database.

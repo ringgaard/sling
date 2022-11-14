@@ -4,31 +4,31 @@
 // SLING case plug-in for adding topic from hjemmestrik.dk.
 
 import {Frame} from "/common/lib/frame.js";
-import {store} from "/case/app/global.js";
+import {store, frame} from "/case/app/global.js";
 import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 
-const n_is = store.lookup("is");
-const n_name = store.lookup("name");
-const n_media = store.lookup("media");
-const n_instance_of = store.lookup("P31");
-const n_human = store.lookup("Q5");
-const n_gender = store.lookup("P21");
-const n_date_of_birth = store.lookup("P569");
-const n_residence = store.lookup("P551");
-const n_country = store.lookup("P27");
-const n_occupation = store.lookup("P106");
-const n_height = store.lookup("P2048");
-const n_weight = store.lookup("P2067");
-const n_described_by_url = store.lookup("P973");
-const n_female = store.lookup("Q6581072");
-const n_denmark = store.lookup("Q35");
-const n_cm = store.lookup("Q174728");
-const n_kg = store.lookup("Q11570");
-const n_amount = store.lookup("/w/amount");
-const n_unit = store.lookup("/w/unit");
-const n_award_received = store.lookup("P166");
-const n_point_in_time = store.lookup("P585");
-const n_sh_girl = store.lookup("t/1052/1");
+const n_is = frame("is");
+const n_name = frame("name");
+const n_media = frame("media");
+const n_instance_of = frame("P31");
+const n_human = frame("Q5");
+const n_gender = frame("P21");
+const n_date_of_birth = frame("P569");
+const n_residence = frame("P551");
+const n_country = frame("P27");
+const n_occupation = frame("P106");
+const n_height = frame("P2048");
+const n_weight = frame("P2067");
+const n_described_by_url = frame("P973");
+const n_female = frame("Q6581072");
+const n_denmark = frame("Q35");
+const n_cm = frame("Q174728");
+const n_kg = frame("Q11570");
+const n_amount = frame("/w/amount");
+const n_unit = frame("/w/unit");
+const n_award_received = frame("P166");
+const n_point_in_time = frame("P585");
+const n_sh_girl = frame("t/1052/1");
 
 // First day of week in year.
 function date_of_week(y, w) {
@@ -133,7 +133,7 @@ async function lookup(context, name) {
   let r = await context.kblookup(name, {fullmatch: 1});
   let data = await r.json();
   if (data.matches.length > 0) {
-    return store.lookup(data.matches[0].ref);
+    return frame(data.matches[0].ref);
   } else {
     return name;
   }

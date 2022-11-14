@@ -1,13 +1,13 @@
 // Copyright 2020 Ringgaard Research ApS
 // Licensed under the Apache License, Version 2
 
-import {store, settings, save_settings} from "./global.js";
+import {store, frame, settings, save_settings} from "./global.js";
 import {Frame, Encoder} from "/common/lib/frame.js";
 
 const n_is = store.is;
-const n_topics = store.lookup("topics");
-const n_created = store.lookup("created");
-const n_results = store.lookup("results");
+const n_topics = frame("topics");
+const n_created = frame("created");
+const n_results = frame("results");
 
 export async function wikidata_initiate() {
   // Initiate authorization and get redirect url.

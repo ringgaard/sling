@@ -3,25 +3,25 @@
 
 // SLING case plug-in for adding topic from Twitter profile.
 
-import {store} from "/case/app/global.js";
+import {store, frame} from "/case/app/global.js";
 import {SocialTopic, strip_emojis} from "/case/app/social.js";
 import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 
-const n_is = store.lookup("is");
-const n_name = store.lookup("name");
-const n_description = store.lookup("description");
-const n_location = store.lookup("P276");
-const n_named_as = store.lookup("P1810");
-const n_media = store.lookup("media");
-const n_twitter = store.lookup("P2002");
-const n_start_time = store.lookup("P580");
-const n_twitter_id = store.lookup("P6552");
-const n_gender = store.lookup("P21");
-const n_female = store.lookup("Q6581072");
-const n_male = store.lookup("Q6581097");
-const n_instance_of = store.lookup("P31");
-const n_human = store.lookup("Q5");
-const n_instagram = store.lookup("P2003");
+const n_is = frame("is");
+const n_name = frame("name");
+const n_description = frame("description");
+const n_location = frame("P276");
+const n_named_as = frame("P1810");
+const n_media = frame("media");
+const n_twitter = frame("P2002");
+const n_start_time = frame("P580");
+const n_twitter_id = frame("P6552");
+const n_gender = frame("P21");
+const n_female = frame("Q6581072");
+const n_male = frame("Q6581097");
+const n_instance_of = frame("P31");
+const n_human = frame("Q5");
+const n_instagram = frame("P2003");
 
 function str2date(s) {
   let d = new Date(s);
@@ -105,7 +105,7 @@ export default class TwitterPlugin {
       if (data.matches.length > 0) {
         let id = data.matches[0].ref;
         let name = data.matches[0].text;
-        let item = store.lookup(id);
+        let item = frame(id);
         if (location.toLowerCase() == name.toLowerCase()) {
           topic.put(n_location, item);
         } else {

@@ -2,35 +2,35 @@
 // Licensed under the Apache License, Version 2
 
 import {Frame, QString} from "/common/lib/frame.js";
-import {store, settings} from "./global.js";
+import {store, frame, settings} from "./global.js";
 
 const n_is = store.is;
 const n_isa = store.isa;
-const n_name = store.lookup("name");
-const n_target = store.lookup("target");
-const n_code = store.lookup("code");
-const n_amount = store.lookup("/w/amount");
-const n_unit = store.lookup("/w/unit");
-const n_cm = store.lookup("Q174728");
-const n_kg = store.lookup("Q11570");
-const n_geo = store.lookup("/w/geo");
-const n_lat = store.lookup("/w/lat");
-const n_lng = store.lookup("/w/lng");
+const n_name = frame("name");
+const n_target = frame("target");
+const n_code = frame("code");
+const n_amount = frame("/w/amount");
+const n_unit = frame("/w/unit");
+const n_cm = frame("Q174728");
+const n_kg = frame("Q11570");
+const n_geo = frame("/w/geo");
+const n_lat = frame("/w/lat");
+const n_lng = frame("/w/lng");
 
-const n_item_type = store.lookup("/w/item");
-const n_string_type = store.lookup("/w/string");
-const n_xref_type = store.lookup("/w/xref");
-const n_time_type = store.lookup("/w/time");
-const n_url_type = store.lookup("/w/url");
-const n_media_type = store.lookup("/w/media");
-const n_quantity_type = store.lookup("/w/quantity");
-const n_geo_type = store.lookup("/w/geo");
+const n_item_type = frame("/w/item");
+const n_string_type = frame("/w/string");
+const n_xref_type = frame("/w/xref");
+const n_time_type = frame("/w/time");
+const n_url_type = frame("/w/url");
+const n_media_type = frame("/w/media");
+const n_quantity_type = frame("/w/quantity");
+const n_geo_type = frame("/w/geo");
 
 function indexmaps(mapping) {
   let m = new Map();
   let n = new Map();
   for (let [name, value] of Object.entries(mapping)) {
-    let v = store.lookup(value);
+    let v = frame(value);
     m.set(name, v);
     n.set(v, name);
   }
