@@ -113,8 +113,9 @@ class TLSAdapter(requests.adapters.HTTPAdapter):
 session = requests.Session()
 session.verify = False
 session.mount('https://', TLSAdapter())
+
 urllib3.disable_warnings()
-pool =  urllib3.PoolManager()
+pool =  urllib3.PoolManager(cert_reqs=ssl.CERT_NONE)
 
 # Global store.
 store = sling.Store()

@@ -436,7 +436,6 @@ export default class IMDBPlugin {
 
     topic.put(n_height, bio.height);
 
-
     // Add IMDB id.
     topic.put(n_imdb, imdbid);
     let item = await context.idlookup(n_imdb, imdbid);

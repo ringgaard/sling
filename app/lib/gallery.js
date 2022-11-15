@@ -69,6 +69,7 @@ export class PhotoGallery extends MdModal {
     this.attach(this.onclick, "click", ".photo");
     this.attach(this.onprev, "click", ".prev");
     this.attach(this.onnext, "click", ".next");
+    this.attach(this.onfullsize, "click", "#fullsize");
     this.attach(this.onfullscreen, "click", "#fullscreen");
     this.attach(this.close, "click", "#close");
     this.attach(this.onsource, "click", ".domain");
@@ -106,8 +107,9 @@ export class PhotoGallery extends MdModal {
       this.delimg(e);
     } else if (e.keyCode == 70) {
       this.onfullscreen(e);
+    } else if (e.keyCode == 90) {
+      this.onfullsize(e);
     }
-    this.focus();
   }
 
   onload(e) {
@@ -168,11 +170,19 @@ export class PhotoGallery extends MdModal {
 
   onfullscreen(e) {
     e.stopPropagation();
-    if (!document.fullscreenElement) {
-      this.requestFullscreen();
+    let photo = this.find(".photo");
+    if (!photo.fullscreenElement) {
+      photo.requestFullscreen();
     } else {
       document.exitFullscreen();
     }
+    photo.focus();
+  }
+
+  onfullsize(e) {
+    e.stopPropagation();
+    let photo = this.find(".photo");
+    photo.classList.toggle("full");
   }
 
   onclose(e) {
@@ -281,57 +291,50 @@ export class PhotoGallery extends MdModal {
   render() {
     if (this.state) return null;
     return `
-      <div class="content">
-        <div class="photo">
-          <img class="image" referrerpolicy="no-referrer">
-          <md-text class="size"></md-text>
-          <div class="toolbox">
-            <md-icon-button id="fullscreen" icon="fullscreen">
-            </md-icon-button>
-            <md-icon-button id="close" icon="close">
-            </md-icon-button>
-          </div>
-
-          <div class="source">
-            <md-text class="domain"></md-text>
-            <photo-copyright class="copyright"></photo-copyright>
-            <md-text class="nsfw"></md-text>
-          </div>
-          <md-text class="counter"></md-text>
-          <a class="prev">&#10094;</a>
-          <a class="next">&#10095;</a>
-        </div>
-        <md-text class="caption"></md-text>
+      <div class="photo" tabindex="0">
+        <img class="image" referrerpolicy="no-referrer">
       </div>
+      <md-text class="size"></md-text>
+      <div class="toolbox">
+        <md-icon-button id="fullsize" icon="fit_screen">
+        </md-icon-button>
+        <md-icon-button id="fullscreen" icon="fullscreen">
+        </md-icon-button>
+        <md-icon-button id="close" icon="close">
+        </md-icon-button>
+      </div>
+      <div class="source">
+        <md-text class="domain"></md-text>
+        <photo-copyright class="copyright"></photo-copyright>
+        <md-text class="nsfw"></md-text>
+      </div>
+      <md-text class="counter"></md-text>
+      <a class="prev">&#10094;</a>
+      <a class="next">&#10095;</a>
+      <md-text class="caption"></md-text>
     `;
   }
 
   static stylesheet() {
     return `
       $ {
+        position: absolute;
         background-color: #0E0E0E;
         user-select: none;
-      }
-
-      $ .content {
-        position: relative;
-        margin: auto;
-        padding: 0;
         width: 100%;
         height: 100%;
       }
 
       $ .photo {
+        position: relative;
+        display: flex;
+        width: 100%;
+        height: 100%;
         margin: auto;
       }
 
       $ .image {
         display: block;
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        left: 0;
-        right: 0;
         max-width: 100%;
         max-height: 100%;
         width: auto;
@@ -339,6 +342,21 @@ export class PhotoGallery extends MdModal {
         margin: auto;
         cursor: pointer;
         background-color: hsl(0, 0%, 90%);
+      }
+
+      $ .full {
+        display: block;
+        overflow: auto;
+      }
+
+      $ .full::-webkit-scrollbar {
+        display: none;
+      }
+
+      $ .full .image {
+        display: block;
+        max-width: initial;
+        max-height: initial;
       }
 
       $ .counter {

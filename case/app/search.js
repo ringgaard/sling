@@ -8,6 +8,7 @@ import {store, frame, settings} from "./global.js";
 
 const n_name = frame("name");
 const n_alias = frame("alias");
+const n_birth_name = frame("P1477");
 
 export function normalized(str) {
   return str
@@ -97,6 +98,9 @@ export class SearchIndex {
 
       // Add topic names and aliases to index.
       for (let name of topic.all(n_name)) {
+        this.names.push({name: normalized(name), topic});
+      }
+      for (let name of topic.all(n_birth_name)) {
         this.names.push({name: normalized(name), topic});
       }
       for (let alias of topic.all(n_alias)) {
