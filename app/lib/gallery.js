@@ -66,9 +66,9 @@ export class PhotoGallery extends MdModal {
   }
 
   onconnected() {
-    this.attach(this.onclick, "click", ".photo");
     this.attach(this.onprev, "click", ".prev");
     this.attach(this.onnext, "click", ".next");
+    this.attach(this.onopennew, "click", "#open");
     this.attach(this.onfullsize, "click", "#fullsize");
     this.attach(this.onfullscreen, "click", "#fullscreen");
     this.attach(this.close, "click", "#close");
@@ -129,7 +129,7 @@ export class PhotoGallery extends MdModal {
     }
   }
 
-  onclick(e) {
+  onopennew(e) {
     let url = imageurl(this.photos[this.current].url, false);
     window.open(url, "_blank", "noopener,noreferrer");
   }
@@ -296,6 +296,8 @@ export class PhotoGallery extends MdModal {
       </div>
       <md-text class="size"></md-text>
       <div class="toolbox">
+        <md-icon-button id="open" icon="open_in_new">
+        </md-icon-button>
         <md-icon-button id="fullsize" icon="fit_screen">
         </md-icon-button>
         <md-icon-button id="fullscreen" icon="fullscreen">
@@ -340,7 +342,6 @@ export class PhotoGallery extends MdModal {
         width: auto;
         height: auto;
         margin: auto;
-        cursor: pointer;
         background-color: hsl(0, 0%, 90%);
       }
 
@@ -350,7 +351,22 @@ export class PhotoGallery extends MdModal {
       }
 
       $ .full::-webkit-scrollbar {
-        display: none;
+        background-color: #0E0E0E;
+        width: 8px;
+        height: 8px;
+      }
+
+      $ .full::-webkit-scrollbar-corner {
+        background-color: #0E0E0E;
+      }
+
+      $ .full::-webkit-scrollbar-thumb {
+        background-color: #A0A0A0;
+        border-radius: 4px;
+      }
+
+      $ .full::-webkit-scrollbar-thumb:hover {
+        background-color: #F0F0F0;
       }
 
       $ .full .image {
@@ -364,7 +380,7 @@ export class PhotoGallery extends MdModal {
         top: 0;
         left: 0;
 
-        color: rgb(255, 255, 255);
+        color: #FFFFFF;
         font-size: 12px;
         padding: 8px 12px;
       }
@@ -433,22 +449,21 @@ export class PhotoGallery extends MdModal {
         font-size: 20px;
         transition: 0.6s ease;
         background-color: rgba(0, 0, 0, 0.2);
+        border-radius: 10px;
       }
 
       $ .next {
         position: absolute;
         right: 0;
         top: 50%;
-        border-top-left-radius: 10px;
-        border-bottom-left-radius: 10px;
+        margin-right: 8px;
       }
 
       $ .prev {
         position: absolute;
         left: 0;
         top: 50%;
-        border-top-right-radius: 5px;
-        border-bottom-right-radius: 5px;
+        margin-left: 8px;
       }
 
       $ .prev:hover, $ .next:hover {

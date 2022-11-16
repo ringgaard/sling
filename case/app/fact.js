@@ -1329,6 +1329,7 @@ class FactValue extends FactField {
     return {
       options: {
         property: this.previousSibling.value(),
+        local: editor.get_index(),
       },
       backends: [
         (query, results, options) => value_parser(query, results),

@@ -275,7 +275,12 @@ class CaseEditor extends MdApp {
     } else if (item.caserec) {
       this.add_case_link(item.caserec);
     } else {
-      this.add_new_topic(item.ref, item.name);
+      let topic = this.get_index().ids.get(item.ref);
+      if (topic) {
+        this.navigate_to(topic);
+      } else {
+        this.add_new_topic(item.ref, item.name);
+      }
     }
   }
 

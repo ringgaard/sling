@@ -387,6 +387,10 @@ export class Context {
 
   async idlookup(prop, identifier) {
     let query = prop.id + "/" + identifier;
+    if (this.editor) {
+      let topic = this.editor.get_index().ids.get(query);
+      if (topic) return topic;
+    }
     let response = await this.kblookup(query, {fullmatch: 1});
     let result = await response.json();
     if (result.matches.length == 1) {

@@ -241,13 +241,12 @@ export default class IMDBPlugin {
         } else if (label == "Height") {
           let m = value.match(/^\d+'(\s\d+[¼½¾]?")\s+\((\d)\.(\d+) m\)/);
           if (m) {
-            let v = store.frame();
             let height = parseInt(m[3]);
             if (m[3].length == 1) height *= 10;
             height += parseInt(m[2]) * 100;
-            v.add(n_amount, height);
-            v.add(n_unit, n_cm);
-            if (!topic.has(n_height)) bio.height = v
+            bio.height = store.frame();
+            bio.height.add(n_amount, height);
+            bio.height.add(n_unit, n_cm);
           }
         } else {
           console.log("unknown overview item", label, value);
@@ -434,12 +433,12 @@ export default class IMDBPlugin {
       }
     }
 
-    topic.put(n_height, bio.height);
+    if (!topic.has(n_height)) topic.put(n_height, bio.height);
 
     // Add IMDB id.
     topic.put(n_imdb, imdbid);
     let item = await context.idlookup(n_imdb, imdbid);
-    if (item) topic.put(store.is, item.id);
+    if (item && item.id != topic.id) topic.put(store.is, item.id);
 
     // Add social links.
     await this.populate_social_links(context, topic, imdbid);

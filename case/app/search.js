@@ -9,6 +9,8 @@ import {store, frame, settings} from "./global.js";
 const n_name = frame("name");
 const n_alias = frame("alias");
 const n_birth_name = frame("P1477");
+const n_target = frame("target");
+const n_xref_type = frame("/w/xref");
 
 export function normalized(str) {
   return str
@@ -41,12 +43,18 @@ export async function search(query, backends, options = {}) {
     // Convert items to search results filtering out duplicates.
     let seen = new Set();
     for (let item of items) {
-      if (item.ref) {
-        if (seen.has(item.ref)) continue;
-        seen.add(item.ref);
+      let ref = item.ref;
+      if (options.local) {
+        let topic = options.local.ids.get(ref)
+        if (topic) ref = topic.id;
+      }
+
+      if (ref) {
+        if (seen.has(ref)) continue;
+        seen.add(ref);
       }
       if (item.topic) {
-        for (let ref of item.topic.links()) seen.add(ref.id);
+        for (let r of item.topic.links()) seen.add(r.id);
       }
       results.push(new MdSearchResult(item));
     }
@@ -96,15 +104,16 @@ export class SearchIndex {
         this.ids.set(link.id, topic)
       }
 
-      // Add topic names and aliases to index.
-      for (let name of topic.all(n_name)) {
-        this.names.push({name: normalized(name), topic});
-      }
-      for (let name of topic.all(n_birth_name)) {
-        this.names.push({name: normalized(name), topic});
-      }
-      for (let alias of topic.all(n_alias)) {
-        this.names.push({name: normalized(alias), topic, alias: true});
+      // Add topic names, aliases, and xrefs to index.
+      for (let [prop, value] of topic) {
+        if (prop == n_name || prop == n_birth_name || prop == n_alias) {
+          let alias = prop == n_alias;
+          this.names.push({name: normalized(value), topic, alias});
+        } else if (prop.id && prop.get(n_target) == n_xref_type) {
+          let xref = store.resolve(value);
+          let identifier = `${prop.id}/${xref}`;
+          if (!this.ids.has(identifier)) this.ids.set(identifier, topic);
+        }
       }
     }
 
@@ -190,7 +199,12 @@ export class OmniBox extends Component {
   async onquery(e) {
     let query = e.detail
     let target = e.target;
-    let results = await search(query, this.backends);
+
+    let options = {};
+    let editor = this.match("#editor");
+    if (editor) options.local = editor.get_index();
+
+    let results = await search(query, this.backends, options);
     target.populate(query, results);
   }
 
