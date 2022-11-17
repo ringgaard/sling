@@ -268,7 +268,8 @@ class CaseEditor extends MdApp {
       if (item.context) await item.context.refresh();
     } else if (item.topic) {
       if (item.casefile) {
-        this.add_topic_link(item.topic);
+        let link = await this.add_topic_link(item.topic);
+        this.navigate_to(link);
       } else {
         this.navigate_to(item.topic);
       }
@@ -859,11 +860,10 @@ class CaseEditor extends MdApp {
     link.add(n_is, topic.id);
     let name = topic.get(n_name);
     if (name) link.add(n_name, name);
-    this.topic_updated(topic);
+    this.topic_updated(link);
 
     // Update topic list.
     await this.update_topics();
-    await this.navigate_to(link);
     return link;
   }
 

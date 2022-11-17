@@ -339,6 +339,7 @@ export class Context {
     let topic = await this.editor.new_topic(null, position);
     if (!topic) return null;
     this.added = topic;
+    if (!this.topic) this.topic = topic;
     return topic;
   }
 
@@ -389,12 +390,13 @@ export class Context {
     let query = prop.id + "/" + identifier;
     if (this.editor) {
       let topic = this.editor.get_index().ids.get(query);
-      if (topic) return topic;
+      if (topic && topic != this.topic) return topic;
     }
     let response = await this.kblookup(query, {fullmatch: 1});
     let result = await response.json();
     if (result.matches.length == 1) {
-      return frame(result.matches[0].ref);
+      let topic = frame(result.matches[0].ref);
+      if (topic && topic != this.topic) return topic;
     }
   }
 };

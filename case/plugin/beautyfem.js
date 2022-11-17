@@ -4,7 +4,7 @@
 // SLING case plug-in for adding topic from r/BeautifulFemales.
 
 import {store, frame} from "/case/app/global.js";
-import {match_link} from "/case/app/social.js";
+import {SocialTopic} from "/case/app/social.js";
 import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 
 const n_is = frame("is");
@@ -96,6 +96,7 @@ export default class BeautifulFemalesPlugin {
 
     // Look for comments from linkbots.
     if (reply.length >= 1) {
+      let social = new SocialTopic(topic, context);
       for (let child of reply[1].data.children) {
         let comment = child.data;
         if (linkbots.has(comment.author)) {
@@ -113,16 +114,7 @@ export default class BeautifulFemalesPlugin {
           // Add social media links.
           for (let match of body.matchAll(/\]\((htt[^\)]+)\)/g)) {
             let url = match[1];
-            let [prop, identifier] = match_link(url);
-            if (prop) {
-              topic.put(prop, identifier);
-
-              // Check for matching topic in knowledge base.
-              let item = await context.idlookup(prop, identifier);
-              if (item) topic.put(n_is, item);
-            } else {
-              console.log("unmatched", url);
-            }
+            await social.add_link(url);
           }
 
           // Get subreddit(s).

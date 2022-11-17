@@ -89,6 +89,7 @@ const tagsdir = {
   "Showgirl": stmt(n_occupation, "Q3482594"),
   "Stripper": stmt(n_occupation, "Q1141526"),
   "Burlesque": stmt(n_occupation, "Q107199096"),
+  "Child Actress": stmt(n_occupation, "Q970153"),
 
   "Blonde": stmt(n_hair_color, "Q202466"),
   "Blond": stmt(n_hair_color, "Q202466"),
@@ -307,10 +308,10 @@ export default class ListalPlugin {
     }
 
     // Listal model ID.
-    topic.put(n_listal, modelid);
+    let social = new SocialTopic(topic, context);
+    await social.add_prop(n_listal, modelid);
 
     // Social links.
-    let social = new SocialTopic(topic, context);
     for (let link of page.getElementsByTagName("a")) {
       let anchor = link.innerText;
       if (anchors.has(anchor)) {

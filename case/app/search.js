@@ -109,7 +109,7 @@ export class SearchIndex {
         if (prop == n_name || prop == n_birth_name || prop == n_alias) {
           let alias = prop == n_alias;
           this.names.push({name: normalized(value), topic, alias});
-        } else if (prop.id && prop.get(n_target) == n_xref_type) {
+        } else if (prop && prop.get && prop.get(n_target) == n_xref_type) {
           let xref = store.resolve(value);
           let identifier = `${prop.id}/${xref}`;
           if (!this.ids.has(identifier)) this.ids.set(identifier, topic);

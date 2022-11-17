@@ -332,7 +332,7 @@ export class SocialTopic {
     this.context = context;
   }
 
-  async add_link(url, title) {
+  async add_link(url, title, unknown) {
     let [prop, identifier] = match_link(url);
 
     if (prop) {
@@ -341,11 +341,11 @@ export class SocialTopic {
 
         if (this.context) {
           let item = await this.context.idlookup(prop, identifier);
-          if (item) this.topic.put(n_is, item.id);
+          if (item && item != this.topic) this.topic.put(n_is, item.id);
         }
         return true;
       }
-    } else {
+    } else if (unknown) {
       if (!this.topic.has(n_homepage, url)) {
         if (title) {
           let q = store.frame();
@@ -359,6 +359,14 @@ export class SocialTopic {
       }
     }
     return false;
+  }
+
+  async add_prop(prop, identifier) {
+    this.topic.put(prop, identifier);
+    if (this.context) {
+      let item = await this.context.idlookup(prop, identifier);
+      if (item && item != this.topic) this.topic.put(n_is, item.id);
+    }
   }
 };
 

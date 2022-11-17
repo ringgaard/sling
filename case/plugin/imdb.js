@@ -5,7 +5,7 @@
 
 import {store, frame} from "/case/app/global.js";
 import {date_parser, ItemCollector} from "/case/app/value.js";
-import {match_link} from "/case/app/social.js";
+import {SocialTopic} from "/case/app/social.js";
 import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 
 const n_name = frame("name");
@@ -268,7 +268,6 @@ export default class IMDBPlugin {
         }
       }
     }
-    console.log("male", male_score, "female", female_score);
     if (male_score || female_score) {
       bio.gender =  male_score > female_score ? n_male : n_female;
     }
@@ -435,11 +434,6 @@ export default class IMDBPlugin {
 
     if (!topic.has(n_height)) topic.put(n_height, bio.height);
 
-    // Add IMDB id.
-    topic.put(n_imdb, imdbid);
-    let item = await context.idlookup(n_imdb, imdbid);
-    if (item && item.id != topic.id) topic.put(store.is, item.id);
-
     // Add social links.
     await this.populate_social_links(context, topic, imdbid);
 
@@ -447,6 +441,10 @@ export default class IMDBPlugin {
   }
 
   async populate_social_links(context, topic, imdbid) {
+    // Add IMDB id.
+    let social = new SocialTopic(topic, context);
+    await social.add_prop(n_imdb, imdbid);
+
     // Get social links.
     let url = `https://www.imdb.com/name/${imdbid}/externalsites`;
     let r = await fetch(context.proxy(url));
@@ -462,16 +460,9 @@ export default class IMDBPlugin {
       for (let link of sites.values()) {
         let href = link.getAttribute("href");
         if (href.includes(".blogspot.com")) continue;
-        let [prop, identifier] = match_link(href);
-        if (prop) {
-          if (!topic.has(prop, identifier)) {
-            topic.put(prop, identifier);
-            let item = await context.idlookup(prop, identifier);
-            if (item) topic.put(store.is, item.id);
-          }
-        }
+        await social.add_link(href);
       }
     }
   }
-};
+}
 

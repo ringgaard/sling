@@ -69,12 +69,12 @@ export default class LinkTreePlugin {
     }
     for (let link of account.links) {
       if (link.url) {
-        await social.add_link(link.url, strip_emojis(link.title));
+        await social.add_link(link.url, strip_emojis(link.title), true);
       }
     }
 
     // Add linktree id.
-    topic.add(n_linktree, username);
+    social.add_prop(n_linktree, username);
 
     // Add profile photo.
     if (account.profilePictureUrl) {

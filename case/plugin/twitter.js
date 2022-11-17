@@ -72,11 +72,6 @@ export default class TwitterPlugin {
     let r = await fetch(context.service("twitter", {user}));
     let profile = await r.json();
 
-    // Check if user is already in knowledge base.
-    let username = profile.screen_name;
-    let item = await context.idlookup(n_twitter, username);
-    if (item) topic.put(n_is, item);
-
     // Add twitter profile name and description to topic.
     topic.put(n_name, strip_emojis(profile.name));
     if (profile.description) {
@@ -120,23 +115,17 @@ export default class TwitterPlugin {
     }
 
     // Add twitter ID.
-    if (!topic.has(n_twitter, username)) {
-      let t = topic.store.frame();
-      t.add(n_is, username);
-      t.add(n_start_time, str2date(profile.created_at));
-      //t.add(n_twitter_id, profile.id_str);
-      topic.add(n_twitter, t);
-    }
+    let social = new SocialTopic(topic, context);
+    let username = profile.screen_name;
+    await social.add_prop(n_twitter, username);
 
     // Add cross references.
-    let social = new SocialTopic(topic, context);
     for (let part of ["url", "description"]) {
       if (part in profile.entities) {
         for (let link of profile.entities[part].urls) {
           let url = link.expanded_url;
           if (!url) url = link.url;
           if (!url) continue;
-          console.log("link", url);
           await social.add_link(url);
         }
       }
@@ -148,9 +137,7 @@ export default class TwitterPlugin {
       let m = d.match(/ (instagram|ig|insta):? +@?([A-Za-z0-9_\.]+)/i);
       if (m) {
         let igname = m[2];
-        topic.put(n_instagram, igname);
-        let item = await context.idlookup(n_instagram, igname);
-        if (item) topic.put(n_is, item);
+        await social.add_prop(n_instagram, igname);
       }
     }
 

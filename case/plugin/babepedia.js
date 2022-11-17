@@ -217,9 +217,9 @@ export default class BabepediaPlugin {
     }
 
     // Add social links.
+    let social = new SocialTopic(topic, context);
     let socialicons = doc.getElementById("socialicons");
     if (socialicons) {
-      let social = new SocialTopic(topic, context);
       for (let i = 0; i < socialicons.children.length; i++) {
         let a = socialicons.children[i];
         let url = a.getAttribute("href");
@@ -230,7 +230,7 @@ export default class BabepediaPlugin {
     // Add reference to babepedia.
     let m = new URL(url).pathname.match(/^\/babe\/([^\/]+)/);
     let username = decodeURIComponent(m[1]);
-    topic.put(n_babepedia_id, decodeURIComponent(username));
+    await social.add_prop(n_babepedia_id, username);
 
     // Add profile photo.
     let profimg = doc.getElementById("profimg");
