@@ -782,7 +782,7 @@ class FactEditor extends Component {
       if (!prop || !value) continue;
       let p = prop.value();
       let v = value.value();
-      if (p === undefined || v === undefined) continue;
+      if (p === undefined || v === undefined || v == "") continue;
       if (e.qualified) {
         if (s.length == 0) return;
         let prev = s[s.length - 1];

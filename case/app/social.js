@@ -304,6 +304,14 @@ let xrefs = [
     pattern: /^https?:\/\/linktr\.ee\/(.+)/,
     property: frame("PLITR"),
   },
+  {
+    pattern: /^https?:\/\/(?:www\.)?crunchbase\.com\/person\/([^#^\/]+)/,
+    property: frame("P2087"),
+  },
+  {
+    pattern: /^https?:\/\/(?:www\.)?crunchbase\.com\/organization\/([^#^\/]+)/,
+    property: frame("P2088"),
+  },
 ];
 
 export function match_link(url) {

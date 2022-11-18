@@ -87,30 +87,33 @@ class CaseApp extends Component {
     if (m) {
       // Get case number from url.
       let caseid = parseInt(m[1]);
-      let fragment = parse_url_fragment();
-
-      let collab = fragment.get("collab");
-      if (collab) {
-        // Collaboration invite
-        let userid = fragment.get("as");
-        let key = fragment.get("invite");
-        this.join_case(caseid, collab, userid, key);
-      } else {
-        let topicid = fragment.get("t");
-        if (topicid) {
-          // Open case specified and navigate to topic.
-          await this.open_case(caseid);
-          this.editor.navigate_to(frame(topicid));
+      try {
+        let fragment = parse_url_fragment();
+        let collab = fragment.get("collab");
+        if (collab) {
+          // Collaboration invite
+          let userid = fragment.get("as");
+          let key = fragment.get("invite");
+          await this.join_case(caseid, collab, userid, key);
         } else {
-          // Open case specified in url.
-          this.open_case(caseid);
+          // Open case.
+          await this.open_case(caseid);
+          let topicid = fragment.get("t");
+          if (topicid) {
+            // Navigate to topic.
+            this.editor.navigate_to(frame(topicid));
+          }
         }
-      }
 
-      // Read case list in background.
-      casedb.readdir().then(caselist => {
-        this.caselist = caselist;
-      });
+        // Read case list in background.
+        casedb.readdir().then(caselist => {
+          this.caselist = caselist;
+        });
+      } catch (e) {
+        console.log("error", e);
+        inform(`Error opening case #${caseid}: ${e}`);
+        this.show_manager();
+      }
     } else {
       // Show case list.
       this.show_manager();
@@ -141,7 +144,7 @@ class CaseApp extends Component {
     casefile.set(n_userid, userid);
     casefile.set(n_credentials, credentials);
 
-    this.show_case(casefile);
+    await this.show_case(casefile);
   }
 
   async read_case(caseid) {
@@ -246,22 +249,14 @@ class CaseApp extends Component {
   }
 
   async open_case(caseid) {
-    try {
-      // Try to load case.
-      let casefile = await this.read_case(caseid);
-      if (!casefile) {
-        inform(`Case #${caseid} not found`);
-        return;
-      }
+    // Try to load case.
+    let casefile = await this.read_case(caseid);
+    if (!casefile) throw `Case #${caseid} not found`;
 
-      // Switch to case editor with new case.
-      await this.show_case(casefile);
+    // Switch to case editor with new case.
+    await this.show_case(casefile);
 
-      return casefile;
-    } catch (e) {
-      console.log("error", e);
-      inform(`Error opening case #${caseid}: ${e}`);
-    }
+    return casefile;
   }
 
   async save_case(casefile) {

@@ -120,32 +120,42 @@ export class Collaboration {
       }
       case COLLAB_CREATE: {
         let credentials = decoder.readVarString();
+        this.onfail = null;
         this.oncreated && this.oncreated(credentials);
         break;
       }
       case COLLAB_LOGIN: {
         let casefile = decoder.readAll();
+        this.onfail = null;
         this.onlogin && this.onlogin(casefile);
         break;
       }
       case COLLAB_INVITE: {
         let key = decoder.readVarString();
+        this.onfail = null;
         this.oninvite && this.oninvite(key);
         break;
       }
       case COLLAB_JOIN: {
         let credentials = decoder.readVarString();
+        this.onfail = null;
         this.onjoin && this.onjoin(credentials);
         break;
       }
       case COLLAB_NEWID: {
         let next = decoder.readVarint32();
+        this.onfail = null;
         this.onnewid && this.onnewid(next);
         break;
       }
       case COLLAB_ERROR: {
         let message = decoder.readVarString();
-        inform(`Collaboration error: ${message}`);
+        if (this.onfail) {
+          this.onfail(message);
+        } else {
+          inform(`Collaboration error: ${message}`);
+        }
+        this.onfail = null;
         break;
       }
       default: {
@@ -183,6 +193,7 @@ export class Collaboration {
   async login(caseid, userid, credentials) {
     return new Promise((resolve, reject) => {
       this.onlogin = casefile => resolve(casefile);
+      this.onfail = e => reject(e);
 
       let encoder = new Encoder(store, false);
       encoder.writeVarInt(COLLAB_LOGIN);
@@ -198,6 +209,7 @@ export class Collaboration {
   async invite(userid) {
     return new Promise((resolve, reject) => {
       this.oninvite = key => resolve(key);
+      this.onfail = e => reject(e);
 
       let encoder = new Encoder(store, false);
       encoder.writeVarInt(COLLAB_INVITE);
@@ -211,6 +223,7 @@ export class Collaboration {
   async join(caseid, userid, key) {
     return new Promise((resolve, reject) => {
       this.onjoin = key => resolve(key);
+      this.onfail = e => reject(e);
 
       let encoder = new Encoder(store, false);
       encoder.writeVarInt(COLLAB_JOIN);
@@ -226,6 +239,7 @@ export class Collaboration {
   async nextid() {
     return new Promise((resolve, reject) => {
       this.onnewid = next => resolve(next);
+      this.onfail = e => reject(e);
 
       let encoder = new Encoder(store, false);
       encoder.writeVarInt(COLLAB_NEWID);
