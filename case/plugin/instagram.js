@@ -3,7 +3,7 @@
 
 // SLING case plug-in for adding images from instagram.
 
-import {store, frame, settings} from "/case/app/global.js";
+import {frame} from "/case/app/global.js";
 import {Drive} from "/case/app/drive.js";
 
 const n_media = frame("media");
@@ -18,15 +18,8 @@ export default class InstagramPlugin {
     let photoid = m[1];
     let photourl = `https://www.instagram.com/p/${photoid}/media/?size=l`;
 
-    // Get instagram cookie.
-    let cookie = settings.cookiejar["www.instagram.com"];
-    if (!cookie) throw "No instagram credentials";
-
-    // Retrieve photo.
-    let r = await fetch(context.proxy(photourl), {headers: {
-      "XUser-Agent": navigator.userAgent,
-      "XCookie": cookie,
-    }});
+    // Fetch photo.
+    let r = await context.fetch(photourl);
     let data = await r.blob();
 
     // Save photo to drive.

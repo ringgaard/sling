@@ -38,58 +38,59 @@ function stmt(prop, value) {
 }
 
 const tagsdir = {
-  "Model": stmt(n_occupation, "Q4610556"),
-  "Actress": stmt(n_occupation, "Q33999"),
   "Actor": stmt(n_occupation, "Q33999"),
-  "Tv Actress": stmt(n_occupation, "Q10798782"),
-  "Television Actress": stmt(n_occupation, "Q10798782"),
-  "Film Actress": stmt(n_occupation, "Q10800557"),
+  "Actress": stmt(n_occupation, "Q33999"),
+  "Athlete": stmt(n_occupation, "Q2066131"),
+  "Ballerina": stmt(n_occupation, "Q805221"),
+  "Beauty Queen": stmt(n_occupation, "Q18581305"),
+  "Blogger": stmt(n_occupation, "Q8246794"),
+  "Burlesque": stmt(n_occupation, "Q107199096"),
+  "Camgirl": stmt(n_occupation, "Q1027930"),
+  "Child Actress": stmt(n_occupation, "Q970153"),
+  "Comedian": stmt(n_occupation, "Q245068"),
+  "Cosplayer": stmt(n_occupation, "Q18810049"),
+  "Dancer": stmt(n_occupation, "Q5716684"),
+  "Erotic Actress": stmt(n_occupation, "Q488111"),
+  "Erotic Model": stmt(n_occupation, "Q3286043"),
+  "Erotic Model": stmt(n_occupation, "Q3286043"),
   "Fashion Model": stmt(n_occupation, "Q3357567"),
-  "Supermodel": stmt(n_occupation, "Q865851"),
-  "Social Media Star": stmt(n_occupation, "Q2045208"),
-  "Fitness Model": stmt(n_occupation, "Q58891836"),
+  "Film Actress": stmt(n_occupation, "Q10800557"),
   "Fitness Athlete": stmt(n_occupation, "Q58891836"),
   "Fitness Celebrity": stmt(n_occupation, "Q58891836"),
+  "Fitness Model": stmt(n_occupation, "Q58891836"),
+  "Golfer": stmt(n_occupation, "Q11303721"),
+  "Influencer": stmt(n_occupation, "Q2906862"),
+  "Instagram Model": stmt(n_occupation, "Q110990999"),
+  "Instagram Star": stmt(n_occupation, "Q110990999"),
+  "InstaModel": stmt(n_occupation, "Q110990999"),
+  "Insta": stmt(n_occupation, "Q110990999"),
+  "Journalist": stmt(n_occupation, "Q1930187"),
+  "Model": stmt(n_occupation, "Q4610556"),
   "Naked": stmt(n_occupation, "Q161850"),
   "Nude": stmt(n_occupation, "Q161850"),
-  "Erotic Model": stmt(n_occupation, "Q3286043"),
-  "Twitch Streamer": stmt(n_occupation, "Q50279140"),
-  "TikTok Star": stmt(n_occupation, "Q94791573"),
-  "Instagram Model": stmt(n_occupation, "Q110990999"),
-  "Insta": stmt(n_occupation, "Q110990999"),
-  "InstaModel": stmt(n_occupation, "Q110990999"),
-  "Instagram Star": stmt(n_occupation, "Q110990999"),
-  "Youtuber": stmt(n_occupation, "Q17125263"),
-  "Comedian": stmt(n_occupation, "Q245068"),
   "Pageant Contestant": stmt(n_occupation, "Q18581305"),
-  "Beauty Queen": stmt(n_occupation, "Q18581305"),
-  "Plus Size": stmt(n_occupation, "Q3286049"),
-  "Dancer": stmt(n_occupation, "Q5716684"),
-  "Ballerina": stmt(n_occupation, "Q805221"),
-  "Blogger": stmt(n_occupation, "Q8246794"),
-  "Influencer": stmt(n_occupation, "Q2906862"),
-  "Cosplayer": stmt(n_occupation, "Q18810049"),
-  "Singer-songwriter": stmt(n_occupation, "Q488205"),
-  "Journalist": stmt(n_occupation, "Q1930187"),
-  "Reporter": stmt(n_occupation, "Q42909"),
-  "TV Presenter": stmt(n_occupation, "Q947873"),
-  "Athlete": stmt(n_occupation, "Q2066131"),
-  "Golfer": stmt(n_occupation, "Q11303721"),
-  "Standup Comedian": stmt(n_occupation, "Q18545066"),
-  "Camgirl": stmt(n_occupation, "Q1027930"),
-  "Tv Host": stmt(n_occupation, "Q947873"),
-  "Reality Tv": stmt(n_occupation, "Q27658988"),
-  "Erotic Model": stmt(n_occupation, "Q3286043"),
-  "Erotic Actress": stmt(n_occupation, "Q488111"),
-  "P*rn Star": stmt(n_occupation, "Q488111"),
-  "PMOM": stmt(n_occupation, "Q728711"),
-  "Singer": stmt(n_occupation, "Q177220"),
   "Pin Up Model": stmt(n_occupation, "Q151092"),
   "Pin Up": stmt(n_occupation, "Q151092"),
+  "Plus Size": stmt(n_occupation, "Q3286049"),
+  "PMOM": stmt(n_occupation, "Q728711"),
+  "P*rn Star": stmt(n_occupation, "Q488111"),
+  "Reality Tv": stmt(n_occupation, "Q27658988"),
+  "Reporter": stmt(n_occupation, "Q42909"),
+  "Ring Girl": stmt(n_occupation, "Q922176"),
   "Showgirl": stmt(n_occupation, "Q3482594"),
+  "Singer-songwriter": stmt(n_occupation, "Q488205"),
+  "Singer": stmt(n_occupation, "Q177220"),
+  "Social Media Star": stmt(n_occupation, "Q2045208"),
+  "Standup Comedian": stmt(n_occupation, "Q18545066"),
   "Stripper": stmt(n_occupation, "Q1141526"),
-  "Burlesque": stmt(n_occupation, "Q107199096"),
-  "Child Actress": stmt(n_occupation, "Q970153"),
+  "Supermodel": stmt(n_occupation, "Q865851"),
+  "Television Actress": stmt(n_occupation, "Q10798782"),
+  "TikTok Star": stmt(n_occupation, "Q94791573"),
+  "Tv Actress": stmt(n_occupation, "Q10798782"),
+  "Tv Host": stmt(n_occupation, "Q947873"),
+  "TV Presenter": stmt(n_occupation, "Q947873"),
+  "Twitch Streamer": stmt(n_occupation, "Q50279140"),
+  "Youtuber": stmt(n_occupation, "Q17125263"),
 
   "Blonde": stmt(n_hair_color, "Q202466"),
   "Blond": stmt(n_hair_color, "Q202466"),
@@ -182,9 +183,7 @@ export default class ListalPlugin {
 
   async populate(context, topic, url, modelid) {
     // Retrieve listal profile for model.
-    let r = await fetch(context.proxy(url), {headers: {
-      "XUser-Agent": navigator.userAgent,
-    }});
+    let r = await context.fetch(url);
     let html = await r.text();
 
     // Parse HTML.
@@ -340,11 +339,7 @@ export default class ListalPlugin {
     let done = false;
     for (let page = 1; !done; ++page) {
       let pageurl = `https://www.listal.com/${modelid}/pictures/${page}`;
-      let r = await fetch(context.proxy(pageurl), {
-        headers: {
-          "XUser-Agent": navigator.userAgent,
-        },
-      });
+      let r = await context.fetch(pageurl);
       let html = await r.text();
       let doc = new DOMParser().parseFromString(html, "text/html");
 

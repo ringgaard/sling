@@ -235,7 +235,7 @@ def service_request(request):
   cookie = request["XCookie"]
   if cookie: headers["Cookie"] = cookie
 
-  log.info("Proxy request for", url, headers)
+  log.info("Proxy request for", url)
 
   # Forward request.
   r = proxy_pool.request("GET", url, headers=headers, timeout=30)

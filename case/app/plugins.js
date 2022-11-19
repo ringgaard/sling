@@ -378,6 +378,21 @@ export class Context {
     return `/case/proxy?url=${encodeURIComponent(url)}`;
   }
 
+  async fetch(url, options = {}) {
+    if (!options.headers) options.headers = {};
+    options.headers["XUser-Agent"] = navigator.userAgent;
+    let hostname = new URL(url).hostname;
+    let cookie = settings.cookiejar[hostname];
+    if (cookie) {
+      options.headers["XCookie"] = cookie;
+    }
+
+    // Fetch content.
+    let response = await fetch(this.proxy(url), options);
+    if (!response.ok) throw `Error fetching ${url}: ${response.statusText}`;
+    return response;
+  }
+
   kblookup(query, params) {
     let qs = new URLSearchParams(params);
     qs.append("q", query);

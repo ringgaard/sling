@@ -1202,7 +1202,7 @@ class CaseEditor extends MdApp {
     if (script) {
       // Execute script.
       try {
-        if (await script.call(this, store, this.print.bind(this))) {
+        if (await script.call(this, store, frame, this.print.bind(this))) {
           // Update editor.
           this.mark_dirty();
           await this.update_folders();
@@ -1791,7 +1791,7 @@ class ScriptDialog extends MdDialog {
     user_script = this.find("textarea").value;
     var func;
     try {
-      func = new AsyncFunction("store", "print", user_script);
+      func = new AsyncFunction("store", "frame", "print", user_script);
     } catch(e) {
       this.find("#msg").innerText = e.message;
       return;

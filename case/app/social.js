@@ -301,6 +301,10 @@ let xrefs = [
     property: frame("P973"),
   },
   {
+    pattern: /^https?:\/\/(?:www\.)?fashionmodeldirectory\.com\/models\/(.+?)(\/|\?|$)/,
+    property: frame("P2266"),
+  },
+  {
     pattern: /^https?:\/\/linktr\.ee\/(.+)/,
     property: frame("PLITR"),
   },
