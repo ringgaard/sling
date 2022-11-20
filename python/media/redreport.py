@@ -395,7 +395,7 @@ class RedditPosting extends Component {
       add = "";
       match = "";
       if (item.query) {
-        match += `<b>${item.query}</b>: `;
+        match += `<b>${Component.escape(item.query)}</b>: `;
       }
       if (item.itemid) {
         let kburl = `https://ringgaard.com/kb/${item.itemid}`;
@@ -416,10 +416,11 @@ class RedditPosting extends Component {
     }
 
     let skip = photos == duplicates;
+    let title = Component.escape(posting.title);
     return `
       <img src="${thumb.url}" width="${thumb.width}" height="${thumb.height}">
       <div class="descr">
-        <div class="title${skip ? "-skip" : ""}">${posting.title}</div>
+        <div class="title${skip ? "-skip" : ""}">${title}</div>
         <div class="info">
           <span class="${posting.over_18 ? "nsfw" : "sfw"}">NSFW</span>
           <a href="${permalink}" target="_blank">

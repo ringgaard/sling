@@ -14,6 +14,7 @@
 
 """Find photos of persons in reddit postings."""
 
+import html
 import json
 import requests
 import datetime
@@ -260,6 +261,7 @@ num_unknown = 0
 num_reposts = 0
 num_removed = 0
 num_selfies = 0
+num_errors = 0
 
 if flags.arg.posting:
   postings = [(flags.arg.posting, redditdb[flags.arg.posting])]
@@ -306,8 +308,11 @@ for key, value in postings:
     continue
 
   # Discard posting with bad titles.
-  if type(title) is bytes: continue
-  title = title.replace('\n', ' ').strip()
+  if type(title) is bytes:
+    print(sr, key, "BAD", title)
+    num_errors += 1
+    continue
+  title = html.unescape(title.replace('\n', ' ').replace("’", "'").strip())
   nsfw = True if posting[n_over_18] else None
 
   # Check for personal subreddit.
@@ -506,6 +511,7 @@ if not flags.arg.dryrun:
   for id in profiles:
     profiles[id].write()
 
+coverage = int(num_known / (num_known + num_unknown) * 100)
 print(num_photos, "photos,",
       num_dups, "dups,",
       num_profiles, "profiles,",
@@ -513,7 +519,10 @@ print(num_photos, "photos,",
       num_unknown, "unknown,",
       num_reposts, "reposts,",
       num_removed, "removed,",
-      num_selfies, "selfies")
+      num_selfies, "selfies,",
+      num_errors, "errors,",
+      coverage, "% coverage",
+)
 
 if not flags.arg.dryrun: chkpt.commit(redditdb.position())
 redditdb.close()
