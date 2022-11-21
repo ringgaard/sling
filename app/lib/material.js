@@ -425,7 +425,7 @@ export class MdToolbar extends Component {
         height: 56px;
         max-height: 56px;
         font-size: 20px;
-        padding: 0px 8px;
+        padding: 0px 4px;
         margin: 0;
         box-shadow: 0 1px 8px 0 rgba(0,0,0,.2),
                     0 3px 4px 0 rgba(0,0,0,.14),

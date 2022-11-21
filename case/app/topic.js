@@ -330,10 +330,10 @@ class TopicToolbox extends MdToolbox {
             tooltip="Find photo duplicates">
           </md-icon-button>
           <md-icon-button
-            id="copyid"
-            icon="numbers"
+            id="link"
+            icon="link"
             class="ripple"
-            tooltip="Copy topic id to clipboard\n(Ctrl+D)">
+            tooltip="Copy topic link to clipboard">
           </md-icon-button>
           <md-icon-button
             id="import"
@@ -390,6 +390,8 @@ class TopicCard extends Component {
         this.onimgsearch(e);
       } else if (action == "imgdups") {
         this.onimgdups(e);
+      } else if (action == "link") {
+        this.ontopiclink(e);
       }
     });
 
@@ -814,6 +816,14 @@ class TopicCard extends Component {
       selection.removeAllRanges();
       selection.selectAllChildren(this.find("#name"));
     }
+  }
+
+  ontopiclink(e) {
+    let topic = this.state;
+    let id = topic.get(n_id);
+    let url = new URL(window.location);
+    url.hash = `t=${id}`;
+    navigator.clipboard.writeText(url.toString());
   }
 
   ondown(e) {

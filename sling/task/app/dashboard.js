@@ -294,8 +294,10 @@ class DashboardStatus extends Component {
     }
 
     this.find("#jobs").update({jobs: this.jobs, selected: this.selected});
-    this.find("#counters").update(this.jobs[this.selected].counters);
-    this.find("#channels").update(this.jobs[this.selected].channels);
+    if (this.jobs[this.selected]) {
+      this.find("#counters").update(this.jobs[this.selected].counters);
+      this.find("#channels").update(this.jobs[this.selected].channels);
+    }
     this.find("#perf").update(census);
     this.find("#charts").update(status.history);
   }

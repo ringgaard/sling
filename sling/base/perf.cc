@@ -16,6 +16,7 @@
 
 #include <glob.h>
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 #include <sys/resource.h>
 #include <string>
@@ -47,7 +48,9 @@ static int64 GetMemoryUsage() {
   FILE *f = fopen("/proc/self/statm", "r");
   if (!f) return 0;
   char buffer[64];
-  int64 ram = atoi(fgets(buffer, 64, f));
+  char *p = fgets(buffer, 64, f);
+  if (p) p = strchr(p, ' ');
+  int64 ram = p ? atoi(p) : 0;
   fclose(f);
   return ram * page_size;
 }
