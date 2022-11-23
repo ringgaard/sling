@@ -97,7 +97,7 @@ const MILLENNIUM = 1;
 const CENTURY = 2;
 const DECADE = 3
 const YEAR = 4;
-const MONTH = 5
+const MONTH = 5;
 const DAY = 6;
 
 const month_names = [
@@ -105,6 +105,11 @@ const month_names = [
   "April", "May", "June",
   "July", "August", "September",
   "October", "November", "December",
+];
+
+const month_days = [
+  [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31],
+  [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31],
 ];
 
 const month_mapping = {
@@ -125,6 +130,10 @@ function pad(num, size) {
 
 function spad(num, size) {
   return (num < 0 ? "-" : "+") + pad(num, size);
+}
+
+function days_in_month(year, month) {
+  return month_days[year % 4 == 0 ? 1 : 0][month - 1];
 }
 
 export class Time {
@@ -305,6 +314,58 @@ export class Time {
       default:
         return "???";
     }
+  }
+
+  next() {
+    switch (this.precision) {
+      case MILLENNIUM:
+        return Time.value(this.year + 1000, null, null, MILLENNIUM);
+
+      case CENTURY:
+        return Time.value(this.year + 100, null, null, CENTURY);
+
+      case DECADE:
+        return Time.value(this.year + 10, null, null, DECADE);
+
+      case YEAR:
+        return Time.value(this.year + 1, null, null, YEAR);
+
+      case MONTH: {
+        let y = this.year;
+        let m = this.month + 1;
+        if (m > 12) {
+          m = 1;
+          y += 1;
+        }
+        return Time.value(y, m, null, MONTH);
+      }
+
+      case DAY: {
+        let y = this.year;
+        let m = this.month;
+        let d = this.day + 1;
+        if (d > days_in_month(y, m)) {
+          d = 1;
+          m += 1;
+          if (m > 12) {
+            m = 1;
+            y += 1;
+          }
+        }
+        return Time.value(y, m, d, DAY);
+      }
+    }
+  }
+
+  decimal() {
+    if (!this.precision) return undefined;
+    if (this.precision <= YEAR) return this.year;
+    let leapyear = this.year % 4 == 0;
+    let table = month_days[leapyear ? 1 : 0];
+    let days = 0;
+    for (let m = 0; m < this.month - 1; ++m) days += table[m];
+    if (this.precision == DAY) days += this.day;
+    return this.year + (days / (leapyear ? 366 : 365));
   }
 
   static value(year, month, day, precision) {
@@ -557,10 +618,10 @@ export function quantity_parser(value, results) {
   }
 
   // Quantity parsing.
-  m = value.match(/^(\-?\d+\.?\d+) (\w+)$/);
+  m = value.match(/^(\-?\d+\.?\d+) ?(\w+)$/);
   if (m) {
     let amount = parseFloat(m[1]);
-    let unit = units.get(m[2]);
+    let unit = units.get(m[2].toLowerCase());
 
     if (!isNaN(amount) && unit) {
       let v = store.frame();

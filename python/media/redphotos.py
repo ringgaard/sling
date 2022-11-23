@@ -351,14 +351,6 @@ for key, value in postings:
     itemid = lookup_name(name)
     query = name
 
-    # Try to match up until first period.
-    if itemid is None:
-      period = title.find(". ")
-      if period != -1:
-        name = title[:period]
-        itemid = lookup_name(name)
-        query = name
-
     # Try to match name.
     if itemid is None:
       itemid = lookup_name(name)
