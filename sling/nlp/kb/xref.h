@@ -28,15 +28,64 @@
 namespace sling {
 namespace nlp {
 
+class XRef;
+
+// URI prefix mapping for converting URIs to xref properties and values.
+class URIMapping {
+ public:
+  // Load URI map from frame.
+  void Load(const Frame &frame);
+
+  // Resolve URI properties.
+  void Bind(Store *store);
+
+  // Add URI map to frame builder.
+  void Save(Builder *builder);
+
+  // Map URI. Return true if match is found.
+  bool Map(Text uri, string *id) const;
+
+  // Look up property mapping for URI. Return true if match is found.
+  bool Lookup(Text uri, Handle *pid, string *id) const;
+
+  // Check if there are no URI mappings.
+  bool empty() const { return mappings_.empty(); }
+
+ private:
+  struct Entry {
+    Entry(const string &uri,
+          const string &prefix,
+          const string &suffix,
+          const string &property)
+      : uri(uri), prefix(prefix), suffix(suffix), property(property) {}
+
+    // Sort predicate.
+    bool operator <(const Entry &other) const { return uri < other.uri; }
+
+    string uri;       // URI prefix
+    string prefix;    // prefix to append to identifier
+    string suffix;    // suffix that is should be removed from URI
+    string property;  // property for URI prefix
+    Handle pid = Handle::nil();
+  };
+
+  // Locate matching URI mapping. Return -1 if none is found.
+  int Locate(Text uri) const;
+
+  // Mappings sorted by URI.
+  std::vector<Entry> mappings_;
+};
+
 // Cross-reference for identifiers.
 class XRef {
  public:
   // Property type for identifier.
   struct Property {
     Handle handle;           // frame handle for property, must be global
-    int priority;            // priority for selecting canonical id
     string name;             // property name
     uint64 hash;             // hash code for property
+    int priority;            // priority for selecting canonical id
+    mutable int count;       // number of occurences
   };
 
   // Identifier with property type and value. The identifiers are stored in a

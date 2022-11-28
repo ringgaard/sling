@@ -49,7 +49,6 @@
     P4015, ; Vimeo identifier
     PBABE, ; Babepedia ID
     PVEF,  ; VEF thread ID
-
     P3869, ; IAFD female performer ID
 
     P214,  ; VIAF ID
@@ -96,6 +95,409 @@
     "mid": "P646"       ; Freebase MID
     "kg": "P2671"       ; Google Knowledge Graph ID
     "fg": "P8168"       ; FactGrid ID
+  }
+
+  ; URI prefix to property mapping.
+  urimap: {
+    ; Wikidata identifiers.
+    ;"https://www.wikidata.org/entity/": nil
+    ;"http://www.wikidata.org/entity/": nil
+    ;"https://www.wikidata.org/wiki/": nil
+
+    ; Social media.
+    "https://twitter.com/": "P2002"
+    "https://instagram.com/": "P2003"
+    "https://facebook.com/": "P2013"
+    "https://tiktok.com/@": "P7085"
+    "https://github.com/": "P2037"
+    "https://imdb.com/name/": "P345"
+
+    ; DOI
+    "https://scigraph.springernature.com/pub.": "P356"
+    "https://scigraph.springernature.com/person.": "P6178"
+    "https://scigraph.springernature.com/journal.": "P6180"
+    "https://scigraph.springernature.com/grant.": "P6854"
+    "http://scigraph.springernature.com/pub.": "P356"
+    "http://scigraph.springernature.com/person.": "P6178"
+    "http://scigraph.springernature.com/journal.": "P6180"
+    "http://scigraph.springernature.com/grant.": "P6854"
+
+    ; identifiers.org
+    "http://identifiers.org/adw/": "P4024" ; ADW taxon ID
+    "http://identifiers.org/ASIN/": "P5749"; Amazon ID
+    "http://identifiers.org/chebi/": "P683" ; ChEBI ID
+    "http://identifiers.org/cl/": "P7963"; Cell Ontology ID
+    "http://identifiers.org/complexportal/": "P7718"; CP accession ID
+    "http://identifiers.org/dbsnp/": "P6861"; dbSNP Reference SNP number
+    "http://identifiers.org/doid/": "P699" ; Disease Ontology ID
+    "http://identifiers.org/doi/": "P356" ; DOI
+    "http://identifiers.org/envo/": "P3859" ; Environment Ontology ID
+    "http://identifiers.org/fb/": "P3852" ; FlyBase Gene ID
+    "http://identifiers.org/FMA/": "P1402" ; Foundational Model of Anatomy ID
+    "http://identifiers.org/foodon/": "P6767"; FoodOn ID
+    "http://identifiers.org/GO/": "P686" ; Gene Ontology ID
+    "http://identifiers.org/hgnc/": "P354" ; HGNC ID
+    "http://identifiers.org/hgnc.symbol/": "P353" ; HGNC gene symbol
+    "http://identifiers.org/inchikey/": "P235" ; InChIKey
+    "http://identifiers.org/inchi/": "P234" ; InChI
+    "http://identifiers.org/isbn/": "P212" ; ISBN-13
+    "http://identifiers.org/issn/": "P236" ; ISSN
+    "http://identifiers.org/kegg/": "P665" ; KEGG ID
+    "http://identifiers.org/lincs.smallmolecule/": "P11096"; LINCS ID
+    "http://identifiers.org/meddra/": "P3201" ; MEDDRA ID
+    "http://identifiers.org/mesh/": "P486" ; MeSH descriptor ID
+    "http://identifiers.org/mir/": "P4793" ; identifiers.org prefix
+    "http://identifiers.org/ncbigene/": "P351" ; Entrez Gene ID
+    "http://identifiers.org/omim/": "P492" ; OMIM ID
+    "http://identifiers.org/orcid/": "P496" ; ORCID iD
+    "http://identifiers.org/pdb.ligand/": "P3636" ; PDB ligand ID
+    "http://identifiers.org/pdb/": "P638" ; PDB structure ID
+    "http://identifiers.org/pfam/": "P3519" ; Pfam ID
+    "http://identifiers.org/pubchem.compound/": "P662" ; PubChem CID
+    "http://identifiers.org/pubchem.substance/": "P2153" ; PubChem Substance ID
+    "http://identifiers.org/reactome:": "P3937" ; Reactome ID
+    "http://identifiers.org/refseq/": "P656" ; RefSeq
+    "http://identifiers.org/rfam/": "P3523" ; Rfam ID
+    "http://identifiers.org/snomedct/": "P5806" ; SNOMED CT
+    "http://identifiers.org/SPD/": "P4537" ; Spider Ontology ID
+    "http://identifiers.org/UBERON/": "P1554" ; UBERON ID
+    "http://identifiers.org/umls/": "P2892" ; UMLS CUI
+    "http://identifiers.org/unii/": "P652" ; UNII
+    "http://identifiers.org/uniprot/": "P352" ; UniProt protein ID
+    "http://identifiers.org/wb/": "P3860" ; Wormbase Gene ID
+    "http://identifiers.org/wikipathways/": "P2410" ; WikiPathways ID
+
+    ; purl
+    "http://purl.obolibrary.org/obo/CLO_": {
+      +"P2158" ; Cell Line Ontology ID
+      prefix: "BTO:"
+    }
+    "http://purl.obolibrary.org/obo/BTO_": {
+      + "P5501" ; Brenda Tissue Ontology ID
+      prefix: "BTO:"
+    }
+    "http://purl.obolibrary.org/obo/DOID_": {
+      +"P699" ; Disease Ontology ID
+      prefix: "DOID_"
+    }
+    "http://purl.obolibrary.org/obo/GO_": {
+      +"P686" ; Gene Ontology ID
+      prefix: "GO:"
+    }
+    "http://purl.obolibrary.org/obo/HP_": {
+      +"P3841" ; Human Phenotype Ontology ID
+      prefix: "HP:"
+    }
+    "http://purl.obolibrary.org/obo/SYMP_": "P8656" ; Symptom Ontology ID
+    "http://purl.obolibrary.org/obo/CHEBI_": "P683" ; ChEBI ID
+    "http://purl.obolibrary.org/obo/NCIT_": "P1748" ; NCI Thesaurus ID
+
+    "http://purl.uniprot.org/geneid/": "P351" ; Entrez Gene ID
+    "http://purl.uniprot.org/journals/": "P4616" ; UniProt journal ID
+    "http://purl.uniprot.org/refseq/": "P637" ; RefSeq protein ID
+    "http://purl.uniprot.org/taxonomy/": "P685" ; NCBI taxonomy ID
+    "http://purl.uniprot.org/uniprot/": "P352" ; UniProt protein ID
+
+    "http://g.co/kg/g/": {
+      +"P2671" ; Google Knowledge Graph ID
+      prefix: "/g/"
+    }
+    "http://g.co/kg/m/": {
+      +"P646" ; Freebase ID
+      prefix: "/m/"
+    }
+
+    "http://id.nlm.nih.gov/mesh/C": {
+      +"P486" ; MeSH descriptor ID
+      prefix: "C"
+    }
+    "http://id.nlm.nih.gov/mesh/D": {
+      +"P486" ; MeSH descriptor ID
+      prefix: "D"
+    }
+    "http://id.nlm.nih.gov/mesh/T": {
+      +"P6680" ; MeSH term ID
+      prefix: "T"
+    }
+    "http://id.nlm.nih.gov/mesh/M": {
+      +"P6694" ; MeSH concept ID
+      prefix: "M"
+    }
+
+    "http://rdf.ebi.ac.uk/resource/ensembl/ENSG": {
+      +"P594" ; Ensembl gene ID
+      prefix: "ENSG"
+    }
+    "http://rdf.ebi.ac.uk/resource/ensembl/ENST": {
+      +"P704" ; Ensembl transcript ID
+      prefix: "ENST"
+    }
+
+    "http://astrothesaurus.org/uat/": "P4466" ; Unified Astronomy Thesaurus ID
+    "http://babelnet.org/rdf/s": "P2581" ; BabelNet ID
+    "http://bag.basisregistraties.overheid.nl/bag/id/openbare-ruimte/": "P5207" ; BAG public space ID
+    "http://bag.basisregistraties.overheid.nl/bag/id/pand/": "P5208" ; BAG building ID
+    "http://bag.basisregistraties.overheid.nl/bag/id/woonplaats/": "P981" ; BAG residence ID
+    "http://catalogo.pusc.it/auth/": "P5739" ; Pontificia Università della Santa Croce ID
+    "http://cv.iptc.org/newscodes/": "P5429" ; IPTC NewsCode
+    "http://dare.ht.lu.se/places/": "P1936" ; Digital Atlas of the Roman Empire ID
+    "http://data.beeldengeluid.nl/gtaa/": "P1741" ; GTAA ID
+    "http://data.bibliotheken.nl/id/dbnla/": "P723" ; Digitale Bibliotheek voor de Nederlandse Letteren author ID
+    "http://data.bibliotheken.nl/id/thes/p": "P1006" ; Nationale Thesaurus voor Auteurs ID
+    "http://data.bnf.fr/ark:/12148/cb": "P268" ; Bibliothèque nationale de France ID
+    "http://data.carnegiehall.org/events/": "P5227" ; Carnegie Hall event ID
+    "http://data.carnegiehall.org/works/": "P5229" ; Carnegie Hall work ID
+    "http://data.cervantesvirtual.com/person/": "P2799" ; BVMC person ID
+    "http://data.cervantesvirtual.com/work/": "P3976" ; BVMC work ID
+    "http://data.cinematheque.qc.ca/data/Person": "P8971" ; Cinémathèque québécoise person ID
+    "http://data.europeana.eu/": "P7704" ; Europeana entity
+    "http://data.library.sh.cn/entity/person/": "P6702" ; Shanghai Library person ID
+    "http://data.library.sh.cn/entity/place/": "P6703" ; Shanghai Library place ID
+    "http://data.logainm.ie/place/": "P5097" ; Logainm ID
+    "http://data.nlg.gr/resource/authority/record": "P3348" ; National Library of Greece ID
+    "https://api.nobelprize.org/2.1/laureate/": "P8024" ; Nobel Laureate API ID
+    "http://data.nobelprize.org/resource/laureate/": "P8024" ; Nobel Laureate ID
+    "http://data.ordnancesurvey.co.uk/id/": "P3120" ; TOID
+    "http://data.persee.fr/collection/": "P2733" ; Persée journal ID
+    "http://data.persee.fr/person/": "P2732" ; Persée author ID
+    "http://data.rism.info/id/rismid/": "P5504" ; RISM ID
+    "http://dati.camera.it/ocd/persona.rdf/p": "P1341" ; Italian Chamber of Deputies dati ID
+    "http://datos.bne.es/resource/": "P950" ; Biblioteca Nacional de España ID
+    "http://d-nb.info/": "P1292" ; DNB editions
+    "http://dx.doi.org/10.13039/": "P3153" ; Crossref funder ID
+    "http://dx.doi.org/": "P356" ; DOI
+    "http://edan.si.edu/saam/id/person-institution/": "P1795" ; Smithsonian American Art Museum person/institution ID
+    "http://eunis.eea.europa.eu/sites/": "P4762" ; Common Database on Designated Areas ID
+    "http://eunis.eea.europa.eu/species/": "P6177" ; EUNIS ID for species
+    "http://eurovoc.europa.eu/": "P5437" ; EuroVoc ID
+    "http://globalwordnet.org/ili/": "P5063" ; Interlingual Index ID
+    "http://glottolog.org/resource/languoid/id/": "P1394" ; Glottolog code
+    "http://gnis-ld.org/lod/gnis/feature/": "P590" ; GNIS ID
+    "http://iconclass.org/": "P1256" ; Iconclass notation
+    "http://id.loc.gov/authorities/classification/": "P1149" ; Library of Congress Classification
+    "http://id.loc.gov/authorities/genreForms/": "P4953" ; Library of Congress Genre/Form Terms ID
+    "http://id.loc.gov/authorities/names/": "P244" ; Library of Congress authority ID
+    "http://id.loc.gov/authorities/subjects/": "P244" ; Library of Congress authority ID
+    "http://id.loc.gov/vocabulary/ethnographicTerms/": "P8540" ; American Folklore Society Ethnographic Thesaurus ID
+    "http://id.loc.gov/vocabulary/organizations/": "P3234" ; Code List for Cultural Heritage Organizations
+    "http://id.ndl.go.jp/auth/ndlna/": "P349" ; NDL Authority ID
+    "http://id.worldcat.org/fast/": "P2163" ; FAST ID
+    "http://ipni.org/urn:lsid:ipni.org:names:": "P961" ; IPNI plant ID
+    "http://irail.be/stations/NMBS/00": "P722" ; UIC station code
+    "http://kbpedia.org/kko/rc/": "P8408" ; KBpedia ID
+    "http://km.aifb.kit.edu/projects/numbers/n": "P5176" ; KIT Linked Open Numbers ID
+    "http://kulturarvsdata.se/": "P1260" ; Swedish Open Cultural Heritage URI
+    "http://ld.zdb-services.de/resource/": "P1042" ; ZDB ID
+    "http://lexvo.org/id/iso639-3/": "P220" ; ISO 639-3 code
+    "http://libris.kb.se/resource/auth/": "P906" ; SELIBR ID
+    "http://libris.kb.se/resource/bib/": "P1182" ; LIBRIS editions
+    "http://loinc.org/rdf/": "P4338" ; LOINC ID
+    "http://lsid.tdwg.org/": "P5037" ; Plants of the World online ID
+    "http://ma-graph.org/entity/": "P6366" ; Microsoft Academic ID
+    "http://msc2010.org/resources/MSC/2010/": "P3285" ; Mathematics Subject Classification ID
+    "http://musicbrainz.org/area/": "P982" ; MusicBrainz area ID
+    "http://musicbrainz.org/artist/": "P434" ; MusicBrainz artist ID
+    "http://musicbrainz.org/event/": "P6423" ; MusicBrainz event ID
+    "http://musicbrainz.org/instrument/": "P1330" ; MusicBrainz instrument ID
+    "http://musicbrainz.org/label/": "P966" ; MusicBrainz label ID
+    "http://musicbrainz.org/place/": "P1004" ; MusicBrainz place ID
+    "http://musicbrainz.org/recording/": "P4404" ; MusicBrainz recording ID
+    "http://musicbrainz.org/release/": "P5813" ; MusicBrainz release ID
+    "http://musicbrainz.org/release-group/": "P436" ; MusicBrainz release group ID
+    "http://musicbrainz.org/series/": "P1407" ; MusicBrainz series ID
+    "http://musicbrainz.org/work/": "P435" ; MusicBrainz work ID
+    "http://nektar.oszk.hu/data/auth/": "P3133" ; NSZL name authority ID
+    "http://nomisma.org/id/": "P2950" ; Nomisma ID
+    "http://numismatics.org/crro/id/rrc-": "P4455" ; Coinage of the Roman Republic Online ID
+    "http://opendata.muis.ee/object/": "P4525" ; MuIS object ID
+    "http://opendata.muis.ee/person-group/": "P4889" ; MuIS person or group ID
+    "http://openlibrary.org/works/": "P648" ; Open Library ID
+    "http://purl.bdrc.io/resource/": "P2477" ; BDRC Resource ID
+    "http://purl.dila.edu.tw/resource/": "P1187" ; Dharma Drum Institute of Liberal Arts person ID
+    "http://purl.org/bncf/tid/": "P508" ; BNCF Thesaurus ID
+    "http://qudt.org/vocab/quantitykind/": "P8393" ; QUDT quantity kind ID
+    "http://qudt.org/vocab/unit/": "P2968" ; QUDT unit ID
+    "http://rdf.chemspider.com/": "P661" ; ChemSpider ID
+    "http://rdf.ebi.ac.uk/resource/chembl/molecule/": "P592" ; ChEMBL ID
+    "http://rdf.ncbi.nlm.nih.gov/pubchem/compound/CID": "P662" ; PubChem CID
+    "http://rdf.ncbi.nlm.nih.gov/pubchem/substance/SID": "P2153" ; PubChem Substance ID (SID)
+    "http://rvk.uni-regensburg.de/nt/": "P1150" ; Regensburg Classification
+    "https://api.treasuryoflives.org/resource/TOLP": "P4138" ; Treasury of Lives ID
+    "https://arcade.nyarc.org/record=": "P8574" ; NYARC Discovery ID
+    "https://bartoc.org/en/node/": "P2689" ; BARTOC ID
+    "https://bnb.data.bl.uk/doc/person/": "P5361" ; BNB person ID
+    "https://data.cinematheque.qc.ca/data/Work": "P4276" ; Cinémathèque québécoise work identifier
+    "https://data.ctext.org/entity/": "P9613" ; ctext data entity ID
+    "https://data.niod.nl/WO2_Thesaurus/kampen/": "P10865" ;  WW2 Camp List ID
+    "https://data.rkd.nl/artists/": "P650" ; RKDartists ID
+    "https://data.rkd.nl/images/": "P350" ; RKDimages ID
+    "https://data.rkd.nl/thesau/": "P8519" ; RKD thesaurus ID
+    "https://dewey.info/class/": "P1036" ; Dewey Decimal Classification
+    "https://d-nb.info/": "P1292" ; DNB editions
+    "https://d-nb.info/gnd/": "P227" ; GND ID
+    "https://doi.org/10.13039/": "P3153" ; Crossref funder ID
+    "https://doi.org/": "P356" ; DOI
+    "https://dolnoserbski.de/mjenja/pokaz/": "P8661" ; Lower Sorbian place name ID
+    "https://id.rijksmuseum.nl/310": "P7444" ; Rijksmuseum Research Library authority ID
+    "https://imperium.ahlfeldt.se/places/": "P1936" ; Digital Atlas of the Roman Empire ID
+    "https://jpsearch.go.jp/entity/chname/": "P6698" ; Japan Search name ID
+    "https://kulturnav.org/": "P1248" ; KulturNav-ID
+    "https://lei.info/": "P1278" ; Legal Entity Identifier
+    "https://libcat.aub.edu.lb/record=": "P9409" ; American University of Beirut's Libraries title ID
+    "https://libris.kb.se/": "P5587" ; Libris-URI
+    "https://lingualibre.org/entity/": "P10369" ; Lingua Libre ID
+    "https://linked.cuzk.cz/resource/ruian/ulice/": "P4533" ; Czech street ID
+    "https://livedata.bibsys.no/authority/": "P1015" ; NORAF ID
+    "https://lod.nl.go.kr/page/": "P5034" ; National Library of Korea ID
+    "http://snomed.info/id/": "P5806" ; SNOMED CT identifier
+    "https://orcid.org/": "P496" ; ORCID iD
+    "https://permid.org/1-": "P3347" ; PermID
+    "https://pleiades.stoa.org/places/": "P1584" ; Pleiades ID
+    "https://rdf.wwpdb.org/pdb/": "P638" ; PDB structure ID
+    "https://register.muinas.ee/rest/v1/monuments/": "P2948" ; Estonian cultural monument ID
+    "https://sok.riksarkivet.se/sbl/Presentation.aspx?id=": "P3217" ; Dictionary of Swedish National Biography ID
+    "http://statistics.data.gov.uk/id/statistical-geography/": "P836" ; GSS code (2011)
+    "https://transparency.ontotext.com/resource/eic/": "P8645" ; Energy Identification Code
+    "https://urn.fi/URN:NBN:fi:au:finaf:": "P8980" ; KANTO ID
+    "https://w3id.org/oc/corpus/br/": "P3181" ; OpenCitations bibliographic resource ID
+    "http://sws.geonames.org/": "P1566" ; GeoNames ID
+    "https://www.kegg.jp/entry/": "P665" ; KEGG ID
+    "https://www.naics.com/naics-code-description/?code=": "P3224" ; NAICS code
+    "https://www.ncbi.nlm.nih.gov/gene/": "P351" ; Entrez Gene ID
+    "https://www.ncbi.nlm.nih.gov/medgen/": "P2892" ; UMLS CUI
+    "https://www.ncbi.nlm.nih.gov/protein/": "P352" ; UniProt protein ID
+    "https://www.openhistoricalmap.org/relation/": "P8424" ; OpenHistoricalMap relation ID
+    "https://www.openstreetmap.org/relation/": "P402" ; OpenStreetMap relation ID
+    "https://www.sejm-wielki.pl/b/": "P8172" ; Sejm-Wielki.pl profile ID
+    "https://www.sotasampo.fi/en/persons/person_": "P3817" ; FI WarSampo person ID
+    "https://www.vegvesen.no/nvdb/api/v2/vegobjekt?id=": "P5580" ; Norwegian National Road DataBase ID
+    "https://www.vondel.humanities.uva.nl/ecartico/persons/": "P2915" ; ECARTICO person ID
+    "http://ta.sandrart.net/-artwork-": "P4380" ; Sandrart.net artwork ID
+    "http://ta.sandrart.net/-person-": "P1422" ; Sandrart.net person ID
+    "http://thesaurus.cerl.org/record/": "P1871" ; CERL Thesaurus ID
+    "http://thesaurus.europeanafashion.eu/thesaurus/": "P3832" ; Europeana Fashion Vocabulary ID
+    "http://ugspace.ug.edu.gh/handle/123456789/": "P8602" ; UGSpace ID
+    "http://uri.gbv.de/document/opac-de-627:ppn:": "P6721" ; K10plus PPN ID
+    "http://uri.gbv.de/terminology/bk/": "P5748" ; Basisklassifikation
+    "http://urn.fi/URN:NBN:fi:au:cn:": "P5266" ; Finnish national bibliography corporate name ID
+    "http://viaf.org/viaf/": "P214" ; VIAF ID
+    "http://vocab.getty.edu/aat/": "P1014" ; Art & Architecture Thesaurus ID
+    "http://vocab.getty.edu/tgn/": "P1667" ; Getty Thesaurus of Geographic Names ID
+    "http://vocab.getty.edu/ulan/": "P245" ; Union List of Artist Names ID
+    "http://vocabularies.unesco.org/thesaurus/": "P3916" ; UNESCO Thesaurus ID
+    "http://wikibase-registry.wmflabs.org/entity/": "P6307" ; Wikibase Registry ID
+    "http://wordnet-rdf.princeton.edu/id/": "P8814" ; WordNet 3.1 Synset ID
+    "http://wordnet-rdf.princeton.edu/wn31/": "P8814" ; WordNet 3.1 Synset ID
+    "http://worldcat.org/entity/work/id/": "P5331" ; OCLC work ID
+    "http://www.alvin-portal.org/alvin/view.jsf?pid=": "P6821" ; Uppsala University Alvin ID
+    "http://www.geonames.org/ontology#": "P2452" ; GeoNames feature code
+    "http://www.gutenberg.org/ebooks/": "P2034" ; Project Gutenberg ebook ID
+    "http://www.gutenberg.org/ebooks/author/": "P1938" ; Project Gutenberg author ID
+    "http://www.isocat.org/datcat/DC-": "P2263" ; ISOCAT id
+    "http://www.muis.ee/rdf/collection/": "P5656" ; MuIS collection ID
+    "http://www.ontology-of-units-of-measure.org/resource/om-2/": "P8769" ; Ontology of units of Measure 2.0 unit ID
+    "http://www.orpha.net/ORDO/Orphanet_": "P1550" ; Orphanet ID
+    "http://www.tcdb.org/search/result.php?tc=": "P7260" ; TC Database ID
+    "http://www.wordnet.dk/owl/instance/2009/03/instances/word-": "P6140" ; DanNet 2.2 word ID
+    "http://www.worldcat.org/oclc/": "P243" ; OCLC control number
+    "http://www.wurvoc.org/vocabularies/om-1.8/": "P3328" ; wurvoc.org measure ID
+    "http://www.yso.fi/onto/yso/p": "P2347" ; YSO ID
+    "http://zbw.eu/stw/descriptor/": "P3911" ; STW Thesaurus for Economics ID
+
+    "http://cpv.data.ac.uk/turtle/code-": {
+      +"P5417" ; Common Procurement Vocabulary
+      suffix: ".ttl"
+    }
+    "http://cpv.data.ac.uk/turtle/code-": {
+      +"P8984" ; CPV Supplementary
+      suffix: ".ttl"
+    }
+    "http://dati.beniculturali.it/mibact/luoghi/resource/CulturalInstituteOrSite/": {
+      +"P5782" ; DBUnico MIBACT ID
+      suffix: ".rdf"
+    }
+    "http://id.loc.gov/vocabulary/iso639-1/": {
+      +"P218" ; ISO 639-1 code
+      suffix: ".rdf"
+    }
+    "http://id.sgcb.mcu.es/Autoridades/": {
+      +"P920" ; LEM ID
+      suffix: "/concept"
+    }
+    "https://ci.nii.ac.jp/author/": {
+      +"P271" ; CiNii Books author ID
+      suffix: "#entity"
+    }
+    "https://ci.nii.ac.jp/naid/": {
+      +"P2409" ; CiNii article ID
+      suffix: "#article"
+    }
+    "https://ci.nii.ac.jp/ncid/": {
+      +"P1739" ; CiNii Books bibliography ID
+      suffix: "#entity"
+    }
+    "https://data.carnegiehall.org/names/": {
+      +"P4104" ; Carnegie Hall agent ID
+      suffix: "/about"
+    }
+    "https://dblp.org/pid/": {
+      +"P2456" ; DBLP author ID
+      suffix: ".rdf"
+    }
+    "https://dblp.org/rec/": {
+      +"P8978" ; DBLP publication ID
+      suffix: ".rdf"
+    }
+    "https://skbl.se/en/artikel/": {
+      +"P4963" ; Svenskt kvinnobiografiskt lexikon ID
+      suffix: ".json"
+    }
+    "https://www.bbc.co.uk/programmes/": {
+      +"P827" ; BBC programme ID
+      suffix: "#programme"
+    }
+    "http://taxref.mnhn.fr/lod/taxon/": {
+      +"P3186" ; TAXREF ID
+      suffix: "/13.0"
+    }
+    "http://treatment.plazi.org/id/": {
+      +"P1992" ; Plazi ID
+      suffix: ".rdf"
+    }
+    "http://vocabulary.curriculum.edu.au/$1": {
+      +"P7033" ; Australian Educational Vocabulary ID
+      suffix: ".rdf"
+    }
+    "http://www.bbc.co.uk/things/": {
+      +"P1617" ; BBC Things ID
+      suffix: "#id"
+    }
+    "http://www.idref.fr/": {
+      +"P269" ; IdRef ID
+      suffix: "/id"
+    }
+    "http://www.sudoc.fr/": {
+      +"P1025" ; SUDOC editions
+      suffix: "/id"
+    }
+    "http://www.theses.fr/": {
+      +"P4285" ; Theses.fr person ID
+      suffix: "/id"
+    }
+    "http://www.theses.fr/": {
+      +"P5005" ; National Thesis Number (France)
+      suffix: "/id"
+    }
+  }
+
+  ; URIs
+  uris: {
+    ; System properties.
+    "http://schema.org/name": "name"
+    "http://schema.org/description": "description"
+    "http://schema.org/disambiguatingDescription": "description"
+    "http://schema.org/alternateName": "alias"
+    "http://xmlns.com/foaf/0.1/name": "name"
   }
 
   ; Pre-resolved reference mappings for ambiguous references.

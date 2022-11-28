@@ -23,6 +23,124 @@
 namespace sling {
 namespace nlp {
 
+void URIMapping::Load(const Frame &frame) {
+  Store *store = frame.store();
+  Handle n_prefix = store->Lookup("prefix");
+  Handle n_suffix = store->Lookup("suffix");
+  string uri, prefix, suffix, property;
+  for (const Slot &s : frame) {
+    if (s.name.IsId()) continue;
+    CHECK(store->IsString(s.name));
+    uri = store->GetString(s.name)->str().str();
+    if (store->IsFrame(s.value)) {
+      Frame f(store, s.value);
+      CHECK(f.valid());
+      property = f.GetString(Handle::is());
+      prefix = f.GetString(n_prefix);
+      suffix = f.GetString(n_suffix);
+    } else {
+      CHECK(store->IsString(s.value));
+      property = store->GetString(s.value)->str().str();
+      prefix.clear();
+      suffix.clear();
+    }
+    mappings_.emplace_back(uri, prefix, suffix, property);
+  }
+
+  // Sort entries by URI.
+  std::sort(mappings_.begin(), mappings_.end());
+}
+
+void URIMapping::Save(Builder *builder) {
+  Store *store = builder->store();
+  Handle n_prefix = store->Lookup("prefix");
+  Handle n_suffix = store->Lookup("suffix");
+
+  for (auto &e : mappings_) {
+    String uri(store, e.uri);
+    String property(store, e.property);
+    if (e.prefix.empty() && e.suffix.empty()) {
+      builder->Add(uri, property);
+    } else {
+      Builder b(store);
+      b.AddIs(property);
+      if (!e.prefix.empty()) b.Add(n_prefix, e.prefix);
+      if (!e.suffix.empty()) b.Add(n_suffix, e.suffix);
+      builder->Add(uri, b.Create());
+    }
+  }
+}
+
+void URIMapping::Bind(Store *store) {
+  for (auto &e : mappings_) {
+    if (!e.property.empty()) {
+      e.pid = store->LookupExisting(e.property);
+    }
+  }
+}
+
+int URIMapping::Locate(Text uri) const {
+  // Bail out if there are no URI mappings.
+  if (empty()) return -1;
+
+  // Find mapping with prefix match.
+  int lo = 0;
+  int hi = mappings_.size() - 1;
+  while (lo < hi) {
+    int mid = (lo + hi) / 2;
+    const Entry &e = mappings_[mid];
+    if (uri < e.uri) {
+      hi = mid;
+    } else {
+      lo = mid + 1;
+    }
+  }
+
+  // Check that the entry is a match for the URI.
+  int match = lo - 1;
+  if (match < 0) return .1;
+  const Entry &e = mappings_[match];
+  if (!uri.starts_with(e.uri)) return false;
+  if (!uri.ends_with(e.suffix)) return false;
+
+  return match;
+}
+
+bool URIMapping::Map(Text uri, string *id) const {
+  // Find mapping with prefix match.
+  int match = Locate(uri);
+  if (match == -1) return false;
+  const Entry &e = mappings_[match];
+
+  // Construct mapped id.
+  id->clear();
+  if (!e.property.empty()) {
+    id->append(e.property);
+    id->push_back('/');
+  }
+  if (!e.prefix.empty()) id->append(e.prefix);
+  int len = uri.size() - e.uri.size() - e.suffix.size();
+  uri.substr(e.uri.size(), len).AppendToString(id);
+
+  return true;
+}
+
+bool URIMapping::Lookup(Text uri, Handle *pid, string *id) const {
+  // Find mapping with prefix match.
+  int match = Locate(uri);
+  if (match == -1) return false;
+  const Entry &e = mappings_[match];
+
+  // Construct mapped id.
+  *pid = e.pid;
+  id->clear();
+  if (!e.prefix.empty()) id->append(e.prefix);
+  int len = uri.size() - e.uri.size() - e.suffix.size();
+  uri.substr(e.uri.size(), len).AppendToString(id);
+
+  return true;
+}
+
 XRef::XRef() {
   // Clear hash table.
   for (int b = 0; b < NUM_BUCKETS; ++b) buckets_[b] = nullptr;
@@ -41,6 +159,7 @@ XRef::Property *XRef::CreateProperty(Handle handle, Text name) {
   p->priority = properties_.size();
   p->name = name.str();
   p->hash = Fingerprint(name.data(), name.size());
+  p->count = 0;
   if (!handle.IsNil()) properties_[handle] = p;
   property_map_[p->name] = p;
   return p;
@@ -98,6 +217,7 @@ XRef::Identifier *XRef::GetIdentifier(const Property *type,
   id->ring = id;
   id->chain = buckets_[bucket];
   buckets_[bucket] = id;
+  type->count++;
 
   return id;
 }

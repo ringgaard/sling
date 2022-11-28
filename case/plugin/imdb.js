@@ -103,6 +103,7 @@ const kinships = {
   "niece": {prop: n_relative, qual: frame("Q3403377"), rank: 122},
 
   "cousin": {prop: n_relative, qual: frame("Q23009870"), rank: 130},
+  "grandchild": {prop: n_relative, qual: frame("Q3603531"), rank: 140},
 };
 
 const gender_words = {

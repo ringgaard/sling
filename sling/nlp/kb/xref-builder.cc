@@ -39,6 +39,14 @@ class XRefBuilder : public task::FrameProcessor {
       xref_.AddProperty(property);
     }
 
+    // Get URI mapping.
+    Frame urimap = config.GetFrame("urimap");
+    if (urimap.valid()) {
+      urimap_.Load(urimap);
+      urimap_.Bind(commons_);
+    }
+    uri_property_ = xref_.CreateProperty(Handle::nil(), "");
+
     // Add properties for cases and topics.
     xref_.CreateProperty(Handle::nil(), "c");
     xref_.CreateProperty(Handle::nil(), "t");
@@ -72,6 +80,9 @@ class XRefBuilder : public task::FrameProcessor {
     num_skipped_ = task->GetCounter("skipped");
     num_conflicts_ = task->GetCounter("conflicts");
     num_property_ids_ = task->GetCounter("property_ids");
+    num_uris_ = task->GetCounter("uris");
+    num_mapped_uris_ = task->GetCounter("mapped_uris");
+    num_indexed_uris_ = task->GetCounter("indexed_uris");
   }
 
   void Process(Slice key, uint64 serial, const Frame &frame) override {
@@ -101,6 +112,7 @@ class XRefBuilder : public task::FrameProcessor {
     XRef::Identifier *anchor = nullptr;
     Store *store = frame.store();
     bool merging = false;
+    string idstr;
     for (const Slot &s : frame) {
       if (s.name == Handle::id()) {
         // Add id to cross reference.
@@ -121,22 +133,70 @@ class XRefBuilder : public task::FrameProcessor {
       } else if (s.name == Handle::isa()) {
         if (s.value == n_merge_) merging = true;
       } else if (s.name.IsGlobalRef()) {
-        // Add identifiers for tracked properties. Look up property to see if
-        // it is tracked.
-        const XRef::Property *property = xref_.LookupProperty(s.name);
-        if (property != nullptr) {
-          // Get identifier value.
+        // Add identifiers for tracked properties.
+        if (s.name == n_exact_match_) {
           Handle value = store->Resolve(s.value);
           if (store->IsString(value)) {
-            Text ref = store->GetString(value)->str();
-            XRef::Identifier *id = xref_.GetIdentifier(property, ref);
+            Text uri = store->GetString(value)->str();
+
+            // Map URI to xref property.
+            Handle pid;
+            XRef::Identifier *id = nullptr;
+            if (urimap_.Lookup(uri, &pid, &idstr)) {
+              if (!pid.IsNil()) {
+                const XRef::Property *property = xref_.LookupProperty(pid);
+                if (property) {
+                  id = xref_.GetIdentifier(property, idstr);
+                  num_indexed_uris_->Increment();
+                }
+              }
+              num_mapped_uris_->Increment();
+            } else {
+              id = xref_.GetIdentifier(uri_property_, uri);
+              num_uris_->Increment();
+            }
+
+            if (id) {
+              XRef::Identifier *merged = Merge(anchor, id);
+              if (merged == nullptr) {
+                conflicts_.emplace_back(anchor, id);
+              } else {
+                anchor = merged;
+              }
+            }
+          }
+        } else if (s.name == n_equivalent_class_ ||
+                   s.name == n_equivalent_property_) {
+          // Add URI as alias for item id.
+          Handle value = store->Resolve(s.value);
+          if (store->IsString(value)) {
+            Text uri = store->GetString(value)->str();
+            XRef::Identifier *id = xref_.GetIdentifier(uri_property_, uri);
             XRef::Identifier *merged = Merge(anchor, id);
             if (merged == nullptr) {
               conflicts_.emplace_back(anchor, id);
             } else {
               anchor = merged;
             }
-            num_property_ids_->Increment();
+            num_uris_->Increment();
+          }
+        } else {
+          // Look up property to see if it is tracked.
+          const XRef::Property *property = xref_.LookupProperty(s.name);
+          if (property != nullptr) {
+            // Get identifier value.
+            Handle value = store->Resolve(s.value);
+            if (store->IsString(value)) {
+              Text ref = store->GetString(value)->str();
+              XRef::Identifier *id = xref_.GetIdentifier(property, ref);
+              XRef::Identifier *merged = Merge(anchor, id);
+              if (merged == nullptr) {
+                conflicts_.emplace_back(anchor, id);
+              } else {
+                anchor = merged;
+              }
+              num_property_ids_->Increment();
+            }
           }
         }
       }
@@ -165,6 +225,12 @@ class XRefBuilder : public task::FrameProcessor {
       }
       b.Create();
     }
+    if (!urimap_.empty()) {
+      Builder b(&store);
+      b.AddId("/w/urimap");
+      urimap_.Save(&b);
+      b.Create();
+    }
     if (snapshot) store.AllocateSymbolHeap();
     store.GC();
 
@@ -188,6 +254,7 @@ class XRefBuilder : public task::FrameProcessor {
   // Output SLING store with merge conflicts.
   void WriteReport(const string &reportfn) {
     // Output frame for each cluster with conflicting clusters.
+    LOG(INFO) << "Write conflicts report";
     Store store;
     string first_cluster_name;
     string second_cluster_name;
@@ -207,7 +274,7 @@ class XRefBuilder : public task::FrameProcessor {
       Handle second = store.Lookup(second_cluster_name);
 
       store.Add(first, second, store.AllocateString(second_id_name));
-      store.Add(second, first, store.AllocateString(second_id_name));
+      store.Add(second, first, store.AllocateString(first_id_name));
     }
 
     // Write conflict store to file.
@@ -215,6 +282,7 @@ class XRefBuilder : public task::FrameProcessor {
     encoder.encoder()->set_shallow(true);
     encoder.EncodeAll();
     CHECK(encoder.Close());
+    LOG(INFO) << "Conflicts report done";
   }
 
  private:
@@ -246,6 +314,10 @@ class XRefBuilder : public task::FrameProcessor {
   // Identifier cross-reference.
   XRef xref_;
 
+  // URI mapping.
+  URIMapping urimap_;
+  XRef::Property *uri_property_ = nullptr;
+
   // List of conflicting identifier pairs.
   std::vector<std::pair<XRef::Identifier *, XRef::Identifier *>> conflicts_;
 
@@ -254,6 +326,9 @@ class XRefBuilder : public task::FrameProcessor {
 
   // Symbols.
   Name n_merge_{names_, "merge"};
+  Name n_exact_match_{names_, "P2888"};
+  Name n_equivalent_class_{names_, "P1709"};
+  Name n_equivalent_property_{names_, "P1628"};
 
   // Statistics.
   task::Counter *num_tracked_ = nullptr;
@@ -262,6 +337,9 @@ class XRefBuilder : public task::FrameProcessor {
   task::Counter *num_skipped_ = nullptr;
   task::Counter *num_conflicts_ = nullptr;
   task::Counter *num_property_ids_ = nullptr;
+  task::Counter *num_uris_ = nullptr;
+  task::Counter *num_mapped_uris_ = nullptr;
+  task::Counter *num_indexed_uris_ = nullptr;
 
   // Mutex for serializing access to cross-reference table.
   Mutex mu_;
