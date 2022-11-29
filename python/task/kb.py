@@ -193,6 +193,7 @@ class KnowledgeBaseWorkflow:
   def collect_xrefs(self):
     """Collect and cluster item identifiers."""
     items = self.wf.bundle(
+      self.data.wikidata_properties(),
       self.data.wikidata_redirects(),
       self.data.wikidata_items(),
       self.topics(),

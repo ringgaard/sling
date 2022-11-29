@@ -1133,6 +1133,13 @@ Handle Store::AllocateHandleSlow(Datum *object) {
   return handle;
 }
 
+Text Store::GetText(Handle h) const {
+  if (!h.IsRef() || h.IsNil()) return Text();
+  const Datum *datum = Deref(h);
+  if (!datum->IsString()) return Text();
+  return datum->AsString()->str();
+}
+
 bool Store::IsPublic(Handle handle) const {
   if (!handle.IsRef()) return false;
   if (handle.IsNil()) return false;

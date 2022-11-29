@@ -56,6 +56,7 @@ cc_library(
   name = "reconciler",
   srcs = ["reconciler.cc"],
   deps = [
+    ":xref",
     "//sling/base",
     "//sling/frame",
     "//sling/task:frames",

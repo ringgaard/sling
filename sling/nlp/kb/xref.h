@@ -37,7 +37,7 @@ class URIMapping {
   void Load(const Frame &frame);
 
   // Resolve URI properties.
-  void Bind(Store *store);
+  void Bind(Store *store, bool create);
 
   // Add URI map to frame builder.
   void Save(Builder *builder);
@@ -200,6 +200,9 @@ class XRefMapping {
  private:
   // Cross-reference store.
   Store xrefs_;
+
+  // URI mapping.
+  URIMapping urimap_;
 
   // Mnemonics for cross-referenced properties.
   std::unordered_map<Text, Text> mnemonics_;

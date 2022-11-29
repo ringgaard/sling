@@ -1143,6 +1143,9 @@ class Store {
   ProxyDatum *GetProxy(Handle h) { return Deref(h)->AsProxy(); }
   const ProxyDatum *GetProxy(Handle h) const { return Deref(h)->AsProxy(); }
 
+  // Return text for string object.
+  Text GetText(Handle h) const;
+
   // Check if object is public, i.e. a frame with an id.
   bool IsPublic(Handle handle) const;
   bool IsAnonymous(Handle handle) const { return !IsPublic(handle); }

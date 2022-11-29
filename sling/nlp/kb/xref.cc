@@ -30,8 +30,7 @@ void URIMapping::Load(const Frame &frame) {
   string uri, prefix, suffix, property;
   for (const Slot &s : frame) {
     if (s.name.IsId()) continue;
-    CHECK(store->IsString(s.name));
-    uri = store->GetString(s.name)->str().str();
+    uri = store->GetText(s.name).str();
     if (store->IsFrame(s.value)) {
       Frame f(store, s.value);
       CHECK(f.valid());
@@ -39,8 +38,7 @@ void URIMapping::Load(const Frame &frame) {
       prefix = f.GetString(n_prefix);
       suffix = f.GetString(n_suffix);
     } else {
-      CHECK(store->IsString(s.value));
-      property = store->GetString(s.value)->str().str();
+      property = store->GetText(s.value).str();
       prefix.clear();
       suffix.clear();
     }
@@ -71,10 +69,14 @@ void URIMapping::Save(Builder *builder) {
   }
 }
 
-void URIMapping::Bind(Store *store) {
+void URIMapping::Bind(Store *store, bool create) {
   for (auto &e : mappings_) {
     if (!e.property.empty()) {
-      e.pid = store->LookupExisting(e.property);
+      if (create) {
+        e.pid = store->Lookup(e.property);
+      } else {
+        e.pid = store->LookupExisting(e.property);
+      }
     }
   }
 }
@@ -98,10 +100,10 @@ int URIMapping::Locate(Text uri) const {
 
   // Check that the entry is a match for the URI.
   int match = lo - 1;
-  if (match < 0) return .1;
+  if (match < 0) return -1;
   const Entry &e = mappings_[match];
-  if (!uri.starts_with(e.uri)) return false;
-  if (!uri.ends_with(e.suffix)) return false;
+  if (!uri.starts_with(e.uri)) return -1;
+  if (!uri.ends_with(e.suffix)) return -1;
 
   return match;
 }
@@ -344,6 +346,20 @@ XRef::Identifier *XRef::Identifier::Canonical() {
 }
 
 bool XRefMapping::Map(string *id) const {
+  // Try to map URI.
+  if (id->size() > 4 && id->compare(0, 4, "http") == 0) {
+    string mapped;
+    if (urimap_.Map(*id, &mapped)) {
+      Handle h = xrefs_.LookupExisting(mapped);
+      if (!h.IsNil()) {
+        *id = xrefs_.FrameId(h).str();
+      } else {
+        *id = mapped;
+      }
+      return true;
+    }
+  }
+
   // Try to look up identifier in cross-reference.
   Handle h = xrefs_.LookupExisting(*id);
   if (!h.IsNil()) {
@@ -382,15 +398,19 @@ void XRefMapping::Load(const string &filename) {
   LoadStore(filename, &xrefs_);
   xrefs_.Freeze();
 
+  // Set up URI mapping.
+  Frame urimap(&xrefs_, "/w/urimap");
+  if (urimap.valid()) {
+    urimap_.Load(urimap);
+  }
+
   // Build mapping from mnemonics to property ids.
   Frame mnemonics(&xrefs_, "/w/mnemonics");
   if (mnemonics.valid()) {
     for (const Slot &s : mnemonics) {
       if (s.name.IsId()) continue;
-      CHECK(xrefs_.IsString(s.name));
-      CHECK(xrefs_.IsString(s.value));
-      Text mnemonic = xrefs_.GetString(s.name)->str();
-      Text property = xrefs_.GetString(s.value)->str();
+      Text mnemonic = xrefs_.GetText(s.name);
+      Text property = xrefs_.GetText(s.value);
       mnemonics_[mnemonic] = property;
     }
   }

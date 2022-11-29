@@ -14,6 +14,7 @@
 
 #include "sling/base/types.h"
 #include "sling/frame/serialization.h"
+#include "sling/nlp/kb/xref.h"
 #include "sling/task/frames.h"
 #include "sling/task/reducer.h"
 #include "sling/util/mutex.h"
@@ -39,6 +40,13 @@ class ItemReconciler : public task::FrameProcessor {
     Frame config = reader.Read().AsFrame();
     CHECK(config.valid());
 
+    // Set up URI mapping.
+    Frame urimap(commons_, "/w/urimap");
+    if (urimap.valid()) {
+      urimap_.Load(urimap);
+      urimap_.Bind(commons_, true);
+    }
+
     // Get property inversions.
     if (config.Has("inversions")) {
       Frame inversions = config.Get("inversions").AsFrame();
@@ -62,6 +70,7 @@ class ItemReconciler : public task::FrameProcessor {
 
     // Statistics.
     num_mapped_ids_ = task->GetCounter("mapped_ids");
+    num_mapped_uris_ = task->GetCounter("mapped_uris");
     num_inverse_properties_ = task->GetCounter("inverse_properties");
     num_inverse_qualifiers_ = task->GetCounter("inverse_qualifiers");
   }
@@ -85,6 +94,24 @@ class ItemReconciler : public task::FrameProcessor {
     if (frame.Has(Handle::id())) {
       Builder b(frame);
       b.Delete(Handle::id());
+      b.Update();
+    }
+
+    // Map URIs.
+    if (frame.Has(n_exact_match_)) {
+      Builder b(frame);
+      Handle pid;
+      string id;
+      for (Slot *s = b.begin(); s < b.end(); ++s) {
+        if (s->name != n_exact_match_) continue;
+        if (!store->IsString(s->value)) continue;
+        String value(store, s->value);
+        if (urimap_.Lookup(value.text(), &pid, &id)) {
+          s->name = pid;
+          s->value = store->AllocateString(id);
+          num_mapped_uris_->Increment();
+        }
+      }
       b.Update();
     }
 
@@ -144,8 +171,15 @@ class ItemReconciler : public task::FrameProcessor {
   };
   HandleMap<Inversion *> inversion_map_;
 
+  // URI mapping.
+  URIMapping urimap_;
+
+  // Symbols.
+  Name n_exact_match_{names_, "P2888"};
+
   // Statistics.
   task::Counter *num_mapped_ids_ = nullptr;
+  task::Counter *num_mapped_uris_ = nullptr;
   task::Counter *num_inverse_properties_ = nullptr;
   task::Counter *num_inverse_qualifiers_ = nullptr;
 };

@@ -32,6 +32,7 @@ class XRefBuilder : public task::FrameProcessor {
     CHECK(config.valid());
 
     // Get property priority list.
+    sys_property_ = xref_.CreateProperty(Handle::nil(), "");
     Array properties = config.Get("properties").AsArray();
     CHECK(properties.valid());
     for (int i = 0; i < properties.length(); ++i) {
@@ -43,7 +44,7 @@ class XRefBuilder : public task::FrameProcessor {
     Frame urimap = config.GetFrame("urimap");
     if (urimap.valid()) {
       urimap_.Load(urimap);
-      urimap_.Bind(commons_);
+      urimap_.Bind(commons_, false);
     }
     uri_property_ = xref_.CreateProperty(Handle::nil(), "");
 
@@ -52,6 +53,19 @@ class XRefBuilder : public task::FrameProcessor {
     xref_.CreateProperty(Handle::nil(), "t");
     Handle pcase = commons_->LookupExisting("PCASE");
     if (!pcase.IsNil()) xref_.CreateProperty(pcase, "PCASE");
+
+    // Add fixed URIs.
+    Frame uris = config.GetFrame("uris");
+    if (uris.valid()) {
+      for (const Slot &s : uris) {
+        if (s.name.IsId()) continue;
+        Text uri = commons_->GetText(s.name);
+        Text prop = commons_->GetText(s.value);
+        auto *pid = xref_.GetIdentifier(sys_property_, prop);
+        auto *uid = xref_.GetIdentifier(uri_property_, uri);
+        xref_.Merge(pid, uid);
+      }
+    }
 
     // Get pre-resolved reference mappings.
     Frame mappings = config.GetFrame("mappings");
@@ -316,6 +330,7 @@ class XRefBuilder : public task::FrameProcessor {
 
   // URI mapping.
   URIMapping urimap_;
+  XRef::Property *sys_property_ = nullptr;
   XRef::Property *uri_property_ = nullptr;
 
   // List of conflicting identifier pairs.
