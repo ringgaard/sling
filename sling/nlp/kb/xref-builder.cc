@@ -184,13 +184,24 @@ class XRefBuilder : public task::FrameProcessor {
           // Add URI as alias for item id.
           Handle value = store->Resolve(s.value);
           if (store->IsString(value)) {
+            XRef::Identifier *id = nullptr;
             Text uri = store->GetString(value)->str();
-            XRef::Identifier *id = xref_.GetIdentifier(uri_property_, uri);
-            XRef::Identifier *merged = Merge(anchor, id);
-            if (merged == nullptr) {
-              conflicts_.emplace_back(anchor, id);
+            Handle pid;
+            if (urimap_.Lookup(uri, &pid, &idstr) && !pid.IsNil()) {
+              const XRef::Property *property = xref_.LookupProperty(pid);
+              if (property) {
+                id = xref_.GetIdentifier(property, idstr);
+              }
             } else {
-              anchor = merged;
+              id = xref_.GetIdentifier(uri_property_, uri);
+            }
+            if (id) {
+              XRef::Identifier *merged = Merge(anchor, id);
+              if (merged == nullptr) {
+                conflicts_.emplace_back(anchor, id);
+              } else {
+                anchor = merged;
+              }
             }
             num_uris_->Increment();
           }

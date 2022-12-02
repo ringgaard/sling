@@ -51,6 +51,8 @@
     PVEF,  ; VEF thread ID
     P3869, ; IAFD female performer ID
 
+    PSCHM  ; Schema.org ID
+
     P214,  ; VIAF ID
     P646,  ; Freebase MID
     P2671, ; Google Knowledge Graph ID
@@ -103,6 +105,10 @@
     ;"https://www.wikidata.org/entity/": nil
     ;"http://www.wikidata.org/entity/": nil
     ;"https://www.wikidata.org/wiki/": nil
+
+    ; Schema.org.
+    "http://schema.org/": "PSCHM"
+    "https://schema.org/": "PSCHM"
 
     ; Social media.
     "https://twitter.com/": "P2002"
@@ -494,10 +500,16 @@
   uris: {
     ; System properties.
     "http://schema.org/name": "name"
+    "https://schema.org/name": "name"
     "http://schema.org/description": "description"
+    "https://schema.org/description": "description"
     "http://schema.org/disambiguatingDescription": "description"
+    "https://schema.org/disambiguatingDescription": "description"
     "http://schema.org/alternateName": "alias"
+    "https://schema.org/alternateName": "alias"
     "http://schema.org/image": "media"
+    "https://schema.org/image": "media"
+
     "http://xmlns.com/foaf/0.1/name": "name"
   }
 

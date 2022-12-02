@@ -340,6 +340,7 @@ for key, value in postings:
     if " vs. " in title: continue
     if " vs " in title: continue
     if " og " in title: continue
+    if " gegen " in title: continue
 
     # Try to match title to name.
     name = title
