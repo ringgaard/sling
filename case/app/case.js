@@ -89,8 +89,8 @@ async function read_from_clipboard() {
   if (!navigator.clipboard) throw "Access to clipboard denied";
   let clipboard = await navigator.clipboard.readText();
 
-  // Try to parse data SLING frames if it starts with '{'.
-  if (clipboard.charAt(0) == "{") {
+  // Try to parse data SLING frames if it starts with '{' (and it's not JSON).
+  if (clipboard.charAt(0) == "{" && !clipboard.match(/^\{\s*\"/)) {
     try {
       let store = new Store();
       let reader = new Reader(store, clipboard);
@@ -1051,7 +1051,7 @@ class CaseEditor extends MdApp {
     if (clip instanceof Array) {
       let first = null;
       let last = null;
-      let position = this.find("topic-list").selection_start();
+      let position = this.find("topic-list").selection_start() + 1;
       if (position === undefined) position = this.folder.length;
       let scraps_before = this.scraps.length > 0;
       let import_mapping = new Map();

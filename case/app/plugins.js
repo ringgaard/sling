@@ -303,6 +303,16 @@ var plugins = [
   ],
 },
 
+// RDF (JSON-LD).
+{
+  name: "rdf",
+  module: "rdf.js",
+  actions: [PASTE],
+  patterns: [
+    /^\{\s*\"@context\"/,
+  ],
+},
+
 ];
 
 function parse_url(url) {

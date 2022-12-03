@@ -90,26 +90,42 @@ class ItemReconciler : public task::FrameProcessor {
       num_mapped_ids_->Increment();
     }
 
+    // Check for ids and uris.
+    bool has_id = false;
+    bool has_uris = false;
+    for (const Slot &s : frame) {
+      if (s.name == Handle::id()) has_id = true;
+      if (s.name == n_exact_match_ ||
+          s.name == n_equivalent_class_ ||
+          s.name == n_equivalent_property_) {
+        has_uris = true;
+      }
+    }
+
     // Remove all id slots.
-    if (frame.Has(Handle::id())) {
+    if (has_id) {
       Builder b(frame);
       b.Delete(Handle::id());
       b.Update();
     }
 
     // Map URIs.
-    if (frame.Has(n_exact_match_)) {
+    if (has_uris) {
       Builder b(frame);
       Handle pid;
       string id;
       for (Slot *s = b.begin(); s < b.end(); ++s) {
-        if (s->name != n_exact_match_) continue;
-        if (!store->IsString(s->value)) continue;
-        String value(store, s->value);
-        if (urimap_.Lookup(value.text(), &pid, &id)) {
-          s->name = pid;
-          s->value = store->AllocateString(id);
-          num_mapped_uris_->Increment();
+      if (s->name == n_exact_match_ ||
+          s->name == n_equivalent_class_ ||
+          s->name == n_equivalent_property_) {
+          if (store->IsString(s->value)) {
+            String value(store, s->value);
+            if (urimap_.Lookup(value.text(), &pid, &id)) {
+              s->name = pid;
+              s->value = store->AllocateString(id);
+              num_mapped_uris_->Increment();
+            }
+          }
         }
       }
       b.Update();
@@ -176,6 +192,8 @@ class ItemReconciler : public task::FrameProcessor {
 
   // Symbols.
   Name n_exact_match_{names_, "P2888"};
+  Name n_equivalent_class_{names_, "P1709"};
+  Name n_equivalent_property_{names_, "P1628"};
 
   // Statistics.
   task::Counter *num_mapped_ids_ = nullptr;

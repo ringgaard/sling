@@ -24,7 +24,7 @@ class OpenCorpService:
     self.apikey = None
     self.pool = urllib3.PoolManager()
     try:
-      credentials = json.load(open("local/keys/opencorp.json"))
+      with open("local/keys/opencorp.json") as f: credentials = json.load(f)
       self.apikey = credentials["apikey"]
     except:
       log.info("Using public OpenCorporates API")
