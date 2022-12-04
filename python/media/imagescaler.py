@@ -16,6 +16,7 @@
 
 import io
 import urllib3
+import time
 import PIL
 from PIL import Image, JpegImagePlugin, PngImagePlugin, MpoImagePlugin
 
@@ -62,6 +63,21 @@ transpose_method = {
   8: Image.ROTATE_90,
 }
 
+# Timing class.
+class Timing:
+  def __init__(self):
+    self.events = []
+    self.time = time.time()
+
+  def measure(self, event):
+    end = time.time()
+    ms = int((end - self.time) * 1000)
+    self.events.append("%s;dur=%d" % (event, ms))
+    self.time = end
+
+  def info(self):
+    return ",".join(self.events)
+
 @sling.net.response(PIL.Image.Image)
 def image_reponse(image, request, response):
   result = io.BytesIO()
@@ -72,6 +88,8 @@ def image_reponse(image, request, response):
     image.save(result, format='JPEG', quality=95)
     response.ct = "image/jpeg"
   response.body = result.getvalue()
+  timing = image.info.get("timing")
+  if timing: response["Server-Timing"] = timing
 
 @sling.net.response(JpegImagePlugin.JpegImageFile)
 def jpeg_reponse(image, request, response):
@@ -79,6 +97,8 @@ def jpeg_reponse(image, request, response):
   image.save(result, format='JPEG', quality=95)
   response.ct = "image/jpeg"
   response.body = result.getvalue()
+  timing = image.info.get("timing")
+  if timing: response["Server-Timing"] = timing
 
 @sling.net.response(PngImagePlugin.PngImageFile)
 def jpeg_reponse(image, request, response):
@@ -86,6 +106,8 @@ def jpeg_reponse(image, request, response):
   image.save(result, format='PNG')
   response.ct = "image/png"
   response.body = result.getvalue()
+  timing = image.info.get("timing")
+  if timing: response["Server-Timing"] = timing
 
 @sling.net.response(MpoImagePlugin.MpoImageFile)
 def mpo_reponse(image, request, response):
@@ -103,7 +125,9 @@ def thumb(request):
 
   try:
     # Try to get image from media database.
+    timing = Timing()
     imagedata = mediadb[url]
+    timing.measure("db")
 
     # Fetch image from source if it is not in the media database.
     if imagedata is None:
@@ -111,6 +135,7 @@ def thumb(request):
       r = pool.request("GET", url, timeout=5)
       if r.status != 200: raise Exception("HTTP error %d" % r.status)
       imagedata = r.data
+      timing.measure("download")
 
     # Read image.
     image = Image.open(io.BytesIO(imagedata))
@@ -127,8 +152,10 @@ def thumb(request):
 
     # Convert to thumbnail.
     image.thumbnail((size, size), Image.ANTIALIAS)
+    timing.measure("process")
 
     # Return scaled image.
+    image.info["timing"] = timing.info()
     return image
 
   except Exception as e:
