@@ -45,6 +45,8 @@ class HTTPRequest:
     self.headers = headers
     self.body = body
     self.qs = None
+    self.timing = None
+    self.start = time.time()
 
   def __getitem__(self, key):
     """Get HTTP request header"""
@@ -73,6 +75,14 @@ class HTTPRequest:
   def frame(self, store=None):
     if store is None: store = sling.Store()
     return store.parse(self.body)
+
+  def measure(self, event, start=None):
+    end = time.time()
+    if start is None: start = self.start
+    ms = int((end - start) * 1000)
+    if self.timing is None: self.timing = []
+    self.timing.append("%s;dur=%d" % (event, ms))
+    self.start = end
 
 class HTTPResponse:
   def __init__(self):
@@ -147,6 +157,10 @@ class HTTPHandler:
           if formatter is None:
             raise Exception("No HTTP formatter for " + str(type(ret)))
           formatter(ret, request, response)
+
+        # Add timing header.
+        if request.timing is not None:
+          response["Server-Timing"] = ",".join(request.timing)
 
     except Exception as e:
       # Return error response with stack trace.
@@ -280,5 +294,5 @@ def json_page(value, request, response):
 @response(sling.Array)
 def json_page(value, request, response):
   response.ct = "application/sling"
-  response.body = value.data(binary=True)
+  response.body = value.data(binary=True, shallow=False)
 

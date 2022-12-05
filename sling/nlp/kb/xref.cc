@@ -346,6 +346,13 @@ XRef::Identifier *XRef::Identifier::Canonical() {
 }
 
 bool XRefMapping::Map(string *id) const {
+  // Try to look up identifier in cross-reference.
+  Handle h = xrefs_.LookupExisting(*id);
+  if (!h.IsNil()) {
+    *id = xrefs_.FrameId(h).str();
+    return true;
+  }
+
   // Try to map URI.
   if (id->size() > 4 && id->compare(0, 4, "http") == 0) {
     string mapped;
@@ -358,13 +365,6 @@ bool XRefMapping::Map(string *id) const {
       }
       return true;
     }
-  }
-
-  // Try to look up identifier in cross-reference.
-  Handle h = xrefs_.LookupExisting(*id);
-  if (!h.IsNil()) {
-    *id = xrefs_.FrameId(h).str();
-    return true;
   }
 
   // Try to convert property mnemonic.

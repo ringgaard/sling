@@ -25,12 +25,10 @@ import sling
 import sling.log as log
 
 # Initialize commons store.
-log.info("Loading schema for RDF service")
 commons = sling.Store()
-commons.parse(requests.get("https://ringgaard.com/schema").content)
-n_target = commons["target"]
-n_url = commons["/w/url"]
-n_type = commons["P31"]
+n_id = commons["id"]
+n_is = commons["is"]
+n_isa = commons["isa"]
 commons.freeze()
 
 # Install JSON-LD schema loader.
@@ -128,6 +126,7 @@ class URIMapping:
     if match == -1: return uri
     e = self.mappings[match]
     identifier = e.prefix + uri[len(e.uri):len(uri) - len(e.suffix)]
+    if identifier.endswith("/"): identifier = identifier[:-1]
     if len(e.prop) == 0:
       return identifier
     else:
@@ -140,41 +139,42 @@ xrefs.load("data/e/kb/xrefs.sling")
 urimap = URIMapping(xrefs)
 xrefs.freeze()
 
+def xmap(uri):
+  uri = urimap.map(uri)
+  canonical = xrefs[uri]
+  if canonical:
+    return canonical.id
+  else:
+    return uri
+
 # JSON-LD converter service.
 class RDFService:
-  def map(self, uri):
-    uri = urimap.map(uri)
-    canonical = xrefs[uri]
-    if canonical:
-      return canonical.id
-    else:
-      return uri
-
-  def convert(self, store, obj, asurl=False):
-    value = obj.get("@value")
-    if value: return value
-
-    id = obj.get("@id")
-    if id:
-      if asurl: return self.map(id)
-      return store[self.map(id)]
-
+  def convert(self, store, obj, nested=False):
     slots = []
     for k, v in obj.items():
-      if k == "@type":
-        prop = n_type
-      else:
-        prop = store[self.map(k)]
-      dt = prop[n_target]
-      isurl = dt == n_url
-      for e in v:
-        if type(e) is dict:
-          value = self.convert(store, e, isurl)
+      if k == "@id":
+        slots.append((n_is if nested else n_id, store[xmap(v)]))
+      elif k == "@value":
+        slots.append((n_is, v))
+      elif k == "@type":
+        if type(v) is list:
+          for t in v:
+            slots.append((n_isa, store[xmap(t)]))
         else:
-          value = store[self.map(e)]
-        slots.append((prop, value))
+          slots.append((n_isa, store[xmap(v)]))
+      else:
+        prop = store[xmap(k)]
+        for e in v:
+          if type(e) is dict:
+            value = self.convert(store, e, True)
+          else:
+            value = store[xmap(e)]
+          slots.append((prop, value))
 
-    return store.frame(slots)
+    if len(slots) == 1 and (slots[0][0] == n_id or slots[0][0] == n_is):
+      return slots[0][1]
+    else:
+      return store.frame(slots)
 
   def handle(self, request):
     # Get JSON-LD document.
@@ -182,6 +182,7 @@ class RDFService:
 
     # Expand JSON-LD document into canonical form.
     doc = jsonld.expand(input)
+    #print(json.dumps(doc, indent=2))
 
     # Convert JSON-LD to SLING format.
     output = []

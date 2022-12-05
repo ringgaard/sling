@@ -45,6 +45,8 @@ static const MIMEMapping mimetypes[] = {
   {"svg", "image/svg+xml; charset=utf-8"},
   {"js", "text/javascript; charset=utf-8"},
   {"zip", "application/zip"},
+  {"json", "application/json"},
+  {"jsonld", "application/ld+json"},
   {nullptr, nullptr},
 };
 

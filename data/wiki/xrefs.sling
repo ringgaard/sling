@@ -112,8 +112,18 @@
 
     ; Social media.
     "https://twitter.com/": "P2002"
+    "http://twitter.com/": "P2002"
+    "https://www.twitter.com/": "P2002"
+    "http://www.twitter.com/": "P2002"
+
     "https://instagram.com/": "P2003"
+    "http://instagram.com/": "P2003"
+    "https://www.instagram.com/": "P2003"
+    "http://www.instagram.com/": "P2003"
+
     "https://facebook.com/": "P2013"
+    "https://facebook.com/": "P2013"
+
     "https://tiktok.com/@": "P7085"
     "https://github.com/": "P2037"
     "https://imdb.com/name/": "P345"
@@ -499,16 +509,11 @@
   ; URIs
   uris: {
     ; System properties.
-    "http://schema.org/name": "name"
-    "https://schema.org/name": "name"
-    "http://schema.org/description": "description"
-    "https://schema.org/description": "description"
-    "http://schema.org/disambiguatingDescription": "description"
-    "https://schema.org/disambiguatingDescription": "description"
-    "http://schema.org/alternateName": "alias"
-    "https://schema.org/alternateName": "alias"
-    "http://schema.org/image": "media"
-    "https://schema.org/image": "media"
+    "PSCHM/name": "name"
+    "PSCHM/description": "description"
+    "PSCHM/disambiguatingDescription": "description"
+    "PSCHM/alternateName": "alias"
+    "PSCHM/image": "media"
 
     "http://xmlns.com/foaf/0.1/name": "name"
   }

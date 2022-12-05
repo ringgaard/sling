@@ -155,7 +155,7 @@ class XRef {
 
  private:
   // Number of hash buckets for identifier hash table.
-  static constexpr uint64 LOG_NUM_BUCKETS = 20;
+  static constexpr uint64 LOG_NUM_BUCKETS = 24;
   static constexpr uint64 NUM_BUCKETS = (1 << LOG_NUM_BUCKETS);
 
   // Compute hash code for identifier.
