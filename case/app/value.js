@@ -433,6 +433,9 @@ export class LabelCollector {
   add(item) {
     // Add all missing values to collector.
     for (let [name, value] of item) {
+      if (name instanceof Frame) {
+        if (name.isproxy()) this.items.add(name);
+      }
       if (value instanceof Frame) {
         if (value.isanonymous()) {
           this.add(value);

@@ -127,6 +127,11 @@ delimiters = [
   "FoxWeather", "News", "Fox13", "Weather Channel", "Court TV", "Fox News",
 ]
 
+conjunctions = [
+  " and ", " And ", " & ", " &amp; ",  " og ",
+  " or ", " vs. ", " vs ", " versus ", " gegen "
+]
+
 # Initialize commons store.
 commons = sling.Store()
 n_subreddit = commons["subreddit"]
@@ -321,7 +326,7 @@ for key, value in postings:
   general = sr in general_subreddits
   if itemid is None and not general: continue
 
-  # Try to match patterns in title.
+  # Transform title using patterns.
   if general:
     for pattern in patterns:
       m = pattern.fullmatch(title)
@@ -332,15 +337,10 @@ for key, value in postings:
   query = title
   if general:
     # Skip photos with multiple persons.
-    if " and " in title: continue
-    if " And " in title: continue
-    if " & " in title: continue
-    if " &amp; " in title: continue
-    if " or " in title: continue
-    if " vs. " in title: continue
-    if " vs " in title: continue
-    if " og " in title: continue
-    if " gegen " in title: continue
+    skip = False
+    for conj in conjunctions:
+      if conj in title: skip = True
+    if skip: continue
 
     # Try to match title to name.
     name = title

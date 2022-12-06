@@ -509,13 +509,13 @@
   ; URIs
   uris: {
     ; System properties.
-    "PSCHM/name": "name"
-    "PSCHM/description": "description"
-    "PSCHM/disambiguatingDescription": "description"
-    "PSCHM/alternateName": "alias"
-    "PSCHM/image": "media"
+    ;"PSCHM/name": "name"
+    ;"PSCHM/description": "description"
+    ;"PSCHM/disambiguatingDescription": "description"
+    ;"PSCHM/alternateName": "alias"
+    ;"PSCHM/image": "media"
 
-    "http://xmlns.com/foaf/0.1/name": "name"
+    ;"http://xmlns.com/foaf/0.1/name": "name"
   }
 
   ; Pre-resolved reference mappings for ambiguous references.

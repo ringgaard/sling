@@ -3,6 +3,7 @@
 
 // SLING case plug-in for adding topic for web article.
 
+import {Store} from "/common/lib/frame.js";
 import {store, frame} from "/case/app/global.js";
 import {match_link} from "/case/app/social.js";
 import {SEARCHURL} from "/case/app/plugins.js";
@@ -141,7 +142,6 @@ export default class ArticlePlugin {
     // Parse HTML.
     let doc = new DOMParser().parseFromString(html, "text/html");
     let head = doc; //doc.head;
-    console.log(doc);
 
     // Collect meta information for article.
     let article = {};
@@ -195,6 +195,19 @@ export default class ArticlePlugin {
       try {
         let ld = JSON.parse(ldjson.innerText);
         console.log(typeof(ld), ld);
+
+        // Convert using RDF service.
+        let r = await fetch(context.service("rdf"), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/ld+json",
+          },
+          body: ldjson.innerText,
+        });
+        if (!r.ok) throw `Error: ${r.statusText}`;
+        let st = new Store();
+        let topics = await st.parse(r);
+        for (let t of topics) console.log(t.text(true));
 
         let parts = [ld];
         if (Array.isArray(ld)) {
