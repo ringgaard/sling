@@ -129,7 +129,7 @@ delimiters = [
 
 conjunctions = [
   " and ", " And ", " & ", " &amp; ",  " og ",
-  " or ", " vs. ", " vs ", " versus ", " gegen "
+  " or ", " vs. ", " vs ", " versus ", "  oder ", " gegen "
 ]
 
 # Initialize commons store.
@@ -383,7 +383,7 @@ for key, value in postings:
   posting_profile = photo.Profile(None)
   try:
     n = 0
-    if sr in aic_subreddits or "(AIC)" in title:
+    if sr in aic_subreddits or "AIC" in title:
       post_url = "https://www.reddit.com" + posting[n_permalink]
       n += posting_profile.add_albums_in_comments(post_url, nsfw)
     if n == 0:
