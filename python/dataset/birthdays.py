@@ -91,16 +91,18 @@ for item in persons[:30]:
         picture = url
         break
 
-  print(item.id, age, dob, item[n_name], item[n_description])
+  name = item[n_name]
+  description = item[n_description]
+  print(item.id, age, dob, name, description)
+
   person = {
     "id": item.id,
-    "name": str(item[n_name]),
-    "description": str(item[n_description]),
     "birthdate": cal.str(dob),
     "age": age,
   }
+  if name is not None: person["name"] = str(name)
+  if description is not None: person["description"] = str(description)
   if picture is not None: person["picture"] = picture
-  if n_lex in item: person["summary"] = str(item[n_lex])
 
   birthdays.append(person)
 

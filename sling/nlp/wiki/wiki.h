@@ -130,6 +130,8 @@ class WikimediaTypes {
   Name n_human_name_disambiguation_{names_, "Q22808320"};
   Name n_list_{names_, "Q13406463"};
   Name n_list_of_characters_{names_, "Q63032896"};
+  Name n_music_list_{names_, "Q98645843"};
+
   Name n_template_{names_, "Q11266439"};
   Name n_navigational_template_{names_, "Q11753321"};
   Name n_infobox_{names_, "Q19887878"};

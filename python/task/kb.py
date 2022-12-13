@@ -19,6 +19,11 @@ import sling.task.corpora as corpora
 import sling.task.data as data
 from sling.task import *
 
+flags.define("--factgrid",
+             help="include factgrid in knowledge base",
+             default=False,
+             action='store_true')
+
 class KnowledgeBaseWorkflow:
   def __init__(self, name=None):
     self.wf = Workflow(name)
@@ -137,7 +142,7 @@ class KnowledgeBaseWorkflow:
                        dir=corpora.workdir("factgrid"),
                        format="records/frame",
                        serial=610),
-    ]
+    ] if flags.arg.factgrid else None
 
   def kbdb(self):
     """Resource for knowledge base database."""

@@ -89,6 +89,11 @@ flags.define("--dryrun",
              default=False,
              action="store_true")
 
+flags.define("--all",
+             help="allow all subreddits",
+             default=False,
+             action="store_true")
+
 flags.parse()
 
 # List of approved photo sites.
@@ -154,22 +159,23 @@ general_subreddits = set()
 skipped_subreddits = set()
 aic_subreddits = set()
 
-for fn in flags.arg.subreddits.split(","):
-  with open(fn, "r") as f:
-    for line in f.readlines():
-      f = line.strip().split(' ')
-      sr = f[0]
-      itemid = f[1] if len(f) > 1 else None
-      if sr in skipped_subreddits: continue
-      if itemid == "skip":
-        skipped_subreddits.add(sr)
-      elif itemid == "aic":
-        general_subreddits.add(sr)
-        aic_subreddits.add(sr)
-      elif itemid is None:
-        general_subreddits.add(sr)
-      else:
-        person_subreddits[sr] = itemid
+if flags.arg.subreddits:
+  for fn in flags.arg.subreddits.split(","):
+    with open(fn, "r") as f:
+      for line in f.readlines():
+        f = line.strip().split(' ')
+        sr = f[0]
+        itemid = f[1] if len(f) > 1 else None
+        if sr in skipped_subreddits: continue
+        if itemid == "skip":
+          skipped_subreddits.add(sr)
+        elif itemid == "aic":
+          general_subreddits.add(sr)
+          aic_subreddits.add(sr)
+        elif itemid is None:
+          general_subreddits.add(sr)
+        else:
+          person_subreddits[sr] = itemid
 
 for sr in skipped_subreddits:
   if sr in person_subreddits: del person_subreddits[sr]
@@ -177,29 +183,31 @@ for sr in skipped_subreddits:
 
 # Read regex patterns for matching posting titles.
 patterns = []
-for fn in flags.arg.patterns.split(","):
-  with open(fn, "r") as f:
-    for line in f.readlines():
-      line = line.strip()
-      if len(line) == 0 or line.startswith("#"): continue
-      r = re.compile(line)
-      patterns.append(r)
+if flags.arg.patterns:
+  for fn in flags.arg.patterns.split(","):
+    with open(fn, "r") as f:
+      for line in f.readlines():
+        line = line.strip()
+        if len(line) == 0 or line.startswith("#"): continue
+        r = re.compile(line)
+        patterns.append(r)
 
 # Read list of celebrity names.
 celebmap = {}
-for fn in flags.arg.celebmap.split(","):
-  with open(fn, "r") as f:
-    for line in f.readlines():
-      line = line.strip()
-      if len(line) == 0: continue
-      f = line.split(':')
-      if len(f) != 2:
-        print("bad line in celebmap:", line)
-        continue
-      name = f[0].replace(".", "").strip()
-      if flags.arg.caseless: name = name.lower()
-      itemid = f[1].strip()
-      celebmap[name] = itemid
+if flags.arg.celebmap:
+  for fn in flags.arg.celebmap.split(","):
+    with open(fn, "r") as f:
+      for line in f.readlines():
+        line = line.strip()
+        if len(line) == 0: continue
+        f = line.split(':')
+        if len(f) != 2:
+          print("bad line in celebmap:", line)
+          continue
+        name = f[0].replace(".", "").strip()
+        if flags.arg.caseless: name = name.lower()
+        itemid = f[1].strip()
+        celebmap[name] = itemid
 
 # Photo id table.
 photoids = sling.RecordDatabase(flags.arg.photoids)
@@ -323,7 +331,7 @@ for key, value in postings:
   # Check for personal subreddit.
   sr = posting[n_subreddit]
   itemid = person_subreddits.get(sr)
-  general = sr in general_subreddits
+  general = sr in general_subreddits or flags.arg.all
   if itemid is None and not general: continue
 
   # Transform title using patterns.
@@ -504,7 +512,8 @@ if not flags.arg.dryrun:
   for id in profiles:
     profiles[id].write()
 
-coverage = int(num_known / (num_known + num_unknown) * 100)
+num_total = num_known + num_unknown
+coverage = int(num_known / num_total * 100) if num_known > 0 else 0
 print(num_photos, "photos,",
       num_dups, "dups,",
       num_profiles, "profiles,",
