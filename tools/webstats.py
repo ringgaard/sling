@@ -143,7 +143,8 @@ apis = [
   ("image caching",        re.compile(r"^\/case/cacheimg$")),
   ("schema",               re.compile(r"^\/schema(.+)$")),
   ("collaboration",        re.compile(r"^\/collab\/")),
-
+  ("birthdays",            re.compile(r"^\/home/birthdays")),
+  ("feedback",             re.compile(r"^\/home/feedback")),
   ("add media",            re.compile(r"^\/redreport\/addmedia\/")),
 
   ("RS refine" ,           re.compile(r"^\/refine")),
@@ -157,6 +158,7 @@ sources = [
   ("KB app",               re.compile(r"^\/kb/app/")),
   ("Case app",             re.compile(r"^\/(case|c)\/app\/(.+)$")),
   ("Home app",             re.compile(r"^\/home\/app\/")),
+  ("Home fonts",           re.compile(r"^\/home\/font\/")),
   ("common library",       re.compile(r"^\/common\/")),
 ]
 
@@ -219,6 +221,7 @@ bots = [
   ("Dataprovider.com",       re.compile(r"Dataprovider\.com")),
   ("LinkAnalyser",           re.compile(r"LinkAnalyser")),
   ("COIBotParser",           re.compile(r"COIBotParser")),
+  ("Gigablast",              re.compile(r"GigablastOpenSource")),
 
   ("Majestic",               re.compile(r"MJ12bot")),
   ("Mail.RU",                re.compile(r"Mail.RU_Bot")),
@@ -359,6 +362,10 @@ spam_hits = defaultdict(int)
 referrers = defaultdict(int)
 referring_domains = defaultdict(int)
 
+cold_hits = defaultdict(int)
+cold_users = {}
+warm_users = set()
+
 prev_query = {}
 for logfn in flags.arg.logfiles:
   if logfn.endswith(".gz"):
@@ -442,6 +449,12 @@ for logfn in flags.arg.logfiles:
     # Mobile.
     if mobile_pattern.search(ua):
       num_mobile += 1
+
+    # Warm and cold hits.
+    if path == "/":
+      cold_hits[ipaddr] += 1
+      cold_users[ipaddr] = ua
+    if path == "/home/birthdays": warm_users.add(ipaddr)
 
     # Browsers and platforms.
     for browser_name, browser_pattern in browsers:
@@ -576,6 +589,11 @@ visits_per_day = {}
 for date, ipaddrs in date_visitors.items():
   visits_per_day[date] = len(ipaddrs)
 
+cold_agents = defaultdict(int)
+for ipaddr, ua in cold_users.items():
+  if ipaddr in warm_users: continue
+  cold_agents[ua] += cold_hits[ipaddr]
+
 print("\nSUMMARY\n")
 print("%6d hits" % num_hits)
 print("%6d visitors" % len(visitors))
@@ -610,6 +628,8 @@ if flags.arg.v:
   print_table("QUERIES", "query", query_hits)
 print_table("REFFERING DOMAINS", "domain", referring_domains)
 print_table("REFERRERS", "referrer", referrers)
+print_table("COLD HITS", "user agent", cold_agents)
+
 if flags.arg.v:
   print_table("HTTP ERRORS", "HTTP status", http_codes)
   print_table("BOTS", "bot", bot_hits)

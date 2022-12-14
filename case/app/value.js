@@ -674,16 +674,14 @@ export function text_parser(value, results) {
   // Parse localized strings.
   let m = value.match(/^(.+)@([a-z][a-z])$/);
   if (m) {
-    let lang = store.find(`/lang/${m[2]}`);
-    if (lang) {
-      let text = m[1].trim();
-      let qstr = new QString(text, lang);
-      results.push({
-        value: qstr,
-        title: text,
-        description: (lang.get(n_name) || m[2]) + " text",
-      });
-    }
+    let lang = store.lookup(`/lang/${m[2]}`);
+    let text = m[1].trim();
+    let qstr = new QString(text, lang);
+    results.push({
+      value: qstr,
+      title: text,
+      description: (lang.get(n_name) || m[2]) + " text",
+    });
   }
 }
 
