@@ -115,7 +115,9 @@ pages = [
   ("data download",        re.compile(r"^\/data\/.*")),
 
   ("KB home",              re.compile(r"^\/kb\/$")),
-  ("KB item",              re.compile(r"^\/kb\/(.+)$")),
+  ("KB item",              re.compile(r"^\/kb\/[A-Z](.+)$")),
+  ("KB item",              re.compile(r"^\/kb\/t\/\d+\/\d+$")),
+  ("KB item",              re.compile(r"^\/kb\/c\/\d+$")),
 
   ("photo search",         re.compile(r"^\/photosearch\/")),
   ("redreport",            re.compile(r"^\/redreport\/")),
@@ -130,7 +132,7 @@ apis = [
   ("KB item",              re.compile(r"^\/kb\/item\?")),
   ("KB frame",             re.compile(r"^\/kb\/frame\?")),
   ("KB topic",             re.compile(r"^\/kb\/topic\?")),
-  ("KB stubs",             re.compile(r"^\/kb\/stubs\?")),
+  ("KB stubs",             re.compile(r"^\/kb\/stubs")),
 
   ("Wikidata auth",        re.compile(r"^\/case/wikibase\/(.+)$")),
   ("create case",          re.compile(r"^\/case\/new$")),

@@ -318,8 +318,9 @@ class FactEditor extends Component {
       let prevprop = prevstmt && prevstmt.firstChild;
       if (forward && prevprop) {
         // Repeat previous property.
-        let prop = new FactProperty({property: "", value: prevprop.value()});
-        let value = new FactValue({property: "", value: ""});
+        let property = prevprop.value();
+        let prop = new FactProperty({property: "", value: property});
+        let value = new FactValue({property: property, value: ""});
         s.statement.appendChild(prop);
         s.statement.appendChild(value);
         s.statement.qualified = prevstmt.qualified;

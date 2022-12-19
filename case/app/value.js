@@ -596,6 +596,12 @@ export function date_parser(value, results) {
     let month = monthnum(m[1]);
     if (month) add_date_result(results, m[2], month, null);
   }
+
+  // Parse MM/YYYY.
+  m = value.match(/^(\d\d)\/(\d\d\d\d)$/);
+  if (m) {
+    add_date_result(results, m[2], m[1], null);
+  }
 }
 
 export function quantity_parser(value, results) {
