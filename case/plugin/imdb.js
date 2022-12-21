@@ -171,7 +171,9 @@ async function parse_date_and_place(context, text) {
     country = await lookup(context, country);
   }
 
-  let cause = await lookup(context, m[3]);
+  let cause = m[3];
+  if (cause == "undisclosed") cause = undefined;
+  let cause = await lookup(context, cause);
 
   return {date, location, country, cause};
 }

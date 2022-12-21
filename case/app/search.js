@@ -81,7 +81,9 @@ export async function kbsearch(query, results, options) {
         description: item.description,
       };
       if (twiddle && item.score > 1000000) {
-        results.unshift(result);
+        if (!options.local || !options.local.ids.get(item.ref)) {
+          results.unshift(result);
+        }
         twiddle = false;
       } else {
         results.push(result);

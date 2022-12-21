@@ -133,7 +133,7 @@ delimiters = [
 ]
 
 conjunctions = [
-  " and ", " And ", " & ", " &amp; ",  " og ",
+  " and ", " And ", " & ", " &amp; ",  " og ", " und ",
   " or ", " vs. ", " vs ", " versus ", "  oder ", " gegen "
 ]
 

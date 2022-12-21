@@ -307,24 +307,33 @@ spammers = set([
   "ahar.net",
   "amatocanizalez.net",
   "aoul.top",
+  "app.raindrop.io",
   "aucoinhomes.com",
   "boyddoherty.top",
   "czcedu.com",
   "ecosia.org",
+  "elton.hugblog.xyz",
   "fineblog.top",
   "gcmx.net",
   "johnnyhaley.top",
   "joyceblog.top",
+  "judyandsimon.com",
   "manwang.net",
   "meendoru.net",
+  "mossiemckenzie.shop",
   "myra.top",
   "pacificdentalcenter.com",
   "pardot.com",
+  "qtrstar.xyz",
   "qxnr.net",
   "rczhan.com",
+  "residualforlife.com",
   "sarahmilne.top",
+  "shoppinglocation.com",
   "sloopyjoes.com",
-  "qtrstar.xyz",
+  "thegreensociety.net",
+  "trade365.org",
+  "workona.com",
 ])
 
 total_hits = 0
@@ -591,10 +600,11 @@ visits_per_day = {}
 for date, ipaddrs in date_visitors.items():
   visits_per_day[date] = len(ipaddrs)
 
-cold_agents = defaultdict(int)
-for ipaddr, ua in cold_users.items():
-  if ipaddr in warm_users: continue
-  cold_agents[ua] += cold_hits[ipaddr]
+if flags.arg.v:
+  cold_agents = defaultdict(int)
+  for ipaddr, ua in cold_users.items():
+    if ipaddr in warm_users: continue
+    cold_agents[ua] += cold_hits[ipaddr]
 
 print("\nSUMMARY\n")
 print("%6d hits" % num_hits)
@@ -628,9 +638,9 @@ if flags.arg.v:
   print_table("MEDIA", "file", media_hits)
   print_table("ITEMS", "item", item_hits)
   print_table("QUERIES", "query", query_hits)
+  print_table("COLD HITS", "user agent", cold_agents)
 print_table("REFFERING DOMAINS", "domain", referring_domains)
 print_table("REFERRERS", "referrer", referrers)
-print_table("COLD HITS", "user agent", cold_agents)
 
 if flags.arg.v:
   print_table("HTTP ERRORS", "HTTP status", http_codes)

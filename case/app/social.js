@@ -37,15 +37,7 @@ let xrefs = [
     property: frame("P2013"),
   },
   {
-    pattern: /^https?:\/\/(?:www\.)?facebook\.com\/([^\?\/]+)/i,
-    property: frame("P2013"),
-  },
-  {
-    pattern: /^https?:\/\/m\.facebook\.com\/([^\?\/]+)/i,
-    property: frame("P2013"),
-  },
-  {
-    pattern: /^https?:\/\/da-dk\.facebook\.com\/([^\?\/]+)/i,
+    pattern: /^https?:\/\/(?:[a-z\-]+\.)?facebook\.com\/([^\?\/]+)/i,
     property: frame("P2013"),
   },
   {
