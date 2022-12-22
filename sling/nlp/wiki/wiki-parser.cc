@@ -790,7 +790,8 @@ void WikiParser::ParseHeaderCell(bool first) {
 
   Push(HEADER);
   ptr_ += first ? 1 : 2;
-  if (ParseAttributes("!\n")) {
+  if (ParseAttributes("!|\n")) {
+    if (*ptr_ == '|') ptr_++;
     if (*ptr_ == '!') ptr_++;
     if (*ptr_ == '!') ptr_++;
   }

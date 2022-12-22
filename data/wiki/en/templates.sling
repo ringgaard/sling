@@ -386,6 +386,7 @@
 "double-dagger": {type: "text" text: "&Dagger;"}
 "extinct": {type: "text" text: "&dagger;"}
 "sbc": {type: "text" text: "&nbsp; BC"}
+"okina": {type: "text" text: "&#x02BB;"}
 
 "small": {type: "tag" argnum: 1 open: "<small>" close: "</small>"}
 "smaller": {type: "tag" argnum: 1 open: "<div style=\"font-size:90%;\">" close: "</div>"}
@@ -405,6 +406,8 @@
 "nihongo": {type: "tag" argnum: 1}
 "nihongo foot": {type: "tag" argnum: 1}
 "ill": {type: "tag" argnum: 1}
+"sortname": {type: "sort"}
+"center": {type: "tag" argnum: 1}
 
 "plainlist": {type: "tag" argnum: 1 open: "<div>" close: "</div>"}
 "flatlist": {type: "tag" argnum: 1 open: "<div>" close: "</div>"}
@@ -443,6 +446,7 @@
 "circa": {type: "year" pre: "c. " range: 1}
 
 "convert": {type: "measure" value: 1 unit: 2 units: /w/units/en}
+"height": {type: "height"}
 "coord": {type: "coord"}
 "flag": {type: "flag"}
 "flagcountry": {type: "flag"}

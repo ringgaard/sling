@@ -154,6 +154,34 @@ class DefineTemplate : public WikiMacro {
 
 REGISTER_WIKI_MACRO("define", DefineTemplate);
 
+// Template macro for sorted named.
+class SortTemplate : public WikiMacro {
+ public:
+  void Generate(const WikiTemplate &templ, WikiAnnotator *annotator) override {
+    string first = templ.GetValue(1);
+    string last = templ.GetValue(2);
+    string name = StrCat(first, " ", last);
+    string link = templ.GetValue(3);
+    if (link.empty()) link = name;
+    if (templ.GetNumber("nolink") == 1) link.clear();
+
+    int begin = annotator->position();
+    templ.Extract(1);
+    annotator->Content(" ");
+    templ.Extract(2);
+    int end = annotator->position();
+
+    if (!link.empty()) {
+      Handle item = Handle::nil();
+      Text qid = annotator->resolver()->ResolveLink(link);
+      if (!qid.empty()) item = annotator->store()->Lookup(qid);
+      if (!item.IsNil()) annotator->AddMention(begin, end, item);
+    }
+  }
+};
+
+REGISTER_WIKI_MACRO("sort", SortTemplate);
+
 // Template macro for expanding dates with annotations.
 class DateTemplate : public WikiMacro {
  public:
@@ -514,6 +542,68 @@ class MeasureTemplate : public WikiMacro {
 };
 
 REGISTER_WIKI_MACRO("measure", MeasureTemplate);
+
+// Template macro for height.
+class HeightTemplate : public WikiMacro {
+ public:
+  void Init(const Frame &config) override {
+    names_.Bind(config.store());
+  }
+
+  void Generate(const WikiTemplate &templ, WikiAnnotator *annotator) override {
+    // Get height in cm.
+    float height = templ.GetFloat("cm");
+    if (height == 0) height = templ.GetFloat("centimetre");
+    if (height == 0) height = templ.GetFloat("centimetres");
+    if (height == 0) height = templ.GetFloat("centimeter");
+    if (height == 0) height = templ.GetFloat("centimeters");
+
+    if (height == 0) height = templ.GetFloat("m") * 100.0;
+    if (height == 0) height = templ.GetFloat("metre") * 100.0;
+    if (height == 0) height = templ.GetFloat("metres") * 100.0;
+    if (height == 0) height = templ.GetFloat("meter") * 100.0;
+    if (height == 0) height = templ.GetFloat("meters") * 100.0;
+
+    if (height == 0) height = templ.GetFloat("mm") / 10.0;
+    if (height == 0) height = templ.GetFloat("dm") * 10.0;
+
+    // Get height in imperial units.
+    if (height == 0) {
+      float ft = templ.GetFloat("ft");
+      if (ft == 0) ft = templ.GetFloat("foot");
+      if (ft == 0) ft = templ.GetFloat("feet");
+
+      float in = templ.GetFloat("in");
+      if (in == 0) in = templ.GetFloat("inch");
+      if (in == 0) in = templ.GetFloat("inches");
+
+      if (in != 0 || ft != 0) height = in * 30.48 + ft * 2.54;
+    }
+
+    // Add height with annotation.
+    int cm = height;
+    if (cm != 0) {
+      // Output measure.
+      int begin = annotator->position();
+      annotator->Content(SimpleItoa(cm));
+      annotator->Content(" cm");
+      int end = annotator->position();
+
+      // Add measure annotation.
+      Builder b(annotator->store());
+      b.AddIsA("/w/quantity");
+      b.Add("/w/amount", cm);
+      b.Add("/w/unit", n_centimetre_);
+      annotator->AddMention(begin, end, b.Create().handle());
+    }
+  }
+
+ private:
+  Names names_;
+  Name n_centimetre_{names_, "Q174728"};
+};
+
+REGISTER_WIKI_MACRO("height", HeightTemplate);
 
 // Sink for collecting media files.
 class MediaSink : public WikiSink {

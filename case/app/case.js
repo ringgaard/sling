@@ -1176,8 +1176,15 @@ class CaseEditor extends MdApp {
         target.put(name, value);
       }
 
-      // Redirect reference to topic to target.
+      // Redirect references to topic to target.
       this.redirect(topic, target);
+    }
+
+    if (sources.length == 1 &&
+        this.folder.includes(sources[0]) &&
+        !this.folder.includes(target)) {
+      // Make source an alias for target.
+      this.folder[this.folder.indexOf(sources[0])] = target;
     }
 
     // Delete merged topics from folder.
