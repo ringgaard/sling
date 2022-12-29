@@ -28,7 +28,6 @@ bazel build -c opt $* \
   sling/task:* \
   sling/util:* \
   sling/web:* \
-  sling/workflow:* \
   tools:* \
   case:* \
 

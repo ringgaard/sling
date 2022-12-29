@@ -134,7 +134,10 @@ apis = [
   ("KB topic",             re.compile(r"^\/kb\/topic\?")),
   ("KB stubs",             re.compile(r"^\/kb\/stubs")),
 
-  ("Wikidata auth",        re.compile(r"^\/case/wikibase\/(.+)$")),
+  ("Wikidata export",      re.compile(r"^\/case\/wikibase\/export")),
+  ("Wikidata initiate",    re.compile(r"^\/case\/wikibase\/initiate")),
+  ("Wikidata access",      re.compile(r"^\/case\/wikibase\/access")),
+
   ("create case",          re.compile(r"^\/case\/new$")),
   ("fetch case",           re.compile(r"^\/case/fetch\/?\?(.+)$")),
   ("share case",           re.compile(r"^\/case/share$")),

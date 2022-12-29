@@ -36,7 +36,6 @@
   value: /lang/bg
   value: /lang/ca
   value: /lang/cs
-  value: /lang/cz
   value: /lang/da
   value: /lang/de
   value: /lang/el
@@ -66,6 +65,7 @@
   value: /lang/sr
   value: /lang/sv
   value: /lang/uk
+  value: /lang/zh
 
   value: /lang/mul
   value: /lang/zxx
@@ -113,13 +113,6 @@
   /lang/wikilang/wiki_image: "Soubor"
   /lang/wikilang/wiki_template: "Šablona"
   /lang/wikilang/wikipedia: Q191168
-}
-
-{=/lang/cz
-  :language :/lang/wikilang
-  name: "Chinese"
-  code: "cz"
-  /lang/wikilang/wikipedia: Q30239
 }
 
 {=/lang/da
@@ -430,6 +423,13 @@
   /lang/wikilang/wiki_image: "Файл"
   /lang/wikilang/wiki_template: "Шаблон"
   /lang/wikilang/wikipedia: Q199698
+}
+
+{=/lang/zh
+  :language :/lang/wikilang
+  name: "Chinese"
+  code: "zh"
+  /lang/wikilang/wikipedia: Q30239
 }
 
 {=/lang/mul

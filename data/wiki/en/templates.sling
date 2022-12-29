@@ -90,19 +90,19 @@
 "CAF": {type: "text" text: "Central African Republic" link: Q929}
 "CAN": {type: "text" text: "Canada" link: Q16}
 "CCK": {type: "text" text: "Cocos (Keeling) Islands" link: Q36004}
-"CEN": {type: "text" text: "Central America" link: Q27611}
+;"CEN": {type: "text" text: "Central America" link: Q27611}
 "CHE": {type: "text" text: "Switzerland" link: Q39}
 "CHL": {type: "text" text: "Chile" link: Q298}
 "CHN": {type: "text" text: "China" link: Q148}
 "CHN-MLD": {type: "text" text: "China (Mainland)" link: Q19188}
 "CHN-ROC": {type: "text" text: "China" link: Q13426199}
 "CHNML": {type: "text" text: "Mainland China" link: Q19188}
-"CIP": {type: "text" text: "International Paralympic Committee" link: Q175386}
+;"CIP": {type: "text" text: "International Paralympic Committee" link: Q175386}
 "CIS": {type: "text" text: " CIS" link: Q7779}
 "CIV": {type: "text" text: "Ivory Coast" link: Q1008}
 "CMR": {type: "text" text: "Cameroon" link: Q1009}
 "COD": {type: "text" text: "Democratic Republic of the Congo" link: Q974}
-"COD2": {type: "text" text: "DR of the Congo" link: Q974}
+;"COD2": {type: "text" text: "DR of the Congo" link: Q974}
 "COE": {type: "text" text: "Council of Europe" link: Q8908}
 "COG": {type: "text" text: "Republic of the Congo" link: Q971}
 "COK": {type: "text" text: "Cook Islands" link: Q26988}
@@ -143,7 +143,7 @@
 "EUA": {type: "text" text: "Germany" link: Q6807126}
 "EUR": {type: "text" text: "Europe" link: Q46}
 
-"FHR": {type: "text" text: "Republic of Haiti (1859–1957)" link: Q5864743}
+;"FHR": {type: "text" text: "Republic of Haiti (1859–1957)" link: Q5864743}
 "FIN": {type: "text" text: "Finland" link: Q33}
 "FJI": {type: "text" text: "Fiji" link: Q712}
 "FLK": {type: "text" text: "Falkland Islands" link: Q9648}
@@ -290,7 +290,7 @@
 "ROC-TW": {type: "text" text: "Republic of China (Taiwan)" link: Q865}
 "ROK": {type: "text" text: "South Korea" link: Q884}
 "ROU": {type: "text" text: "Romania" link: Q218}
-"RSR": {type: "text" text: "Socialist Republic of Romania" link: Q842794}
+;"RSR": {type: "text" text: "Socialist Republic of Romania" link: Q842794}
 "RUS": {type: "text" text: "Russia" link: Q159}
 "RWA": {type: "text" text: "Rwanda" link: Q1037}
 
@@ -441,7 +441,7 @@
 
 "as of": {type: "date" year: 1 month: 2 day: 3 pre: "As of " format: /w/dates/en}
 "marriage": {type: "marriage" format: /w/dates/en}
-"ce": {type: "year" post: " CE"}
+;"ce": {type: "year" post: " CE"}
 "bce": {type: "year" bce: 1 post: " BCE"}
 "circa": {type: "year" pre: "c. " range: 1}
 
@@ -1941,45 +1941,6 @@
     "lifetime_pro_points": /wp/info/lifetime_pro_points
     "pw_level": /wp/info/pw_level
     "footnotes": /wp/info/footnotes
-  }
-}
-
-"Infobox manaschi": {
-  type: "infobox"
-  class: /wp/infobox/manaschi
-  fields: {
-    "honorific_prefix": /wp/info/honorific_prefix
-    "name": {+/wp/info/name alias: 12}
-    "honorific_suffix": /wp/info/honorific_suffix
-    "image": {+/wp/info/image media: true}
-    "image_size": /wp/info/image_size
-    "alt": /wp/info/alt
-    "caption": /wp/info/caption
-    "native_name": {+/wp/info/native_name alias: 12}
-    "native_name_lang": /wp/info/native_name_lang
-    "birth_name": {+/wp/info/birth_name alias: 12}
-    "birth_date": /wp/info/birth_date
-    "birth_place": /wp/info/birth_place
-    "death_date": /wp/info/death_date
-    "death_place": /wp/info/death_place
-    "resting_place": /wp/info/resting_place
-    "resting_place_coordinates": /wp/info/resting_place_coordinates
-    "nationality": /wp/info/nationality
-    "residence": /wp/info/residence
-    "education": /wp/info/education
-    "alma_mater": /wp/info/alma_mater
-    "known_for": /wp/info/known_for
-    "notable_works": /wp/info/notable_works
-    "style": /wp/info/style
-    "movement": /wp/info/movement
-    "spouse": /wp/info/spouse
-    "partner": /wp/info/partner
-    "awards": /wp/info/awards
-    "elected": /wp/info/elected
-    "patrons": /wp/info/patrons
-    "memorials": /wp/info/memorials
-    "website": /wp/info/website
-    "module": /wp/info/module
   }
 }
 
