@@ -23,7 +23,10 @@
 
 namespace sling {
 
-// Python wrapper for Wiki converter.
+class WikipediaExtractor;
+class WikipediaPage;
+
+// Python wrapper for Wikidata converter.
 struct PyWikiConverter : public PyBase {
   int Init(PyObject *args, PyObject *kwds);
   void Dealloc();
@@ -119,6 +122,49 @@ struct PyPlausibility : public PyBase {
 
   // Plausibility model.
   nlp::PlausibilityModel *model;
+
+  // Registration.
+  static PyTypeObject type;
+  static PyMethodTable methods;
+  static void Define(PyObject *module);
+};
+
+// Python wrapper for Wikipedia extractor.
+struct PyWikipedia : public PyBase {
+  int Init(PyObject *args, PyObject *kwds);
+  void Dealloc();
+
+  // Convert wikitext to parsed Wikipedia page.
+  PyObject *Parse(PyObject *wikitext);
+
+  // Commons store for extractor.
+  PyStore *pystore;
+
+  // Wikipedia extractor for language.
+  WikipediaExtractor *wikiex;
+
+  // Registration.
+  static PyTypeObject type;
+  static PyMethodTable methods;
+  static void Define(PyObject *module);
+};
+
+// Python wrapper for parsed Wikipedia page.
+struct PyWikipediaPage : public PyBase {
+  void Init(PyWikipedia *wikipedia, WikipediaPage *wikipage);
+  void Dealloc();
+
+  // Convert Wikipedia page to SLING document.
+  PyObject *Annotate(PyObject *args, PyObject *kwds);
+
+  // Return AST as string.
+  PyObject *AST();
+
+  // Wikipedia
+  PyWikipedia *pywikipedia;
+
+  // Wikipedia page.
+  WikipediaPage *page;
 
   // Registration.
   static PyTypeObject type;

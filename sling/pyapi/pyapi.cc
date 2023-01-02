@@ -93,6 +93,8 @@ static PyObject *RegisterPythonModule() {
   PyFactExtractor::Define(module);
   PyTaxonomy::Define(module);
   PyPlausibility::Define(module);
+  PyWikipedia::Define(module);
+  PyWikipediaPage::Define(module);
 
   PyCompiler::Define(module);
   PyNetwork::Define(module);

@@ -836,45 +836,6 @@
   }
 }
 
-"Infobox cyclist": {
-  type: "infobox"
-  class: /wp/infobox/cyclist
-  fields: {
-    "name": {+/wp/info/name alias: 12}
-    "image": {+/wp/info/image media: true}
-    "picture": {+/wp/info/image media: true}
-    "image_size": /wp/info/image_size
-    "alt": /wp/info/alt
-    "caption": /wp/info/caption
-    "fullname": {+/wp/info/full_name alias: 12}
-    "nickname": {+/wp/info/nickname alias: 13}
-    "birth_date": /wp/info/birth_date
-    "birth_place": /wp/info/birth_place
-    "death_date": /wp/info/death_date
-    "death_place": /wp/info/death_place
-    "height": /wp/info/height
-    "weight": /wp/info/weight
-    "currentteam": /wp/info/currentteam
-    "discipline": /wp/info/discipline
-    "role": /wp/info/role
-    "ridertype": /wp/info/ridertype
-
-    "amateuryears": {+/wp/info/years group: /wp/info/amateur}
-    "amateurteam": {+/wp/info/team group: /wp/info/amateur}
-
-    "proyears": {+/wp/info/years group: /wp/info/pro}
-    "proteam": {+/wp/info/team group: /wp/info/pro}
-
-    "manageyears": {+/wp/info/years group: /wp/info/manager}
-    "manageteam": {+/wp/info/team group: /wp/info/manager}
-
-    "majorwins": /wp/info/majorwins
-    "medaltemplates": /wp/info/medaltemplates
-    "show-medals": /wp/info/show-medals
-    "updated": /wp/info/updated
-  }
-}
-
 "Infoboks NFL-spiller": {
   type: "infobox"
   class: /wp/infoboks/nfl-spiller
@@ -1182,36 +1143,6 @@
     "medaljeart": /wp/info/medaljeart
     "webside": /wp/info/webside
     "signatur": /wp/info/signatur
-  }
-}
-
-"Infobox swimmer": {
-  type: "infobox"
-  class: /wp/infobox/swimmer
-  fields: {
-    "name": {+/wp/info/name alias: 12}
-    "image": {+/wp/info/image media: true}
-    "image_size": /wp/info/image_size
-    "alt": /wp/info/alt
-    "caption": /wp/info/caption
-    "fullname": {/wp/info/full_name alias: 12}
-    "nicknames": {+/wp/info/nicknames alias: 13}
-    "nationality": /wp/info/nationality
-    "national_team": /wp/info/national_team
-    "birth_name": /wp/info/birth_name
-    "birth_date": /wp/info/birth_date
-    "birth_place": /wp/info/birth_place
-    "death_date": /wp/info/death_date
-    "death_place": /wp/info/death_place
-    "height": /wp/info/height
-    "weight": /wp/info/weight
-    "strokes": /wp/info/strokes
-    "classification": /wp/info/classification
-    "club": /wp/info/club
-    "collegeteam": /wp/info/collegeteam
-    "coach": /wp/info/coach
-    "medaltemplates": /wp/info/medaltemplates
-    "show-medals": /wp/info/show-medals
   }
 }
 
@@ -1645,39 +1576,6 @@
     "imdb": /wp/info/imdb
     "iafd": /wp/info/iafd
     "afdb": /wp/info/afdb
-  }
-}
-
-"Infoboks mma-udøver": {
-  type: "infobox"
-  class: /wp/infoboks/mma-udoever
-  fields: {
-    "mma-udøvernavn": {+/wp/info/name alias: 12}
-    "billede": {+/wp/info/image media: true}
-    "billede_størrelse": /wp/info/billede_stoerrelse
-    "billedtekst": /wp/info/caption
-    "fuldnavn": {+/wp/info/fullname alias: 12}
-    "fighternavn": {+/wp/info/fightername alias: 13}
-    "land": /wp/info/land
-    "fødselsdato": /wp/info/foedselsdato
-    "fødeby": /wp/info/foedeby
-    "død": /wp/info/doed
-    "dødsby": /wp/info/doedsby
-    "vægtklasse": /wp/info/vaegtklasse
-    "højde": /wp/info/hoejde
-    "teknik": /wp/info/teknik
-    "team": /wp/info/team
-    "aktive år": /wp/info/aktive_aar
-    "kampe": /wp/info/kampe
-    "vundne": /wp/info/vundne
-    "vundne på KO": /wp/info/vundne_paa_ko
-    "vundne på submission": /wp/info/vundne_paa_submission
-    "vundne på point": /wp/info/vundne_paa_point
-    "uafgjorte": /wp/info/uafgjorte
-    "tabte": /wp/info/tabte
-    "tabte på KO": /wp/info/tabte_paa_ko
-    "tabte på submission": /wp/info/tabte_paa_submission
-    "tabte på point": /wp/info/tabte_paa_point
   }
 }
 

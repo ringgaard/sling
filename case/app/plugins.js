@@ -155,6 +155,16 @@ var plugins = [
   ],
 },
 
+// Famous persons from famousbirthdays.com.
+{
+  name: "fambdays",
+  module: "fambdays.js",
+  actions: [PASTEURL, SEARCHURL],
+  patterns: [
+    /^https?\:\/\/www\.famousbirthdays\.com\/people\//,
+  ],
+},
+
 // Se & Hør profiles from hjemmestrik.dk.
 {
   name: "hjemmestrik",

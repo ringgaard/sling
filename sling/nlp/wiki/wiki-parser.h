@@ -15,6 +15,7 @@
 #ifndef SLING_NLP_WIKI_WIKI_PARSER_H_
 #define SLING_NLP_WIKI_WIKI_PARSER_H_
 
+#include <ostream>
 #include <string>
 #include <vector>
 
@@ -108,7 +109,7 @@ class WikiParser {
   void Parse();
 
   // Print AST node and its children.
-  void PrintAST(int index, int indent);
+  void PrintAST(std::ostream &out, int index, int indent);
 
   // Return nodes.
   const std::vector<Node> &nodes() const { return nodes_; }

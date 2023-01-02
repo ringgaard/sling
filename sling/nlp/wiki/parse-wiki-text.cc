@@ -147,7 +147,7 @@ int main(int argc, char *argv[]) {
     }
   }
   std::cout << "<h1>AST</h1>\n<pre>\n";
-  parser.PrintAST(0, 0);
+  parser.PrintAST(std::cout, 0, 0);
   std::cout << "</pre>\n";
   std::cout << "</body></html>\n";
 

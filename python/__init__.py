@@ -23,6 +23,7 @@ Date = api.Date
 WikiConverter = api.WikiConverter
 FactExtractor = api.FactExtractor
 PlausibilityModel = api.PlausibilityModel
+Wikipedia = api.Wikipedia
 WebArchive = api.WebArchive
 WebsiteAnalysis = api.WebsiteAnalysis
 

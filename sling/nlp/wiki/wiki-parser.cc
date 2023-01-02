@@ -907,41 +907,41 @@ bool WikiParser::ParseAttributes(const char *delimiters) {
   return true;
 }
 
-void WikiParser::PrintAST(int index, int indent) {
-  std::cout << StringPrintf("%05d ", index);
-  for (int i = 0; i < indent; ++i) std::cout << "  ";
+void WikiParser::PrintAST(std::ostream &out, int index, int indent) {
+  out << StringPrintf("%05d ", index);
+  for (int i = 0; i < indent; ++i) out << "  ";
   Node &node = nodes_[index];
-  std::cout << node_names[node.type];
+  out << node_names[node.type];
   if (node.param != 0) {
-    std::cout << "(" << node.param << ")";
+    out << "(" << node.param << ")";
   }
   if (node.named()) {
-    std::cout << "[" << node.name() << "]";
+    out << "[" << node.name() << "]";
   }
   if (node.begin != nullptr && node.end != nullptr) {
-    std::cout << ": ";
+    out << ": ";
     if (node.end - node.begin > 4096) {
-      std::cout << "<<<" << (node.end - node.begin) << " bytes>>>";
+      out << "<<<" << (node.end - node.begin) << " bytes>>>";
     } else {
       for (const char *p = node.begin; p < node.end; ++p) {
         if (*p == '\n') {
-          std::cout << "⏎";
+          out << "⏎";
         } else if (*p == '<') {
-          std::cout << "&lt;";
+          out << "&lt;";
         } else if (*p == '>') {
-          std::cout << "&gt;";
+          out << "&gt;";
         } else if (*p == '&') {
-          std::cout << "&amp;";
+          out << "&amp;";
         } else {
-          std::cout << *p;
+          out << *p;
         }
       }
     }
   }
-  std::cout << "\n";
+  out << "\n";
   int child = node.first_child;
   while (child != -1) {
-    PrintAST(child, indent + 1);
+    PrintAST(out, child, indent + 1);
     child = nodes_[child].next_sibling;
   }
 }

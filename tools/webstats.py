@@ -103,6 +103,7 @@ pages = [
   ("Home image",           re.compile(r"^\/home\/image\/")),
   ("Case home",            re.compile(r"^\/c\/$")),
   ("Case open",            re.compile(r"^\/c\/\d+")),
+  ("Birthday page",        re.compile(r"^\/birthdays")),
 
   ("media file",           re.compile(r"^\/media\/.+")),
   ("thumbnail",            re.compile(r"^\/thumb\/.+")),

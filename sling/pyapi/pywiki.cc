@@ -12,12 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <sstream>
+
 #include "sling/pyapi/pywiki.h"
 
 #include "sling/frame/object.h"
 #include "sling/frame/reader.h"
 #include "sling/frame/serialization.h"
 #include "sling/frame/store.h"
+#include "sling/nlp/document/document-tokenizer.h"
+#include "sling/nlp/wiki/wiki-annotator.h"
+#include "sling/nlp/wiki/wiki-parser.h"
+#include "sling/nlp/wiki/wikipedia-map.h"
 #include "sling/pyapi/pyarray.h"
 #include "sling/pyapi/pyframe.h"
 #include "sling/stream/memory.h"
@@ -33,6 +39,10 @@ PyTypeObject PyTaxonomy::type;
 PyMethodTable PyTaxonomy::methods;
 PyTypeObject PyPlausibility::type;
 PyMethodTable PyPlausibility::methods;
+PyTypeObject PyWikipedia::type;
+PyMethodTable PyWikipedia::methods;
+PyTypeObject PyWikipediaPage::type;
+PyMethodTable PyWikipediaPage::methods;
 
 void PyWikiConverter::Define(PyObject *module) {
   InitType(&type, "sling.WikiConverter", sizeof(PyWikiConverter), true);
@@ -372,6 +382,212 @@ PyObject *PyPlausibility::Score(PyObject *args) {
   float score = model->Score(premise, hypothesis);
 
   return PyFloat_FromDouble(score);
+}
+
+class WikipediaExtractor : public nlp::WikiLinkResolver {
+ public:
+  WikipediaExtractor(Store *store, const string &lang):
+      store_(store), lang_(lang) {
+    // Get language settings.
+    Frame langinfo(store, "/lang/" + lang);
+    if (langinfo.valid()) {
+      category_prefix_ = langinfo.GetString("/lang/wikilang/wiki_category");
+      template_prefix_ = langinfo.GetString("/lang/wikilang/wiki_template");
+      image_prefix_ = langinfo.GetString("/lang/wikilang/wiki_image");
+    }
+
+    // Load Wikipedia mappings.
+    if (!lang_.empty()) {
+      string dir = "data/e/wiki/" + lang_;
+      if (File::Exists(dir + "/redirects.sling")) {
+        wikimap_.LoadRedirects(dir + "/redirects.sling");
+      }
+      if (File::Exists(dir + "/mapping.sling")) {
+        wikimap_.LoadMapping(dir + "/mapping.sling");
+      }
+    }
+    wikimap_.Freeze();
+
+    // Initialize templates.
+    Frame template_config(store, "/wp/templates/" + lang_);
+    if (template_config.valid()) {
+      templates_.Init(this, template_config);
+    }
+  }
+
+  // Wikipedia link resolver interface.
+  Text ResolveLink(Text link) override {
+    if (link.find('#') != -1) return Text();
+    return wikimap_.LookupLink(lang_, link, nlp::WikipediaMap::ARTICLE);
+  }
+
+  Text ResolveTemplate(Text link) override {
+    nlp::WikipediaMap::PageInfo info;
+    if (!wikimap_.GetPageInfo(lang_, template_prefix_, link, &info)) {
+      return Text();
+    }
+    if (info.type != nlp::WikipediaMap::TEMPLATE &&
+        info.type != nlp::WikipediaMap::INFOBOX) {
+      return Text();
+    }
+    return info.qid;
+  }
+
+  Text ResolveCategory(Text link) override {
+    return wikimap_.LookupLink(lang_, category_prefix_, link,
+                               nlp::WikipediaMap::CATEGORY);
+  }
+
+  Text ResolveMedia(Text link) override {
+    return wikimap_.ResolveRedirect(lang_, image_prefix_, link);
+  }
+
+  // Tokenize document.
+  void Tokenize(nlp::Document *document) const {
+    tokenizer_.Tokenize(document);
+  }
+
+ private:
+  // Global store for Wikipedia extractor.
+  Store *store_;
+
+  // Wikipedia language code.
+  string lang_;
+
+  // Language settings.
+  string category_prefix_;
+  string template_prefix_;
+  string image_prefix_;
+
+  // Mapping from Wikipedia links to QIDs.
+  nlp::WikipediaMap wikimap_;
+
+  // Template definitions.
+  nlp::WikiTemplateRepository templates_;
+
+  // Document tokenizer.
+  nlp::DocumentTokenizer tokenizer_;
+};
+
+class WikipediaPage {
+ public:
+  WikipediaPage(const char *wikitext)
+      : wikitext_(wikitext), ast_(wikitext_.c_str()) {
+    ast_.Parse();
+  }
+
+  nlp::WikiParser &ast() { return ast_; }
+
+ private:
+  // Wikipedia markup for Wikipedia page.
+  string wikitext_;
+
+  // Parsed Wikipedia page with AST.
+  nlp::WikiParser ast_;
+};
+
+void PyWikipedia::Define(PyObject *module) {
+  InitType(&type, "sling.Wikipedia", sizeof(PyWikipedia), true);
+  type.tp_init = method_cast<initproc>(&PyWikipedia::Init);
+  type.tp_dealloc = method_cast<destructor>(&PyWikipedia::Dealloc);
+
+  methods.AddO("parse", &PyWikipedia::Parse);
+  type.tp_methods = methods.table();
+
+  RegisterType(&type, module, "Wikipedia");
+}
+
+int PyWikipedia::Init(PyObject *args, PyObject *kwds) {
+  // Get store argument.
+  pystore = nullptr;
+  wikiex = nullptr;
+  const char *language = "en";
+  if (!PyArg_ParseTuple(args, "O|s", &pystore, &language)) return -1;
+  if (!PyStore::TypeCheck(pystore)) return -1;
+
+  // Initialize converter.
+  Py_INCREF(pystore);
+  wikiex = new WikipediaExtractor(pystore->store, language);
+
+  return 0;
+}
+
+void PyWikipedia::Dealloc() {
+  delete wikiex;
+  if (pystore) Py_DECREF(pystore);
+  Free();
+}
+
+PyObject *PyWikipedia::Parse(PyObject *wikitext) {
+  // Get wikitext and make a copy for the Wikipedia parser.
+  Text text = GetText(wikitext);
+  if (text.data() == nullptr) return nullptr;
+
+  // Parse wikitext.
+  WikipediaPage *page = new WikipediaPage(text.data());
+
+  // Return wikipedia page object.
+  PyWikipediaPage *wp = PyObject_New(PyWikipediaPage, &PyWikipediaPage::type);
+  wp->Init(this, page);
+  return wp->AsObject();
+}
+
+void PyWikipediaPage::Define(PyObject *module) {
+  InitType(&type, "sling.WikipediaPage", sizeof(PyWikipediaPage), false);
+  type.tp_dealloc = method_cast<destructor>(&PyWikipediaPage::Dealloc);
+
+  methods.Add("annotate", &PyWikipediaPage::Annotate);
+  methods.Add("ast", &PyWikipediaPage::AST);
+  type.tp_methods = methods.table();
+
+  RegisterType(&type, module, "WikipediaPage");
+}
+
+void PyWikipediaPage::Init(PyWikipedia *wikipedia, WikipediaPage *wikipage) {
+  // Keep reference to wikipedia wrapper to keep extractor alive.
+  Py_INCREF(wikipedia);
+  pywikipedia = wikipedia;
+  page = wikipage;
+}
+
+void PyWikipediaPage::Dealloc() {
+  delete page;
+  if (pywikipedia) Py_DECREF(pywikipedia);
+  Free();
+}
+
+PyObject *PyWikipediaPage::Annotate(PyObject *args, PyObject *kwds) {
+  // Get store for document.
+  PyStore *pystore = nullptr;
+  bool skip_tables = false;
+  static const char *kwlist[] = {"store", "skip_tables", nullptr};
+  if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|b",
+      const_cast<char **>(kwlist),
+      &pystore, &skip_tables)) return nullptr;
+  if (!PyStore::TypeCheck(pystore)) return nullptr;
+  if (!pystore->Writable()) return nullptr;
+  Store *store = pystore->store;
+
+  // Extract annotations.
+  nlp::WikiExtractor extractor(page->ast());
+  nlp::WikiAnnotator annotator(store, pywikipedia->wikiex);
+  extractor.set_skip_tables(skip_tables);
+  extractor.Extract(&annotator);
+
+  // Add annotations to document.
+  nlp::Document document(store);
+  document.SetText(annotator.text());
+  pywikipedia->wikiex->Tokenize(&document);
+  annotator.AddToDocument(&document);
+  document.Update();
+
+  return pystore->PyValue(document.top().handle());
+}
+
+PyObject *PyWikipediaPage::AST() {
+  std::stringstream ss;
+  page->ast().PrintAST(ss, 0, 0);
+  return AllocateString(ss.str());
 }
 
 }  // namespace sling
