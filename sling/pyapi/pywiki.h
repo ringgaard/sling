@@ -134,6 +134,9 @@ struct PyWikipedia : public PyBase {
   int Init(PyObject *args, PyObject *kwds);
   void Dealloc();
 
+  // Lookup QID for article.
+  PyObject *Lookup(PyObject *title);
+
   // Convert wikitext to parsed Wikipedia page.
   PyObject *Parse(PyObject *wikitext);
 

@@ -62,7 +62,6 @@ app.page("/photosearch",
       <md-icon-button id="selectall" icon="select_all"></md-icon-button>
       <md-icon-button id="deselect" icon="deselect"></md-icon-button>
       <md-icon-button id="copy" icon="content_copy"></md-icon-button>
-      </md-icon-button>
     </md-toolbar>
 
     <md-content>
@@ -82,7 +81,7 @@ app.page("/photosearch",
 app.js("/photosearch/app.js",
 """
 import {Component} from "/common/lib/component.js";
-import {MdApp, MdCard, inform} from "/common/lib/material.js";
+import {MdApp, MdCard, StdDialog, inform} from "/common/lib/material.js";
 import {reddit_thumbnail} from "/common/lib/reddit.js";
 
 let nsfw = false;
@@ -137,6 +136,7 @@ class PhotoSearchApp extends MdApp {
         urls.push(url);
       }
     }
+    if (urls.length == 0) return;
 
     let r = await fetch("/photosearch/gallery", {
       method: "POST",
@@ -144,8 +144,19 @@ class PhotoSearchApp extends MdApp {
     });
     this.style.cursor = "";
     let gallery = await r.text();
-    navigator.clipboard.writeText(gallery);
-    inform("Gallery URL coped to clipboard");
+    if (!gallery) return;
+
+    while (true) {
+      try {
+        if (!navigator.clipboard) throw "Access to clipboard denied";
+        navigator.clipboard.writeText(gallery);
+        inform("Gallery URL coped to clipboard");
+        break;
+      } catch (e) {
+        let again = await StdDialog.ask("Paste error", `${e}. Try again?`);
+        if (!again) break;
+      }
+    }
   }
 
   static stylesheet() {

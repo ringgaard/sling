@@ -491,6 +491,7 @@ void PyWikipedia::Define(PyObject *module) {
   type.tp_init = method_cast<initproc>(&PyWikipedia::Init);
   type.tp_dealloc = method_cast<destructor>(&PyWikipedia::Dealloc);
 
+  methods.AddO("lookup", &PyWikipedia::Lookup);
   methods.AddO("parse", &PyWikipedia::Parse);
   type.tp_methods = methods.table();
 
@@ -516,6 +517,12 @@ void PyWikipedia::Dealloc() {
   delete wikiex;
   if (pystore) Py_DECREF(pystore);
   Free();
+}
+
+PyObject *PyWikipedia::Lookup(PyObject *title) {
+  Text link = GetText(title);
+  if (link.data() == nullptr) return nullptr;
+  return AllocateString(wikiex->ResolveLink(link));
 }
 
 PyObject *PyWikipedia::Parse(PyObject *wikitext) {
