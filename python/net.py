@@ -16,6 +16,7 @@
 
 import json
 import os
+import os.path
 import signal
 import time
 import traceback
@@ -23,6 +24,13 @@ import urllib.parse
 import sling
 import sling.log as log
 import sling.pysling as api
+
+# Convert timestamp to HTTP time.
+def http_time(ts):
+  return time.strftime('%a, %d %b %Y %H:%M:%S GMT', time.gmtime(ts))
+
+# Timestamp used for static content.
+static_timestamp = http_time(time.time())
 
 # Map of HTTP response formatters for each handler return type.
 http_reponse_formatters = {}
@@ -33,9 +41,6 @@ def response(response_type):
     http_reponse_formatters[response_type] = func
     return func
   return inner
-
-# Timestamp used for static content.
-static_timestamp = time.strftime('%a, %d %b %Y %H:%M:%S GMT', time.gmtime())
 
 class HTTPRequest:
   def __init__(self, method, path, query, headers, body):
@@ -193,6 +198,26 @@ def file_page(value, request, response):
   response.ct = value.ct
   response.file = value.filename
 
+class CachedFile:
+ def __init__(self, filename, ct=None):
+   self.filename = filename
+   self.ct = ct
+   self.content = None
+   self.mtime = 0
+
+@response(CachedFile)
+def static_page(value, request, response):
+  mtime = os.path.getmtime(value.filename)
+  if mtime > value.mtime: value.content = None
+  if value.content is None:
+    with open(value.filename, "rb") as f:
+      value.content = f.read()
+    value.mtime = mtime
+
+  response["Last-Modified"] = http_time(value.mtime)
+  response.body = value.content
+  response.ct = value.ct
+
 class HTTPRedirect:
  def __init__(self, location, status=307):
    self.location = location
@@ -243,6 +268,12 @@ class HTTPServer:
     def inner(func):
       self.httpd.dynamic(path, HTTPHandler(func, method, methods))
     return inner
+
+  def file(self, path, filename, ct):
+    f = CachedFile(filename, ct)
+    def inner(request):
+      return f
+    self.dynamic(path, inner)
 
   def redirect(self, path, location, status=307):
     redir = HTTPRedirect(location, status)

@@ -78,42 +78,8 @@ app = sling.net.HTTPServer(flags.arg.port)
 app.static("/common", "app", internal=True)
 app.redirect("/", "/witex/")
 
-# Main page.
-app.page("/witex",
-"""
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name=viewport content="width=device-width, initial-scale=1">
-  <title>Wikipedia extractor</title>
-  <link rel="icon" href="/common/image/appicon.ico" type="image/x-icon" />
-  <script type="module" src="/witex/witex.js"></script>
-</head>
-<body style="display: none">
-  <witex-app id="app">
-    <md-toolbar>
-      <md-toolbar-logo></md-toolbar-logo>
-      <div id="title">Wikipedia extractor</div>
-      <md-input
-        id="wikiurl"
-        type="search"
-        placeholder="Enter or paste URL for Wikipedia page...">
-      </md-input>
-    </md-toolbar>
-
-    <md-content>
-      <wiki-ast id="ast"></wiki-ast>
-    </md-content>
-  </my-app>
-</body>
-</html>
-""")
-
-@app.route("/witex/witex.js")
-def witex_js(request):
-  with open("python/wiki/witex.js", "rb") as f: data = f.read()
-  return sling.net.HTTPStatic("text/javascript", data)
+app.file("/witex", "python/wiki/witex.html", "text/html")
+app.file("/witex/witex.js", "python/wiki/witex.js", "text/javascript")
 
 wikipat = re.compile(r'https\:\/\/([a-z]+)\.wikipedia\.org\/wiki\/(.*)')
 
@@ -136,10 +102,37 @@ def handle_extract(request):
   # Parse wikitext.
   page = wikiex.parse(wikitext)
 
+  # Extract tables.
+  store = sling.Store(wikiex.store)
+  tables = []
+  n_title = store["title"]
+  n_header = store["header"]
+  n_row = store["row"]
+  for table in page.tables(store):
+    headers = []
+    rows = []
+    for name, value in table:
+      if name == n_row:
+        r = []
+        for cell in value:
+          r.append(sling.api.tolex(cell))
+        rows.append(r)
+      elif name == n_header:
+        h = []
+        for header in value:
+          h.append(str(header))
+        headers.append(h)
+    tables.append({
+      "title": table[n_title],
+      "headers": headers,
+      "rows": rows,
+    })
+
   return {
     "lang": lang,
     "title": title,
     "qid": wikiex.lookup(title),
+    "tables": tables,
     "ast": page.ast(),
   }
 

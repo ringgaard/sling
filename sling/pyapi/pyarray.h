@@ -56,6 +56,7 @@ struct PyArray : public PyBase, public Root {
 
   // Initialize array wrapper. Takes ownership of the slice.
   void Init(PyStore *pystore, Handle handle, Slice *slice = nullptr);
+  void Init(PyStore *pystore, const Handles &data);
 
   // Deallocate array wrapper.
   void Dealloc();

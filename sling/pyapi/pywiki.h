@@ -163,6 +163,9 @@ struct PyWikipediaPage : public PyBase {
   // Return AST as string.
   PyObject *AST();
 
+  // Extract tables from Wikipedia page.
+  PyObject *Tables(PyObject *args);
+
   // Wikipedia
   PyWikipedia *pywikipedia;
 

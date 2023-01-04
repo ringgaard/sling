@@ -18,7 +18,8 @@ class WitexApp extends MdApp {
     let r = await fetch(`/witex/extract?url=${url}`);
     let page = await r.json();
     this.style.cursor = "";
-    this.find("#ast").update(page);
+    this.find("#tables").update(page);
+    //this.find("#ast").update(page);
   }
 
   static stylesheet() {
@@ -63,6 +64,37 @@ class WikiAst extends MdCard {
 }
 
 Component.register(WikiAst);
+
+class WikiTables extends Component {
+  render() {
+    let page = this.state;
+    if (!page) return;
+    let cards = new Array();
+    for (let table of page.tables) {
+      let card = new WikiTable({page, table});
+      cards.push(card);
+    }
+    return cards;
+  }
+}
+
+Component.register(WikiTables);
+
+class WikiTable extends MdCard {
+  render() {
+    if (!this.state) return;
+    let table = this.state.table;
+    let labels = table.headers[0] || [];
+    return `
+      <md-card-toolbar>
+        <div>Table: ${table.title}</div>
+      </md-card-toolbar>
+      <div>${labels.join(" | ")} (${table.rows.length} rows)</div>
+    `;
+  }
+}
+
+Component.register(WikiTable);
 
 document.body.style = null;
 

@@ -61,6 +61,13 @@ void PyArray::Init(PyStore *pystore, Handle handle, Slice *slice) {
   Py_INCREF(pystore);
 }
 
+void PyArray::Init(PyStore *pystore, const Handles &data) {
+  const Handle *begin = data.data();
+  const Handle *end = begin + data.size();
+  Handle handle = pystore->store->AllocateArray(begin, end);
+  Init(pystore, handle);
+}
+
 void PyArray::Dealloc() {
   // Unlock tracking of handle in store.
   Unlink();

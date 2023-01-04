@@ -413,7 +413,12 @@ class WikipediaExtractor : public nlp::WikiLinkResolver {
     if (template_config.valid()) {
       templates_.Init(this, template_config);
     }
+
+    // Initialize document schema.
+    docnames_ = new nlp::DocumentNames(store);
   }
+
+  ~WikipediaExtractor() { if (docnames_) docnames_->Release(); }
 
   // Wikipedia link resolver interface.
   Text ResolveLink(Text link) override {
@@ -447,6 +452,8 @@ class WikipediaExtractor : public nlp::WikiLinkResolver {
     tokenizer_.Tokenize(document);
   }
 
+  nlp::DocumentNames *docnames() { return docnames_; }
+
  private:
   // Global store for Wikipedia extractor.
   Store *store_;
@@ -465,6 +472,9 @@ class WikipediaExtractor : public nlp::WikiLinkResolver {
   // Template definitions.
   nlp::WikiTemplateRepository templates_;
 
+  // Document schema.
+  nlp::DocumentNames *docnames_ = nullptr;
+
   // Document tokenizer.
   nlp::DocumentTokenizer tokenizer_;
 };
@@ -477,6 +487,74 @@ class WikipediaPage {
   }
 
   nlp::WikiParser &ast() { return ast_; }
+
+  // Extract tables from page.
+  void ExtractTables(Store *store,
+                     WikipediaExtractor *wikiex,
+                     Handles *tables) {
+    // Get symbols.
+    Handle n_title = store->Lookup("title");
+    Handle n_header = store->Lookup("header");
+    Handle n_row = store->Lookup("row");
+
+    // Run through all top-level nodes.
+    nlp::WikiExtractor extractor(ast_);
+    int n = ast_.node(0).first_child;
+    string heading;
+    while (n != -1) {
+      auto &node = ast_.node(n);
+      if (node.type == nlp::WikiParser::HEADING) {
+        nlp::WikiPlainTextSink sink;
+        extractor.Enter(&sink);
+        extractor.ExtractNode(node);
+        extractor.Leave(&sink);
+        heading = sink.text();
+      } else if (node.type == nlp::WikiParser::TABLE) {
+        Builder table(store);
+        table.Add(n_title, heading);
+        int r = node.first_child;
+        while (r != -1) {
+          auto &row = ast_.node(r);
+          if (row.type == nlp::WikiParser::ROW) {
+            bool has_headers = false;
+            Handles cells(store);
+            int c = row.first_child;
+            while (c != -1) {
+              auto &cell = ast_.node(c);
+              if (cell.type == nlp::WikiParser::CELL) {
+                // Extract and annotate table cell.
+                nlp::WikiAnnotator annotator(store, wikiex);
+                extractor.Enter(&annotator);
+                extractor.ExtractNode(cell);
+                extractor.Leave(&annotator);
+
+                // Convert cell to document.
+                nlp::Document document(store, wikiex->docnames());
+                document.SetText(annotator.text());
+                wikiex->Tokenize(&document);
+                annotator.AddToDocument(&document);
+                document.Update();
+                cells.push_back(document.top().handle());
+              } else if (cell.type == nlp::WikiParser::HEADER) {
+                // Extract header cell as plain text.
+                nlp::WikiPlainTextSink sink;
+                extractor.Enter(&sink);
+                extractor.ExtractNode(cell);
+                extractor.Leave(&sink);
+                cells.push_back(store->AllocateString(sink.text()));
+                has_headers = true;
+              }
+              c = cell.next_sibling;
+            }
+            table.Add(has_headers ? n_header : n_row, cells);
+          }
+          r = row.next_sibling;
+        }
+        tables->push_back(table.Create().handle());
+      }
+      n = node.next_sibling;
+    }
+  }
 
  private:
   // Wikipedia markup for Wikipedia page.
@@ -544,6 +622,7 @@ void PyWikipediaPage::Define(PyObject *module) {
   type.tp_dealloc = method_cast<destructor>(&PyWikipediaPage::Dealloc);
 
   methods.Add("annotate", &PyWikipediaPage::Annotate);
+  methods.Add("tables", &PyWikipediaPage::Tables);
   methods.Add("ast", &PyWikipediaPage::AST);
   type.tp_methods = methods.table();
 
@@ -595,6 +674,19 @@ PyObject *PyWikipediaPage::AST() {
   std::stringstream ss;
   page->ast().PrintAST(ss, 0, 0);
   return AllocateString(ss.str());
+}
+
+PyObject *PyWikipediaPage::Tables(PyObject *args) {
+  PyStore *pystore = nullptr;
+  if (!PyArg_ParseTuple(args, "O", &pystore)) return nullptr;
+  if (!PyStore::TypeCheck(pystore)) return nullptr;
+  Store *store = pystore->store;
+  Handles tables(store);
+  page->ExtractTables(store, pywikipedia->wikiex, &tables);
+
+  PyArray *array = PyObject_New(PyArray, &PyArray::type);
+  array->Init(pystore, tables);
+  return array->AsObject();
 }
 
 }  // namespace sling

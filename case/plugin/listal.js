@@ -64,6 +64,8 @@ const tagsdir = {
   "Fitness Celebrity": stmt(n_occupation, "Q58891836"),
   "Fitness Model": stmt(n_occupation, "Q58891836"),
   "Golfer": stmt(n_occupation, "Q11303721"),
+  "Gravure": stmt(n_occupation, "Q1328668"),
+  "Gravure Idol": stmt(n_occupation, "Q1328668"),
   "Influencer": stmt(n_occupation, "Q2906862"),
   "Instagram Model": stmt(n_occupation, "Q110990999"),
   "Instagram Star": stmt(n_occupation, "Q110990999"),

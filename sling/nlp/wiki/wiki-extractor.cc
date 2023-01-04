@@ -346,7 +346,7 @@ void WikiPlainTextSink::Content(const char *begin, const char *end) {
       space_break_ = true;
     } else {
       if (space_break_) {
-        text_.push_back(' ');
+        if (!text_.empty()) text_.push_back(' ');
         space_break_ = false;
       }
       text_.push_back(*p);

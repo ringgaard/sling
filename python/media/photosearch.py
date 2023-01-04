@@ -149,7 +149,7 @@ class PhotoSearchApp extends MdApp {
     while (true) {
       try {
         if (!navigator.clipboard) throw "Access to clipboard denied";
-        navigator.clipboard.writeText(gallery);
+        await navigator.clipboard.writeText(gallery);
         inform("Gallery URL coped to clipboard");
         break;
       } catch (e) {

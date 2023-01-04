@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name=viewport content="width=device-width, initial-scale=1">
+  <title>Wikipedia extractor</title>
+  <link rel="icon" href="/common/image/appicon.ico" type="image/x-icon" />
+  <script type="module" src="/witex/witex.js"></script>
+</head>
+<body style="display: none">
+  <witex-app id="app">
+    <md-toolbar>
+      <md-toolbar-logo></md-toolbar-logo>
+      <div id="title">Wikipedia extractor</div>
+      <md-input
+        id="wikiurl"
+        type="search"
+        placeholder="Enter or paste URL for Wikipedia page...">
+      </md-input>
+    </md-toolbar>
+
+    <md-content>
+      <wiki-tables id="tables"></wiki-tables>
+      <wiki-ast id="ast"></wiki-ast>
+    </md-content>
+  </my-app>
+</body>
+</html>
+
