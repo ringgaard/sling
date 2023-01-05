@@ -115,12 +115,18 @@ def handle_extract(request):
       if name == n_row:
         r = []
         for cell in value:
-          r.append(sling.api.tolex(cell))
+          if cell is None:
+            r.append(None)
+          else:
+            r.append(sling.api.tolex(cell))
         rows.append(r)
       elif name == n_header:
         h = []
         for header in value:
-          h.append(str(header))
+          if type(header) is sling.Frame:
+            h.append(sling.api.tolex(header))
+          else:
+            h.append(str(header))
         headers.append(h)
     tables.append({
       "title": table[n_title],

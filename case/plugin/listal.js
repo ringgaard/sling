@@ -58,6 +58,7 @@ const tagsdir = {
   "Erotic Model": stmt(n_occupation, "Q3286043"),
   "Erotic Model": stmt(n_occupation, "Q3286043"),
   "Fashion Model": stmt(n_occupation, "Q3357567"),
+  "Fashion Designer": stmt(n_occupation, "Q3501317"),
   "Film Actress": stmt(n_occupation, "Q10800557"),
   "Filmmaker": stmt(n_occupation, "Q1414443"),
   "Fitness Athlete": stmt(n_occupation, "Q58891836"),

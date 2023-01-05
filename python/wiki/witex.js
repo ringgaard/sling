@@ -19,7 +19,7 @@ class WitexApp extends MdApp {
     let page = await r.json();
     this.style.cursor = "";
     this.find("#tables").update(page);
-    //this.find("#ast").update(page);
+    this.find("#ast").update(page);
   }
 
   static stylesheet() {
@@ -37,34 +37,6 @@ class WitexApp extends MdApp {
 
 Component.register(WitexApp);
 
-class WikiAst extends MdCard {
-  visible() { return this.state; }
-
-  render() {
-    let page = this.state;
-    if (!page) return;
-    return `
-      <md-card-toolbar>
-        <div>AST</div>
-      </md-card-toolbar>
-      <pre>${page.ast}</pre>
-    `;
-  }
-
-  static stylesheet() {
-    return `
-      $ {
-        overflow-x: auto;
-      }
-      $ pre {
-        font-size: 12px;
-      }
-    `;
-  }
-}
-
-Component.register(WikiAst);
-
 class WikiTables extends Component {
   render() {
     let page = this.state;
@@ -81,20 +53,110 @@ class WikiTables extends Component {
 Component.register(WikiTables);
 
 class WikiTable extends MdCard {
+  onrendered() {
+    this.attach(this.onexpand, "click", "#expand");
+  }
+
+  onexpand(e) {
+    this.expanded = !this.expanded;
+    this.update(this.state);
+  }
+
   render() {
     if (!this.state) return;
     let table = this.state.table;
-    let labels = table.headers[0] || [];
+    if (this.expanded) {
+      let h = new Array();
+      h.push(`
+        <md-card-toolbar>
+          <div>Table: ${table.title}</div>
+          <md-spacer></md-spacer>
+          <md-icon id="expand" icon="expand_less">
+        </md-card-toolbar>`);
+      h.push("<div><table>");
+      for (let row of table.headers) {
+        h.push("<tr>");
+        h.push("<th>Skip</th>");
+        for (let cell of row) {
+          h.push(`<th>${cell}</th>`);
+        }
+        h.push("</tr>");
+      }
+      for (let row of table.rows) {
+        h.push("<tr>");
+        h.push('<td><input type="checkbox"></th>');
+        for (let cell of row) {
+          h.push(`<td>${cell || ""}</td>`);
+        }
+        h.push("</tr>");
+      }
+      h.push("</table></div>");
+      return h.join("");
+    } else {
+      let labels = table.headers[0] || [];
+      return `
+        <md-card-toolbar>
+          <div>Table: ${table.title}</div>
+          <md-spacer></md-spacer>
+          <md-icon id="expand" icon="expand_more">
+        </md-card-toolbar>
+        <div>${labels.join(" | ")} (${table.rows.length} rows)</div>`;
+    }
+  }
+
+  static stylesheet() {
     return `
-      <md-card-toolbar>
-        <div>Table: ${table.title}</div>
-      </md-card-toolbar>
-      <div>${labels.join(" | ")} (${table.rows.length} rows)</div>
+      $ table {
+        border-collapse: collapse;
+      }
+      $ td, $ th {
+        border: 1px solid black;
+        padding: 4px;
+      }
     `;
   }
 }
 
 Component.register(WikiTable);
+
+class WikiAst extends MdCard {
+  visible() { return this.state; }
+
+  onrendered() {
+    this.attach(this.onexpand, "click", "#expand");
+  }
+
+  onexpand(e) {
+    this.expanded = !this.expanded;
+    this.update(this.state);
+  }
+
+  render() {
+    let page = this.state;
+    if (!page) return;
+    return `
+      <md-card-toolbar>
+        <div>AST</div>
+        <md-spacer></md-spacer>
+        <md-icon id="expand" icon="expand_${this.expanded ? "less" : "more"}">
+      </md-card-toolbar>
+      <pre>${this.expanded ? page.ast : ""}</pre>
+    `;
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        overflow-x: auto;
+      }
+      $ pre {
+        font-size: 12px;
+      }
+    `;
+  }
+}
+
+Component.register(WikiAst);
 
 document.body.style = null;
 

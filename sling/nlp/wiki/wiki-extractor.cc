@@ -14,6 +14,7 @@
 
 #include "sling/nlp/wiki/wiki-extractor.h"
 
+#include "sling/string/numbers.h"
 #include "sling/string/strcat.h"
 
 namespace sling {
@@ -333,6 +334,14 @@ Text WikiExtractor::GetAttr(const Node &node, Text attrname) {
     child = n.next_sibling;
   }
   return Text();
+}
+
+int WikiExtractor::GetIntAttr(const Node &node, Text attrname, int defval) {
+  Text value = GetAttr(node, attrname);
+  if (value.empty()) return defval;
+  int number;
+  if (safe_strto32(value.data(), value.size(), &number)) return number;
+  return defval;
 }
 
 void WikiExtractor::ResetFont() {

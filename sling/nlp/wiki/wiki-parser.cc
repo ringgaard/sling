@@ -330,7 +330,9 @@ void WikiParser::ParseNewLine() {
 
   // Check for elements that can start line.
   switch (*ptr_) {
-    case '=': ParseHeadingBegin(); return;
+    case '=':
+      ParseHeadingBegin();
+      return;
 
     case '*':
     case '#':

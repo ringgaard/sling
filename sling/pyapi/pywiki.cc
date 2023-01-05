@@ -453,6 +453,7 @@ class WikipediaExtractor : public nlp::WikiLinkResolver {
   }
 
   nlp::DocumentNames *docnames() { return docnames_; }
+  nlp::WikiTemplateRepository *templates() { return &templates_; }
 
  private:
   // Global store for Wikipedia extractor.
@@ -511,45 +512,108 @@ class WikipediaPage {
         heading = sink.text();
       } else if (node.type == nlp::WikiParser::TABLE) {
         Builder table(store);
-        table.Add(n_title, heading);
+        string title = heading;
+        Handles prevrow(store);
+        std::vector<int> repeats;
         int r = node.first_child;
         while (r != -1) {
           auto &row = ast_.node(r);
           if (row.type == nlp::WikiParser::ROW) {
-            bool has_headers = false;
-            Handles cells(store);
-            int c = row.first_child;
-            while (c != -1) {
+            // Skip empty rows.
+            bool empty = true;
+            for (int c = row.first_child; c != -1;) {
               auto &cell = ast_.node(c);
-              if (cell.type == nlp::WikiParser::CELL) {
-                // Extract and annotate table cell.
-                nlp::WikiAnnotator annotator(store, wikiex);
-                extractor.Enter(&annotator);
-                extractor.ExtractNode(cell);
-                extractor.Leave(&annotator);
-
-                // Convert cell to document.
-                nlp::Document document(store, wikiex->docnames());
-                document.SetText(annotator.text());
-                wikiex->Tokenize(&document);
-                annotator.AddToDocument(&document);
-                document.Update();
-                cells.push_back(document.top().handle());
-              } else if (cell.type == nlp::WikiParser::HEADER) {
-                // Extract header cell as plain text.
-                nlp::WikiPlainTextSink sink;
-                extractor.Enter(&sink);
-                extractor.ExtractNode(cell);
-                extractor.Leave(&sink);
-                cells.push_back(store->AllocateString(sink.text()));
-                has_headers = true;
+              if (cell.type == nlp::WikiParser::CELL ||
+                  cell.type == nlp::WikiParser::HEADER) {
+                empty = false;
+                break;
               }
               c = cell.next_sibling;
             }
-            table.Add(has_headers ? n_header : n_row, cells);
+
+            if (!empty) {
+              bool has_headers = false;
+              Handles cells(store);
+              int c = row.first_child;
+              int colno = 0;
+              while (c != -1) {
+                auto &cell = ast_.node(c);
+                if (cell.type == nlp::WikiParser::CELL) {
+                  // Fill in repeated cells.
+                  while (colno < repeats.size() && repeats[colno] > 0) {
+                    if (colno < prevrow.size()) {
+                      cells.push_back(prevrow[colno]);
+                    } else {
+                      cells.push_back(Handle::nil());
+                    }
+                    repeats[colno++]--;
+                  }
+                  int rowspan = extractor.GetIntAttr(cell, "rowspan", 1);
+                  if (rowspan > 1) {
+                    if (repeats.size() <= colno) repeats.resize(colno + 1);
+                    repeats[colno] = rowspan - 1;
+                  }
+
+                  // Extract and annotate table cell.
+                  nlp::WikiAnnotator annotator(store, wikiex);
+                  annotator.set_templates(wikiex->templates());
+                  extractor.Enter(&annotator);
+                  extractor.ExtractNode(cell);
+                  extractor.Leave(&annotator);
+
+                  // Convert cell to document.
+                  nlp::Document document(store, wikiex->docnames());
+                  document.SetText(annotator.text());
+                  wikiex->Tokenize(&document);
+                  annotator.AddToDocument(&document);
+                  document.Update();
+
+                  // Add cell to row.
+                  cells.push_back(document.top().handle());
+                  int colspan = extractor.GetIntAttr(cell, "colspan", 1);
+                  colno += colspan;
+                  while (--colspan > 0) cells.push_back(Handle::nil());
+                } else if (cell.type == nlp::WikiParser::HEADER) {
+                  // Extract header cell as plain text.
+                  nlp::WikiPlainTextSink sink;
+                  extractor.Enter(&sink);
+                  extractor.ExtractNode(cell);
+                  extractor.Leave(&sink);
+                  cells.push_back(store->AllocateString(sink.text()));
+                  has_headers = true;
+                }
+
+                c = cell.next_sibling;
+              }
+
+              // Fill in repeated cells at end of row.
+              while (colno < repeats.size() && repeats[colno] > 0) {
+                if (colno < prevrow.size()) {
+                  cells.push_back(prevrow[colno]);
+                } else {
+                  cells.push_back(Handle::nil());
+                }
+                repeats[colno++]--;
+              }
+
+              // Add row.
+              if (!cells.empty()) {
+                table.Add(has_headers ? n_header : n_row, cells);
+                prevrow.swap(cells);
+              }
+            }
+          } else if (row.type == nlp::WikiParser::CAPTION) {
+            // Extract caption as plain text.
+            nlp::WikiPlainTextSink sink;
+            extractor.Enter(&sink);
+            extractor.ExtractNode(row);
+            extractor.Leave(&sink);
+            title = sink.text();
           }
+
           r = row.next_sibling;
         }
+        table.Add(n_title, title);
         tables->push_back(table.Create().handle());
       }
       n = node.next_sibling;
@@ -657,6 +721,7 @@ PyObject *PyWikipediaPage::Annotate(PyObject *args, PyObject *kwds) {
   // Extract annotations.
   nlp::WikiExtractor extractor(page->ast());
   nlp::WikiAnnotator annotator(store, pywikipedia->wikiex);
+  annotator.set_templates(pywikipedia->wikiex->templates());
   extractor.set_skip_tables(skip_tables);
   extractor.Extract(&annotator);
 

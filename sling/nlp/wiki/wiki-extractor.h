@@ -131,6 +131,7 @@ class WikiExtractor {
 
   // Get attribute value from child nodes.
   Text GetAttr(const Node &node, Text attrname);
+  int GetIntAttr(const Node &node, Text attrname, int defval = 0);
 
   // Reset font back to normal.
   void ResetFont();

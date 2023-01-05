@@ -57,6 +57,7 @@ cc_library(
   hdrs = ["wiki-extractor.h"],
   deps = [
     ":wiki-parser",
+    "//sling/string:numbers",
     "//sling/string:strcat",
   ],
 )

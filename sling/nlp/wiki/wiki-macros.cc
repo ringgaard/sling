@@ -97,7 +97,6 @@ REGISTER_WIKI_MACRO("frac", FracTemplate);
 class TagTemplate : public WikiMacro {
  public:
   void Init(const Frame &config) override {
-    arg_ = config.GetString("arg");
     argnum_ = config.GetInt("argnum", 0);
     argname_ = config.GetString("argname");
     open_ = config.GetString("open");
@@ -125,7 +124,6 @@ class TagTemplate : public WikiMacro {
   }
 
  private:
-  string arg_;
   int argnum_;
   string argname_;
   string open_;

@@ -453,6 +453,7 @@
 "flagu": {type: "flag"}
 "flagteam": {type: "flag"}
 "ushr": {type: "ushr"}
+"nowrap": {type: "tag"}
 
 "Photomontage": {type: "photomontage"}
 
