@@ -106,31 +106,30 @@ def handle_extract(request):
   store = sling.Store(wikiex.store)
   tables = []
   n_title = store["title"]
-  n_header = store["header"]
+  n_columns = store["columns"]
   n_row = store["row"]
   for table in page.tables(store):
-    headers = []
+    columns = {}
+    for doc, col in table[n_columns]:
+      if doc is None: continue;
+      name = sling.api.tolex(doc)
+      if len(name) == 0 or name in columns: continue;
+      columns[name] = col
+
     rows = []
     for name, value in table:
-      if name == n_row:
-        r = []
-        for cell in value:
-          if cell is None:
-            r.append(None)
-          else:
-            r.append(sling.api.tolex(cell))
-        rows.append(r)
-      elif name == n_header:
-        h = []
-        for header in value:
-          if type(header) is sling.Frame:
-            h.append(sling.api.tolex(header))
-          else:
-            h.append(str(header))
-        headers.append(h)
+      if name != n_row: continue
+      r = []
+      for cell in value:
+        if cell is None:
+          r.append(None)
+        else:
+          r.append(sling.api.tolex(cell))
+      rows.append(r)
+
     tables.append({
       "title": table[n_title],
-      "headers": headers,
+      "columns": columns,
       "rows": rows,
     })
 

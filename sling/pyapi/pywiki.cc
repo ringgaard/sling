@@ -495,7 +495,7 @@ class WikipediaPage {
                      Handles *tables) {
     // Get symbols.
     Handle n_title = store->Lookup("title");
-    Handle n_header = store->Lookup("header");
+    Handle n_columns = store->Lookup("columns");
     Handle n_row = store->Lookup("row");
 
     // Run through all top-level nodes.
@@ -512,6 +512,7 @@ class WikipediaPage {
         heading = sink.text();
       } else if (node.type == nlp::WikiParser::TABLE) {
         Builder table(store);
+        Builder colnames(store);
         string title = heading;
         Handles prevrow(store);
         std::vector<int> repeats;
@@ -532,13 +533,14 @@ class WikipediaPage {
             }
 
             if (!empty) {
-              bool has_headers = false;
               Handles cells(store);
               int c = row.first_child;
               int colno = 0;
               while (c != -1) {
                 auto &cell = ast_.node(c);
-                if (cell.type == nlp::WikiParser::CELL) {
+                bool is_cell = cell.type == nlp::WikiParser::CELL;
+                bool is_header = cell.type == nlp::WikiParser::HEADER;
+                if (is_cell || is_header) {
                   // Fill in repeated cells.
                   while (colno < repeats.size() && repeats[colno] > 0) {
                     if (colno < prevrow.size()) {
@@ -569,18 +571,12 @@ class WikipediaPage {
                   document.Update();
 
                   // Add cell to row.
-                  cells.push_back(document.top().handle());
+                  Handle content = document.top().handle();
+                  cells.push_back(content);
+                  if (is_header) colnames.Add(content, colno);
                   int colspan = extractor.GetIntAttr(cell, "colspan", 1);
                   colno += colspan;
                   while (--colspan > 0) cells.push_back(Handle::nil());
-                } else if (cell.type == nlp::WikiParser::HEADER) {
-                  // Extract header cell as plain text.
-                  nlp::WikiPlainTextSink sink;
-                  extractor.Enter(&sink);
-                  extractor.ExtractNode(cell);
-                  extractor.Leave(&sink);
-                  cells.push_back(store->AllocateString(sink.text()));
-                  has_headers = true;
                 }
 
                 c = cell.next_sibling;
@@ -597,10 +593,8 @@ class WikipediaPage {
               }
 
               // Add row.
-              if (!cells.empty()) {
-                table.Add(has_headers ? n_header : n_row, cells);
-                prevrow.swap(cells);
-              }
+              table.Add(n_row, cells);
+              prevrow.swap(cells);
             }
           } else if (row.type == nlp::WikiParser::CAPTION) {
             // Extract caption as plain text.
@@ -614,6 +608,7 @@ class WikipediaPage {
           r = row.next_sibling;
         }
         table.Add(n_title, title);
+        table.Add(n_columns, colnames.Create());
         tables->push_back(table.Create().handle());
       }
       n = node.next_sibling;
