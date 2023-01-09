@@ -53,6 +53,7 @@ const [units, unitname] = indexmaps({
   "USD": "Q4917",
   "EUR": "Q4916",
   "DKK": "Q25417",
+  "yo": "Q24564698",
 });
 
 // Convert geo coordinate from decimal to degrees, minutes and seconds.

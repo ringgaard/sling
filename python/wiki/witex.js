@@ -1,18 +1,45 @@
 // Copyright 2020 Ringgaard Research ApS
 // Licensed under the Apache License, Version 2
 
+import {Store, Reader, Frame} from "/common/lib/frame.js";
 import {Component} from "/common/lib/component.js";
-import {MdApp, MdCard} from "/common/lib/material.js";
+import {MdApp, MdCard, inform} from "/common/lib/material.js";
+
+var commons = new Store();
+const n_is = commons.lookup("is");
+const n_amount = commons.lookup("/w/amount");
+const n_unit = commons.lookup("/w/unit");
+const n_years_old = commons.lookup("Q24564698");
 
 const lib = {
-  "text": () => this,
-  "link": () => this,
-  "id": () => this,
-  "int": () => this ? parseInt(this) : undefined,
+  "text": (value) => {
+    if (value instanceof Document) return value.text;
+  },
+
+  "link": (value) => {
+    if (value instanceof Document) return value.annotation(0);
+  },
+
+  "id": (value) => value && value.id,
+
+  "int": (value) => {
+    if (value instanceof Document) value = value.text;
+    return value && parseInt(value);
+  },
+
+  "age": function(value) {
+    if (value instanceof Document) value = value.text;
+    let age = value && parseInt(value);
+    if (!age) return;
+    let frame = this.store.frame();
+    frame.add(n_amount, age);
+    frame.add(n_unit, n_years_old);
+    return frame;
+  },
 };
 
 class Script {
-  constructor(script) {
+  constructor(script, columns) {
     this.pipe = new Array();
 
     let code;
@@ -25,8 +52,11 @@ class Script {
     for (let expr of script.split('|')) {
       expr = expr.trim();
       if (this.pipe.length == 0) {
-        let num = parseInt(expr);
-        if (!isNaN(num)) expr = num;
+        let num = columns.get(expr);
+        if (num === undefined) {
+          num = parseInt(expr);
+          if (!isNaN(num)) expr = num;
+        }
         if (expr == "*") expr = null;
         this.pipe.push(expr);
       } else {
@@ -35,7 +65,7 @@ class Script {
     }
 
     if (code) {
-      let func = new Function("value", "record", code);
+      let func = new Function("value", code);
       this.pipe.push(func);
     }
   }
@@ -48,13 +78,13 @@ class Script {
       value = record.field(value);
     }
     for (let i = 1; i < this.pipe.length; ++i) {
-      value = this.pipe[i].call(row, value);
+      value = this.pipe[i].call(record, value);
     }
     return value;
   }
 }
 
-function parse_template(template) {
+function parse_template(template, columns) {
   let pos = 0;
   let start = 0;
   let size = template.length;
@@ -71,7 +101,7 @@ function parse_template(template) {
         if (ch == 0x3E) break;
         pos++;
       }
-      parts.push(new Script(template.slice(start, pos)));
+      parts.push(new Script(template.slice(start, pos), columns));
       start = ++pos;
     } else {
       pos++;
@@ -81,6 +111,134 @@ function parse_template(template) {
     parts.push(template.slice(start, pos));
   }
   return parts;
+}
+
+function detag(html) {
+  return html.replace(/<\/?[^>]+(>|$)/g, "");
+}
+
+class Mention {
+  constructor(begin, end, annotation) {
+    this.begin = begin;
+    this.end = end;
+    this.annotation = annotation;
+  }
+}
+
+class Document {
+  constructor(store, text) {
+    this.store = store;
+    this.text = text;
+    this.mentions = new Array();
+    this.themes = new Array();
+  }
+
+  mention(idx) {
+    return this.mentions[idx];
+  }
+
+  annotation(idx) {
+    let mention = this.mentions[idx];
+    return mention && mention.annotation;
+  }
+
+  phrase(idx) {
+    let mention = this.mentions[idx];
+    if (!mention) return null;
+    return this.text.slice(mention.begin, mention.end);
+  }
+}
+
+function delex(document, lex) {
+  let text = "";
+  let stack = new Array();
+  let level = 0;
+  let pos = 0;
+  while (pos < lex.length) {
+    let c = lex[pos++];
+    switch (c) {
+      case "[":
+        stack.push(text.length);
+        break;
+
+      case "]": {
+        let begin = stack.pop();
+        let end = pos;
+        document.mentions.push(new Mention(begin, end));
+        break;
+      }
+
+      case "|": {
+        if (stack.length == 0) {
+          text += c;
+        } else {
+          let nesting = 0;
+          let start = pos;
+          while (pos < lex.length) {
+            let c = lex[pos++];
+            if (c == '{') {
+              nesting++;
+            } else if (c == '}') {
+              nesting--;
+            } else if (c == ']') {
+              if (nesting == 0) break;
+            }
+          }
+          let reader = new Reader(document.store, lex.slice(start, pos - 1));
+          let obj = reader.parseAll();
+          document.mentions.push(new Mention(stack.pop(), text.length, obj));
+        }
+        break;
+      }
+
+      case "{": {
+        let nesting = 0;
+        let start = pos;
+        while (pos < lex.length) {
+          let c = lex[pos++];
+          if (c == '{') {
+            nesting++;
+          } else if (c == '}') {
+            if (--nesting == 0) break;
+          }
+        }
+        let reader = new Reader(document.store, lex.slice(start - 1, pos));
+        let obj = reader.parseAll();
+        document.themes.push(obj);
+        break;
+      }
+
+      default:
+        text += c;
+    }
+  }
+  document.text = text;
+}
+
+class Record {
+  constructor(store, page, table) {
+    this.store = store;
+    this.page = page;
+    this.table = table;
+    this.colnames = new Map();
+    this.fields = null;
+  }
+
+  add_column_name(colname, colno) {
+    if (!this.colnames.has(colname)) {
+      this.colnames.set(colname, colno);
+    }
+  }
+
+  field(col) {
+    if (typeof(col) !== "number") col = this.colnames.get(col);
+    return this.fields[col];
+  }
+
+  article() {
+    if (this.page.qid) return this.store.lookup(this.page.qid);
+    return this.page.title;
+  }
 }
 
 class WitexApp extends MdApp {
@@ -95,10 +253,15 @@ class WitexApp extends MdApp {
     console.log("fetch", url);
     this.style.cursor = "wait";
     let r = await fetch(`/witex/extract?url=${url}`);
-    let page = await r.json();
     this.style.cursor = "";
-    this.find("#tables").update(page);
-    this.find("#ast").update(page);
+    if (!r.ok) {
+      let message = await r.text();
+      inform(`Error ${r.status}: ${message}`);
+    } else {
+      let page = await r.json();
+      this.find("#tables").update(page);
+      this.find("#ast").update(page);
+    }
   }
 
   static stylesheet() {
@@ -146,6 +309,7 @@ class WikiTable extends MdCard {
   }
 
   onrowclick(e) {
+    if (e.target.className != "rowid") return;
     let tr = e.target.closest("tr");
     if (tr) {
       if (tr.className == "skip") {
@@ -159,9 +323,13 @@ class WikiTable extends MdCard {
   }
 
   onextract(e) {
+    let store = new Store(commons);
+    let page = this.state.page;
     let table = this.state.table;
-    let template = this.find("#template").value;
-    let columns = new Map();
+    let record = new Record(store, page, table);
+    let colnames = record.colnames;
+
+    // Find column names and skipped rows.
     let skipped = new Set();
     for (let r of this.querySelectorAll("tr").values()) {
       let rowno = parseInt(r.getAttribute("rowno"));
@@ -169,7 +337,7 @@ class WikiTable extends MdCard {
       if (r.className == "header") {
         for (let c = 0; c < row.length; ++c) {
           let colname = row[c];
-          if (!columns.has(colname)) columns.set(colname, c);
+          record.add_column_name(row[c], c);
           skipped.add(rowno);
         }
       } else if (r.className == "skip") {
@@ -177,8 +345,74 @@ class WikiTable extends MdCard {
       }
     }
 
-    let parts = parse_template(template);
-    console.log("extract parts", parts);
+    // Parse extraction template.
+    let template = this.find("#template").value;
+    let parts = parse_template(template, colnames);
+    console.log("extract parts", parts, colnames);
+
+    // Extract data from each row in the table.
+    let extractions = new Array();
+    for (let rowno = 0; rowno < table.rows.length; ++rowno) {
+      if (skipped.has(rowno)) continue;
+
+      // Get fields for row.
+      let row = table.rows[rowno];
+      record.fields = new Array();
+      for (let cell of row) {
+        if (!cell || cell == "-") {
+          record.fields.push(null);
+        } else {
+          let doc = new Document(store);
+          delex(doc, detag(cell));
+          record.fields.push(doc);
+        }
+      }
+
+      // Extract data from row using template.
+      let result = "";
+      for (let part of parts) {
+        let piece = part;
+        if (piece instanceof Script) {
+          piece = piece.execute(record)
+          if (!piece) {
+            result += "null";
+          } else if (piece instanceof Document) {
+            let annotation = piece.annotation(0);
+            if (annotation instanceof Frame) {
+              result += annotation.id || annotation.text(false, true);
+            } else {
+              let phrase = piece.phrase(0);
+              result += JSON.stringify(phrase || piece.text)
+            }
+          } else if (piece instanceof Frame) {
+            result += piece.id || piece.text(false, true);
+          } else {
+            result += JSON.stringify(piece);
+          }
+        } else {
+          result += piece;
+        }
+      }
+      console.log(rowno, result);
+
+      // Remove empty slots.
+      let frame = store.parse(result);
+      frame.apply((name, value) => {
+        if ((value instanceof Frame) && value.isanonymous()) {
+          value.purge((n, v) => !v);
+          if (value.length == 0 || value.get(n_is) == null) value = null;
+          return [name, value];
+        }
+      });
+      frame.purge((name, value) => !value);
+      result = frame.text(false, true);
+
+      extractions.push(result);
+    }
+
+    let output = this.find("#output");
+    output.innerText = extractions.join("\n");
+    window.getSelection().selectAllChildren(output);
   }
 
   render() {
@@ -198,6 +432,7 @@ class WikiTable extends MdCard {
       let rowno = 0;
       for (let row of table.rows) {
         h.push(`<tr rowno=${rowno}${rowno == 0 ? ' class="header"' : ''}>`);
+        h.push(`<td class="rowid">${rowno}</td>`);
         for (let cell of row) {
           h.push(`<td>${cell || ""}</td>`);
         }
@@ -211,6 +446,8 @@ class WikiTable extends MdCard {
                  rows="20"
                  placeholder="Extraction template"></textarea>`);
       h.push(`<button id="extract">Extract</button>`);
+
+      h.push(`<pre id="output"></pre>`);
 
       h.push("</div>");
       return h.join("");
@@ -235,16 +472,27 @@ class WikiTable extends MdCard {
         border: 1px solid black;
         padding: 4px;
       }
+      $ td.rowid {
+        cursor: pointer;
+        text-align: right;
+      }
       $ tr.header {
         font-weight: bold;
+        background-color: lightgrey;
       }
       $ tr.skip {
         text-decoration: line-through;
+        color: grey;
       }
       $ textarea {
         display: block;
         width: 95%;
         margin: 10px 10px 10px 0px;
+      }
+
+      $ pre {
+        overflow: hidden;
+        white-space: pre-wrap;
       }
     `;
   }

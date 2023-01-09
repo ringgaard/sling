@@ -127,7 +127,6 @@ class PhotoSearchApp extends MdApp {
   }
 
   async oncopy() {
-    this.style.cursor = "wait";
     let urls = new Array();
     let results = this.querySelectorAll("search-result");
     for (let i = 0; i < results.length; ++i) {
@@ -138,6 +137,7 @@ class PhotoSearchApp extends MdApp {
     }
     if (urls.length == 0) return;
 
+    this.style.cursor = "wait";
     let r = await fetch("/photosearch/gallery", {
       method: "POST",
       body: urls.join("\\n"),
