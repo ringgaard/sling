@@ -11,22 +11,9 @@ const n_amount = commons.lookup("/w/amount");
 const n_unit = commons.lookup("/w/unit");
 const n_years_old = commons.lookup("Q24564698");
 
+const empty_values = new Set(["-", "--", "—", "?"]);
+
 const lib = {
-  "text": (value) => {
-    if (value instanceof Document) return value.text;
-  },
-
-  "link": (value) => {
-    if (value instanceof Document) return value.annotation(0);
-  },
-
-  "id": (value) => value && value.id,
-
-  "int": (value) => {
-    if (value instanceof Document) value = value.text;
-    return value && parseInt(value);
-  },
-
   "age": function(value) {
     if (value instanceof Document) value = value.text;
     let age = value && parseInt(value);
@@ -35,6 +22,23 @@ const lib = {
     frame.add(n_amount, age);
     frame.add(n_unit, n_years_old);
     return frame;
+  },
+
+  "article": (value) => value.article(),
+
+  "id": (value) => value && value.id,
+
+  "int": (value) => {
+    if (value instanceof Document) value = value.text;
+    return value && parseInt(value);
+  },
+
+  "link": (value) => {
+    if (value instanceof Document) return value.annotation(0);
+  },
+
+  "text": (value) => {
+    if (value instanceof Document) return value.text;
   },
 };
 
@@ -359,7 +363,8 @@ class WikiTable extends MdCard {
       let row = table.rows[rowno];
       record.fields = new Array();
       for (let cell of row) {
-        if (!cell || cell == "-") {
+        if (empty_values.has(cell)) cell = null;
+        if (!cell) {
           record.fields.push(null);
         } else {
           let doc = new Document(store);
@@ -432,7 +437,7 @@ class WikiTable extends MdCard {
       let rowno = 0;
       for (let row of table.rows) {
         h.push(`<tr rowno=${rowno}${rowno == 0 ? ' class="header"' : ''}>`);
-        h.push(`<td class="rowid">${rowno}</td>`);
+        h.push(`<td class="rowid">${rowno || "Row#"}</td>`);
         for (let cell of row) {
           h.push(`<td>${cell || ""}</td>`);
         }

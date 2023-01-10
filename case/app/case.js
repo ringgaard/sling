@@ -1153,9 +1153,15 @@ class CaseEditor extends MdApp {
     let list = this.find("topic-list");
     let selected = list.selection();
     if (selected.length == 1) {
+      let index = this.get_index();
       for (let redirect of selected[0].links()) {
         if (this.topics.includes(redirect)) {
           selected.unshift(redirect);
+        } else {
+          let local = index.ids.get(redirect.id);
+          if (local && selected[0] != local) {
+            selected.unshift(local);
+          }
         }
       }
     }
