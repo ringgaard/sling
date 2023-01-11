@@ -886,8 +886,6 @@ class CaseEditor extends MdApp {
       let pos = this.folder.indexOf(topic);
       if (pos != -1) {
         this.folder.splice(pos, 1);
-      } else {
-        console.log("topic not in current folder", topic.id);
       }
 
       // Delete topic from case.
@@ -1153,14 +1151,18 @@ class CaseEditor extends MdApp {
     let list = this.find("topic-list");
     let selected = list.selection();
     if (selected.length == 1) {
-      let index = this.get_index();
-      for (let redirect of selected[0].links()) {
+      let focus = selected[0];
+      for (let redirect of focus.links()) {
         if (this.topics.includes(redirect)) {
+          // Merge with redirect.
           selected.unshift(redirect);
         } else {
-          let local = index.ids.get(redirect.id);
-          if (local && selected[0] != local) {
-            selected.unshift(local);
+          for (let t of this.topics) {
+            if (t != focus && t.link() == redirect) {
+              // Merge with topic with identical redirect.
+              selected.unshift(t);
+              break;
+            }
           }
         }
       }
