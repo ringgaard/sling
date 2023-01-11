@@ -50,6 +50,7 @@ export async function search(query, backends, options = {}) {
       }
 
       if (ref) {
+        if (ref == options.self) continue;
         if (seen.has(ref)) continue;
         seen.add(ref);
       }

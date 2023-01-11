@@ -254,7 +254,6 @@ class WitexApp extends MdApp {
 
   async onfetch() {
     let url = this.find("#wikiurl").value();
-    console.log("fetch", url);
     this.style.cursor = "wait";
     let r = await fetch(`/witex/extract?url=${url}`);
     this.style.cursor = "";
@@ -352,7 +351,6 @@ class WikiTable extends MdCard {
     // Parse extraction template.
     let template = this.find("#template").value;
     let parts = parse_template(template, colnames);
-    console.log("extract parts", parts, colnames);
 
     // Extract data from each row in the table.
     let extractions = new Array();
@@ -398,7 +396,6 @@ class WikiTable extends MdCard {
           result += piece;
         }
       }
-      console.log(rowno, result);
 
       // Remove empty slots.
       let frame = store.parse(result);

@@ -312,6 +312,10 @@ let xrefs = [
     pattern: /^https?:\/\/(?:www\.)?crunchbase\.com\/organization\/([^#^\/]+)/,
     property: frame("P2088"),
   },
+  {
+    pattern: /^https?:\/\/(?:www\.)?wikitree\.com\/wiki\/([^#^\/]+)/,
+    property: frame("P2949"),
+  },
 ];
 
 export function match_link(url) {
