@@ -37,6 +37,21 @@ const lib = {
     if (value instanceof Document) return value.annotation(0);
   },
 
+
+  "memoize": function(value) {
+    if (value instanceof Document) {
+      if (!this.links) this.links = new Map();
+      let link = value.mentions[0] && value.mentions[0].annotation;
+      if (link) {
+        this.links.set(value.text, link);
+        value = link;
+      } else {
+        value = this.links.get(value.text) || value.text;
+      }
+    }
+    return value;
+  },
+
   "text": (value) => {
     if (value instanceof Document) return value.text;
   },
