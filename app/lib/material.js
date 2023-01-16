@@ -195,6 +195,9 @@ export class MdDialog extends Component {
   }
 
   show() {
+    // Save previous focus.
+    this.prevfocus = document.activeElement;
+
     // Add dialog to DOM.
     document.body.insertAdjacentHTML("beforeend", "<dialog></dialog>");
     this.dialog = document.body.lastChild;
@@ -210,10 +213,12 @@ export class MdDialog extends Component {
       if (e.keyCode == 13) {
         this.submit();
         e.preventDefault();
+        e.stopPropagation();
       }
       if (e.keyCode == 27) {
         this.cancel();
         e.preventDefault();
+        e.stopPropagation();
       }
     });
     if (this.find("#submit")) {
@@ -229,6 +234,7 @@ export class MdDialog extends Component {
 
   close(result) {
     document.body.removeChild(this.dialog);
+    if (this.prevfocus) this.prevfocus.focus();
     this.resolve(result);
   }
 
