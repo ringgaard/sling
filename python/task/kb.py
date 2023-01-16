@@ -79,7 +79,7 @@ class KnowledgeBaseWorkflow:
     return self.wf.resource("twitter-media.sling",
                             dir=corpora.workdir("media"),
                             format="text/frame",
-                            serial=410)
+                            serial=420)
 
   def photos(self):
     """Resource for photo database."""
@@ -87,7 +87,7 @@ class KnowledgeBaseWorkflow:
 
   def imdb(self):
     """Resource for imdb profile database."""
-    return self.wf.resource(corpora.imdb(), format="db/frames", serial=420)
+    return self.wf.resource(corpora.imdb(), format="db/frames", serial=410)
 
   def celebs(self):
     """Resource for celebrity profiles."""
@@ -163,8 +163,8 @@ class KnowledgeBaseWorkflow:
   #  320 wikipedia summaries
   #  330 wikilinks
   #  400 wikipedia media
-  #  410 twitter
-  #  420 imdb
+  #  410 imdb
+  #  420 twitter
   #  500 elf
   #  510 nace
   #  520 dknace

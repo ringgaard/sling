@@ -21,6 +21,7 @@ import "./fact.js"
 const n_id = store.id;
 const n_is = store.is;
 const n_name = frame("name");
+const n_alias = frame("alias");
 const n_case_file = frame("Q108673968");
 const n_instance_of = frame("P31");
 const n_media = frame("media");
@@ -344,7 +345,7 @@ class TopicToolbox extends MdToolbox {
           <md-icon-button
             id="reconcile"
             icon="join_right"
-            tooltip="Reconcile topic\n(Alt+R)">
+            tooltip="Reconcile topic\n(Ctrl+R)">
           </md-icon-button>
           <md-icon-button
             id="moveup"
@@ -669,8 +670,30 @@ class TopicCard extends Component {
   async onreconcile(e) {
     if (this.readonly) return;
     let topic = this.state;
-    if (!topic.get(n_name)) return;
-    let dialog = new ReconcileDialog(topic);
+    let queries = new Array();
+    for (let name of topic.all(n_name)) {
+      queries.push(name.toString());
+    }
+    for (let name of topic.all(n_alias)) {
+      queries.push(name.toString());
+    }
+    if (queries.length == 0) return;
+
+    let editor = this.match("#editor");
+    let backends = [
+        editor.search.bind(editor),
+        kbsearch,
+    ];
+    let options = {
+      full: true,
+      ignore: topic.id,
+      local: editor.get_index(),
+    };
+
+    let results = await search(queries, backends, options);
+    if (results.length == 0) return;
+
+    let dialog = new ReconcileDialog(results);
     let ref = await dialog.show();
     if (ref) {
       topic.put(n_is, ref);
@@ -707,8 +730,9 @@ class TopicCard extends Component {
     } else if (e.ctrlKey && e.code === "KeyE") {
       e.preventDefault();
       this.oncopyname(e);
-    } else if (e.altKey && e.code === "KeyR") {
+    } else if (e.ctrlKey && !e.shiftKey && e.code === "KeyR") {
       e.preventDefault();
+      e.stopPropagation();  // prevent reload
       this.onreconcile(e);
     } else if (e.ctrlKey && !e.shiftKey && e.code === "KeyI") {
       e.preventDefault();
@@ -1149,28 +1173,7 @@ Component.register(DedupDialog);
 export class ReconcileDialog extends MdDialog {
   async onconnected() {
     this.attach(this.onselect, "select", "#search");
-
-    // Seach for matches.
-    let topic = this.state;
-    let query = topic.get(n_name).toString();
-
-    let editor = document.getElementById("editor");
-    let backends = [
-        editor.search.bind(editor),
-        kbsearch,
-    ];
-    let options = {
-      full: true,
-      ignore: topic.id,
-      local: editor.get_index(),
-    };
-
-    let results = await search(query, backends, options);
-    if (results.length > 0) {
-      this.find("#search").update({items: results});
-    } else {
-      this.find("#message").update("no matches found");
-    }
+    this.find("#search").update({items: this.state});
   }
 
   async onselect(e) {
@@ -1182,7 +1185,6 @@ export class ReconcileDialog extends MdDialog {
     return `
       <md-dialog-top>Reconcile with...</md-dialog-top>
       <md-search-list id="search"></md-search-list>
-      <md-text id="message"></md-text>
       <md-dialog-bottom>
         <button id="cancel">Cancel</button>
       </md-dialog-bottom>

@@ -20,45 +20,49 @@ export function normalized(str) {
     .toLowerCase();
 }
 
-export async function search(query, backends, options = {}) {
-  query = query.trim();
-  if (query.endsWith(".")) {
-    // Do full matching if query ends with period.
-    options.full = true;
-    query = query.slice(0, -1);
-  } else if (query.endsWith("?")) {
-    // Do keyword matching if query ends with question mark.
-    options.keyword = true;
-    query = query.slice(0, -1);
-  }
+export async function search(queries, backends, options = {}) {
+  if (!Array.isArray(queries)) queries = [queries];
 
-  let results = new Array();
-  if (query.length > 0) {
+  let items = new Array();
+  for (let query of queries) {
+    query = query.trim();
+    if (query.length == 0) continue;
+
+    if (query.endsWith(".")) {
+      // Do full matching if query ends with period.
+      options.full = true;
+      query = query.slice(0, -1);
+    } else if (query.endsWith("?")) {
+      // Do keyword matching if query ends with question mark.
+      options.keyword = true;
+      query = query.slice(0, -1);
+    }
+
     // Collect search results from backends.
-    let items = new Array();
     for (let backend of backends) {
       await backend(query, items, options);
     }
+  }
 
-    // Convert items to search results filtering out duplicates.
-    let seen = new Set();
-    for (let item of items) {
-      let ref = item.ref;
-      if (options.local) {
-        let topic = options.local.ids.get(ref)
-        if (topic) ref = topic.id;
-      }
-
-      if (ref) {
-        if (ref == options.ignore) continue;
-        if (seen.has(ref)) continue;
-        seen.add(ref);
-      }
-      if (item.topic) {
-        for (let r of item.topic.links()) seen.add(r.id);
-      }
-      results.push(new MdSearchResult(item));
+  // Convert items to search results filtering out duplicates.
+  let results = new Array();
+  let seen = new Set();
+  for (let item of items) {
+    let ref = item.ref;
+    if (options.local) {
+      let topic = options.local.ids.get(ref)
+      if (topic) ref = topic.id;
     }
+
+    if (ref) {
+      if (ref == options.ignore) continue;
+      if (seen.has(ref)) continue;
+      seen.add(ref);
+    }
+    if (item.topic) {
+      for (let r of item.topic.links()) seen.add(r.id);
+    }
+    results.push(new MdSearchResult(item));
   }
 
   return results;

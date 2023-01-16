@@ -15,6 +15,7 @@ import {wikidata_initiate, wikidata_export} from "./wikibase.js";
 import {generate_key, encrypt} from "./crypto.js";
 import {Collaboration} from "./collab.js";
 import {SearchIndex, kbsearch} from "./search.js";
+import {LabelCollector, ItemCollector} from "./value.js";
 import "./topic.js";
 
 const n_is = store.is;
@@ -1404,6 +1405,22 @@ class CaseEditor extends MdApp {
 
   fetch(resource, init) {
     return fetch(`/case/proxy?url=${encodeURIComponent(resource)}`, init);
+  }
+
+  async collect(topics) {
+    let collector = new ItemCollector(store);
+    for (let t of topics) {
+      collector.add(store.resolve(t));
+    }
+    await collector.retrieve();
+  }
+
+  async label(topics) {
+    let collector = new LabelCollector(store);
+    for (let t of topics) {
+      collector.add_item(store.resolve(t));
+    }
+    await collector.retrieve();
   }
 
   topic_updated(topic) {
