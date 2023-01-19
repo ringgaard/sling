@@ -241,21 +241,6 @@ class Statements {
     }
   }
 
-  // Check if unqualified statement is in table.
-  bool Has(Handle name, Handle value) {
-    int pos = NameHash(name) & mask_;
-    for (;;) {
-      Slot &s = slots_[pos];
-      if (s.name == name && store_->Equal(s.value, value)) {
-        // Match found.
-        return true;
-      } else if (s.name.IsNil()) {
-        return false;
-      }
-      pos = (pos + 1) & mask_;
-    }
-  }
-
   // Insert statement. Return false if the statement is already in the table.
   bool Insert(Handle name, Handle value) {
     int pos = NameHash(name) & mask_;
@@ -304,7 +289,7 @@ class ItemMerger : public task::Reducer {
     num_orig_statements_ = task->GetCounter("original_statements");
     num_final_statements_ = task->GetCounter("final_statements");
     num_dup_statements_ = task->GetCounter("duplicate_statements");
-    num_pruned_statements_ = task->GetCounter("pruned_statements");
+    num_merged_statements_ = task->GetCounter("merged_statements");
     num_merged_items_ = task->GetCounter("merged_items");
     num_unnames_ = task->GetCounter("unnames");
   }
@@ -318,7 +303,6 @@ class ItemMerger : public task::Reducer {
 
     // Merge all item sources.
     Statements statements(&store);
-    bool prune = false;
     for (task::Message *message : input.messages()) {
       // Decode item.
       Frame item = DecodeMessage(&store, message);
@@ -332,74 +316,71 @@ class ItemMerger : public task::Reducer {
         if (s->value == self) s->value = proxy;
       });
 
+      // Add/merge statements.
       statements.Ensure(item.size());
-      for (const Slot &s : item) {
-        // Skip redirects.
-        if (s.name == Handle::is()) continue;
+      for (const Slot &slot : item) {
+        // Skip redirects and comments.
+        if (slot.name == Handle::is()) continue;
+        if (slot.name.IsNil()) continue;
 
-        if (s.name.IsNil() || statements.Insert(s.name, s.value)) {
-         // Add new statement.
-         builder.Add(s.name, s.value);
-        } else {
-          // Skip duplicate statement.
+        // Check for existing match(es).
+        Handle qvalue = store.Resolve(slot.value);
+        bool isnew = statements.Insert(slot.name, qvalue);
+        if (isnew) {
+          // Add new statement.
+          builder.Add(slot.name, slot.value);
+        } else if (qvalue == slot.value) {
+          // Skip unqualified duplicate statement.
           num_dup_statements_->Increment();
+        } else {
+          // Try to find compatible statement for merging.
+          Handle compatible = Handle::nil();
+          bool replaced = false;
+          for (Slot *s = builder.begin(); s < builder.end(); ++s) {
+            Handle qv = store.Resolve(s->value);
+            if (s->name != slot.name || qv != qvalue) continue;
+
+            if (qv == s->value) {
+              // Replace existing unqualified statement.
+              s->value = slot.value;
+              replaced = true;
+              break;
+            }
+
+            // Skip new statement if it is the same as an exising one.
+            if (store.Equal(s->value, slot.value)) {
+              replaced = true;
+              break;
+            }
+
+            // Check if new qualified statement is compatible with existing
+            // qualified statement.
+            if (Compatible(&store, slot.value, s->value)) {
+              compatible = s->value;
+              break;
+            }
+          }
+
+          if (replaced) {
+            num_dup_statements_->Increment();
+          } else if (compatible.IsNil()) {
+            // No compatible existing statement; add new.
+            builder.Add(slot.name, slot.value);
+          } else {
+            // Merge new qualified statement into existing statement.
+            Frame existing_value(&store, compatible);
+            Frame new_value(&store, slot.value);
+            Merge(existing_value, new_value);
+            num_merged_statements_->Increment();
+          }
         }
       }
     }
 
     // Replace names if item has unname statements.
     if (!store.LookupExisting("PUNME").IsNil()) {
-      Handle n_name = store.Lookup("name");
-      Handle n_alias = store.Lookup("alias");
-      Handle n_unname = store.Lookup("PUNME");
-
-      for (int i = 0; i < builder.size(); ++i) {
-        if (builder[i].name == n_unname) {
-          Handle old_name = store.Resolve(builder[i].value);
-          Handle new_name = Handle::nil();
-          if (old_name != builder[i].value) {
-            new_name = Frame(&store, builder[i].value).GetHandle(n_name);
-          }
-
-          for (int j = 0; j < builder.size(); ++j) {
-            if (builder[j].name == n_name &&
-                store.Equal(old_name, builder[j].value)) {
-              if (new_name.IsNil()) {
-                builder[j].name = n_alias;
-              } else {
-                builder[j].value = new_name;
-              }
-              num_unnames_->Increment();
-            }
-          }
-        }
-      }
+      Unname(builder);
     }
-
-    // Remove unqualified statements which have qualified counterparts.
-    for (int i = 0; i < builder.size(); ++i) {
-      // Check if statement is qualified.
-      Handle value = builder[i].value;
-      Handle resolved = store.Resolve(value);
-      if (value == resolved) continue;
-
-      // Check if there is an unqualifed counterpart.
-      Handle property = builder[i].name;
-      if (statements.Has(property, resolved)) {
-        // Remove unqualifed counterpart.
-        for (int j = 0; j < builder.size(); ++j) {
-          Slot &s = builder[j];
-          if (s.name == property && store.Equal(s.value, resolved)) {
-            // Mark statement for deletion.
-            s.name = Handle::nil();
-            prune = true;
-            num_pruned_statements_->Increment();
-            break;
-          }
-        }
-      }
-    }
-    if (prune) builder.Prune();
 
     // Output merged frame for item.
     Frame merged = builder.Create();
@@ -429,6 +410,75 @@ class ItemMerger : public task::Reducer {
     Output(0, task::CreateMessage(catalog.Create()));
   }
 
+  // Check if two qualified values are compatible.
+  static bool Compatible(Store *store, Handle first, Handle second) {
+    // Check for temporal compatibility.
+    Frame f(store, first);
+    Frame s(store, second);
+    if (Same(f, s, store->Lookup("P585"))) return true;  // point in time
+    if (Same(f, s, store->Lookup("P580"))) return true;  // start time
+    if (Same(f, s, store->Lookup("P582"))) return true;  // end time
+
+    return false;
+  }
+
+  // Check for compatible property.
+  static bool Same(Frame &f1, Frame &f2, Handle property) {
+    Handle v1 = f1.GetHandle(property);
+    Handle v2 = f2.GetHandle(property);
+    if (v1.IsNil() || v2.IsNil()) return false;
+    return f1.store()->Equal(v1, v2);
+  }
+
+  // Merge second frame into the first frame.
+  static void Merge(Frame &f1, Frame &f2) {
+    CHECK(f1.valid());
+    CHECK(f2.valid());
+    Store *store = f1.store();
+    Builder merged(f1);
+    for (const Slot &s2 : f2) {
+      bool found = false;
+      for (const Slot &s1 : f1) {
+        if (s1.name == s2.name && store->Equal(s1.value, s2.value)) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) merged.Add(s2.name, s2.value);
+    }
+    merged.Update();
+  }
+
+  // Unname item.
+  void Unname(Builder &builder) {
+    Store *store = builder.store();
+    Handle n_name = store->Lookup("name");
+    Handle n_alias = store->Lookup("alias");
+    Handle n_unname = store->Lookup("PUNME");
+
+    for (int i = 0; i < builder.size(); ++i) {
+      if (builder[i].name == n_unname) {
+        Handle old_name = store->Resolve(builder[i].value);
+        Handle new_name = Handle::nil();
+        if (old_name != builder[i].value) {
+          new_name = Frame(store, builder[i].value).GetHandle(n_name);
+        }
+
+        for (int j = 0; j < builder.size(); ++j) {
+          if (builder[j].name == n_name &&
+              store->Equal(old_name, builder[j].value)) {
+            if (new_name.IsNil()) {
+              builder[j].name = n_alias;
+            } else {
+              builder[j].value = new_name;
+            }
+            num_unnames_->Increment();
+          }
+        }
+      }
+    }
+  }
+
  private:
   // Property ids.
   std::vector<string> properties_;
@@ -438,7 +488,7 @@ class ItemMerger : public task::Reducer {
   task::Counter *num_orig_statements_ = nullptr;
   task::Counter *num_final_statements_ = nullptr;
   task::Counter *num_dup_statements_ = nullptr;
-  task::Counter *num_pruned_statements_ = nullptr;
+  task::Counter *num_merged_statements_ = nullptr;
   task::Counter *num_merged_items_ = nullptr;
   task::Counter *num_unnames_ = nullptr;
 };
