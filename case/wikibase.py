@@ -33,7 +33,7 @@ wikikeys = "local/keys/wikimedia.json"
 if os.path.exists(wikikeys):
   with open(wikikeys, "r") as f: config = json.load(f)
 
-# Wikidata is not updates in dryrun model.
+# Wikidata is not updated in dryrun mode.
 dryrun = config.get("dryrun", False)
 next_dryid = 1000
 if dryrun: log.info("Wikibase exporter is in dryrun mode")
@@ -86,6 +86,9 @@ reference_qualifiers = set([
 
 # Defer schema loading.
 schema_loaded = False
+
+# Cached QIDs for new items.
+qid_cache = {}
 
 def ensure_schema():
   global schema_loaded;
@@ -166,8 +169,9 @@ def get_qid(topic):
     if name == n_id:
       if is_qid(value): return value
     elif name == n_is:
-      id = value.id
-      if is_qid(id): return id
+      ref = value
+      if type(ref) is sling.Frame: ref = ref.id
+      if is_qid(ref): return ref
 
   return None
 
@@ -201,7 +205,7 @@ class WikibaseExporter:
     self.num_labels = 0
     self.num_descriptions = 0
     self.num_aliases = 0
-    self.num_claims = 0
+    self.num_statements = 0
     self.num_qualifiers = 0
     self.num_references = 0
     self.num_skipped = 0
@@ -265,10 +269,10 @@ class WikibaseExporter:
       # Get item id for new stub and patch value.
       itemid = response["entity"]["id"]
       item = self.store[itemid]
-      topic[n_is] = item
+      topic.append(n_is, itemid)
+      qid_cache[topic.id] = itemid
       self.created[topic] = item
       value["value"]["id"] = itemid
-      log.info("reference", topic.id, value)
       self.num_stubs += 1
 
     # Publish topic updates.
@@ -288,7 +292,8 @@ class WikibaseExporter:
       if qid is None:
         itemid = response["entity"]["id"]
         item = self.store[itemid]
-        topic[n_is] = item
+        item.append(n_is, itemid)
+        qid_cache[topic.id] = itemid
         self.created[topic] = item
         self.num_created += 1
       else:
@@ -316,15 +321,23 @@ class WikibaseExporter:
       elif name == n_name:
         label = str(value)
         lang = self.get_language(value)
-        if "labels" not in entity: entity["labels"] = {}
-        entity["labels"][lang] = {"language": lang, "value": label}
-        self.num_labels += 1
+        if not self.has_language_value(current, n_name, lang):
+          if "labels" not in entity: entity["labels"] = {}
+          entity["labels"][lang] = {"language": lang, "value": label}
+          self.num_labels += 1
+        else:
+          if "aliases" not in entity: entity["aliases"] = {}
+          if lang not in entity["aliases"]: entity["aliases"][lang] = []
+          entity["aliases"][lang].append({"language": lang, "value": alias})
+          self.num_aliases += 1
       elif name == n_description:
         description = str(value)
         lang = self.get_language(value)
-        if "descriptions" not in entity: entity["descriptions"] = {}
-        entity["descriptions"][lang] = {"language": lang, "value": description}
-        self.num_descriptions += 1
+        if not self.has_language_value(current, n_description, lang):
+          if "descriptions" not in entity: entity["descriptions"] = {}
+          entity["descriptions"][lang] = {"language": lang,
+                                          "value": description}
+          self.num_descriptions += 1
       elif name == n_alias:
         alias = str(value)
         lang = self.get_language(value)
@@ -367,7 +380,7 @@ class WikibaseExporter:
           "rank": "normal",
           "mainsnak": snak,
         }
-        self.num_claims += 1
+        self.num_statements += 1
 
         if v != value:
           # Add qualifiers/references.
@@ -553,6 +566,12 @@ class WikibaseExporter:
       if id.startswith("/lang/"): return id[6:]
     return self.lang
 
+  def has_language_value(self, item, prop, lang):
+    if item is None: return False
+    for value in item(prop):
+      if self.get_language(value) == lang: return True
+    return False
+
   def fetch_item(self, qid):
     # Fetch item from wikidata site.
     url = "https://www.wikidata.org/wiki/Special:EntityData/" + qid + ".json"
@@ -572,27 +591,33 @@ def handle_export(request):
   # Get exported request.
   store = sling.Store(commons)
   export = request.frame(store)
+  topics = export[n_topics]
 
-  # Resolve all redirects.
-  for item in store:
-    if n_is in item:
-      redirs = []
-      update = False
-      for redir in item(n_is):
-        if type(redir) is str:
-          update = True
-          redirs.append((n_is, store[redir]))
-        else:
-          redirs.append((n_is, redir))
-      if update:
-        del item[n_is]
-        item.extend(redirs)
+  # Topic recovery.
+  recovered = {}
+  for topic in topics:
+    has_qid = False
+    for redir in topic(n_is):
+      if type(redir) is sling.Frame: redir = redir.id
+      if is_qid(redir):
+        has_qid = True
+        break
+    if not has_qid and topic.id in qid_cache:
+      qid = qid_cache[topic.id]
+      if qid is not None:
+        topic.append(n_is, qid)
+        recovered[topic] = store[qid]
+        log.info("recover QID", qid, "for", topic.id)
 
   # Export topics to Wikidata.
-  exporter = WikibaseExporter(client, export[n_topics])
+  exporter = WikibaseExporter(client, topics)
   exporter.publish()
 
-  # Return QIDs for newly created items.
+  # Return recovered topics as newly created items.
+  for topic, item in recovered.items():
+    exporter.created[topic] = item
+
+  # Return QIDs for newly created/recovered items.
   return store.frame({
     n_created: exporter.created,
     n_results: {
@@ -604,7 +629,7 @@ def handle_export(request):
       "labels": exporter.num_labels,
       "descriptions": exporter.num_descriptions,
       "aliases": exporter.num_aliases,
-      "claims": exporter.num_claims,
+      "statements": exporter.num_statements,
       "qualifiers": exporter.num_qualifiers,
       "references": exporter.num_references,
       "skipped": exporter.num_skipped,

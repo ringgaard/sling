@@ -21,13 +21,16 @@ export function normalized(str) {
 }
 
 export async function search(queries, backends, options = {}) {
-  if (!Array.isArray(queries)) queries = [queries];
-
   let items = new Array();
-  for (let query of queries) {
-    query = query.trim();
-    if (query.length == 0) continue;
-
+  if (Array.isArray(queries)) {
+    for (let query of queries) {
+      if (query.length == 0) continue;
+      for (let backend of backends) {
+        await backend(query, items, options);
+      }
+    }
+  } else {
+    let query = queries.trim();
     if (query.endsWith(".")) {
       // Do full matching if query ends with period.
       options.full = true;
@@ -39,8 +42,15 @@ export async function search(queries, backends, options = {}) {
     }
 
     // Collect search results from backends.
-    for (let backend of backends) {
-      await backend(query, items, options);
+    if (query.length > 0) {
+      for (let backend of backends) {
+        let start = performance.now();
+        await backend(query, items, options);
+        let time = Math.round(performance.now() - start);
+        if (time > 10) {
+          console.log(`search ${backend.name} ${time} ms`);
+        }
+      }
     }
   }
 
@@ -101,6 +111,7 @@ export async function kbsearch(query, results, options) {
 
 export class SearchIndex {
   constructor(topics) {
+    let start = performance.now();
     this.topics = topics;
     this.ids = new Map();
     this.names = new Array();
@@ -130,6 +141,8 @@ export class SearchIndex {
       if (a.name > b.name) return 1;
       return 0;
     });
+
+    console.log(`re-index ${Math.round(performance.now() - start)} ms`);
   }
 
   hits(query, options = {}) {

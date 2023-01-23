@@ -1349,6 +1349,29 @@ class CaseEditor extends MdApp {
       }
     }
 
+    // Try to resolve topics to Wikidata items.
+    let dirty = false;
+    let collector = new ItemCollector(store);
+    for (let t of topics) collector.add_links(t);
+    for (let t of aux) collector.add_links(t);
+    await collector.retrieve();
+    for (let t of [...topics, ...aux]) {
+      let qid = null;
+      for (let link of t.links()) {
+        if (link.id.startsWith("Q")) {
+          qid = link.id;
+          break;
+        }
+      }
+      if (qid) {
+        if (t.put(n_is, qid)) {
+          this.update_topic(t);
+          this.topic_updated(t);
+          dirty = true;
+        }
+      }
+    }
+
     // Export topics.
     this.style.cursor = "wait";
     inform(`Publishing ${topics.length} topics to Wikidata`);
@@ -1359,13 +1382,14 @@ class CaseEditor extends MdApp {
           this.update_topic(topic);
           this.topic_updated(topic);
         }
-        this.mark_dirty();
+        dirty = true;
       }
       inform("Published in Wikidata: " + status);
     } catch (e) {
       inform(e.name + ": " + e.message);
     }
     this.style.cursor = "";
+    if (dirty) this.mark_dirty();
   }
 
   async onimport(e) {
@@ -1412,7 +1436,7 @@ class CaseEditor extends MdApp {
     for (let t of topics) {
       collector.add(store.resolve(t));
     }
-    await collector.retrieve();
+    return await collector.retrieve();
   }
 
   async label(topics) {
@@ -1420,7 +1444,7 @@ class CaseEditor extends MdApp {
     for (let t of topics) {
       collector.add_item(store.resolve(t));
     }
-    await collector.retrieve();
+    return await collector.retrieve();
   }
 
   topic_updated(topic) {

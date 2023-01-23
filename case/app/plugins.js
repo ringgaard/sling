@@ -448,6 +448,7 @@ export async function process(action, query, context) {
 
   // Try to find plug-in with a matching pattern.
   let result = null;
+  let start = performance.now();
   for (let plugin of plugins) {
     let match = false;
     if (plugin.actions.includes(action)) {
@@ -459,6 +460,8 @@ export async function process(action, query, context) {
       }
     }
     if (!match) continue;
+
+    console.log(`plugin search ${Math.round(performance.now() - start)} ms`);
 
     // Load module if not already done.
     if (!plugin.instance) {
