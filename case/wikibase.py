@@ -326,10 +326,7 @@ class WikibaseExporter:
           entity["labels"][lang] = {"language": lang, "value": label}
           self.num_labels += 1
         else:
-          if "aliases" not in entity: entity["aliases"] = {}
-          if lang not in entity["aliases"]: entity["aliases"][lang] = []
-          entity["aliases"][lang].append({"language": lang, "value": label})
-          self.num_aliases += 1
+          self.add_alias(entity, current, lang, label)
       elif name == n_description:
         description = str(value)
         lang = self.get_language(value)
@@ -341,10 +338,7 @@ class WikibaseExporter:
       elif name == n_alias:
         alias = str(value)
         lang = self.get_language(value)
-        if "aliases" not in entity: entity["aliases"] = {}
-        if lang not in entity["aliases"]: entity["aliases"][lang] = []
-        entity["aliases"][lang].append({"language": lang, "value": alias})
-        self.num_aliases += 1
+        self.add_alias(entity, current, lang, alias)
       else:
         # Only add claims for Wikidata properties.
         if name is None: continue
@@ -430,6 +424,31 @@ class WikibaseExporter:
         if "claims" not in entity: entity["claims"] = {}
         if pid not in entity["claims"]: entity["claims"][pid] = []
         entity["claims"][pid].append(claim)
+
+  def add_alias(self, entity, current, lang, alias):
+    # Get/add alias section.
+    aliases = entity.get("aliases")
+    if aliases is None:
+      aliases = {}
+      entity["aliases"] = aliases
+
+    # Get/add alias section for language and copy exising aliases.
+    aliases_for_lang = aliases.get(lang)
+    if aliases_for_lang is None:
+      aliases_for_lang = []
+      aliases[lang] = aliases_for_lang
+      if current:
+        for alias in current(n_alias):
+          if self.get_language(alias) == lang:
+            aliases_for_lang.append({"language": lang, "value": str(alias)})
+
+    # Check if alias already exists.
+    for a in aliases_for_lang:
+      if a["value"] == alias: return
+
+    # Add new alias.
+    aliases_for_lang.append({"language": lang, "value": str(alias)})
+    self.num_aliases += 1
 
   def convert_value(self, dt, value):
     datatype = None
