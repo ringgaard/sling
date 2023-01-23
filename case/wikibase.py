@@ -328,7 +328,7 @@ class WikibaseExporter:
         else:
           if "aliases" not in entity: entity["aliases"] = {}
           if lang not in entity["aliases"]: entity["aliases"][lang] = []
-          entity["aliases"][lang].append({"language": lang, "value": alias})
+          entity["aliases"][lang].append({"language": lang, "value": label})
           self.num_aliases += 1
       elif name == n_description:
         description = str(value)
