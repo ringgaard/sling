@@ -234,6 +234,12 @@ def selfie(title):
     if title.startswith(prefix): return True
   return False
 
+# Check for album in comments.
+def album_title(title):
+  for phrase in ["AIC", "MIC", "Album", "album"];
+    if phrase in title: return True
+  return False
+
 # Look up name in name table.
 def lookup_name(name):
   if flags.arg.caseless:
@@ -391,7 +397,7 @@ for key, value in postings:
   posting_profile = photo.Profile(None)
   try:
     n = 0
-    if sr in aic_subreddits or "AIC" in title:
+    if sr in aic_subreddits or album_title(title):
       post_url = "https://www.reddit.com" + posting[n_permalink]
       n += posting_profile.add_albums_in_comments(post_url, nsfw)
     if n == 0:

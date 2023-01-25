@@ -74,6 +74,9 @@ struct PyFrame : public PyBase, public Root {
   // Check if frame is equal to another object.
   PyObject *Compare(PyObject *other, int op);
 
+  // Check if frame is equal to another object (deep compare).
+  PyObject *Equals(PyObject *other);
+
   // Check if frame has isa: type.
   PyObject *IsA(PyObject *arg);
 

@@ -159,21 +159,26 @@ class PropertyPanel extends Component {
 
     function render_time(val, prop) {
       let t = new Time(val);
-      h.push(t.text());
-      if (born) {
-        if (prop == n_date_of_birth) {
-          if (!died) {
-            let age = t.age(new Time(new Date()));
-            if (age) {
-              h.push(` <span class="prop-age">(${age} yo)</span>`);
+      let text = t.text();
+      if (text) {
+        h.push(` <span class="prop-time">${text}</span>`);
+        if (born) {
+          if (prop == n_date_of_birth) {
+            if (!died) {
+              let age = t.age(new Time(new Date()));
+              if (age) {
+                h.push(` <span class="prop-age">(${age} yo)</span>`);
+              }
+            }
+          } else {
+            let years = born.age(t);
+            if (years) {
+              h.push(` <span class="prop-age">(${years} yo)</span>`);
             }
           }
-        } else {
-          let years = born.age(t);
-          if (years) {
-            h.push(` <span class="prop-age">(${years} yo)</span>`);
-          }
         }
+      } else {
+        render_fallback(val);
       }
     }
 
@@ -432,6 +437,10 @@ class PropertyPanel extends Component {
 
       $ .prop-age {
         color: #808080;
+      }
+
+      $ .prop-time {
+        color: #0b0080;
       }
 
       $ .prop-value a {

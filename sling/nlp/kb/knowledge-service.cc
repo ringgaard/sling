@@ -315,7 +315,7 @@ Handle KnowledgeService::RetrieveItem(Store *store, Text id,
   if (!handle.IsNil() && store->IsProxy(handle)) handle = Handle::nil();
 
   string key = id.str();
-  if (handle.IsNil() and xref_.loaded()) {
+  if (handle.IsNil() && xref_.loaded()) {
     // Try looking up in cross-reference.
     if (xref_.Map(&key)) {
       handle = store->LookupExisting(key);

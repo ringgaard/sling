@@ -45,6 +45,10 @@ class WikidataConverter {
   bool only_known_languages() const { return only_known_languages_; }
   void set_only_known_languages(bool b) { only_known_languages_ = b; }
 
+  // Extract GUIDs for claims.
+  bool guids() const { return guids_; }
+  void set_guids(bool b) { guids_ = b; }
+
  private:
   // Return symbol for Wikidata item.
   static Handle Item(Store *store, int id) {
@@ -108,6 +112,9 @@ class WikidataConverter {
   bool only_primary_language_ = false;
   bool only_known_languages_ = false;
 
+  // Extract GUIDs for claims.
+  bool guids_ = false;
+
   // Per-language information.
   struct LanguageInfo {
     int priority;
@@ -146,6 +153,7 @@ class WikidataConverter {
   Name n_alias_{names_, "alias"};
   Name n_sources_{names_, "sources"};
   Name n_rank_{names_, "rank"};
+  Name n_guid_{names_, "guid"};
 
   // Wikidata attribute names.
   Name s_id_{names_, "_id"};

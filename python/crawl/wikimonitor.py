@@ -102,7 +102,7 @@ def process_change(change):
       db.delete(qid)
     except Exception as e:
       print("DB delete error:", e)
-  elif kind == "edit":
+  elif kind == "edit" or kind == "new":
     revision = change["revision"]["new"]
     store = sling.Store(commons)
     item = None

@@ -61,6 +61,7 @@ void PyFrame::Define(PyObject *module) {
   methods.Add("resolve", &PyFrame::Resolve);
   methods.AddO("count", &PyFrame::Count);
   methods.Add("has", &PyFrame::Has);
+  methods.AddO("equals", &PyFrame::Equals);
   type.tp_methods = methods.table();
 
   RegisterType(&type, module, "Frame");
@@ -125,6 +126,17 @@ PyObject *PyFrame::Compare(PyObject *other, int op) {
   }
 
   if (op == Py_NE) match = !match;
+  return PyBool_FromLong(match);
+}
+
+PyObject *PyFrame::Equals(PyObject *other) {
+  bool match = false;
+  if (PyObject_TypeCheck(other, &PyFrame::type)) {
+    PyFrame *pyother = reinterpret_cast<PyFrame *>(other);
+    if (CompatibleStore(pyother)) {
+      match = pystore->store->Equal(handle(), pyother->handle());
+    }
+  }
   return PyBool_FromLong(match);
 }
 

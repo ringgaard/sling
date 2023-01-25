@@ -51,7 +51,7 @@ sessions = {}
 
 # Initialize commons store for Wikidata export.
 commons = sling.Store()
-wikiconv = sling.WikiConverter(commons)
+wikiconv = sling.WikiConverter(commons, guids=True)
 n_id = commons["id"]
 n_is = commons["is"]
 n_name = commons["name"]
@@ -59,6 +59,7 @@ n_description = commons["description"]
 n_alias = commons["alias"]
 n_media = commons["media"]
 n_english = commons["/lang/en"]
+n_guid = commons["guid"]
 n_target = commons["target"]
 n_lat = commons["/w/lat"]
 n_lng = commons["/w/lng"]
@@ -77,6 +78,12 @@ n_url_type = commons["/w/url"]
 n_media_type = commons["/w/media"]
 n_quantity_type = commons["/w/quantity"]
 n_geo_type = commons["/w/geo"]
+
+qualifier_identifiers = [
+  commons["P585"], # point in time
+  commons["P580"], # start time
+  commons["P582"], # end time
+]
 
 reference_qualifiers = set([
   commons["P248"], # stated in
@@ -175,6 +182,19 @@ def get_qid(topic):
 
   return None
 
+def same(a, b):
+  if type(a) is sling.Frame:
+    return a.equals(b)
+  else:
+    return a == b
+
+def has_qualifiers(f):
+  if type(f) is sling.Frame:
+    for name, _ in f:
+      if name != n_is and name != n_guid:
+        return True
+  return False
+
 def empty_entity(entity):
   for section in ["labels", "aliases", "descriptions", "claims"]:
     if section in entity: return False
@@ -187,6 +207,18 @@ def itemtext(item):
     return item[n_id] + " " + str(name)
   else:
     return item[n_id]
+
+# Return obj[key1][key2].
+def section(obj, key1, key2):
+  l1 = obj.get(key1)
+  if l1 is None:
+    l1 = {}
+    obj[key1] = l1
+  l2 = l1.get(key2)
+  if l2 is None:
+    l2 = []
+    l1[key2] = l2
+  return l2
 
 class WikibaseExporter:
   def __init__(self, client, topics):
@@ -316,24 +348,30 @@ class WikibaseExporter:
       # Skip existing statements.
       if name == n_id or name == n_is or name == n_media:
         pass
-      elif current and self.has(current, name, value):
-        pass
       elif name == n_name:
         label = str(value)
         lang = self.get_language(value)
-        if not self.has_language_value(current, n_name, lang):
+        current_name = self.value_for_language(current, n_name, lang)
+        if current_name is None:
           if "labels" not in entity: entity["labels"] = {}
-          entity["labels"][lang] = {"language": lang, "value": label}
+          entity["labels"][lang] = {
+            "language": lang,
+            "value": label,
+            "add": "",
+          }
           self.num_labels += 1
-        else:
+        elif label != current_name:
           self.add_alias(entity, current, lang, label)
       elif name == n_description:
         description = str(value)
         lang = self.get_language(value)
         if not self.has_language_value(current, n_description, lang):
           if "descriptions" not in entity: entity["descriptions"] = {}
-          entity["descriptions"][lang] = {"language": lang,
-                                          "value": description}
+          entity["descriptions"][lang] = {
+            "language": lang,
+            "value": description,
+            "add": "",
+          }
           self.num_descriptions += 1
       elif name == n_alias:
         alias = str(value)
@@ -345,18 +383,25 @@ class WikibaseExporter:
         pid = name.id
         if not is_pid(pid): continue
 
-        # Build main snak.
-        t = name[n_target]
+        # Skip statements with invalid values.
         v = self.store.resolve(value)
         if self.skip_value(v):
-          log.info("skip unknown", itemtext(name), itemtext(v),
+          log.info("skip", itemtext(name), itemtext(v),
                    "for", itemtext(topic))
           self.num_skipped += 1
           continue
 
-        datatype, datavalue = self.convert_value(t, v)
+        # Try to find compatible existing claim.
+        match = self.match(current, name, value)
+
+        # Skip existing unqualified claim.
+        if match and v == value: continue
+
+        # Build main snak and claim.
+        dt = name[n_target]
+        datatype, datavalue = self.convert_value(dt, v)
         if datatype is None or datavalue is None:
-          log.info("skip invalid", itemtext(name), itemtext(v),
+          log.info("skip invalid value", itemtext(name), itemtext(v),
                    "for", itemtext(topic))
           self.num_skipped += 1
           continue
@@ -375,26 +420,56 @@ class WikibaseExporter:
           "mainsnak": snak,
         }
         self.num_statements += 1
+        if match:
+          # Set id for existing claim.
+          claim["id"] = match["guid"]
 
+          # Add existing qualifiers.
+          if has_qualifiers(match):
+            for qname, qvalue in match:
+              if qname == n_is or qname == n_guid: continue
+              dt = qname[n_target]
+              v = self.store.resolve(qvalue)
+              qpid = qname.id
+              datatype, datavalue = self.convert_value(dt, v)
+              section(claim, "qualifiers", qpid).append({
+                "snaktype": "value",
+                "property": qpid,
+                "datatype": datatype,
+                "datavalue": datavalue,
+              })
+
+        new_qualifiers = False
         if v != value:
           # Add qualifiers/references.
           for qname, qvalue in value:
             if qname is None or qname == n_is: continue
-            pid = qname.id
-            if not is_pid(pid): continue
+            qpid = qname.id
+            if not is_pid(qpid): continue
 
-            # Build snak for qualifier/reference.
-            t = qname[n_target]
+            # Skip invalid/unknown qualifiers.
+            dt = qname[n_target]
             v = self.store.resolve(qvalue)
             if self.skip_value(v):
               log.info("skip qualifier", itemtext(qname), itemtext(v),
                        "for", itemtext(topic))
               continue
 
-            datatype, datavalue = self.convert_value(t, v)
+            # Check for existing qualifier.
+            found = False
+            if match:
+              for qv in match(qname):
+                if same(qv, qvalue):
+                  found = True
+                  break
+              if found: continue
+            new_qualifiers = True
+
+            # Build snak for qualifier/reference.
+            datatype, datavalue = self.convert_value(dt, v)
             snak = {
               "snaktype": "value",
-              "property": pid,
+              "property": qpid,
               "datatype": datatype,
               "datavalue": datavalue,
             }
@@ -404,9 +479,9 @@ class WikibaseExporter:
               if "references" not in claim: claim["references"] = []
               claim["references"].append({
                 "snaks": {
-                  pid: [{
+                  qpid: [{
                     "snaktype": "value",
-                    "property": pid,
+                    "property": qpid,
                     "datatype": datatype,
                     "datavalue": datavalue,
                   }]
@@ -415,17 +490,18 @@ class WikibaseExporter:
               self.num_references += 1
             else:
               # Add qualifier to claim.
-              if "qualifiers" not in claim: claim["qualifiers"] = {}
-              if pid not in claim["qualifiers"]: claim["qualifiers"][pid] = []
-              claim["qualifiers"][pid].append(snak)
+              section(claim, "qualifiers", qpid).append(snak);
               self.num_qualifiers += 1
 
         # Add claim to entity.
-        if "claims" not in entity: entity["claims"] = {}
-        if pid not in entity["claims"]: entity["claims"][pid] = []
-        entity["claims"][pid].append(claim)
+        if match is None or new_qualifiers:
+          section(entity, "claims", pid).append(claim);
 
   def add_alias(self, entity, current, lang, alias):
+    # Check for existing alias.
+    for a in current(n_alias):
+      if self.get_language(a) == lang and str(a) == alias: return
+
     # Get/add alias section.
     aliases = entity.get("aliases")
     if aliases is None:
@@ -438,16 +514,16 @@ class WikibaseExporter:
       aliases_for_lang = []
       aliases[lang] = aliases_for_lang
       if current:
-        for alias in current(n_alias):
-          if self.get_language(alias) == lang:
-            aliases_for_lang.append({"language": lang, "value": str(alias)})
-
-    # Check if alias already exists.
-    for a in aliases_for_lang:
-      if a["value"] == alias: return
+        for a in current(n_alias):
+          if self.get_language(a) == lang:
+            aliases_for_lang.append({"language": lang, "value": str(a)})
 
     # Add new alias.
-    aliases_for_lang.append({"language": lang, "value": str(alias)})
+    aliases_for_lang.append({
+      "language": lang,
+      "value": alias,
+      "add": "",
+    })
     self.num_aliases += 1
 
   def convert_value(self, dt, value):
@@ -558,26 +634,18 @@ class WikibaseExporter:
     if value in self.topics: return False
     return True
 
-  def has(self, item, name, value):
-    value = self.store.resolve(value)
-    lang = self.lang
-    if type(value) is sling.String:
-      lang = self.get_language(value)
-      value = value.text()
-
-    qid = ""
-    if type(value) is sling.Frame:
-      qid = get_qid(value)
-
+  def match(self, item, name, value):
+    if item is None: return None
+    baseval = self.store.resolve(value)
     for v in item(name):
-      v = self.store.resolve(v)
-      if v == value: return True
-      if type(v) is sling.Frame:
-        if get_qid(v) == qid: return True
-      if type(v) is sling.String:
-        if v.text() == value and self.get_language(v) == lang: return True
-
-    return False
+      basev = self.store.resolve(v)
+      if not same(baseval, basev): continue
+      if value == baseval or not has_qualifiers(v): return v
+      for ident in qualifier_identifiers:
+        idval = value[ident]
+        if idval is None : continue
+        if idval == v[ident]: return v
+    return None
 
   def get_language(self, s):
     if type(s) is sling.String:
@@ -585,11 +653,11 @@ class WikibaseExporter:
       if id.startswith("/lang/"): return id[6:]
     return self.lang
 
-  def has_language_value(self, item, prop, lang):
+  def value_for_language(self, item, prop, lang):
     if item is None: return False
     for value in item(prop):
-      if self.get_language(value) == lang: return True
-    return False
+      if self.get_language(value) == lang: return str(value)
+    return None
 
   def fetch_item(self, qid):
     # Fetch item from wikidata site.

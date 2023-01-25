@@ -59,13 +59,18 @@ int PyWikiConverter::Init(PyObject *args, PyObject *kwds) {
   // Get store argument.
   pycommons = nullptr;
   converter = nullptr;
+  bool guids = false;
   const char *language = "en";
-  if (!PyArg_ParseTuple(args, "O|s", &pycommons, &language)) return -1;
+  static const char *kwlist[] = {"store", "lang", "guids", nullptr};
+  if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|sb",
+      const_cast<char **>(kwlist),
+      &pycommons, &language, &guids)) return -1;
   if (!PyStore::TypeCheck(pycommons)) return -1;
 
   // Initialize converter.
   Py_INCREF(pycommons);
   converter = new nlp::WikidataConverter(pycommons->store, language);
+  converter->set_guids(guids);
   s_entities = pycommons->store->Lookup("entities");
 
   return 0;

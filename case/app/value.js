@@ -257,9 +257,6 @@ export class Time {
 
       case DAY:
         return month_names[this.month - 1] + " " + this.day + ", " + this.year;
-
-      default:
-        return "???";
     }
   }
 

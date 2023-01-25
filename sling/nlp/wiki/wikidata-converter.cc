@@ -252,30 +252,30 @@ Frame WikidataConverter::Convert(const Frame &item,
         if (!value.IsNil()) {
           // Add qualifiers.
           Frame qualifiers = statement.GetFrame(s_qualifiers_);
-          if (qualifiers.valid()) {
+          if (qualifiers.valid() || guids_ || ranking != 1) {
             Builder qualified(store);
             qualified.AddIs(value);
-            for (const Slot &qproperty : qualifiers) {
-              Array qstatement_list(store, qproperty.value);
-              for (int j = 0; j < qstatement_list.length(); ++j) {
-                Frame qstatement(store, qstatement_list.get(j));
-                Handle qproperty = qstatement.GetHandle(s_property_);
-                CHECK(!qproperty.IsNil());
-                Frame qdatavalue = qstatement.GetFrame(s_datavalue_);
-                if (qdatavalue.invalid()) continue;
-                Object qvalue(store, ConvertValue(qdatavalue));
-                if (!qvalue.IsNil()) {
-                  qualified.Add(Property(store, qproperty), qvalue);
+            if (qualifiers.valid()) {
+              for (const Slot &qproperty : qualifiers) {
+                Array qstatement_list(store, qproperty.value);
+                for (int j = 0; j < qstatement_list.length(); ++j) {
+                  Frame qstatement(store, qstatement_list.get(j));
+                  Handle qproperty = qstatement.GetHandle(s_property_);
+                  CHECK(!qproperty.IsNil());
+                  Frame qdatavalue = qstatement.GetFrame(s_datavalue_);
+                  if (qdatavalue.invalid()) continue;
+                  Object qvalue(store, ConvertValue(qdatavalue));
+                  if (!qvalue.IsNil()) {
+                    qualified.Add(Property(store, qproperty), qvalue);
+                  }
                 }
               }
             }
+            if (guids_) {
+              String guid = statement.Get(s_id_).AsString();
+              qualified.Add(n_guid_, guid);
+            }
             if (ranking != 1) qualified.Add(n_rank_, ranking);
-            value = qualified.Create();
-          } else if (ranking != 1) {
-            // Add rank to primitive value.
-            Builder qualified(store);
-            qualified.AddIs(value);
-            qualified.Add(n_rank_, ranking);
             value = qualified.Create();
           }
 
