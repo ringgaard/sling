@@ -27,6 +27,14 @@ PySequenceMethods PyFrame::sequence;
 PyMethodTable PyFrame::methods;
 PyTypeObject PySlots::type;
 
+// Find common store.
+static Store *CommonStore(Store *s1, Store *s2) {
+  if (s1 == s2) return s1;
+  if (s1->globals() == s2) return s1;
+  if (s2->globals() == s1) return s2;
+  return nullptr;
+}
+
 void PyFrame::Define(PyObject *module) {
   InitType(&type, "sling.Frame", sizeof(PyFrame), false);
   type.tp_dealloc = method_cast<destructor>(&PyFrame::Dealloc);
@@ -133,8 +141,9 @@ PyObject *PyFrame::Equals(PyObject *other) {
   bool match = false;
   if (PyObject_TypeCheck(other, &PyFrame::type)) {
     PyFrame *pyother = reinterpret_cast<PyFrame *>(other);
-    if (CompatibleStore(pyother)) {
-      match = pystore->store->Equal(handle(), pyother->handle());
+    Store *common = CommonStore(pystore->store, pyother->pystore->store);
+    if (common) {
+      match = common->Equal(handle(), pyother->handle());
     }
   }
   return PyBool_FromLong(match);
