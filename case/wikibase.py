@@ -365,7 +365,7 @@ class WikibaseExporter:
       elif name == n_description:
         description = str(value)
         lang = self.get_language(value)
-        if not self.has_language_value(current, n_description, lang):
+        if self.value_for_language(current, n_description, lang) is None:
           if "descriptions" not in entity: entity["descriptions"] = {}
           entity["descriptions"][lang] = {
             "language": lang,
@@ -499,8 +499,9 @@ class WikibaseExporter:
 
   def add_alias(self, entity, current, lang, alias):
     # Check for existing alias.
-    for a in current(n_alias):
-      if self.get_language(a) == lang and str(a) == alias: return
+    if current:
+      for a in current(n_alias):
+        if self.get_language(a) == lang and str(a) == alias: return
 
     # Get/add alias section.
     aliases = entity.get("aliases")
