@@ -503,24 +503,8 @@ class WikibaseExporter:
       for a in current(n_alias):
         if self.get_language(a) == lang and str(a) == alias: return
 
-    # Get/add alias section.
-    aliases = entity.get("aliases")
-    if aliases is None:
-      aliases = {}
-      entity["aliases"] = aliases
-
-    # Get/add alias section for language and copy exising aliases.
-    aliases_for_lang = aliases.get(lang)
-    if aliases_for_lang is None:
-      aliases_for_lang = []
-      aliases[lang] = aliases_for_lang
-      if current:
-        for a in current(n_alias):
-          if self.get_language(a) == lang:
-            aliases_for_lang.append({"language": lang, "value": str(a)})
-
     # Add new alias.
-    aliases_for_lang.append({
+    section(entity, "aliases", lang).append({
       "language": lang,
       "value": alias,
       "add": "",
@@ -641,11 +625,22 @@ class WikibaseExporter:
     for v in item(name):
       basev = self.store.resolve(v)
       if not same(baseval, basev): continue
+
+      # Check for unqualified match.
       if value == baseval or not has_qualifiers(v): return v
+
+      # Check for match based on qualifier identifier.
       for ident in qualifier_identifiers:
         idval = value[ident]
         if idval is None : continue
         if idval == v[ident]: return v
+
+      # Check for same qualifiers.
+      identical = True
+      for qname, qvalue in value:
+        if not v.has(qname, qvalue): identical = False
+      if identical: return v
+
     return None
 
   def get_language(self, s):
@@ -655,7 +650,7 @@ class WikibaseExporter:
     return self.lang
 
   def value_for_language(self, item, prop, lang):
-    if item is None: return False
+    if item is None: return None
     for value in item(prop):
       if self.get_language(value) == lang: return str(value)
     return None
