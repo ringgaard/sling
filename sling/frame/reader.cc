@@ -90,18 +90,6 @@ Handle Reader::ParseObject() {
       break;
     }
 
-    case INDEX_TOKEN: {
-      int32 value;
-      if (safe_strto32(token_text(), &value)) {
-        handle = Handle::Index(value);
-        NextToken();
-      } else {
-        SetError("invalid index token");
-        handle = Handle::error();
-      }
-      break;
-    }
-
     case NULL_TOKEN:
       handle = Handle::nil();
       NextToken();
@@ -122,13 +110,7 @@ Handle Reader::ParseObject() {
       NextToken();
       break;
 
-    case LITERAL_TOKEN:
-      handle = store_->Symbol(token_text());
-      NextToken();
-      break;
-
-    case NUMERIC_TOKEN:
-    case INDEX_REF_TOKEN: {
+    case REFERENCE_TOKEN: {
       int32 index;
       if (safe_strto32(token_text(), &index)) {
         if (index >= references_.size()) references_.resize(index + 1);
@@ -137,7 +119,7 @@ Handle Reader::ParseObject() {
         handle = ref;
         NextToken();
       } else {
-        SetError("invalid numeric token");
+        SetError("invalid reference token");
         handle = Handle::error();
       }
       break;
@@ -152,7 +134,7 @@ Handle Reader::ParseObject() {
       break;
 
     case '$':
-      handle = ParseQuotedSymbol();
+      handle = ParseQuoted();
       break;
 
     case QSTRING_TOKEN:
@@ -191,8 +173,8 @@ Handle Reader::ParseFrame() {
           NextToken();
           Handle id = ParseId();
           if (error()) return Handle::error();
-          if (id.IsIndex()) {
-            index = id.AsIndex();
+          if (id.IsInt()) {
+            index = id.AsInt();
           } else {
             Push(Handle::id());
             Push(id);
@@ -346,24 +328,13 @@ Handle Reader::ParseQString() {
   return handle;
 }
 
-Handle Reader::ParseQuotedSymbol() {
+Handle Reader::ParseQuoted() {
   NextToken();
   if (token() == STRING_TOKEN) {
     Handle handle = store_->Symbol(token_text());
     NextToken();
     return handle;
-  } else {
-    SetError("invalid quoted symbol");
-    return Handle::error();
-  }
-}
-
-Handle Reader::ParseId() {
-  if (token() == SYMBOL_TOKEN || token() == LITERAL_TOKEN) {
-    Handle handle = store_->Symbol(token_text());
-    NextToken();
-    return handle;
-  } else if (token() == INDEX_REF_TOKEN || token() == NUMERIC_TOKEN) {
+  } else if (token() == INTEGER_TOKEN) {
     int32 value;
     if (safe_strto32(token_text(), &value)) {
       Handle index = Handle::Index(value);
@@ -374,8 +345,33 @@ Handle Reader::ParseId() {
       return Handle::error();
     }
   } else {
-    return ParseObject();
+    SetError("quoted symbol or index expected");
+    return Handle::error();
   }
+}
+
+Handle Reader::ParseId() {
+  if (token() == SYMBOL_TOKEN) {
+    Handle handle = store_->Symbol(token_text());
+    NextToken();
+    return handle;
+  } else if (token() == REFERENCE_TOKEN) {
+    int32 n;
+    if (safe_strto32(token_text(), &n)) {
+      NextToken();
+      return Handle::Integer(n);
+    }
+  } else if (token() == '$') {
+    NextToken();
+    if (token() == STRING_TOKEN) {
+      Handle handle = store_->Symbol(token_text());
+      NextToken();
+      return handle;
+    }
+  }
+
+  SetError("invalid id");
+  return Handle::error();
 }
 
 }  // namespace sling

@@ -32,6 +32,9 @@ struct PyString : public PyBase, public Root {
   // Return hash value for string.
   long Hash();
 
+  // Check if string is equal to another object.
+  PyObject *Compare(PyObject *other, int op);
+
   // Return string as Python string.
   PyObject *Str();
 

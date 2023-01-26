@@ -236,7 +236,7 @@ def selfie(title):
 
 # Check for album in comments.
 def album_title(title):
-  for phrase in ["AIC", "MIC", "Album", "album"];
+  for phrase in ["AIC", "MIC", "Album", "album"]:
     if phrase in title: return True
   return False
 

@@ -44,7 +44,8 @@ export class Component extends HTMLElement {
       let value = attr.value;
 
       try {
-        this.attrs[name] = JSON.parse(value);
+        let v = JSON.parse(`[${value}]`);
+        this.attrs[name] = Array.isArray(v) && v.length == 1 ? v[0] : value;
       } catch (e) {
         this.attrs[name] = value;
       }

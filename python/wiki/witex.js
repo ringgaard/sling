@@ -417,7 +417,9 @@ class WikiTable extends MdCard {
       frame.apply((name, value) => {
         if ((value instanceof Frame) && value.isanonymous()) {
           value.purge((n, v) => !v);
-          if (value.length == 0 || value.get(n_is) == null) value = null;
+          if (value.length == 0 || value.has(n_is) && !value.get(n_is)) {
+            value = null;
+          }
           return [name, value];
         }
       });

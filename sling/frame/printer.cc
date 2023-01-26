@@ -60,7 +60,7 @@ void Printer::Print(Handle handle, bool reference) {
     PrintInt(handle.AsInt());
   } else if (handle.IsFloat()) {
     if (handle.IsIndex()) {
-      WriteChar(reference ? '#' : '@');
+      WriteChar(reference ? '#' : '$');
       PrintInt(handle.AsIndex());
     } else {
       PrintFloat(handle.AsFloat());

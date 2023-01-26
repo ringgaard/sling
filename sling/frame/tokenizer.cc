@@ -52,21 +52,10 @@ int Tokenizer::NextToken() {
         if (ascii_isdigit(current_)) return ParseNumber(false, true);
         return Token('.');
 
-      case '#':  // numeric symbol name
+      case '#':  // reference
         NextChar();
-        if (current_ == '@') {
-          NextChar();
-          if (ParseDigits() > 0) return Token(INDEX_REF_TOKEN);
-          return Error("Invalid index reference");
-        } else if (ParseDigits() > 0) {
-          return Token(NUMERIC_TOKEN);
-        }
+        if (ParseDigits() > 0) return Token(REFERENCE_TOKEN);
         return Token('#');
-
-      case '@':  // index number
-        NextChar();
-        if (ParseDigits() > 0) return Token(INDEX_TOKEN);
-        return Token('@');
 
       case ';':  // comment or semicolon
         NextChar();

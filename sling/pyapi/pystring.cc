@@ -25,6 +25,7 @@ void PyString::Define(PyObject *module) {
   type.tp_dealloc = method_cast<destructor>(&PyString::Dealloc);
   type.tp_str = method_cast<reprfunc>(&PyString::Str);
   type.tp_hash = method_cast<hashfunc>(&PyString::Hash);
+  type.tp_richcompare = method_cast<richcmpfunc>(&PyString::Compare);
 
   methods.Add("text", &PyString::Text);
   methods.Add("qualifier", &PyString::Qualifier);
@@ -79,6 +80,36 @@ PyObject *PyString::Text() {
 
 PyObject *PyString::Qualifier() {
   return pystore->PyValue(string()->qualifier());
+}
+
+PyObject *PyString::Compare(PyObject *other, int op) {
+  StringDatum *str = string();
+  sling::Text a = str->str();
+  sling::Text b;
+  if (PyObject_TypeCheck(other, &PyString::type)) {
+    // Other object is a qualified string, so qualifiers must match if set.
+    PyString *pyother = reinterpret_cast<PyString *>(other);
+    StringDatum *other = pyother->string();
+    if (!str->qualifier().IsNil() || !other->qualifier().IsNil()) {
+      if (str->qualifier() != other->qualifier()) Py_RETURN_FALSE;
+    }
+
+    b = other->str();
+  } else if (PyUnicode_Check(other)) {
+    b = GetText(other);
+  }
+
+  // Compare strings.
+  bool result = false;
+  switch (op) {
+    case Py_LT: result = (a < b); break;
+    case Py_LE: result = (a <= b); break;
+    case Py_EQ: result = (a == b); break;
+    case Py_NE: result = (a != b); break;
+    case Py_GT: result = (a > b); break;
+    case Py_GE: result = (a >= b); break;
+  }
+  return PyBool_FromLong(result);
 }
 
 }  // namespace sling

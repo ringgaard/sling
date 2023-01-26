@@ -32,10 +32,7 @@ class Tokenizer : public Scanner {
     INTEGER_TOKEN,
     FLOAT_TOKEN,
     SYMBOL_TOKEN,
-    LITERAL_TOKEN,
-    NUMERIC_TOKEN,
-    INDEX_TOKEN,
-    INDEX_REF_TOKEN,
+    REFERENCE_TOKEN,
     CHARACTER_TOKEN,
 
     // Multi-character operators.

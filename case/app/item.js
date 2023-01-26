@@ -9,8 +9,6 @@ import {Time, LabelCollector, latlong} from "./value.js";
 import {get_widget} from "./plugins.js";
 import {PhotoGallery, censor, imageurl, mediadb} from "/common/lib/gallery.js";
 
-mediadb.thumb = false;
-
 const n_id = store.id;
 const n_is = store.is;
 const n_isa = store.isa;
