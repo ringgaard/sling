@@ -565,7 +565,7 @@ class PicturePanel extends Component {
         caption += ` [${index + 1}/${images.length}]`;
       }
 
-      this.find(".photo").update(imageurl(image.url));
+      this.find(".photo").update(imageurl(image.url, true));
       this.find(".caption").update(caption);
     } else {
       this.find(".photo").update(null);
