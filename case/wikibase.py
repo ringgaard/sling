@@ -340,6 +340,7 @@ class WikibaseExporter:
     # Fetch existing item to check for existing claims.
     current = None
     revision = None
+    print("qid", qid)
     if qid is not None:
       current, revision = self.fetch_item(qid)
 
@@ -502,8 +503,10 @@ class WikibaseExporter:
           self.num_qualifiers += num_qualifiers
 
   def add_alias(self, entity, current, lang, alias):
-    # Check for existing alias.
+    # Check for existing name or alias.
     if current:
+      for a in current(n_name):
+        if self.get_language(a) == lang and str(a) == alias: return
       for a in current(n_alias):
         if self.get_language(a) == lang and str(a) == alias: return
 
