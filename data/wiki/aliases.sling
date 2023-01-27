@@ -74,7 +74,7 @@
 
   ; female
   Q6581072: {
-    "women": @2
+    "women": $2
   }
 
   ; Luis Félix López
@@ -104,17 +104,17 @@
 
   ; party leader
   Q1553195: {
-    "leader": @2
+    "leader": $2
   }
 
   ; women's sports
   Q920057: {
-    "women's": @2
+    "women's": $2
   }
 
   ; men's sports
   Q35555522: {
-    "men's": @2
+    "men's": $2
   }
 
   ; person
