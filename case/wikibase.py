@@ -345,9 +345,6 @@ class WikibaseExporter:
       current, revision = self.fetch_item(qid)
 
     # Add new labels, description, aliases, and claims.
-    num_statements = 0
-    num_references = 0
-    num_qualifiers = 0
     for name, value in topic:
       # Skip existing statements.
       if name == n_id or name == n_is or name == n_media:
@@ -423,7 +420,6 @@ class WikibaseExporter:
           "rank": "normal",
           "mainsnak": snak,
         }
-        num_statements += 1
         if match:
           # Set id for existing claim.
           claim["id"] = match["guid"]
@@ -443,6 +439,8 @@ class WikibaseExporter:
                 "datavalue": datavalue,
               })
 
+        let num_references = 0
+        let num_qualifiers = 0
         if v != value:
           # Add qualifiers/references.
           for qname, qvalue in value:
@@ -498,7 +496,7 @@ class WikibaseExporter:
         # Add claim to entity.
         if match is None or num_qualifiers > 0:
           section(entity, "claims", pid).append(claim);
-          self.num_statements += num_statements
+          self.num_statements += 1
           self.num_references += num_references
           self.num_qualifiers += num_qualifiers
 

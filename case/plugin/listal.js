@@ -83,6 +83,7 @@ const tagsdir = {
   "PMOM": stmt(n_occupation, "Q728711"),
   "P*rn Star": stmt(n_occupation, "Q488111"),
   "Reality Tv": stmt(n_occupation, "Q27658988"),
+  "Reality Tv Contestant": stmt(n_occupation, "Q27658988"),
   "Realtor": stmt(n_occupation, "Q519076"),
   "Reporter": stmt(n_occupation, "Q42909"),
   "Ring Girl": stmt(n_occupation, "Q922176"),

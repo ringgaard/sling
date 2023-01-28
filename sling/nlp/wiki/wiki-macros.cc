@@ -575,7 +575,7 @@ class HeightTemplate : public WikiMacro {
       if (in == 0) in = templ.GetFloat("inch");
       if (in == 0) in = templ.GetFloat("inches");
 
-      if (in != 0 || ft != 0) height = in * 30.48 + ft * 2.54;
+      if (in != 0 || ft != 0) height = ft * 30.48 + in * 2.54;
     }
 
     // Add height with annotation.
