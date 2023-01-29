@@ -340,7 +340,6 @@ class WikibaseExporter:
     # Fetch existing item to check for existing claims.
     current = None
     revision = None
-    print("qid", qid)
     if qid is not None:
       current, revision = self.fetch_item(qid)
 
@@ -618,10 +617,8 @@ class WikibaseExporter:
 
   def skip_value(self, value):
     if type(value) != sling.Frame: return False
-    id = value.id
-    if id is None: return False
-    if is_qid(id): return False
-    if value in self.topics: return False
+    if value.isanonymous(): return False
+    if get_qid(value) is not None: return False
     return True
 
   def match(self, item, name, value):
