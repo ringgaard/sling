@@ -439,8 +439,8 @@ class WikibaseExporter:
                 "datavalue": datavalue,
               })
 
-        let num_references = 0
-        let num_qualifiers = 0
+        num_references = 0
+        num_qualifiers = 0
         if v != value:
           # Add qualifiers/references.
           for qname, qvalue in value:
