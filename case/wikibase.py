@@ -182,9 +182,15 @@ def get_qid(topic):
 
   return None
 
+def original(v):
+  if type(v) is sling.Frame and n_is in v:
+    qid = get_qid(v)
+    if qid is not None: v = v.store()[qid]
+  return v
+
 def same(a, b):
   if type(a) is sling.Frame:
-    return a.equals(b)
+    return original(a).equals(original(b))
   else:
     return a == b
 
@@ -618,6 +624,7 @@ class WikibaseExporter:
   def skip_value(self, value):
     if type(value) != sling.Frame: return False
     if value.isanonymous(): return False
+    if value in self.topics: return False
     if get_qid(value) is not None: return False
     return True
 
