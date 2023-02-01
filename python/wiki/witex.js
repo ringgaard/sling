@@ -416,9 +416,11 @@ class WikiTable extends MdCard {
       let frame = store.parse(result);
       frame.apply((name, value) => {
         if ((value instanceof Frame) && value.isanonymous()) {
-          value.purge((n, v) => !v);
-          if (value.length == 0 || value.has(n_is) && !value.get(n_is)) {
+          if (value.has(n_is) && !value.get(n_is)) {
             value = null;
+          } else {
+            value.purge((n, v) => !v);
+            if (value.length == 0) value = null;
           }
           return [name, value];
         }
