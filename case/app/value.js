@@ -590,6 +590,7 @@ export function date_parser(value, results) {
 
   // Parse Month YYYY.
   m = value.match(/^(\w+)\.?[ ,]+(\d+)$/);
+  if (!m) m = value.match(/^(\w+) of (\d+)$/);
   if (m) {
     let month = monthnum(m[1]);
     if (month) add_date_result(results, m[2], month, null);

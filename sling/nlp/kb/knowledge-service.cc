@@ -1221,16 +1221,24 @@ void KnowledgeService::HandleGetStubs(HTTPRequest *request,
   Encoder encoder(store, &out);
   Array stubs(store, size);
   for (int i = 0; i < size; ++i) {
-    Frame item(store, frames.get(i));
-    if (item.valid() && !item.IsProxy()) {
-      Builder b(store);
-      b.AddId(item.Id());
-      Handle name = item.GetHandle(n_name_);
-      if (!name.IsNil()) b.Add(n_name_, name);
-      Frame stub = b.Create();
-      stubs.set(i, stub.handle());
-      encoder.Encode(stub);
+    Handle handle = frames.get(i);
+    if (store->IsProxy(handle)) {
+      // Try to resolve xrefs and retrieve offline item.
+      handle = RetrieveItem(store, store->FrameId(handle), true);
     }
+    if (handle.IsNil()) continue;
+
+    Frame item(store, handle);
+    Builder b(store);
+    b.AddId(item.Id());
+    if (handle != frames.get(i)) {
+      b.AddId(store->FrameId(frames.get(i)));
+    }
+    Handle name = item.GetHandle(n_name_);
+    if (!name.IsNil()) b.Add(n_name_, name);
+    Frame stub = b.Create();
+    stubs.set(i, stub.handle());
+    encoder.Encode(stub);
   }
   encoder.Encode(stubs);
 }
