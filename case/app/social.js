@@ -316,6 +316,13 @@ let xrefs = [
     pattern: /^https?:\/\/(?:www\.)?wikitree\.com\/wiki\/([^#^\/]+)/,
     property: frame("P2949"),
   },
+
+  {
+    pattern: /^https?:\/\/(\w+)\.fandom\.com\/wiki\/([^#^\/]+)/,
+    property: frame("P6262"),
+    extract: m => decodeURIComponent(m[1]) + ":" + decodeURIComponent(m[2])
+  },
+
 ];
 
 export function match_link(url) {
@@ -323,8 +330,8 @@ export function match_link(url) {
     let m = url.match(xref.pattern);
     if (m) {
       let prop = xref.property;
-      let identifier = decodeURIComponent(m[1]);
-      return [prop, identifier];
+      let id = xref.extract ? xref.extract(m) : decodeURIComponent(m[1]);
+      return [prop, id];
     }
   }
   return [null, null];
