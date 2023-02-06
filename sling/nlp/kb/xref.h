@@ -85,6 +85,7 @@ class XRef {
     string name;             // property name
     uint64 hash;             // hash code for property
     int priority;            // priority for selecting canonical id
+    bool caseless;           // property value is case insensitive
     mutable int count;       // number of occurences
   };
 
@@ -122,11 +123,11 @@ class XRef {
   ~XRef();
 
   // Create new property for handle.
-  Property *CreateProperty(Handle handle, Text name);
+  Property *CreateProperty(Handle handle, Text name, bool caseless = false);
 
   // Add property type to cross reference. Identifier property types should be
   // added in priority order. The property frames must be in a global store.
-  const Property *AddProperty(const Frame &property);
+  const Property *AddProperty(const Frame &property, bool caseless);
 
   // Look up property. Return null if property is not found.
   const Property *LookupProperty(Handle handle) const;
@@ -206,6 +207,9 @@ class XRefMapping {
 
   // Mnemonics for cross-referenced properties.
   std::unordered_map<Text, Text> mnemonics_;
+
+  // Case insensitive properties.
+  std::unordered_set<Text> caseless_;
 };
 
 }  // namespace nlp

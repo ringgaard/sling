@@ -75,6 +75,7 @@ cc_library(
     "//sling/frame:object",
     "//sling/frame:serialization",
     "//sling/frame:store",
+    "//sling/string:ctype",
     "//sling/string:strcat",
     "//sling/string:text",
     "//sling/util:arena",

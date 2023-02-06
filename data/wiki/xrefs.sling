@@ -1,6 +1,22 @@
 {
   ; Properties that are cross-referenced in knowledge base in priority order.
   properties: [
+    P345,  ; IMDB ID
+    P2002, ; Twitter username
+    P2003, ; Instagram username
+    P5346, ; Playmate ID
+    P6290, ; Penthouse ID
+    P2013, ; Facebook ID
+    P7085, ; TikTok username
+    P8604, ; OnlyFans ID
+    P3984, ; subreddit
+    P4015, ; Vimeo identifier
+    PBABE, ; Babepedia ID
+    PVEF,  ; VEF thread ID
+    P3869, ; IAFD female performer ID
+
+    PSCHM  ; Schema.org ID
+
     P4496, ; NACE industry code
 
     P1059, ; Danish CVR company number
@@ -36,22 +52,6 @@
     P1320, ; OpenCorporates ID
     P1278, ; Legal Entity Identifier
     PELF,  ; ISO 20275 entity legal form ID
-
-    P345,  ; IMDB ID
-    P2002, ; Twitter username
-    P2003, ; Instagram username
-    P5346, ; Playmate ID
-    P6290, ; Penthouse ID
-    P2013, ; Facebook ID
-    P7085, ; TikTok username
-    P8604, ; OnlyFans ID
-    P3984, ; subreddit
-    P4015, ; Vimeo identifier
-    PBABE, ; Babepedia ID
-    PVEF,  ; VEF thread ID
-    P3869, ; IAFD female performer ID
-
-    PSCHM  ; Schema.org ID
 
     P214,  ; VIAF ID
     P646,  ; Freebase MID
@@ -98,6 +98,15 @@
     "kg": "P2671"       ; Google Knowledge Graph ID
     "fg": "P8168"       ; FactGrid ID
   }
+
+  ; Case insensitive cross-reference properties.
+  caseless: [
+    P2002, ; Twitter
+    P2003, ; Instagram
+    P2013, ; Facebook
+    P3984, ; subreddit
+    P3869, ; IAFD
+  ]
 
   ; URI prefix to property mapping.
   urimap: {

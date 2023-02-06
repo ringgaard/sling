@@ -31,13 +31,22 @@ class XRefBuilder : public task::FrameProcessor {
     Frame config = reader.Read().AsFrame();
     CHECK(config.valid());
 
+    // Get case insensitive properties.
+    HandleSet nocase;
+    caseless_ = config.Get("caseless").AsArray();
+    if (caseless_.valid()) {
+      for (int i = 0; i < caseless_.length(); ++i) {
+        nocase.add(caseless_.get(i));
+      }
+    }
+
     // Get property priority list.
     sys_property_ = xref_.CreateProperty(Handle::nil(), "");
     Array properties = config.Get("properties").AsArray();
     CHECK(properties.valid());
     for (int i = 0; i < properties.length(); ++i) {
       Frame property(commons_, properties.get(i));
-      xref_.AddProperty(property);
+      xref_.AddProperty(property, nocase.has(property.handle()));
     }
 
     // Get URI mapping.
@@ -232,14 +241,17 @@ class XRefBuilder : public task::FrameProcessor {
     // Get output file name.
     task::Binding *file = task->GetOutput("output");
     CHECK(file != nullptr);
+    bool snapshot = task->Get("snapshot", false);
 
     // Build xref frames.
-    bool snapshot = task->Get("snapshot", false);
     Store store;
     xref_.Build(&store);
+
+    // Add xref configuration.
+    Builder xcfg(&store);
+    xcfg.AddId("/w/xrefs");
     if (mnemonics_.valid()) {
       Builder b(&store);
-      b.AddId("/w/mnemonics");
       Store *commons = mnemonics_.store();
       for (const Slot &s : mnemonics_) {
         CHECK(commons->IsString(s.name));
@@ -248,14 +260,23 @@ class XRefBuilder : public task::FrameProcessor {
         Text property = commons->GetString(s.value)->str();
         b.Add(String(&store, mnemonic), property);
       }
-      b.Create();
+      xcfg.Add("/w/mnemonics", b.Create());
+    }
+    if (caseless_.valid()) {
+      Handles nocase(&store);
+      Store *commons = caseless_.store();
+      for (int i = 0; i < caseless_.length(); ++i) {
+        String pid(&store, commons->FrameId(caseless_.get(i)));
+        nocase.push_back(pid.handle());
+      }
+      xcfg.Add("/w/caseless", nocase);
     }
     if (!urimap_.empty()) {
       Builder b(&store);
-      b.AddId("/w/urimap");
       urimap_.Save(&b);
-      b.Create();
+      xcfg.Add("/w/urimap", b.Create());
     }
+    xcfg.Create();
     if (snapshot) store.AllocateSymbolHeap();
     store.GC();
 
@@ -349,6 +370,9 @@ class XRefBuilder : public task::FrameProcessor {
 
   // Property mnemonics.
   Frame mnemonics_;
+
+  // Caseless properties.
+  Array caseless_;
 
   // Symbols.
   Name n_merge_{names_, "merge"};

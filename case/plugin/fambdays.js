@@ -96,5 +96,5 @@ export default class FamousBirthdaysPlugin {
 
     context.updated(topic);
   }
-};
+}
 

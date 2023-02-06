@@ -322,7 +322,6 @@ let xrefs = [
     property: frame("P6262"),
     extract: m => decodeURIComponent(m[1]) + ":" + decodeURIComponent(m[2])
   },
-
 ];
 
 export function match_link(url) {

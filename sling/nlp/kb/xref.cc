@@ -18,10 +18,18 @@
 #include <vector>
 
 #include "sling/frame/serialization.h"
+#include "sling/string/ctype.h"
 #include "sling/string/strcat.h"
 
 namespace sling {
 namespace nlp {
+
+static void lowercase(string *str, int start = 0) {
+  for (int i = start; i < str->size(); ++i) {
+    char &c = str->at(i);
+    c = ascii_tolower(c);
+  }
+}
 
 void URIMapping::Load(const Frame &frame) {
   Store *store = frame.store();
@@ -155,21 +163,22 @@ XRef::~XRef() {
   for (auto &it : properties_) delete it.second;
 }
 
-XRef::Property *XRef::CreateProperty(Handle handle, Text name) {
+XRef::Property *XRef::CreateProperty(Handle handle, Text name, bool caseless) {
   Property *p = new Property();
   p->handle = handle;
   p->priority = properties_.size();
   p->name = name.str();
   p->hash = Fingerprint(name.data(), name.size());
   p->count = 0;
+  p->caseless = caseless;
   if (!handle.IsNil()) properties_[handle] = p;
   property_map_[p->name] = p;
   return p;
 }
 
-const XRef::Property *XRef::AddProperty(const Frame &property) {
+const XRef::Property *XRef::AddProperty(const Frame &property, bool caseless) {
   CHECK(property.IsGlobal()) << property.Id();
-  return CreateProperty(property.handle(), property.Id());
+  return CreateProperty(property.handle(), property.Id(), caseless);
 }
 
 const XRef::Property *XRef::LookupProperty(Handle handle) const {
@@ -194,6 +203,14 @@ XRef::Identifier *XRef::GetIdentifier(const Property *type,
                                       bool redirect) {
   // Empty values not allowed.
   if (value.empty()) return nullptr;
+
+  // Make case insensitive values lower case.
+  string valuebuf;
+  if (type->caseless) {
+    value.CopyToString(&valuebuf);
+    lowercase(&valuebuf);
+    value = valuebuf;
+  }
 
   // Try to find existing identifier.
   uint64 hash = Hash(type, value);
@@ -346,6 +363,16 @@ XRef::Identifier *XRef::Identifier::Canonical() {
 }
 
 bool XRefMapping::Map(string *id) const {
+  // Lowercase id if property is case insensitive.
+  int slash = id->find('/');
+  int colon = id->find(':');
+  if (slash != -1 && (colon == -1 || slash < colon)) {
+    Text pid(id->data(), slash);
+    if (caseless_.count(pid)) {
+      lowercase(id, slash + 1);
+    }
+  }
+
   // Try to look up identifier in cross-reference.
   Handle h = xrefs_.LookupExisting(*id);
   if (!h.IsNil()) {
@@ -368,8 +395,6 @@ bool XRefMapping::Map(string *id) const {
   }
 
   // Try to convert property mnemonic.
-  int slash = id->find('/');
-  int colon = id->find(':');
   int sep = slash != -1 && slash < colon ? slash : colon;
   if (sep != -1) {
     Text domain = Text(*id, 0, sep).trim();
@@ -377,6 +402,7 @@ bool XRefMapping::Map(string *id) const {
     if (!domain.empty() && !identifier.empty()) {
       auto f = mnemonics_.find(domain);
       if (f != mnemonics_.end()) domain = f->second;
+      if (caseless_.count(domain) > 0) lowercase(id, sep + 1);
       string idstr = StrCat(domain, "/", identifier);
       Handle h = xrefs_.LookupExisting(idstr);
       if (!h.IsNil()) {
@@ -398,20 +424,33 @@ void XRefMapping::Load(const string &filename) {
   LoadStore(filename, &xrefs_);
   xrefs_.Freeze();
 
-  // Set up URI mapping.
-  Frame urimap(&xrefs_, "/w/urimap");
-  if (urimap.valid()) {
-    urimap_.Load(urimap);
-  }
+  // Get xref configuration.
+  Frame xcfg(&xrefs_, "/w/xrefs");
+  if (xcfg.valid()) {
+    // Set up URI mapping.
+    Frame urimap = xcfg.Get("/w/urimap").AsFrame();
+    if (urimap.valid()) {
+      urimap_.Load(urimap);
+    }
 
-  // Build mapping from mnemonics to property ids.
-  Frame mnemonics(&xrefs_, "/w/mnemonics");
-  if (mnemonics.valid()) {
-    for (const Slot &s : mnemonics) {
-      if (s.name.IsId()) continue;
-      Text mnemonic = xrefs_.GetText(s.name);
-      Text property = xrefs_.GetText(s.value);
-      mnemonics_[mnemonic] = property;
+    // Build mapping from mnemonics to property ids.
+    Frame mnemonics = xcfg.Get("/w/mnemonics").AsFrame();
+    if (mnemonics.valid()) {
+      for (const Slot &s : mnemonics) {
+        if (s.name.IsId()) continue;
+        Text mnemonic = xrefs_.GetText(s.name);
+        Text property = xrefs_.GetText(s.value);
+        mnemonics_[mnemonic] = property;
+      }
+    }
+
+    // Get case insensitive properties.
+    Array caseless = xcfg.Get("/w/caseless").AsArray();
+    if (caseless.valid()) {
+      for (int i = 0; i < caseless.length(); ++i) {
+        String pid(&xrefs_, caseless.get(i));
+        caseless_.insert(pid.text());
+      }
     }
   }
 }
