@@ -105,10 +105,6 @@ class KbRef extends Component {
 Component.register(KbRef);
 
 class PropertyPanel extends Component {
-  onconnected() {
-    this.bind(null, "click", e => { e.stopPropagation(); });
-  }
-
   visible() {
     return this.state && this.state.length > 0;
   }
@@ -411,11 +407,10 @@ class PropertyPanel extends Component {
 
       $ .prop-name {
         font-weight: 500;
-        width: 20%;
+        width: 30%;
         padding: 8px;
         vertical-align: top;
         overflow-wrap: break-word;
-        user-select: none;
       }
 
       $ .prop-values {

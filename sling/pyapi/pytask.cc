@@ -501,7 +501,10 @@ PyObject *PyRegisterTask(PyObject *self, PyObject *args) {
 
   // Initialize and acquire the global interpreter lock so the registered
   // Python tasks can be run in separate threads.
+  // Deprecated since Python version 3.9.
+#if PYVER < 37
   PyEval_InitThreads();
+#endif
 
   // Factory for creating new task instances.
   auto *factory = new Processor::Factory([cls]() {

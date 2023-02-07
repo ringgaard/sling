@@ -61,6 +61,10 @@ flags.define("--media_service",
              help="Media cache service",
              default=None)
 
+flags.define("--thumb_service",
+             help="Thumb nail service",
+             default=None)
+
 # Load services before parsing flags to allow services to define flags.
 services.load()
 flags.parse()
@@ -263,6 +267,14 @@ def media_request(request):
   redir = request.path[1:]
   if flags.arg.media_service:
     redir = flags.arg.media_service + "/" + redir
+  return sling.net.HTTPRedirect(redir)
+
+@app.route("/thumb")
+def thumb_request(request):
+  # Dummy media service that redirects the media server or the original url.
+  redir = request.path[1:]
+  if flags.arg.thumb_service:
+    redir = flags.arg.thumb_service + "/" + redir
   return sling.net.HTTPRedirect(redir)
 
 @app.route("/case/cacheimg", method="POST")

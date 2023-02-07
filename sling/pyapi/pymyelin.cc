@@ -47,6 +47,12 @@ PyMappingMethods PyTensor::mapping;
 PyBufferProcs PyTensor::buffer;
 PyMethodTable PyTensor::methods;
 
+// Replacement for PyObject_CheckBuffer. This was a macro before Python 3.9.
+int PyCheckBuffer(PyObject *obj) {
+  PyBufferProcs *tp_as_buffer = Py_TYPE(obj)->tp_as_buffer;
+  return tp_as_buffer != nullptr && tp_as_buffer->bf_getbuffer != nullptr;
+}
+
 // Assign Python value to element.
 static int AssignElement(char *ptr, Type type, PyObject *value) {
   switch (type) {
@@ -481,7 +487,7 @@ int PyNetwork::SetTensor(PyObject *key, PyObject *value) {
   char *ptr = tensor->data();
 
   // Try to set data from Python buffer.
-  if (PyObject_CheckBuffer(value)) {
+  if (PyCheckBuffer(value)) {
     Py_buffer view;
     if (PyObject_GetBuffer(value, &view, PyBUF_RECORDS_RO) == -1) return -1;
 
@@ -792,7 +798,7 @@ int PyInstance::SetTensor(PyObject *key, PyObject *value) {
   }
 
   // Try to set data from Python buffer.
-  if (PyObject_CheckBuffer(value)) {
+  if (PyCheckBuffer(value)) {
     Py_buffer view;
     if (PyObject_GetBuffer(value, &view, PyBUF_RECORDS_RO) == -1) return -1;
 
@@ -1141,7 +1147,7 @@ PyBuffers::~PyBuffers() {
 
 char *PyBuffers::GetData(PyObject *obj, Type type, size_t *size) {
   // Try to data using Python buffer protocol.
-  if (PyObject_CheckBuffer(obj)) {
+  if (PyCheckBuffer(obj)) {
     Py_buffer *view = new Py_buffer;
     if (PyObject_GetBuffer(obj, view, PyBUF_C_CONTIGUOUS) == -1) {
       delete view;

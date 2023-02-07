@@ -10,7 +10,7 @@ import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 const n_name = frame("name");
 const n_description = frame("description");
 const n_media = frame("media");
-const n_linktree = frame("PLITR");
+const n_linktree = frame("P11079");
 
 export default class LinkTreePlugin {
   async process(action, query, context) {

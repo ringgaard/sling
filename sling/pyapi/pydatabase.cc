@@ -327,17 +327,19 @@ PyObject *PyDatabase::Epoch() {
 }
 
 bool PyDatabase::GetData(PyObject *obj, Slice *data) {
-  char *buffer;
-  Py_ssize_t length;
-
   if (PyBytes_Check(obj)) {
+    char *buffer;
+    Py_ssize_t length;
     if (PyBytes_AsStringAndSize(obj, &buffer, &length) == -1) return false;
+    *data = Slice(buffer, length);
   } else {
+    const char *buffer;
+    Py_ssize_t length;
     buffer = PyUnicode_AsUTF8AndSize(obj, &length);
     if (buffer == nullptr) return false;
+    *data = Slice(buffer, length);
   }
 
-  *data = Slice(buffer, length);
   return true;
 }
 

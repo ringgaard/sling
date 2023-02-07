@@ -27,6 +27,9 @@
 #elif PYVER==38
 #include <python3.8/Python.h>
 #include <python3.8/structmember.h>
+#elif PYVER==39
+#include <python3.9/Python.h>
+#include <python3.9/structmember.h>
 #else
 #include <Python.h>
 #include <structmember.h>
@@ -136,14 +139,17 @@ struct PyBase : public PyVarObject {
 
   // Get text from Python string or bytes.
   static Text GetText(PyObject *obj) {
-    char *data = nullptr;
-    Py_ssize_t length = 0;
     if (PyBytes_Check(obj)) {
+      char *data = nullptr;
+      Py_ssize_t length = 0;
       if (PyBytes_AsStringAndSize(obj, &data, &length) == -1) return Text();
+      return Text(data, length);
     } else {
+      const char *data = nullptr;
+      Py_ssize_t length = 0;
       data = PyUnicode_AsUTF8AndSize(obj, &length);
+      return Text(data, length);
     }
-    return Text(data, length);
   }
 
   // Type checking.
