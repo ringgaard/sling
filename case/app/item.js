@@ -407,7 +407,7 @@ class PropertyPanel extends Component {
 
       $ .prop-name {
         font-weight: 500;
-        width: 30%;
+        width: 25%;
         padding: 8px;
         vertical-align: top;
         overflow-wrap: break-word;

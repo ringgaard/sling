@@ -204,6 +204,10 @@ class CaseEditor extends MdApp {
       this.onmerge(e);
     } else if (e.code === "Escape") {
       this.find("#search").clear();
+    } else if (e.shiftKey && e.code === "PageDown") {
+      this.next_folder();
+    } else if (e.shiftKey && e.code === "PageUp") {
+      this.prev_folder();
     }
   }
 
@@ -677,6 +681,18 @@ class CaseEditor extends MdApp {
       }
       if (updated && !this.scraps.includes(topic)) this.topic_updated(topic);
     }
+  }
+
+  next_folder() {
+    let current = this.folder_index(this.folder);
+    let next = this.folders.value(current + 1);
+    if (next) this.show_folder(next);
+  }
+
+  prev_folder() {
+    let current = this.folder_index(this.folder);
+    let prev = this.folders.value(current - 1);
+    if (prev) this.show_folder(prev);
   }
 
   async show_folder(folder) {

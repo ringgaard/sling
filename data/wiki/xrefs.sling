@@ -489,7 +489,7 @@
       +"P1992" ; Plazi ID
       suffix: ".rdf"
     }
-    "http://vocabulary.curriculum.edu.au/$1": {
+    "http://vocabulary.curriculum.edu.au/": {
       +"P7033" ; Australian Educational Vocabulary ID
       suffix: ".rdf"
     }

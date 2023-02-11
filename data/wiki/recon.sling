@@ -40,7 +40,10 @@
     }
     P22: P40            ; father -> child
     P25: P40            ; mother -> child
-    P26: P26            ; spouse -> spouse
+    P26: {+P26          ; spouse -> spouse
+      P580: P580   ; start time
+      P582: P582   ; end time
+    }
     P3373: P3373        ; sibling -> sibling
     P1027: Q101072499   ; conferred by -> award conferred
     P170: Q78522641     ; creator -> creator of
