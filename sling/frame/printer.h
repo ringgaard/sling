@@ -125,7 +125,7 @@ class Printer {
   bool byref_ = true;
 
   // Allow UTF-8 in strings and identifiers.
-  bool utf8_ = false;
+  bool utf8_ = true;
 
   // Mapping of frames that have been printed mapped to their ids.
   handle_map<Handle> references_;

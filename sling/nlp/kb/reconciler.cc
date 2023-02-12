@@ -12,9 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <vector>
+#include <unordered_set>
+#include <utility>
+
 #include "sling/base/types.h"
 #include "sling/frame/serialization.h"
 #include "sling/nlp/kb/xref.h"
+#include "sling/string/ctype.h"
 #include "sling/task/frames.h"
 #include "sling/task/reducer.h"
 #include "sling/util/mutex.h"
@@ -40,13 +45,6 @@ class ItemReconciler : public task::FrameProcessor {
     Frame config = reader.Read().AsFrame();
     CHECK(config.valid());
 
-    // Set up URI mapping.
-    Frame urimap(commons_, "/w/urimap");
-    if (urimap.valid()) {
-      urimap_.Load(urimap);
-      urimap_.Bind(commons_, true);
-    }
-
     // Get property inversions.
     if (config.Has("inversions")) {
       Frame inversions = config.Get("inversions").AsFrame();
@@ -68,6 +66,25 @@ class ItemReconciler : public task::FrameProcessor {
       }
     }
 
+    Frame xcfg(commons_, "/w/xrefs");
+    if (xcfg.valid()) {
+      // Set up URI mapping.
+      Frame urimap(commons_, "/w/urimap");
+      if (urimap.valid()) {
+        urimap_.Load(urimap);
+        urimap_.Bind(commons_, true);
+      }
+
+      // Get case insensitive properties.
+      Array caseless = xcfg.Get("/w/caseless").AsArray();
+      if (caseless.valid()) {
+        for (int i = 0; i < caseless.length(); ++i) {
+          String pid(commons_, caseless.get(i));
+          caseless_.insert(pid.text());
+        }
+      }
+    }
+
     // Statistics.
     num_mapped_ids_ = task->GetCounter("mapped_ids");
     num_mapped_uris_ = task->GetCounter("mapped_uris");
@@ -81,12 +98,10 @@ class ItemReconciler : public task::FrameProcessor {
 
     // Lookup the key in the store to get the reconciled id for the frame.
     Store *store = frame.store();
-    Text id = key;
-    if (id.empty()) id = frame.Id();
+    string id(key.data(), key.size());
+    if (id.empty()) id = frame.Id().str();
     CHECK(!id.empty());
-    Handle mapped = commons_->LookupExisting(id);
-    if (!mapped.IsNil()) {
-      id = commons_->FrameId(mapped);
+    if (Map(&id)) {
       num_mapped_ids_->Increment();
     }
 
@@ -177,6 +192,31 @@ class ItemReconciler : public task::FrameProcessor {
   }
 
  private:
+  // Map identifier.
+  bool Map(string *id) const {
+    // Lowercase id if property is case insensitive.
+    int slash = id->find('/');
+    int colon = id->find(':');
+    if (slash != -1 && (colon == -1 || slash < colon)) {
+      Text pid(id->data(), slash);
+      if (caseless_.count(pid)) {
+        for (int i = slash + 1; i < id->size(); ++i) {
+          char &c = id->at(i);
+          c = ascii_tolower(c);
+        }
+      }
+    }
+
+    // Try to look up identifier in cross-reference.
+    Handle mapped = commons_->LookupExisting(*id);
+    if (!mapped.IsNil()) {
+      *id = commons_->FrameId(mapped).str();
+      return true;
+    }
+
+    return false;
+  }
+
   // Property inversion map.
   struct Inversion {
     // Inverse property.
@@ -189,6 +229,9 @@ class ItemReconciler : public task::FrameProcessor {
 
   // URI mapping.
   URIMapping urimap_;
+
+  // Case insensitive properties.
+  std::unordered_set<Text> caseless_;
 
   // Symbols.
   Name n_exact_match_{names_, "P2888"};

@@ -757,7 +757,12 @@ void WikiParser::ParseSwitch() {
 void WikiParser::ParseTableBegin() {
   Push(TABLE);
   ptr_ += 2;
-  if (!ParseAttributes("\n")) SkipWhitespace();
+  while (ParseAttributes("\n")) {
+    SkipWhitespace(false);
+    if (*ptr_ != '|') break;
+    ptr_++;
+  }
+  SkipWhitespace();
   txt_ = ptr_;
 }
 
@@ -879,19 +884,17 @@ bool WikiParser::ParseAttributes(const char *delimiters) {
       attrlen = p++ - attr;
     } else {
       attr = p;
-      while (IsNameChar(*p) ||
-             *p == '#'  ||
-             *p == '%' ||
-             *p == ';' ||
-             *p == ',') {
-        p++;
-      }
+      while (IsNameChar(*p) || *p == '#'  || *p == '%') p++;
       if (p == attr) return false;
       attrlen = p - attr;
     }
 
     // Add attribute to list.
     attributes.emplace_back(Text(name, namelen), Text(attr, attrlen));
+
+    // Skip separator.
+    while (*p == ' ') p++;
+    if (*p == ';') p++;
   }
 
   // Bail out if no attributes found.

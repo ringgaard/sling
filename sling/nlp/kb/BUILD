@@ -59,6 +59,7 @@ cc_library(
     ":xref",
     "//sling/base",
     "//sling/frame",
+    "//sling/string:ctype",
     "//sling/task:frames",
     "//sling/task:reducer",
     "//sling/util:mutex",

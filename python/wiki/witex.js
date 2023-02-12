@@ -7,11 +7,15 @@ import {MdApp, MdCard, inform} from "/common/lib/material.js";
 
 var commons = new Store();
 const n_is = commons.lookup("is");
+const n_isa = commons.lookup("isa");
 const n_amount = commons.lookup("/w/amount");
 const n_unit = commons.lookup("/w/unit");
 const n_years_old = commons.lookup("Q24564698");
+const n_time = commons.lookup("/w/time");
 
 const empty_values = new Set(["-", "--", "—", "?"]);
+
+var last_template = "";
 
 const lib = {
   "age": function(value) {
@@ -22,6 +26,22 @@ const lib = {
     frame.add(n_amount, age);
     frame.add(n_unit, n_years_old);
     return frame;
+  },
+
+  "date": (value) => {
+    if (!value) return;
+    if (value instanceof Document) {
+      let a = value.annotation(0);
+      if (a && a.get(n_isa) == n_time) return value;
+      value = value.text;
+    }
+    let dateval = value.toString();
+    let d = new Date(dateval);
+    if (d.getMonth() == 0 && d.getDate() == 1) {
+      return d.getFullYear();
+    } else {
+      return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+    }
   },
 
   "article": (value) => value.article(),
@@ -50,6 +70,14 @@ const lib = {
       }
     }
     return value;
+  },
+
+  "phrase": value => {
+    if (value instanceof Document) {
+      return value.phrase(0) || value;
+    } else {
+      return value;
+    }
   },
 
   "text": (value) => {
@@ -318,6 +346,7 @@ class WikiTable extends MdCard {
     if (this.expanded) {
       this.attach(this.onrowclick, "click", "table");
       this.attach(this.onextract, "click", "#extract");
+      this.attach(this.onrepeat, "click", "#repeat");
     }
   }
 
@@ -340,6 +369,10 @@ class WikiTable extends MdCard {
     }
   }
 
+  onrepeat(e) {
+    this.find("#template").value = last_template;
+  }
+
   onextract(e) {
     let store = new Store(commons);
     let page = this.state.page;
@@ -354,8 +387,8 @@ class WikiTable extends MdCard {
       let row = table.rows[rowno];
       if (r.className == "header") {
         for (let c = 0; c < row.length; ++c) {
-          let colname = row[c];
-          record.add_column_name(row[c], c);
+          let colname = row[c].replace(/\s+/g, " ").trim();
+          record.add_column_name(colname, c);
           skipped.add(rowno);
         }
       } else if (r.className == "skip") {
@@ -397,7 +430,11 @@ class WikiTable extends MdCard {
           } else if (piece instanceof Document) {
             let annotation = piece.annotation(0);
             if (annotation instanceof Frame) {
-              result += annotation.id || annotation.text(false, true);
+              if (annotation.get(n_isa) == n_time) {
+                result += JSON.stringify(annotation.get(n_is));
+              } else {
+                result += annotation.id || annotation.text(false, true);
+              }
             } else {
               let phrase = piece.phrase(0);
               result += JSON.stringify(phrase || piece.text)
@@ -434,6 +471,7 @@ class WikiTable extends MdCard {
     let output = this.find("#output");
     output.innerText = extractions.join("\n");
     window.getSelection().selectAllChildren(output);
+    last_template = template;
   }
 
   render() {
@@ -467,6 +505,7 @@ class WikiTable extends MdCard {
                  rows="20"
                  placeholder="Extraction template"></textarea>`);
       h.push(`<button id="extract">Extract</button>`);
+      h.push(`<button id="repeat">Repeat</button>`);
 
       h.push(`<pre id="output"></pre>`);
 

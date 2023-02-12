@@ -406,6 +406,7 @@
 "nihongo": {type: "tag" argnum: 1}
 "nihongo foot": {type: "tag" argnum: 1}
 "ill": {type: "tag" argnum: 1}
+"sort": {type: "tag" argnum: 2}
 "sortname": {type: "sort"}
 "center": {type: "tag" argnum: 1}
 
@@ -436,6 +437,8 @@
 "death date and age": {type: "date" year: 1 month: 2 day: 3 format: /w/dates/en}
 "death-date and age": {type: "date" full: 1 format: /w/dates/en}
 "death year and age": {type: "date" year: 1 format: /w/dates/en}
+
+"dts": {type: "date" year: 1 month: 2 day: 3 format: /w/dates/en}
 
 "Baseball year": {type: "date" year: 1 format: /w/dates/en}
 
