@@ -318,7 +318,7 @@ let xrefs = [
   },
 
   {
-    pattern: /^https?:\/\/(\w+)\.fandom\.com\/wiki\/([^#^\/]+)/,
+    pattern: /^https?:\/\/([a-z0-9-]+)\.fandom\.com\/wiki\/([^#^\/]+)/,
     property: frame("P6262"),
     extract: m => decodeURIComponent(m[1]) + ":" + decodeURIComponent(m[2])
   },

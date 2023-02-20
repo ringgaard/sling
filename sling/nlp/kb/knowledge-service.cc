@@ -1232,7 +1232,7 @@ void KnowledgeService::HandleGetStubs(HTTPRequest *request,
     Builder b(store);
     b.AddId(item.Id());
     if (handle != frames.get(i)) {
-      b.AddId(store->FrameId(frames.get(i)));
+      b.AddIs(store->FrameId(frames.get(i)));
     }
     Handle name = item.GetHandle(n_name_);
     if (!name.IsNil()) b.Add(n_name_, name);

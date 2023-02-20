@@ -257,24 +257,45 @@ export default class IMDBPlugin {
       }
     }
 
-    // Guess gender from bio text.
-    let male_score = 0;
-    let female_score = 0;
-    for (let block of doc.querySelectorAll("div.soda").values()) {
-      let text = trim(block.innerText).toLowerCase();
-      let tokens = text.split(/[\s\(\)\.,:&\-"]+/);
-      for (let token of tokens) {
-        let gender = gender_words[token];
-        if (gender) {
-          if (gender == n_male) male_score += 1;
-          if (gender == n_female) female_score += 1;
+    // Get gender from Self-verified table.
+    let verified = doc.getElementById("selfVerifiedTable");
+    if (verified) {
+      for (let row of verified.querySelectorAll("tr").values()) {
+        let cols = row.querySelectorAll("td");
+        let label = cols[0].innerText;
+        let value = trim(cols[1].innerText);
+        if (label == "Gender / Gender identity") {
+          if (value == "Male") {
+            bio.gender =  n_male;
+          } else if (value == "Female") {
+            bio.gender =  n_female;
+          }
         }
       }
     }
-    if (male_score || female_score) {
-      bio.gender =  male_score > female_score ? n_male : n_female;
+
+    // Guess gender from bio text.
+    if (!bio.gender) {
+      let male_score = 0;
+      let female_score = 0;
+      for (let block of doc.querySelectorAll("div.soda").values()) {
+        let text = trim(block.innerText).toLowerCase();
+        let tokens = text.split(/[\s\(\)\.,:&\-"]+/);
+        for (let token of tokens) {
+          let gender = gender_words[token];
+          if (gender) {
+            if (gender == n_male) male_score += 1;
+            if (gender == n_female) female_score += 1;
+          }
+        }
+      }
+      if (male_score || female_score) {
+        bio.gender =  male_score > female_score ? n_male : n_female;
+      }
     }
-    if (!bio.gender) bio.gender = await gender_for_name(name);
+    if (!bio.gender) {
+      bio.gender = await gender_for_name(name);
+    }
 
     // Add bio to topic.
     topic.put(n_name, name);
