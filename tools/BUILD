@@ -87,3 +87,28 @@ cc_binary(
   ],
 )
 
+cc_binary(
+  name = "archive-scanner",
+  srcs = [
+    "archive-scanner.cc",
+    "epsonds.cc",
+    "epsonds.h",
+  ],
+  deps = [
+    "//app",
+    "//app:roboto-font",
+    "//app:material-icons",
+    "//sling/base",
+    "//sling/file",
+    "//sling/file:embed",
+    "//sling/file:posix",
+    "//sling/net:http-server",
+    "//sling/net:static-content",
+    "//sling/net:web-sockets",
+    "//sling/string:printf",
+    "//sling/string:text",
+    "//sling/util:json",
+    "//sling/util:threadpool",
+  ],
+)
+

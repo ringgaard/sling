@@ -302,7 +302,7 @@ let xrefs = [
   },
   {
     pattern: /^https?:\/\/linktr\.ee\/(.+)/,
-    property: frame("PLITR"),
+    property: frame("P11079"),
   },
   {
     pattern: /^https?:\/\/(?:www\.)?crunchbase\.com\/person\/([^#^\/]+)/,
