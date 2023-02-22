@@ -154,6 +154,10 @@ export async function get_schema() {
   if (kbschema) return kbschema;
   kbschema = await store.parse(response);
 
+  // Schema property redirects.
+  store.register("PLSTL", frame("P11386"));
+  store.register("PLITR", frame("P11079"));
+
   return kbschema;
 }
 

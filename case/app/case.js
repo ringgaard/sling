@@ -204,10 +204,18 @@ class CaseEditor extends MdApp {
       this.onmerge(e);
     } else if (e.code === "Escape") {
       this.find("#search").clear();
-    } else if (e.shiftKey && e.code === "PageDown") {
-      this.next_folder();
-    } else if (e.shiftKey && e.code === "PageUp") {
-      this.prev_folder();
+    } else if (e.code === "PageDown") {
+      if (e.altKey) {
+        this.move_folder_down(this.folder);
+      } else if (e.shiftKey) {
+        this.next_folder();
+      }
+    } else if (e.code === "PageUp") {
+      if (e.altKey) {
+        this.move_folder_up(this.folder);
+      } else if (e.shiftKey) {
+        this.prev_folder();
+      }
     }
   }
 
