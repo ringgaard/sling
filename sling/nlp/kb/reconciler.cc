@@ -360,11 +360,19 @@ class ItemMerger : public task::Reducer {
       });
 
       // Add/merge statements.
+      Handle n_auxid = store.LookupExisting("PAUXID");
       statements.Ensure(item.size());
       for (const Slot &slot : item) {
         // Skip redirects and comments.
         if (slot.name == Handle::is()) continue;
         if (slot.name.IsNil()) continue;
+
+        // Add auxiliary ids.
+        if (slot.name == n_auxid) {
+          String auxid(&store, slot.value);
+          if (auxid.valid()) builder.AddId(auxid.text());
+          continue;
+        }
 
         // Check for existing match(es).
         Handle qvalue = store.Resolve(slot.value);
@@ -455,12 +463,23 @@ class ItemMerger : public task::Reducer {
 
   // Check if two qualified values are compatible.
   static bool Compatible(Store *store, Handle first, Handle second) {
+    // Qualifiers used for testing compatibility.
+    static const char *compatible[] = {
+      "P585",   // point in time.
+      "P580",   // start time
+      "P582",   // end time
+      "P2937",  // parliamentary term
+      nullptr,
+    };
+
     // Check for temporal compatibility.
     Frame f(store, first);
     Frame s(store, second);
-    if (Same(f, s, store->Lookup("P585"))) return true;  // point in time
-    if (Same(f, s, store->Lookup("P580"))) return true;  // start time
-    if (Same(f, s, store->Lookup("P582"))) return true;  // end time
+    for (const char **cp = compatible; *cp; ++cp) {
+      Handle property = store->LookupExisting(*cp);
+      if (property.IsNil()) continue;
+      if (Same(f, s, property)) return true;
+    }
 
     return false;
   }

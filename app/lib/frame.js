@@ -11,19 +11,19 @@ var fltbuf = new Float32Array(numbuf);
 var namepat = /^[A-Za-z_\/][A-Za-z0-9_\-\/]*$/;
 
 // Convert binary 32-bit IEEE-754 float to number.
-function bitsToFloat(bits) {
+function bits_to_float(bits) {
   intbuf[0] = bits;
   return fltbuf[0];
 }
 
 // Convert number to binary 32-bit IEEE-754 float.
-function FloatToBits(num) {
+function float_to_bits(num) {
   fltbuf[0] = num;
   return intbuf[0];
 }
 
 // Check for binary marker.
-function hasBinaryMarker(data) {
+function has_binary_marker(data) {
   if (data instanceof ArrayBuffer) {
     let bytes = new Uint8Array(data);
     return bytes[0] == 0;
@@ -172,12 +172,12 @@ export class Store {
       return data.arrayBuffer().then(data => this.parse(data));
     }
 
-    if (hasBinaryMarker(data)) {
+    if (has_binary_marker(data)) {
       let decoder = new Decoder(this, data);
-      return decoder.readAll();
+      return decoder.readall();
     } else {
       let reader = new Reader(this, data);
-      let obj = reader.parseAll();
+      let obj = reader.parseall();
       return obj;
     }
   }
@@ -543,7 +543,7 @@ export class Decoder {
 
   // Read tag from input. The tag is encoded as a varint64 where the lower three
   // bits are the opcode and the upper bits are the argument.
-  readTag() {
+  read_tag() {
     // Low bits (0-27).
     var lo = 0, shift = 0, b;
     do {
@@ -565,7 +565,7 @@ export class Decoder {
   }
 
   // Read 32-bit varint from input.
-  readVarint32() {
+  read_varint32() {
     var result = 0, shift = 0, b;
     do {
       b = this.input[this.pos++];
@@ -577,16 +577,10 @@ export class Decoder {
   }
 
   // Read UTF-8 encoded string from input.
-  readString(size) {
+  read_string(size) {
     let buffer = this.input.slice(this.pos, this.pos + size);
     this.pos += size;
     return strdecoder.decode(buffer);
-  }
-
-  // Read variable-length string from input.
-  readVarString() {
-    let size = this.readVarint32();
-    return this.readString(size);
   }
 
   done() {
@@ -594,7 +588,7 @@ export class Decoder {
   }
 
   // Read all the objects from the input.
-  readAll() {
+  readall() {
     let obj = this.read();
     while (!this.done()) obj = this.read();
     return obj;
@@ -603,7 +597,7 @@ export class Decoder {
   // Read one object from the input.
   read() {
     // Read next tag.
-    let [op, arg] = this.readTag();
+    let [op, arg] = this.read_tag();
     let object;
     switch (op) {
       case 0:
@@ -614,24 +608,24 @@ export class Decoder {
 
       case 1:
         // FRAME.
-        object = this.readFrame(arg, -1);
+        object = this.read_frame(arg, -1);
         break;
 
       case 2:
         // STRING.
-        object = this.readString(arg);
+        object = this.read_string(arg);
         this.refs.push(object);
         break;
 
       case 3:
         // SYMBOL.
-        object = this.readSymbol(arg);
+        object = this.read_symbol(arg);
         this.refs.push(object);
         break;
 
       case 4:
         // LINK.
-        object = this.readLink(arg);
+        object = this.read_link(arg);
         this.refs.push(object);
         break;
 
@@ -642,7 +636,7 @@ export class Decoder {
 
       case 6:
         // FLOAT.
-        object = bitsToFloat(arg << 2);
+        object = bits_to_float(arg << 2);
         break;
 
       case 7:
@@ -655,24 +649,24 @@ export class Decoder {
 
           case 5:
             // ARRAY.
-            object = this.readArray();
+            object = this.read_array();
             break;
 
           case 6:
             // INDEX.
-            object = bitsToFloat((this.readVarint32() << 2) | 0xffc00003)
+            object = bits_to_float((this.read_varint32() << 2) | 0xffc00003)
             break;
 
           case 7:
             // RESOLVE.
-            let slots = this.readVarint32();
-            let replace = this.readVarint32();
-            object = this.readFrame(slots, replace);
+            let slots = this.read_varint32();
+            let replace = this.read_varint32();
+            object = this.read_frame(slots, replace);
             break;
 
           case 8:
             // QSTRING.
-            object = this.readQString(arg);
+            object = this.read_qstring(arg);
             break;
         }
         break;
@@ -682,7 +676,7 @@ export class Decoder {
   }
 
   // Read frame from from input.
-  readFrame(size, replace) {
+  read_frame(size, replace) {
     // Make new frame or replace existing frame.
     let frame;
     let refidx = this.refs.length;
@@ -729,9 +723,9 @@ export class Decoder {
   }
 
   // Read array from from input.
-  readArray() {
+  read_array() {
     // Get array size.
-    let size = this.readVarint32();
+    let size = this.read_varint32();
 
     // Allocate array.
     let array = new Array(size);
@@ -746,12 +740,12 @@ export class Decoder {
   }
 
   // Read qstring from input.
-  readQString() {
+  read_qstring() {
     // Get string size.
-    let size = this.readVarint32();
+    let size = this.read_varint32();
 
     // Read string.
-    let text = this.readString(size);
+    let text = this.read_string(size);
     let qstr = new QString(text);
     this.refs.push(qstr);
 
@@ -761,13 +755,13 @@ export class Decoder {
   }
 
   // Read symbol from from input.
-  readSymbol(size) {
-    return this.readString(size);
+  read_symbol(size) {
+    return this.read_string(size);
   }
 
   // Read link from input.
-  readLink(size) {
-    return this.store.lookup(this.readSymbol(size));
+  read_link(size) {
+    return this.store.lookup(this.read_symbol(size));
   }
 }
 
@@ -801,7 +795,7 @@ export class Encoder {
     this.refs.set(store.is, {status: Status.ENCODED, index: -4});
 
     // Output binary encoding mark.
-    if (marker) this.writeByte(0);
+    if (marker) this.write_byte(0);
   }
 
   // Encode object.
@@ -809,14 +803,14 @@ export class Encoder {
     if (typeof obj === 'number') {
       // TODO: handle integer overflow.
       if (Number.isInteger(obj)) {
-        this.writeTag(5, obj);
+        this.write_tag(5, obj);
       } else {
-        this.writeTag(6, FloatToBits(obj) >> 2);
+        this.write_tag(6, float_to_bits(obj) >> 2);
       }
     } else if (typeof obj === 'boolean') {
-      this.writeTag(5, obj ? 1 : 0);
+      this.write_tag(5, obj ? 1 : 0);
     } else if (obj === null) {
-      this.writeTag(7, 1);
+      this.write_tag(7, 1);
     } else {
       let ref = this.refs.get(obj);
       if (!ref) {
@@ -826,55 +820,55 @@ export class Encoder {
 
       if (typeof obj === 'string') {
         if (ref.status == Status.STRING) {
-          this.encodeRef(ref);
+          this.encode_ref(ref);
         } else {
           ref.status == Status.STRING
           ref.index = this.next++;
-          this.encodeString(obj, 2);
+          this.encode_string(obj, 2);
         }
       } else if (obj instanceof Frame) {
         if (ref.status == Status.ENCODED) {
-          this.encodeRef(ref);
+          this.encode_ref(ref);
         } else if (ref.status == Status.LINKED) {
           // A link to this frame has already been encoded.
           if (obj.state == PROXY) {
-            this.encodeRef(ref);
+            this.encode_ref(ref);
           } else {
             // Encode a resolved frame which points back to the link reference.
             ref.status = Status.ENCODED;
-            this.writeTag(7, 7);
-            this.writeVarInt(obj.length);
-            this.writeVarInt(ref.index);
-            this.encodeSlots(obj.slots);
+            this.write_tag(7, 7);
+            this.write_varint(obj.length);
+            this.write_varint(ref.index);
+            this.encode_slots(obj.slots);
           }
         } else if (obj.state == PROXY) {
             // Output SYMBOL for the proxy.
             ref.status = Status.LINKED;
             ref.index = this.next++;
-            this.encodeString(obj.id, 4);
+            this.encode_string(obj.id, 4);
         } else {
           // Output frame slots.
           ref.status = Status.ENCODED;
           ref.index = this.next++;
-          this.writeTag(1, obj.length);
-          this.encodeSlots(obj.slots);
+          this.write_tag(1, obj.length);
+          this.encode_slots(obj.slots);
         }
       } else if (obj instanceof Array) {
         // Output array tag followed by array size and the elements.
         ref.status = Status.ENCODED;
         ref.index = this.next++;
-        this.writeTag(7, 5);
-        this.writeVarInt(obj.length);
+        this.write_tag(7, 5);
+        this.write_varint(obj.length);
         for (let n = 0; n < obj.length; ++n) {
-          this.encodeLink(obj[n]);
+          this.encode_link(obj[n]);
         }
       } else if (obj instanceof QString) {
         if (ref.status == Status.STRING) {
-          this.encodeRef(ref);
+          this.encode_ref(ref);
         } else {
           ref.status == Status.STRING
           ref.index = this.next++;
-          this.encodeQString(obj);
+          this.encode_qstring(obj);
         }
       } else {
         throw "Object type cannot be encoded";
@@ -883,36 +877,36 @@ export class Encoder {
   }
 
   // Encode frame slots.
-  encodeSlots(slots) {
+  encode_slots(slots) {
     for (let n = 0; n < slots.length; n += 2) {
       let name = slots[n];
       let value = slots[n + 1];
-      this.encodeLink(name);
+      this.encode_link(name);
       if (name === this.id) {
         // Skip symbol reference since the id value is just a string and not a
         // separate symbol object in this implementation.
         this.next++;
-        this.encodeString(value, 3);
+        this.encode_string(value, 3);
       } else {
-        this.encodeLink(value);
+        this.encode_link(value);
       }
     }
   }
 
   // Encode link.
-  encodeLink(link) {
+  encode_link(link) {
     // Only output link to public frames.
     if (link instanceof Frame) {
       if (link.state != ANONYMOUS) {
         // Just output link to public frame.
         let ref = this.refs.get(link);
         if (ref) {
-          this.encodeRef(ref);
+          this.encode_ref(ref);
         } else {
           // Encode LINK.
           ref = {status: Status.LINKED, index: this.next++};
           this.refs.set(link, ref);
-          this.encodeString(link.id, 4);
+          this.encode_string(link.id, 4);
         }
         return;
       }
@@ -921,35 +915,35 @@ export class Encoder {
   }
 
   // Encode string with length.
-  encodeString(str, type) {
+  encode_string(str, type) {
     let utf8 = strencoder.encode(str);
     let len = utf8.byteLength;
-    this.writeTag(type, len);
+    this.write_tag(type, len);
     this.ensure(len);
     this.buffer.subarray(this.pos, this.pos + len).set(utf8);
     this.pos += len;
   }
 
   // Encode qualified string.
-  encodeQString(str) {
+  encode_qstring(str) {
     let utf8 = strencoder.encode(str.text);
     let len = utf8.byteLength;
-    this.writeTag(7, 8);
-    this.writeVarInt(len);
+    this.write_tag(7, 8);
+    this.write_varint(len);
     this.ensure(len);
     this.buffer.subarray(this.pos, this.pos + len).set(utf8);
     this.pos += len;
-    this.encodeLink(str.qual);
+    this.encode_link(str.qual);
   }
 
   // Encode reference to previous object.
-  encodeRef(ref) {
+  encode_ref(ref) {
     if (ref.index < 0) {
       // Special handles are stored with negative reference numbers.
-      this.writeTag(7, -ref.index);
+      this.write_tag(7, -ref.index);
     } else {
       // Output reference to previous object.
-      this.writeTag(0, ref.index);
+      this.write_tag(0, ref.index);
     }
   }
 
@@ -972,13 +966,13 @@ export class Encoder {
   }
 
   // Write a single byte to output.
-  writeByte(byte) {
+  write_byte(byte) {
     this.ensure(1);
     this.buffer[this.pos++] = byte;
   }
 
   // Write varint-encoded integer to output.
-  writeVarInt(num) {
+  write_varint(num) {
     if (num > Number.MAX_SAFE_INTEGER) {
       throw new RangeError("Could not encode varint");
     }
@@ -994,19 +988,9 @@ export class Encoder {
     this.buffer[this.pos++] = num | 0;
   }
 
-  // Write variable-length string to output.
-  writeVarString(str) {
-    let utf8 = strencoder.encode(str);
-    let len = utf8.byteLength;
-    this.writeVarInt(len);
-    this.ensure(len);
-    this.buffer.subarray(this.pos, this.pos + len).set(utf8);
-    this.pos += len;
-  }
-
   // Write varint-encoded tag and argument to output.
-  writeTag(tag, arg) {
-    this.writeVarInt(tag | (arg << 3));
+  write_tag(tag, arg) {
+    this.write_varint(tag | (arg << 3));
   }
 }
 
@@ -1092,20 +1076,20 @@ export class Reader {
 
         case 34:  // '"'
           // Parse string.
-          this.parseString();
+          this.parse_string();
           return;
 
         case 48: case 49: case 50: case 51: case 52:  // '0' '1' '2' '3' '4'
         case 53: case 54: case 55: case 56: case 57:  // '5' '6' '7' '8' '9'
         case 46: case 45:  // '.' '-'
           // Parse number.
-          this.parseNumber();
+          this.parse_number();
           return;
 
         case 35:  // '#'
           // Parse index reference.
           this.read();
-          this.parseIndex();
+          this.parse_index();
           return;
 
         case 59:  // ';'
@@ -1117,20 +1101,20 @@ export class Reader {
         case 36:  // '$'
           // Quoted symbol.
           this.read();
-          this.parseString();
+          this.parse_string();
           this.token = -8;
           return;
 
         default:
           // Parse keyword or symbol.
-          this.parseName();
+          this.parse_name();
           return;
       }
     }
   }
 
   // Parse string literal.
-  parseString() {
+  parse_string() {
     let start = this.pos;
     this.read();
     while (this.ch != -1 && this.ch != 34) {  // '"'
@@ -1144,7 +1128,7 @@ export class Reader {
   }
 
   // Parse number literal.
-  parseNumber() {
+  parse_number() {
     let start = this.pos - 1;
     let integer = true;
 
@@ -1176,7 +1160,7 @@ export class Reader {
   }
 
   // Parse symbol index.
-  parseIndex() {
+  parse_index() {
     let start = this.pos - 1;
     while (this.ch >= 48 && this.ch <= 57) this.read();
     let end = this.ch == -1 ? this.pos : this.pos - 1;
@@ -1185,7 +1169,7 @@ export class Reader {
   }
 
   // Parse symbol or keyword.
-  parseName() {
+  parse_name() {
     let start = this.pos - 1;
     let end = this.pos;
     let done = false;
@@ -1225,7 +1209,7 @@ export class Reader {
   }
 
   // Parse all input and return last object.
-  parseAll() {
+  parseall() {
     let obj = this.parse();
     while (!this.done()) obj = this.parse();
     return obj;
@@ -1279,10 +1263,10 @@ export class Reader {
         return sym;
 
       case 123: // '{'
-        return this.parseFrame();
+        return this.parse_frame();
 
       case 91: // '['
-        return this.parseArray();
+        return this.parse_array();
 
       default:
         throw "syntax error";
@@ -1290,7 +1274,7 @@ export class Reader {
   }
 
   // Parse frame.
-  parseFrame() {
+  parse_frame() {
     // Skip open bracket.
     this.next();
 
@@ -1358,7 +1342,7 @@ export class Reader {
   }
 
   // Parse array.
-  parseArray() {
+  parse_array() {
     // Skip open bracket.
     this.next();
 
@@ -1399,11 +1383,11 @@ export class Printer {
     if (obj == null) {
       this.write("nil");
     } else if (obj instanceof Frame) {
-      this.printFrame(obj);
+      this.print_frame(obj);
     } else if (typeof obj === 'string') {
       this.write(JSON.stringify(obj));
     } else if (Array.isArray(obj)) {
-      this.printArray(obj);
+      this.print_array(obj);
     } else if (obj instanceof QString) {
       this.write(JSON.stringify(obj.text));
       if (obj.qual) {
@@ -1419,10 +1403,10 @@ export class Printer {
   }
 
   // Print frame or reference.
-  printFrame(frame) {
+  print_frame(frame) {
     // Output reference for nested frames.
     if (this.level > 0 && frame.state != ANONYMOUS) {
-      this.printSymbol(frame.id);
+      this.print_symbol(frame.id);
       return;
     }
 
@@ -1431,7 +1415,7 @@ export class Printer {
     if (ref) {
       if (typeof ref === 'string') {
         // Public reference.
-        this.printSymbol(ref);
+        this.print_symbol(ref);
       } else {
         // Local reference.
         this.write("#");
@@ -1476,7 +1460,7 @@ export class Printer {
         let value = slots[n + 1];
         if (name == this.store.id) {
           this.write("=");
-          this.printSymbol(value);
+          this.print_symbol(value);
           if (this.refs) this.refs.set(frame, value);
         } else if (name === this.store.isa) {
           this.write(":");
@@ -1502,7 +1486,7 @@ export class Printer {
   }
 
   // Print array.
-  printArray(array) {
+  print_array(array) {
     this.write("[");
     for (let i = 0; i < array.length; ++i) {
       if (i != 0) this.write(this.indent ? ", " : ",");
@@ -1512,7 +1496,7 @@ export class Printer {
   }
 
   // Print symbol.
-  printSymbol(symbol) {
+  print_symbol(symbol) {
     if (namepat.test(symbol)) {
       this.write(symbol);
     } else {

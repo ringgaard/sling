@@ -75,7 +75,7 @@ class CaseDatabase {
         let rec = e.target.result;
         if (rec) {
           let decoder = new Decoder(store, rec.data);
-          let casefile = decoder.readAll();
+          let casefile = decoder.readall();
           resolve(casefile);
         } else {
           resolve(null);

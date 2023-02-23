@@ -80,18 +80,18 @@ export class Collaboration {
           let type = decoder.readVarint32();
           switch (type) {
             case CCU_TOPIC: {
-              let topic = decoder.readAll();
+              let topic = decoder.readall();
               this.listener.remote_topic_update(topic);
               break;
             }
             case CCU_FOLDER: {
               let folder = decoder.readVarString();
-              let topics = decoder.readAll();
+              let topics = decoder.readall();
               this.listener.remote_folder_update(folder, topics);
               break;
             }
             case CCU_FOLDERS: {
-              let folders = decoder.readAll();
+              let folders = decoder.readall();
               this.listener.remote_folders_update(folders);
               break;
             }
@@ -125,7 +125,7 @@ export class Collaboration {
         break;
       }
       case COLLAB_LOGIN: {
-        let casefile = decoder.readAll();
+        let casefile = decoder.readall();
         this.onfail = null;
         this.onlogin && this.onlogin(casefile);
         break;
