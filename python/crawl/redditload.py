@@ -64,14 +64,14 @@ else:
 num_submissions = 0
 num_dups = 0
 dt = None
-after = 0
+before = int(time.time())
 while True:
   # Fetch next batch.
   if flags.arg.ids:
     url = "%s/?ids=%s" % (baseurl, flags.arg.ids)
   else:
-    url = "%s/?subreddit=%s&sort=asc&after=%d&size=%d" % (
-      baseurl, flags.arg.subreddit, after, batchsize)
+    url = "%s/?subreddit=%s&before=%d&size=%d" % (
+      baseurl, flags.arg.subreddit, before, batchsize)
 
   r = session.get(url)
   if r.status_code == 429:
@@ -108,7 +108,7 @@ while True:
 
   # Resume at the creation time for last retrieved submission.
   if flags.arg.ids: break
-  after = created
+  before = created
 
 if output != None: output.close()
 if fout != None: fout.close()

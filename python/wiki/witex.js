@@ -232,7 +232,7 @@ function delex(document, lex) {
             }
           }
           let reader = new Reader(document.store, lex.slice(start, pos - 1));
-          let obj = reader.parseAll();
+          let obj = reader.parseall();
           document.mentions.push(new Mention(stack.pop(), text.length, obj));
         }
         break;
@@ -250,7 +250,7 @@ function delex(document, lex) {
           }
         }
         let reader = new Reader(document.store, lex.slice(start - 1, pos));
-        let obj = reader.parseAll();
+        let obj = reader.parseall();
         document.themes.push(obj);
         break;
       }
