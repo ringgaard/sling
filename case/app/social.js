@@ -278,6 +278,10 @@ let xrefs = [
     property: frame("P8618"),
   },
   {
+    pattern: /^https?:\/\/(?:www\.)?wtatennis\.com\/players\/(\d+)/,
+    property: frame("P597"),
+  },
+  {
     pattern: /https?:\/\/muckrack\.com\/([^\/]+)\/?/i,
     property: frame("P6005"),
   },

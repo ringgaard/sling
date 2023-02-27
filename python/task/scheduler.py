@@ -93,6 +93,8 @@ class Task:
     self.name = config.name
     self.description = config.description
     self.shell = config.shell == True
+    self.daemon = config.daemon == True
+    self.port = config.port
     self.program = None
     self.args = []
     argv = config.program
@@ -120,14 +122,16 @@ class Job:
   RUNNING = 1
   COMPLETED = 2
   FAILED = 3
+  DAEMON = 4
 
   def __init__(self, task, args):
     self.task = task
     self.queue = None
     self.args = args
     self.id = get_jobid()
-    self.port = None
+    self.port = task.port
     self.state = Job.PENDING
+    self.process = None
     self.submitted = time.time()
     self.started = None
     self.ended = None
@@ -187,6 +191,10 @@ class Job:
         cmd.append("--monitor")
         cmd.append(str(self.port))
 
+      if self.task.daemon and self.port != None:
+        cmd.append("--port")
+        cmd.append(str(self.port))
+
       if self.task.statistics:
         cmd.append("--logdir")
         cmd.append(flags.arg.logpath)
@@ -194,6 +202,22 @@ class Job:
         cmd.append(self.id)
 
     return cmd
+
+  def run(self, out=None, err=None):
+    # Get command for executing job.
+    cmd = self.command()
+    self.started = time.time()
+    self.state = Job.RUNNING
+
+    # Start process.
+    self.process = subprocess.Popen(
+        cmd,
+        stdin=None,
+        stdout=out,
+        stderr=err,
+        bufsize=1,
+        shell=self.task.shell,
+        close_fds=True)
 
   def __str__(self):
     s = [self.task.name]
@@ -231,8 +255,6 @@ class Queue(threading.Thread):
 
   def execute(self, job):
     log.info("execute job", job.id, str(job))
-    job.started = time.time()
-    job.state = Job.RUNNING
 
     # Get command for executing job.
     cmd = job.command()
@@ -253,16 +275,13 @@ class Queue(threading.Thread):
 
     # Run job.
     try:
-      process = subprocess.run(cmd,
-                               stdin=None,
-                               stdout=out,
-                               stderr=err,
-                               bufsize=1,
-                               shell=job.task.shell,
-                               close_fds=True)
+      job.run(out, err)
+      job.process.wait()
     except Exception as e:
       job.error = e
     finally:
+      rc = job.process.returncode
+      job.process = None
       out.close()
       err.close()
 
@@ -279,6 +298,25 @@ class Queue(threading.Thread):
       elif os.path.getsize(job.status) == 0:
         os.remove(job.status)
         job.status = None
+
+    # Get job results.
+    job.ended = time.time()
+    if job.error:
+      log.error("failed to lauch job", job.id, str(job), job.error)
+      job.state = Job.FAILED
+      alert.send("Job %s failed to launch" % str(job),
+        "Error launching job %s %s on %s: %s" %
+          (job.id, str(job), socket.gethostname(), job.error))
+    elif rc != 0:
+      log.error("job", job.id, str(job), "failed, returned", rc)
+      job.state = Job.FAILED
+      job.error = "Error " + str(rc)
+      alert.send("Job %s failed" % str(job),
+        "Job %s %s failed on %s with error code %d" %
+          (job.id, str(job), socket.gethostname(), rc))
+    else:
+      log.info("completed job", job.id, str(job))
+      job.state = Job.COMPLETED
 
     # Submit triggers.
     for trigger in job.task.triggers:
@@ -306,25 +344,6 @@ class Queue(threading.Thread):
 
         requests.post(url)
 
-    # Get job results.
-    job.ended = time.time()
-    if job.error:
-      log.error("failed to lauch job", job.id, str(job), job.error)
-      job.state = Job.FAILED
-      alert.send("Job %s failed to launch" % str(job),
-        "Error launching job %s %s on %s: %s" %
-          (job.id, str(job), socket.gethostname(), job.error))
-    elif process.returncode != 0:
-      log.error("job", job.id, str(job), "failed, returned", process.returncode)
-      job.state = Job.FAILED
-      job.error = "Error " + str(process.returncode)
-      alert.send("Job %s failed" % str(job),
-        "Job %s %s failed on %s with error code %d" %
-          (job.id, str(job), socket.gethostname(), process.returncode))
-    else:
-      log.info("completed job", job.id, str(job))
-      job.state = Job.COMPLETED
-
   def run(self):
     log.info("job queue", self.name, "ready to execute jobs")
     while True:
@@ -344,6 +363,16 @@ jobs = []
 main_queue = Queue("main")
 queues["main"] = main_queue
 last_task_timestamp = None
+
+def get_job(jobid):
+  for job in jobs:
+    if job.id == jobid: return job
+  return None
+
+def get_job_for_task(taskname):
+  for job in jobs:
+    if job.state == Job.DAEMON and job.task.name == taskname: return job
+  return None
 
 def refresh_task_list():
   global last_task_timestamp, tasks
@@ -387,10 +416,48 @@ def submit_job(taskname, queuename, args):
   queue.submit(job)
   return job
 
-def get_job(jobid):
-  for job in jobs:
-    if job.id == jobid: return job
-  return None
+def start_daemon(taskname, args):
+  # Re-read task list if it has changed.
+  refresh_task_list()
+
+  # Check that task is not already running.
+  if get_job_for_task(taskname):
+    log.error("daemon already running for", taskname)
+    return None
+
+  # Get task for daemon.
+  task = tasks.get(taskname)
+  if task is None: return None
+  if not task.daemon: return None
+
+  # Log file for stdout and strerr.
+  job = Job(task, args)
+  job.stdout = flags.arg.logpath + "/" + job.task.name + ".log"
+  out = open(job.stdout, "a")
+
+  # Start job as daemon.
+  job.run(out, subprocess.STDOUT)
+  job.state = Job.DAEMON
+  out.close()
+  jobs.append(job)
+  log.info("started daemon", job.id, job.task.name, "pid", job.process.pid)
+  return job
+
+def stop_daemon(taskname):
+  # Find current running daemon.
+  job = get_job_for_task(taskname)
+  if job is None:
+    log.error("no daemon is running for", taskname)
+    return None
+
+  # Stop daemon.
+  log.info("stop daemon", job.id, job.task.name, "pid", job.process.pid)
+  job.process.terminate()
+  job.state = Job.COMPLETED
+  job.ended = time.time()
+  job.process = None
+  jobs.remove(job)
+  return job
 
 # Load task list.
 refresh_task_list()
@@ -426,6 +493,21 @@ app.page("/",
 
     <md-content>
 
+      <md-card id="services">
+        <md-card-toolbar>
+          <div>Daemons</div>
+        </md-card-toolbar>
+
+        <md-data-table id="daemons">
+          <md-data-field field="job">Job</md-data-field>
+          <md-data-field field="pid">PID</md-data-field>
+          <md-data-field field="task">Task</md-data-field>
+          <md-data-field field="command">Service</md-data-field>
+          <md-data-field field="started">Started</md-data-field>
+          <md-data-field field="time">Time</md-data-field>
+        </md-data-table>
+      </md-card>
+
       <md-card id="running">
         <md-card-toolbar>
           <div>Running jobs</div>
@@ -433,6 +515,7 @@ app.page("/",
 
         <md-data-table id="running-jobs">
           <md-data-field field="job">Job</md-data-field>
+          <md-data-field field="pid">PID</md-data-field>
           <md-data-field field="task">Task</md-data-field>
           <md-data-field field="command">Command</md-data-field>
           <md-data-field field="queue">Queue</md-data-field>
@@ -506,6 +589,7 @@ class SchedulerApp extends MdApp {
   }
 
   onupdate() {
+    this.find("#daemons").update(this.state.daemons);
     this.find("#running-jobs").update(this.state.running);
     this.find("#pending-jobs").update(this.state.pending);
     this.find("#terminated-jobs").update(this.state.terminated);
@@ -567,12 +651,22 @@ app.page("/report",
 
 @app.route("/jobs")
 def jobs_request(request):
+  daemons = []
   running = []
   pending = []
   terminated = []
 
   for job in jobs:
-    if job.state == Job.RUNNING:
+    if job.state == Job.DAEMON:
+      daemons.append({
+        "job": job.id,
+        "task": job.task.description,
+        "command": str(job),
+        "started": ts2str(job.started),
+        "time": dur2str(job.runtime()),
+        "pid": job.process.pid,
+      })
+    elif job.state == Job.RUNNING:
       status = ""
       if job.port:
         hostname = request["Host"]
@@ -592,7 +686,8 @@ def jobs_request(request):
         "queue": job.queuename(),
         "started": ts2str(job.started),
         "time": dur2str(job.runtime()),
-        "status": status
+        "status": status,
+        "pid": job.process.pid,
       })
     elif job.state == Job.PENDING:
       pending.append({
@@ -632,6 +727,7 @@ def jobs_request(request):
   terminated.reverse()
 
   return {
+    "daemons": daemons,
     "running": running,
     "pending": pending,
     "terminated": terminated
@@ -674,16 +770,12 @@ def status_page(request):
   if job.status is None: return 404;
   return sling.net.HTTPFile(job.status, "application/json")
 
-@app.route("/submit", method="POST")
-def submit_command(request):
-  # Get job and optionally queue from path.
-  path = request.path[1:].split("/")
-
+def parse_args(request):
   args = []
   if request.query is not None:
     # Check for illegal characters in arguments.
     for ch in "|<>;()[]":
-      if ch in request.query: return 500
+      if ch in request.query: return None
 
     # Get job arguments from query string.
     for part in request.query.split("&"):
@@ -693,6 +785,15 @@ def submit_command(request):
         args.append((part, None))
       else:
         args.append((part[:eq], part[eq + 1:]))
+  return args
+
+@app.route("/submit", method="POST")
+def submit_command(request):
+  # Get job and optionally queue from path.
+  path = request.path[1:].split("/")
+
+  args = parse_args(request)
+  if args is None: return 500
 
   # Submit job.
   if len(path) == 1:
@@ -705,6 +806,32 @@ def submit_command(request):
   # Reply with job id.
   if job is None: return 500
   return "job %s submitted to %s queue\n" % (job.id, job.queue.name)
+
+@app.route("/start", method="POST")
+def start_command(request):
+  # Get service task from path.
+  taskname = request.path[1:]
+  args = parse_args(request)
+  if args is None: return 500
+
+  # Start daemon.
+  job = start_daemon(taskname, args)
+
+  # Reply with job id.
+  if job is None: return 500
+  return "daemon %s started for %s\n" % (job.id, job.task.name)
+
+@app.route("/stop", method="POST")
+def stop_command(request):
+  # Get service task from path.
+  taskname = request.path[1:]
+
+  # Stop daemon.
+  job = stop_daemon(taskname)
+
+  # Reply with job id.
+  if job is None: return 500
+  return "daemon %s stopped for %s\n" % (job.id, job.task.name)
 
 restart = False
 
