@@ -5,7 +5,7 @@ function join { local IFS="$1"; shift; echo "$*"; }
 COMPUTER=$1
 JOB=$2
 ARGS=${@:3}
-URL="http://${COMPUTER}:5050/submit/${JOB}?$(join "&" ${ARGS[@]})"
+URL="http://${COMPUTER}:5050/start/${JOB}?$(join "&" ${ARGS[@]})"
 
 curl -s -X POST "${URL}"
 

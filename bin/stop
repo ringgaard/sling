@@ -1,0 +1,8 @@
+#!/bin/bash
+
+COMPUTER=$1
+JOB=$2
+URL="http://${COMPUTER}:5050/stop/${JOB}"
+
+curl -s -X POST "${URL}"
+
