@@ -10,6 +10,9 @@ export function frame(id) {
   return store.lookup(id);
 }
 
+store.parse("{=P11079 =PLITR}").state = 0;
+store.parse("{=P11386 =PLSTL}").state = 0;
+
 // Global settings.
 export var settings = {}
 
