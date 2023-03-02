@@ -1,0 +1,43 @@
+#!/bin/bash
+
+#
+# Scheduler job controller
+#
+# Submit job to scheduler:
+# bin/job submit <host> <task> [<param>=<val> ...]
+#
+# Cancel pending or running job:
+# bin/job cancel <host> <jobid>
+#
+# Put pending job on hold:
+# bin/job pause <host> <jobid>
+#
+# Resume job on hold:
+# bin/job resume <host> <jobid>
+#
+# Start scheduler daemon:
+# bin/job start <host> <task> [<param>=<val> ...]
+#
+# Stop scheduler daemon:
+# bin/job stop <host> <task> [<param>=<val> ...]
+#
+# Restart scheduler daemon:
+# bin/job restart <host> <task> [<param>=<val> ...]
+#
+
+function join { local IFS="$1"; shift; echo "$*"; }
+
+OP=$1
+HOST=$2
+JOB=$3
+ARGS=${@:4}
+PORT=5050
+
+if [[ $OP == "restart" ]]; then
+  curl -s -X POST "http://${HOST}:${PORT}/stop/${JOB}"
+  sleep 2
+  curl -s -X POST "http://${HOST}:${PORT}/start/${JOB}?$(join "&" ${ARGS[@]})"
+else
+  curl -s -X POST "http://${HOST}:${PORT}/${OP}/${JOB}?$(join "&" ${ARGS[@]})"
+fi
+

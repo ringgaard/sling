@@ -20,6 +20,7 @@ import queue
 import requests
 import socket
 import subprocess
+import signal
 import sys
 import threading
 import time
@@ -118,11 +119,13 @@ class Task:
 
 class Job:
   # Job states.
-  PENDING = 0
-  RUNNING = 1
-  COMPLETED = 2
-  FAILED = 3
-  DAEMON = 4
+  PENDING   = 0
+  PAUSED    = 1
+  WAITING   = 2
+  RUNNING   = 3
+  COMPLETED = 4
+  FAILED    = 5
+  DAEMON    = 6
 
   def __init__(self, task, args):
     self.task = task
@@ -254,9 +257,11 @@ class Queue(threading.Thread):
     jobs.append(job)
 
   def execute(self, job):
-    log.info("execute job", job.id, str(job))
+    # Wait if job is paused.
+    while job.state == Job.PAUSED: time.sleep(5)
 
     # Get command for executing job.
+    log.info("execute job", job.id, str(job))
     cmd = job.command()
     log.info("command:", cmd)
 
@@ -310,10 +315,13 @@ class Queue(threading.Thread):
     elif rc != 0:
       log.error("job", job.id, str(job), "failed, returned", rc)
       job.state = Job.FAILED
-      job.error = "Error " + str(rc)
+      if rc < 0:
+        job.error = "signal " + signal.Signals(-rc).name
+      else:
+        job.error = "error " + str(rc)
       alert.send("Job %s failed" % str(job),
-        "Job %s %s failed on %s with error code %d" %
-          (job.id, str(job), socket.gethostname(), rc))
+        "Job %s %s failed on %s: %s" %
+          (job.id, str(job), socket.gethostname(), job.error))
     else:
       log.info("completed job", job.id, str(job))
       job.state = Job.COMPLETED
@@ -369,9 +377,9 @@ def get_job(jobid):
     if job.id == jobid: return job
   return None
 
-def get_job_for_task(taskname):
+def get_job_for_task(taskname, state):
   for job in jobs:
-    if job.state == Job.DAEMON and job.task.name == taskname: return job
+    if job.state == state and job.task.name == taskname: return job
   return None
 
 def refresh_task_list():
@@ -416,12 +424,47 @@ def submit_job(taskname, queuename, args):
   queue.submit(job)
   return job
 
+def pause_job(jobid):
+  # Get job for jobid.
+  job = get_job(jobid)
+  if job is None: return None
+
+  # Put pending job on hold.
+  if job.state != Job.PENDING: return None
+  job.state = Job.PAUSED
+  return job
+
+def resume_job(jobid):
+  # Get job for jobid.
+  job = get_job(jobid)
+  if job is None: return None
+
+  # Resume job.
+  if job.state != Job.PAUSED: return None
+  job.state = Job.PENDING
+  return job
+
+def cancel_job(jobid):
+  # Get job for jobid.
+  job = get_job(jobid)
+  if job is None: return None
+
+  if job.state == Job.RUNNING:
+    # Terminate running job.
+    job.process.terminate()
+  elif job.state == Job.PENDING:
+    jobs.remove(job)
+  else:
+    return None
+
+  return job
+
 def start_daemon(taskname, args):
   # Re-read task list if it has changed.
   refresh_task_list()
 
   # Check that task is not already running.
-  if get_job_for_task(taskname):
+  if get_job_for_task(taskname, Job.DAEMON):
     log.error("daemon already running for", taskname)
     return None
 
@@ -445,7 +488,7 @@ def start_daemon(taskname, args):
 
 def stop_daemon(taskname):
   # Find current running daemon.
-  job = get_job_for_task(taskname)
+  job = get_job_for_task(taskname, Job.DAEMON)
   if job is None:
     log.error("no daemon is running for", taskname)
     return None
@@ -698,6 +741,15 @@ def jobs_request(request):
         "submitted": ts2str(job.submitted),
         "time": dur2str(job.waittime())
       })
+    elif job.state == Job.PAUSED:
+      pending.append({
+        "job": job.id,
+        "task": job.task.description + " [ON HOLD]",
+        "command": str(job),
+        "queue": job.queuename(),
+        "submitted": ts2str(job.submitted),
+        "time": dur2str(job.waittime())
+      })
     else:
       style = None
       if job.state == Job.FAILED: style = "background-color: #FCE4EC;"
@@ -806,6 +858,42 @@ def submit_command(request):
   # Reply with job id.
   if job is None: return 500
   return "job %s submitted to %s queue\n" % (job.id, job.queue.name)
+
+@app.route("/pause", method="POST")
+def stop_command(request):
+  # Get job id from path.
+  jobid = request.path[1:]
+
+  # Pause job.
+  job = pause_job(jobid)
+
+  # Reply with job id.
+  if job is None: return 500
+  return "job %s paused\n" % (job.id)
+
+@app.route("/resume", method="POST")
+def stop_command(request):
+  # Get job id from path.
+  jobid = request.path[1:]
+
+  # Resume job.
+  job = resume_job(jobid)
+
+  # Reply with job id.
+  if job is None: return 500
+  return "job %s resumed\n" % (job.id)
+
+@app.route("/cancel", method="POST")
+def cancel_command(request):
+  # Get job id from path.
+  jobid = request.path[1:]
+
+  # Cancel job.
+  job = cancel_job(jobid)
+
+  # Reply with job id.
+  if job is None: return 500
+  return "job %s cancelled\n" % (job.id)
 
 @app.route("/start", method="POST")
 def start_command(request):
