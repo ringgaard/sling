@@ -247,10 +247,7 @@ export default class AlbumPlugin {
     console.log(`Add photos from ${url} to topic ${context.topic.id}`);
 
     // Fetch forum post.
-    let r = await fetch(context.proxy(url), {headers: {
-      "XUser-Agent": navigator.userAgent,
-    }});
-    if (!r.ok) throw "Error fetching photos from " + url;
+    let r = await context.fetch(url);
     let html = await r.text();
 
     // Parse HTML.

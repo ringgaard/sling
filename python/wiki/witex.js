@@ -13,7 +13,7 @@ const n_unit = commons.lookup("/w/unit");
 const n_years_old = commons.lookup("Q24564698");
 const n_time = commons.lookup("/w/time");
 
-const empty_values = new Set(["-", "--", "—", "?"]);
+const empty_values = new Set(["-", "--", "—", "?", "―"]);
 
 var last_template = "";
 

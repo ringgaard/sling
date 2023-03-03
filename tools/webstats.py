@@ -123,6 +123,7 @@ pages = [
   ("photo search",         re.compile(r"^\/photosearch\/")),
   ("redreport",            re.compile(r"^\/redreport\/")),
   ("reddit report",        re.compile(r"^\/reddit\/report\/")),
+  ("Witex",                re.compile(r"^\/witex\/?$")),
 ]
 
 apis = [
@@ -152,6 +153,7 @@ apis = [
   ("birthdays",            re.compile(r"^\/home/birthdays")),
   ("feedback",             re.compile(r"^\/home/feedback")),
   ("add media",            re.compile(r"^\/redreport\/addmedia\/")),
+  ("witex",                re.compile(r"^\/witex\/extract")),
 
   ("RS refine" ,           re.compile(r"^\/refine")),
   ("RS reconcile" ,        re.compile(r"^\/reconcile")),
@@ -164,6 +166,7 @@ sources = [
   ("KB app",               re.compile(r"^\/kb/app/")),
   ("Case app",             re.compile(r"^\/(case|c)\/app\/(.+)$")),
   ("Home app",             re.compile(r"^\/home\/app\/")),
+  ("Witex app",            re.compile(r"^\/witex\/witex.js")),
   ("Home fonts",           re.compile(r"^\/home\/font\/")),
   ("common library",       re.compile(r"^\/common\/")),
 ]
@@ -360,6 +363,7 @@ num_monitor = 0
 num_curls = 0
 
 page_hits = defaultdict(int)
+ip_hits = defaultdict(int)
 api_calls = defaultdict(int)
 source_files = defaultdict(int)
 date_hits = defaultdict(int)
@@ -378,9 +382,8 @@ spam_hits = defaultdict(int)
 referrers = defaultdict(int)
 referring_domains = defaultdict(int)
 
-cold_hits = defaultdict(int)
-cold_users = {}
-warm_users = set()
+home_ips = set()
+bday_ips = set()
 
 prev_query = {}
 for logfn in flags.arg.logfiles:
@@ -467,10 +470,9 @@ for logfn in flags.arg.logfiles:
       num_mobile += 1
 
     # Warm and cold hits.
-    if path == "/":
-      cold_hits[ipaddr] += 1
-      cold_users[ipaddr] = ua
-    if path == "/home/birthdays": warm_users.add(ipaddr)
+    ip_hits[ipaddr] += 1
+    if path == "/": home_ips.add(ipaddr)
+    if path == "/home/birthdays": bday_ips.add(ipaddr)
 
     # Browsers and platforms.
     for browser_name, browser_pattern in browsers:
@@ -605,11 +607,13 @@ visits_per_day = {}
 for date, ipaddrs in date_visitors.items():
   visits_per_day[date] = len(ipaddrs)
 
-if flags.arg.v:
-  cold_agents = defaultdict(int)
-  for ipaddr, ua in cold_users.items():
-    if ipaddr in warm_users: continue
-    cold_agents[ua] += cold_hits[ipaddr]
+warm_hits = 0
+cold_hits = 0
+for ipaddr in home_ips:
+  if ipaddr in bday_ips:
+    warm_hits += ip_hits[ipaddr]
+  else:
+    cold_hits += ip_hits[ipaddr]
 
 print("\nSUMMARY\n")
 print("%6d hits" % num_hits)
@@ -625,6 +629,8 @@ print("%6d curl requests" % num_curls)
 print("%6d bot requests" % num_bots)
 print("%6d worm requests" % num_worms)
 print("%6d spam hits" % num_spammers)
+print("%6d warm hits" % warm_hits)
+print("%6d cold hits" % cold_hits)
 print("%6d errors" % num_errors)
 print("%6d unknown requests" % num_unknown)
 print("%6d invalid requests" % num_invalid)
