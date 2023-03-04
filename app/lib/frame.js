@@ -583,6 +583,12 @@ export class Decoder {
     return strdecoder.decode(buffer);
   }
 
+  // Read variable-length string from input.
+  read_varstring() {
+    let size = this.read_varint32();
+    return this.read_string(size);
+  }
+
   done() {
     return this.pos == this.input.length;
   }
@@ -986,6 +992,16 @@ export class Encoder {
       num >>>= 7;
     }
     this.buffer[this.pos++] = num | 0;
+  }
+
+  // Write variable-length string to output.
+  write_varstring(str) {
+    let utf8 = strencoder.encode(str);
+    let len = utf8.byteLength;
+    this.write_varint(len);
+    this.ensure(len);
+    this.buffer.subarray(this.pos, this.pos + len).set(utf8);
+    this.pos += len;
   }
 
   // Write varint-encoded tag and argument to output.

@@ -73,11 +73,11 @@ export class Collaboration {
   async onrecv(e) {
     // Decode message from server.
     let decoder = new Decoder(store, await e.data.arrayBuffer(), false);
-    let op = decoder.readVarint32();
+    let op = decoder.read_varint32();
     switch (op) {
       case COLLAB_UPDATE: {
         if (this.listener) {
-          let type = decoder.readVarint32();
+          let type = decoder.read_varint32();
           switch (type) {
             case CCU_TOPIC: {
               let topic = decoder.readall();
@@ -85,7 +85,7 @@ export class Collaboration {
               break;
             }
             case CCU_FOLDER: {
-              let folder = decoder.readVarString();
+              let folder = decoder.read_varstring();
               let topics = decoder.readall();
               this.listener.remote_folder_update(folder, topics);
               break;
@@ -96,18 +96,18 @@ export class Collaboration {
               break;
             }
             case CCU_DELETE: {
-              let topicid = decoder.readVarString();
+              let topicid = decoder.read_varstring();
               this.listener.remote_topic_delete(topicid);
               break;
             }
             case CCU_RENAME: {
-              let oldname = decoder.readVarString();
-              let newname = decoder.readVarString();
+              let oldname = decoder.read_varstring();
+              let newname = decoder.read_varstring();
               this.listener.remote_folder_rename(oldname, newname);
               break;
             }
             case CCU_SAVE: {
-              let modtime = decoder.readVarString();
+              let modtime = decoder.read_varstring();
               this.listener.remote_save(modtime);
               break;
             }
@@ -119,7 +119,7 @@ export class Collaboration {
         break;
       }
       case COLLAB_CREATE: {
-        let credentials = decoder.readVarString();
+        let credentials = decoder.read_varstring();
         this.onfail = null;
         this.oncreated && this.oncreated(credentials);
         break;
@@ -131,25 +131,25 @@ export class Collaboration {
         break;
       }
       case COLLAB_INVITE: {
-        let key = decoder.readVarString();
+        let key = decoder.read_varstring();
         this.onfail = null;
         this.oninvite && this.oninvite(key);
         break;
       }
       case COLLAB_JOIN: {
-        let credentials = decoder.readVarString();
+        let credentials = decoder.read_varstring();
         this.onfail = null;
         this.onjoin && this.onjoin(credentials);
         break;
       }
       case COLLAB_NEWID: {
-        let next = decoder.readVarint32();
+        let next = decoder.read_varint32();
         this.onfail = null;
         this.onnewid && this.onnewid(next);
         break;
       }
       case COLLAB_ERROR: {
-        let message = decoder.readVarString();
+        let message = decoder.read_varstring();
         if (this.onfail) {
           this.onfail(message);
         } else {
@@ -179,7 +179,7 @@ export class Collaboration {
 
       // Send collaboration create request to server.
       let encoder = new Encoder(store, false);
-      encoder.writeVarInt(COLLAB_CREATE);
+      encoder.write_varint(COLLAB_CREATE);
       for (let topic of casefile.get(n_topics)) {
         encoder.encode(topic);
       }
@@ -196,10 +196,10 @@ export class Collaboration {
       this.onfail = e => reject(e);
 
       let encoder = new Encoder(store, false);
-      encoder.writeVarInt(COLLAB_LOGIN);
-      encoder.writeVarInt(caseid);
-      encoder.writeVarString(userid);
-      encoder.writeVarString(credentials);
+      encoder.write_varint(COLLAB_LOGIN);
+      encoder.write_varint(caseid);
+      encoder.write_varstring(userid);
+      encoder.write_varstring(credentials);
       let packet = encoder.output();
       this.send(packet);
     });
@@ -212,8 +212,8 @@ export class Collaboration {
       this.onfail = e => reject(e);
 
       let encoder = new Encoder(store, false);
-      encoder.writeVarInt(COLLAB_INVITE);
-      encoder.writeVarString(userid);
+      encoder.write_varint(COLLAB_INVITE);
+      encoder.write_varstring(userid);
       let packet = encoder.output();
       this.send(packet);
     });
@@ -226,10 +226,10 @@ export class Collaboration {
       this.onfail = e => reject(e);
 
       let encoder = new Encoder(store, false);
-      encoder.writeVarInt(COLLAB_JOIN);
-      encoder.writeVarInt(caseid);
-      encoder.writeVarString(userid);
-      encoder.writeVarString(key);
+      encoder.write_varint(COLLAB_JOIN);
+      encoder.write_varint(caseid);
+      encoder.write_varstring(userid);
+      encoder.write_varstring(key);
       let packet = encoder.output();
       this.send(packet);
     });
@@ -242,7 +242,7 @@ export class Collaboration {
       this.onfail = e => reject(e);
 
       let encoder = new Encoder(store, false);
-      encoder.writeVarInt(COLLAB_NEWID);
+      encoder.write_varint(COLLAB_NEWID);
       let packet = encoder.output();
       this.send(packet);
     });
@@ -252,8 +252,8 @@ export class Collaboration {
   topic_updated(topic) {
     console.log("send topic update", topic.id);
     let encoder = new Encoder(store, false);
-    encoder.writeVarInt(COLLAB_UPDATE);
-    encoder.writeVarInt(CCU_TOPIC);
+    encoder.write_varint(COLLAB_UPDATE);
+    encoder.write_varint(CCU_TOPIC);
     encoder.encodeLink(topic);
     encoder.encode(topic);
     let packet = encoder.output();
@@ -264,9 +264,9 @@ export class Collaboration {
   topic_deleted(topic) {
     console.log("send topic delete", topic.id);
     let encoder = new Encoder(store, false);
-    encoder.writeVarInt(COLLAB_UPDATE);
-    encoder.writeVarInt(CCU_DELETE);
-    encoder.writeVarString(topic.id);
+    encoder.write_varint(COLLAB_UPDATE);
+    encoder.write_varint(CCU_DELETE);
+    encoder.write_varstring(topic.id);
     let packet = encoder.output();
     this.send(packet);
   }
@@ -275,9 +275,9 @@ export class Collaboration {
   folder_updated(name, content) {
     console.log("send folder update", name, content);
     let encoder = new Encoder(store, false);
-    encoder.writeVarInt(COLLAB_UPDATE);
-    encoder.writeVarInt(CCU_FOLDER);
-    encoder.writeVarString(name);
+    encoder.write_varint(COLLAB_UPDATE);
+    encoder.write_varint(CCU_FOLDER);
+    encoder.write_varstring(name);
     encoder.encode(content);
     let packet = encoder.output();
     this.send(packet);
@@ -287,10 +287,10 @@ export class Collaboration {
   folder_renamed(oldname, newname) {
     console.log("send folder rename", oldname, newname);
     let encoder = new Encoder(store, false);
-    encoder.writeVarInt(COLLAB_UPDATE);
-    encoder.writeVarInt(CCU_RENAME);
-    encoder.writeVarString(oldname);
-    encoder.writeVarString(newname);
+    encoder.write_varint(COLLAB_UPDATE);
+    encoder.write_varint(CCU_RENAME);
+    encoder.write_varstring(oldname);
+    encoder.write_varstring(newname);
     let packet = encoder.output();
     this.send(packet);
   }
@@ -303,8 +303,8 @@ export class Collaboration {
     }
     console.log("send folder list update", folder_names);
     let encoder = new Encoder(store, false);
-    encoder.writeVarInt(COLLAB_UPDATE);
-    encoder.writeVarInt(CCU_FOLDERS);
+    encoder.write_varint(COLLAB_UPDATE);
+    encoder.write_varint(CCU_FOLDERS);
     encoder.encode(folder_names);
     let packet = encoder.output();
     this.send(packet);
