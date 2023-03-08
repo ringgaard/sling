@@ -43,13 +43,11 @@ export class Component extends HTMLElement {
       let name = attr.name.replace(/-/g, "_");
       let value = attr.value;
 
-      if (value.length > 0 && !value.match(/^[A-Za-z]/)) {
-        try {
-          let v = JSON.parse(`[${value}]`);
-          if (v.length == 1) value = v[0];
-        } catch (e) {
-          // Fall back to literal value if JSON parse fails.
-        }
+      try {
+        let v = JSON.parse(`[${value}]`);
+        if (v.length == 1) value = v[0];
+      } catch (e) {
+        // Fall back to literal value if JSON parse fails.
       }
       this.attrs[name] = value;
     }

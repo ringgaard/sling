@@ -294,6 +294,12 @@ const char *property_order[] = {
   "P1363",      // points/goal scored by
   "P1352",      // ranking
 
+  // Publicity.
+  "P166",       // award received
+  "P2522",      // victory
+  "P1441",      // present in work
+  "PFEIN",      // featured in
+
   // Proportions.
   "P2043",      // length
   "P2049",      // width
@@ -463,12 +469,6 @@ const char *property_order[] = {
   "P405",       // taxon author
   "P697",       // ex taxon author
   "P6507",      // taxon author citation
-
-  // Publicity.
-  "P166",       // award received
-  "P2522",      // victory
-  "P1441",      // present in work
-  "PFEIN",      // featured in
 
   // Media.
   "P18",        // image
