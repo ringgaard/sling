@@ -209,6 +209,13 @@ class TopicList extends Component {
     }
   }
 
+  editing() {
+    for (let e = this.firstChild; e; e = e.nextSibling) {
+      if (e.editing) return true;
+    }
+    return false;
+  }
+
   refresh(state) {
     this.innerHTML = "";
     return this.update(state);
@@ -1172,13 +1179,31 @@ Component.register(DedupDialog);
 
 export class ReconcileDialog extends MdDialog {
   async onconnected() {
+    this.attach(this.onkeydown, "keydown");
     this.attach(this.onselect, "select", "#search");
     this.find("#search").update({items: this.state});
+  }
+
+  onkeydown(e) {
+    let list = this.find("#search");
+    if (e.keyCode == 40) {
+      list.next();
+    } else if (e.keyCode == 38) {
+      list.prev();
+    }
   }
 
   async onselect(e) {
     let ref = e.detail.item.state.ref;
     this.close(ref);
+  }
+
+  submit() {
+    let list = this.find("#search");
+    if (list.active) {
+      let ref = list.active.state.ref;
+      this.close(ref);
+    }
   }
 
   render() {

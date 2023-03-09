@@ -196,6 +196,10 @@ class CaseEditor extends MdApp {
     }
   }
 
+  editing() {
+    return this.find("topic-list").editing();
+  }
+
   onkeydown(e) {
     if ((e.ctrlKey || e.metaKey) && e.code === "KeyS") {
       e.preventDefault();
@@ -204,13 +208,13 @@ class CaseEditor extends MdApp {
       this.onmerge(e);
     } else if (e.code === "Escape") {
       this.find("#search").clear();
-    } else if (e.code === "PageDown" && !e.ctrlKey) {
+    } else if (e.code === "PageDown" && !e.ctrlKey && !this.editing()) {
       if (e.altKey) {
         this.move_folder_down(this.folder);
       } else if (e.shiftKey) {
         this.next_folder();
       }
-    } else if (e.code === "PageUp" && !e.ctrlKey) {
+    } else if (e.code === "PageUp" && !e.ctrlKey && !this.editing()) {
       if (e.altKey) {
         this.move_folder_up(this.folder);
       } else if (e.shiftKey) {

@@ -455,6 +455,14 @@ window.onclick = e => {
   if (current_menu && event.target != current_menu) current_menu.close();
 }
 
+window.onkeydown = e => {
+  // Close menu on escape.
+  if (current_menu && e.keyCode == 27) {
+    e.stopPropagation();
+    current_menu.close();
+  }
+}
+
 export class MdMenu extends Component {
   constructor(state) {
     super(state);
