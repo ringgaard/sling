@@ -89,10 +89,6 @@ class KnowledgeBaseWorkflow:
     """Resource for imdb profile database."""
     return self.wf.resource(corpora.imdb(), format="db/frames", serial=410)
 
-  def celebs(self):
-    """Resource for celebrity profiles."""
-    return self.wf.resource(corpora.celebdb(), format="db/frames", serial=9010)
-
   def forum(self):
     """Resource for forum profiles."""
     return self.wf.resource(corpora.forumdb(), format="db/frames", serial=9030)
@@ -173,7 +169,6 @@ class KnowledgeBaseWorkflow:
   #  600 factgrid properties
   #  610 factgrid items
   # 1000 case topics
-  # 9010 celebs
   # 9020 photos
   # 9030 forum
 
@@ -184,7 +179,6 @@ class KnowledgeBaseWorkflow:
       self.wikipedia_media(),
       self.twitter(),
       self.imdb(),
-      self.celebs(),
       self.forum(),
       self.photos(),
       self.data.wikipedia_summaries(),
@@ -207,8 +201,7 @@ class KnowledgeBaseWorkflow:
       self.dknace(),
       self.gleif(),
       self.cvr(),
-      self.factgrid(),
-      self.celebs())
+      self.factgrid())
 
     with self.wf.namespace("xrefs"):
       builder = self.wf.task("xref-builder", params={"snapshot": True})

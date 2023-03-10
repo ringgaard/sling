@@ -57,11 +57,6 @@ flags.define("--photodb",
              default="photo",
              metavar="DBURL")
 
-flags.define("--celebdb",
-             help="celebrity profile database",
-             default="celeb",
-             metavar="DBURL")
-
 flags.define("--forumdb",
              help="forum profile database",
              default="forum",
@@ -125,10 +120,6 @@ def wikidatadb():
 def kbdb():
   """Knowledge base database."""
   return flags.arg.kbdb
-
-def celebdb():
-  """Celebrity profile database."""
-  return flags.arg.celebdb
 
 def forumdb():
   """Forum profile database."""
