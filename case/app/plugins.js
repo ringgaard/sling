@@ -326,7 +326,7 @@ var plugins = [
 ];
 
 // Cached HTML pages from html: urls.
-var cache = new Map();
+var webcache = new Map();
 
 function parse_url(url) {
   try {
@@ -414,8 +414,8 @@ export class Context {
 
   async fetch(url, options = {}) {
     // Try to get content from cache.
-    if (cache.has(url)) {
-      return new LocalResponse(url, cache.get(url));
+    if (webcache.has(url)) {
+      return new LocalResponse(url, webcache.get(url));
     }
 
     // Build headers.
@@ -457,13 +457,13 @@ export class Context {
 };
 
 export async function process(action, query, context) {
-  // Check for pasted HTML pages.
+  // Check encoded HTML page.
   if (query.startsWith("html:")) {
-    let m = query.match(/html:([^\s]+) (.*)/);
+    let m = query.match(/^html:([^\s]+) ([^]*)$/);
     if (m) {
       let url = m[1];
       let content = m[2];
-      cache.set(url, content);
+      webcache.set(url, content);
       query = url;
     }
   }

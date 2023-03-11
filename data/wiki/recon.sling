@@ -28,6 +28,7 @@
     P162: Q65994327     ; producer -> producer of
     P57:  Q65971570     ; director -> director of
     P161: Q66318312     ; cast member -> cast member of
+    Q66318312: P161     ; cast member of -> cast member
     P58:  Q65971578     ; screenwriter -> wrote script of
     P166: {+Q66796038   ; award received -> award received by
       P585: P585   ; point in time

@@ -117,6 +117,9 @@ export default class BabepediaPlugin {
     // Parse HTML.
     let doc = new DOMParser().parseFromString(html, "text/html");
 
+    // Create new topic if missing.
+    if (!topic) topic = await context.new_topic();
+
     // Get name and aliases.
     let babename = doc.getElementById("babename");
     if (babename) {
@@ -223,6 +226,13 @@ export default class BabepediaPlugin {
       for (let i = 0; i < socialicons.children.length; i++) {
         let a = socialicons.children[i];
         let url = a.getAttribute("href");
+        await social.add_link(url);
+      }
+    }
+    let linkstable = doc.querySelector("div.linkstable");
+    if (linkstable) {
+      for (let link of linkstable.querySelectorAll("a.outlink").values()) {
+        let url = link.getAttribute("href");
         await social.add_link(url);
       }
     }

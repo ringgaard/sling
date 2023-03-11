@@ -496,6 +496,7 @@ def stop_daemon(taskname):
   # Stop daemon.
   log.info("stop daemon", job.id, job.task.name, "pid", job.process.pid)
   job.process.terminate()
+  job.process.wait()
   job.state = Job.COMPLETED
   job.ended = time.time()
   job.process = None
