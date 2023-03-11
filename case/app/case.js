@@ -149,7 +149,7 @@ class CaseEditor extends MdApp {
     omnibox.add(kbsearch);
     omnibox.add(app.search.bind(app));
     omnibox.add((query, results, options) => {
-      if (!options.keyword) {
+      if (!options.keyword && query.length < 80) {
         results.push({
           title: "more...",
           description: 'search for "' + query + '" 🔎',

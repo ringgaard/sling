@@ -79,6 +79,7 @@ export async function search(queries, backends, options = {}) {
 }
 
 export async function kbsearch(query, results, options) {
+  if (query.length > 1024) return;
   try {
     let path = options.keyword ? "/kb/search" : "/kb/query";
     let params = "fmt=cjson";
@@ -111,7 +112,6 @@ export async function kbsearch(query, results, options) {
 
 export class SearchIndex {
   constructor(topics) {
-    let start = performance.now();
     this.topics = topics;
     this.ids = new Map();
     this.names = new Array();
@@ -141,8 +141,6 @@ export class SearchIndex {
       if (a.name > b.name) return 1;
       return 0;
     });
-
-    console.log(`re-index ${Math.round(performance.now() - start)} ms`);
   }
 
   hits(query, options = {}) {

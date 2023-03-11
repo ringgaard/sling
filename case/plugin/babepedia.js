@@ -111,7 +111,7 @@ export default class BabepediaPlugin {
 
   async populate(context, topic, url) {
     // Retrieve babepedia profile for user.
-    let r = await fetch(context.proxy(url));
+    let r = await context.fetch(url);
     let html = await r.text();
 
     // Parse HTML.
@@ -231,19 +231,6 @@ export default class BabepediaPlugin {
     let m = new URL(url).pathname.match(/^\/babe\/([^\/]+)/);
     let username = decodeURIComponent(m[1]);
     await social.add_prop(n_babepedia_id, username);
-
-    // Add profile photo.
-    let profimg = doc.getElementById("profimg");
-    if (profimg) {
-      let a = profimg.querySelector("a");
-      if (a) {
-        let href = a.getAttribute("href");
-        if (!href.startsWith("javascript")) {
-          let image = "https://babepedia.com" + a.getAttribute("href");
-          topic.put(n_media, image);
-        }
-      }
-    }
 
     context.updated(topic);
   }

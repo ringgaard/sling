@@ -325,6 +325,9 @@ var plugins = [
 
 ];
 
+// Cached HTML pages from html: urls.
+var cache = new Map();
+
 function parse_url(url) {
   try {
     return new URL(url);
@@ -342,6 +345,17 @@ async function load_plugin(module) {
   } catch (e) {
     console.log(e);
     throw `error loading ${module}`;
+  }
+}
+
+class LocalResponse {
+  constructor(url, content) {
+    this.url = url;
+    this.content = content;
+  }
+
+  text() {
+    return this.content;
   }
 }
 
@@ -399,6 +413,12 @@ export class Context {
   }
 
   async fetch(url, options = {}) {
+    // Try to get content from cache.
+    if (cache.has(url)) {
+      return new LocalResponse(url, cache.get(url));
+    }
+
+    // Build headers.
     if (!options.headers) options.headers = {};
     options.headers["XUser-Agent"] = navigator.userAgent;
     let hostname = new URL(url).hostname;
@@ -437,6 +457,17 @@ export class Context {
 };
 
 export async function process(action, query, context) {
+  // Check for pasted HTML pages.
+  if (query.startsWith("html:")) {
+    let m = query.match(/html:([^\s]+) (.*)/);
+    if (m) {
+      let url = m[1];
+      let content = m[2];
+      cache.set(url, content);
+      query = url;
+    }
+  }
+
   // Check for URL query.
   let url = parse_url(query);
   if (url) {
@@ -448,7 +479,6 @@ export async function process(action, query, context) {
 
   // Try to find plug-in with a matching pattern.
   let result = null;
-  let start = performance.now();
   for (let plugin of plugins) {
     let match = false;
     if (plugin.actions.includes(action)) {
@@ -460,8 +490,6 @@ export async function process(action, query, context) {
       }
     }
     if (!match) continue;
-
-    console.log(`plugin search ${Math.round(performance.now() - start)} ms`);
 
     // Load module if not already done.
     if (!plugin.instance) {
