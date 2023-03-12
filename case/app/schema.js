@@ -20,8 +20,11 @@ const n_properties_for_type = frame("P1963");
 const n_property_constraint = frame("P2302");
 const n_allowed_qualifiers_constraint = frame("Q21510851");
 const n_property = frame("P2306");
+const n_formatter_url = frame("P1630");
+const n_matcher = frame("P8460");
 
 const n_properties = frame("properties");
+const n_rank = frame("rank");
 const n_fanin = frame("/w/item/fanin");
 
 const max_fanin = Number.POSITIVE_INFINITY;
@@ -143,6 +146,56 @@ class Properties {
 
     return results.slice(0, options.limit);
   }
+}
+
+class URLFormatter {
+  constructor(prop) {
+    let rank = 1;
+    for (let f of prop.all(n_formatter_url)) {
+      if (f instanceof Frame) {
+        let r = f.get(n_rank);
+        if (r === undefined) r = 1;
+        let regex = f.get(n_matcher);
+        if (regex) {
+          if (!this.variants) this.variants = new Array();
+          this.variants.push({
+            pattern: new RegExp("^" + regex + "$"),
+            formatter: f.get(n_is),
+          });
+        } else if (!this.formatter || r > rank) {
+          this.formatter = f.get(n_is);
+          rank = r;
+        }
+      } else if (!this.formatter || rank < 1) {
+        this.formatter = f;
+        rank = 1;
+      }
+    }
+  }
+
+  url(value) {
+    if (this.variants) {
+      for (let v of this.variants) {
+        if (v.pattern.test(value)) {
+          return v.formatter.replace("$1", value);
+        }
+      }
+    }
+    if (this.formatter) {
+      return this.formatter.replace("$1", value);
+    }
+  }
+}
+
+var formatters = new Map();
+
+export function url_format(prop, value) {
+  let formatter = formatters.get(prop);
+  if (!formatter) {
+    formatter = new URLFormatter(prop);
+    formatters.set(prop, formatter);
+  }
+  return formatter.url(value);
 }
 
 export async function get_schema() {

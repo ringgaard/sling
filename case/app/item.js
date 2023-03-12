@@ -6,6 +6,7 @@ import {inform} from "/common/lib/material.js";
 import {Frame, QString} from "/common/lib/frame.js";
 import {store, frame, settings} from "./global.js";
 import {Time, LabelCollector, latlong} from "./value.js";
+import {url_format} from "./schema.js";
 import {get_widget} from "./plugins.js";
 import {PhotoGallery, censor, imageurl, mediadb} from "/common/lib/gallery.js";
 
@@ -21,7 +22,6 @@ const n_media = frame("media");
 const n_internal = frame("internal");
 const n_casefile = frame("casefile");
 const n_main = frame("main");
-const n_rank = frame("rank");
 
 const n_item_type = frame("/w/item");
 const n_lexeme_type = frame("/w/lexeme");
@@ -43,8 +43,6 @@ const n_formatter_url = frame("P1630");
 const n_media_legend = frame("P2096");
 const n_has_quality = frame("P1552");
 const n_not_safe_for_work = frame("Q2716583");
-
-var formatters = new Map();
 
 class KbLink extends Component {
   onconnected() {
@@ -213,26 +211,8 @@ class PropertyPanel extends Component {
     }
 
     function render_xref(val, prop) {
-      let formatter = formatters.get(prop);
-      if (!formatter) {
-        let rank = 1;
-        for (let f of prop.all(n_formatter_url)) {
-          if (f instanceof Frame) {
-            let r = f.get(n_rank);
-            if (r === undefined) r = 1;
-            if (!formatter || r > rank) {
-              formatter = f.get(n_is);
-              rank = r;
-            }
-          } else if (!formatter || rank < 1) {
-            formatter = f;
-            rank = 1;
-          }
-        }
-        if (formatter) formatters.set(prop, formatter)
-      }
-      if (formatter) {
-        let url = formatter.replace("$1", val);
+      let url = url_format(prop, val);
+      if (url) {
         h.push('<a href="');
         h.push(url);
         h.push('" target="_blank" rel="noreferrer">');
