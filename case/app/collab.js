@@ -254,7 +254,7 @@ export class Collaboration {
     let encoder = new Encoder(store, false);
     encoder.write_varint(COLLAB_UPDATE);
     encoder.write_varint(CCU_TOPIC);
-    encoder.encodeLink(topic);
+    encoder.encode_link(topic);
     encoder.encode(topic);
     let packet = encoder.output();
     this.send(packet);
