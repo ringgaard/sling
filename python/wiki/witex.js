@@ -57,7 +57,6 @@ const lib = {
     if (value instanceof Document) return value.annotation(0);
   },
 
-
   "memoize": function(value) {
     if (value instanceof Document) {
       if (!this.links) this.links = new Map();

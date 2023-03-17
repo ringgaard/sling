@@ -14,6 +14,22 @@ flags.define("--cache",
              default=None,
              help="mapping of twitter user names to ids")
 
+flags.define("--filter",
+             default=None,
+             help="file with twitter filters")
+
+flags.define("--max_rule_length",
+             help="Maximum length of twitter filter rule",
+             default=512,
+             type=int,
+             metavar="NUM")
+
+flags.define("--max_rules",
+             help="Maximum number of twitter filter rules",
+             default=25,
+             type=int,
+             metavar="NUM")
+
 flags.define("--retweets",
              help="Process retweets",
              default=False,
@@ -21,54 +37,22 @@ flags.define("--retweets",
 
 flags.parse()
 
-# Load news site list.
-news.init()
-
-# Connect to Twitter.
-with open(flags.arg.apikeys, "r") as f:
-  apikeys = json.load(f)
-
-auth = tweepy.OAuthHandler(apikeys["consumer_key"], apikeys["consumer_secret"])
-auth.set_access_token(apikeys["access_key"], apikeys["access_secret"])
-api = tweepy.API(auth, wait_on_rate_limit=True, wait_on_rate_limit_notify=True)
-
-# Read twitter user cache.
+num_tweets = 0
 user_cache = {}
-if flags.arg.cache:
-  with open(flags.arg.cache, "r") as f:
-    for line in f.readlines():
-      fields = line.strip().split(' ')
-      user_cache[fields[0]] = fields[1]
-
-# Make list of users to follow.
-print("Look up feeds...")
-feeds = set()
-users = set()
-for domain, site in news.sites.items():
-  if site.twitter != None:
-    users.add(site.twitter.lower()[1:])
-    if site.twitter in user_cache:
-      feeds.add(user_cache[site.twitter])
-    else:
-      try:
-        user = api.get_user(site.twitter)
-        feeds.add(str(user.id))
-        print(site.twitter, user.id)
-      except Exception as e:
-        print("Ignore bad feed for domain", domain, ":", site.twitter, e)
-
-# Initialize news crawler.
-crawler = news.Crawler("twitter")
 
 def collect_urls(obj, urls):
   if "entities" in obj:
     entities = obj["entities"]
-    for url in entities["urls"]:
-      expanded_url = url["expanded_url"]
-      if expanded_url.startswith("https://twitter.com/"): continue
-      if expanded_url.startswith("https://www.twitter.com/"): continue
-      if expanded_url.startswith("https://mobile.twitter.com/"): continue
-      urls.add(expanded_url)
+    if "urls" in entities:
+      for url in entities["urls"]:
+        if "unwound_url" in url:
+          expanded_url = url["unwound_url"]
+        else:
+          expanded_url = url["expanded_url"]
+        if expanded_url.startswith("https://twitter.com/"): continue
+        if expanded_url.startswith("https://www.twitter.com/"): continue
+        if expanded_url.startswith("https://mobile.twitter.com/"): continue
+        urls.add(expanded_url)
 
   if "retweeted_status" in obj:
     retweet = obj["retweeted_status"]
@@ -77,16 +61,26 @@ def collect_urls(obj, urls):
     extended = obj["extended_tweet"]
     collect_urls(extended, urls)
 
-class NewsStreamListener(tweepy.StreamListener):
-  def on_status(self, status):
+class NewsStreamFeed(tweepy.StreamingClient):
+  def on_data(self, data):
+    global num_tweets
+    num_tweets += 1
+    tweet = json.loads(data)["data"]
+
     # Check for retweet.
-    retweet = status.text.startswith("RT @")
+    retweet = tweet["text"].startswith("RT @")
+    if retweet and not flags.arg.retweets: return
+
+    # Get author.
+    user = tweet["author_id"]
+    user = user_cache.get(user, user)
+
+    #print(json.dumps(tweet))
 
     # Get urls.
     urls = set([])
-    collect_urls(status._json, urls)
+    collect_urls(tweet, urls)
 
-    user = status.user.screen_name.lower()
     for url in urls:
       # Check for blocked sites.
       if news.blocked(url): continue
@@ -94,34 +88,73 @@ class NewsStreamListener(tweepy.StreamListener):
       # Check for news site. Try to crawl all urls in tweets from feeds.
       # Otherwise the site must be in the whitelist.
       site = news.sitename(url)
-      if user not in users:
-        if retweet and not flags.arg.retweets: continue
-        if site not in news.sites: continue
+      if site not in news.sites: continue
 
       # Crawl URL.
-      print("---", user, "-", news.trim_url(url))
+      print("---", num_tweets, user, "-", news.trim_url(url))
       crawler.crawl(url)
       sys.stdout.flush()
 
-  def on_error(self, status_code):
-    print("Stream error:", status_code)
+  def on_errors(self, errors):
+    print("Stream error:", tweet)
     return False
 
-# Monitor live twitter stream for news articles.
-print("Follow", len(feeds), "twitter feeds")
-while True:
-  try:
-    print("Start twitter stream")
-    stream = tweepy.Stream(auth, NewsStreamListener(), tweet_mode="extended")
-    stream.filter(follow=feeds)
-    time.sleep(20)
+# Read twitter user cache.
+if flags.arg.cache:
+  with open(flags.arg.cache, "r") as f:
+    for line in f.readlines():
+      fields = line.strip().split(' ')
+      user_name = fields[0][1:]
+      user_id = fields[1]
+      user_cache[user_id] = user_name
 
-  except KeyboardInterrupt as error:
-    print("Stopped")
-    crawler.dumpstats()
-    sys.exit()
+# Get twitter credentials.
+with open(flags.arg.apikeys, "r") as f:
+  apikeys = json.load(f)
 
-  except:
-    traceback.print_exc(file=sys.stdout)
-    time.sleep(60)
+# Create twitter stream.
+feed = NewsStreamFeed(apikeys["bearer_token"], wait_on_rate_limit=True)
+
+# Update filter.
+if flags.arg.filter:
+  # Create new rules.
+  newrules = []
+  with open(flags.arg.filter, "r") as f:
+    parts = []
+    left = flags.arg.max_rule_length
+    for line in f.readlines():
+      line = line.strip()
+      if len(line) == 0 or line[0] == ";": continue
+      if left < len(line):
+        newrules.append(" OR ".join(parts))
+        parts = []
+        left = flags.arg.max_rule_length
+      parts.append(line)
+      left -= len(line) + 4
+  if len(parts) > 0: newrules.append(" OR ".join(parts))
+  if len(newrules) > flags.arg.max_rules:
+    print(flags.arg.max_rules, "of", len(newrules),"rules used")
+    print("skip from", newrules[flags.arg.max_rules])
+    newrules = newrules[:flags.arg.max_rules]
+  else:
+    print(len(newrules), "rules")
+
+  # Delete all existing rules.
+  rules = feed.get_rules()
+  if rules.data is not None:
+    ruleids = []
+    for rule in rules.data: ruleids.append(rule.id)
+    feed.delete_rules(ruleids)
+
+  # Create new rules.
+  for r in newrules:
+    print("add rule:", r)
+    feed.add_rules(tweepy.StreamRule(r))
+
+# Initialize news crawler.
+news.init()
+crawler = news.Crawler("twitter")
+
+print("Start")
+feed.filter(expansions=["author_id"], tweet_fields=["entities"])
 
