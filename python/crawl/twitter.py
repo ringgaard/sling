@@ -65,7 +65,10 @@ class NewsStreamFeed(tweepy.StreamingClient):
   def on_data(self, data):
     global num_tweets
     num_tweets += 1
-    tweet = json.loads(data)["data"]
+    tweet = json.loads(data).get("data")
+    if tweet is None:
+      print("missing data:", data)
+      return
 
     # Check for retweet.
     retweet = tweet["text"].startswith("RT @")
