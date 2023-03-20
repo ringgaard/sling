@@ -50,12 +50,15 @@ DEFINE_int32(poll, 1000, "Poll interval (in ms) for incremental fetching");
 DEFINE_string(field, "", "Only display a single field from frame");
 DEFINE_bool(timestamp, false, "Output version as timestamp");
 DEFINE_bool(position, false, "Output file position");
-DEFINE_string(output, "", "Output to record file");
+DEFINE_string(recout, "", "Output to record file");
+DEFINE_string(dbout, "", "Output to database");
+DEFINE_bool(bulk, false, "Database bulk loading");
 
 using namespace sling;
 using namespace sling::nlp;
 
-RecordWriter *output = nullptr;
+RecordWriter *recout = nullptr;
+DBClient *dbout = nullptr;
 int records_output = 0;
 
 void DisplayObject(const Object &object) {
@@ -96,9 +99,13 @@ void DisplayRaw(const Slice &value) {
 }
 
 void DisplayRecord(const Slice &key, uint64 version, const Slice &value) {
-  // Output to record file.
-  if (output != nullptr) {
-    CHECK(output->Write(key, version, value));
+  if (recout != nullptr) {
+    // Output to record file.
+    CHECK(recout->Write(key, version, value));
+  } else if (dbout != nullptr) {
+    DBRecord rec(key, value);
+    rec.version = version;
+    CHECK(dbout->Put(&rec));
   } else {
     // Display key.
     if (!FLAGS_values) {
@@ -230,8 +237,12 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  if (!FLAGS_output.empty()) {
-    output = new RecordWriter(FLAGS_output);
+  if (!FLAGS_recout.empty()) {
+    recout = new RecordWriter(FLAGS_recout);
+  } else if (!FLAGS_dbout.empty()) {
+    dbout = new DBClient();
+    CHECK(dbout->Connect(FLAGS_dbout, "codex"));
+    if (FLAGS_bulk) dbout->Bulk(true);
   }
 
   std::vector<string> files;
@@ -258,11 +269,17 @@ int main(int argc, char *argv[]) {
     DisplayFile(files[shard]);
   }
 
-  if (output != nullptr) {
-    output->Close();
-    delete output;
+  if (recout != nullptr) {
+    recout->Close();
+    delete recout;
     std::cout << records_output << " records written to "
-              << FLAGS_output << "\n";
+              << FLAGS_recout << "\n";
+  } else if (dbout != nullptr) {
+    if (FLAGS_bulk) dbout->Bulk(false);
+    dbout->Close();
+    delete dbout;
+    std::cout << records_output << " records written to database "
+              << FLAGS_dbout << "\n";
   }
 
   return 0;

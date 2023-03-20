@@ -1194,6 +1194,7 @@ class CaseEditor extends MdApp {
             }
           }
         }
+        if (selected.length > 1) break;
       }
     }
     if (selected.length < 2) return;
