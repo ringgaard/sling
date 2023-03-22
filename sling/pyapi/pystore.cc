@@ -205,7 +205,7 @@ PyObject *PyStore::Parse(PyObject *args, PyObject *kw) {
   bool all = false;
   PyObject *idsym = nullptr;
   bool ok = PyArg_ParseTupleAndKeywords(
-                args, kw, "O|bbbbO", const_cast<char **>(kwlist),
+                args, kw, "O|bbbbbO", const_cast<char **>(kwlist),
                 &object, &force_binary, &json, &xml, &ttl, &all, &idsym);
   if (!ok) return nullptr;
 

@@ -19,12 +19,13 @@
 import os
 import sys
 import time
-import requests
+import urllib3
 import asyncore
 import smtpd
 import email
 import email.policy
 import traceback
+import socket
 
 import sling
 import sling.flags as flags
@@ -126,6 +127,18 @@ app.page("/",
         </md-data-table>
       </md-card>
 
+      <md-card id="controllers">
+        <md-card-toolbar>
+          <div>Machines</div>
+        </md-card-toolbar>
+
+        <md-data-table id="controller-table">
+          <md-data-field field="machine">Machine</md-data-field>
+          <md-data-field field="status">Status</md-data-field>
+          <md-data-field field="since">Since</md-data-field>
+        </md-data-table>
+      </md-card>
+
     </md-content>
   </monitor-app>
 </body>
@@ -177,6 +190,7 @@ class MonitorApp extends MdApp {
     this.find("#alert-table").update(this.state.alerts);
     this.find("#scheduler-table").update(this.state.schedulers);
     this.find("#monitor-table").update(this.state.monitors);
+    this.find("#controller-table").update(this.state.controllers);
 
     let alarms = this.alarms();
     let status = this.find("#status");
@@ -230,7 +244,8 @@ Component.register(MonitorApp);
 document.body.style = null;
 """)
 
-session = requests.Session()
+pool =  urllib3.PoolManager()
+
 commons = sling.Store()
 
 config = commons.load(flags.arg.cfg)
@@ -252,6 +267,15 @@ n_service = commons["service"]
 n_status = commons["status"]
 n_collected_sec = commons["collected_sec"]
 
+machines = {}
+for c in config.controllers:
+  machines[c.machine] = {
+    "host": c.host,
+    "hwa": c.hwa,
+    "online": c.online,
+    "last": int(time.time()),
+  }
+
 commons.freeze()
 
 # Received messages.
@@ -259,6 +283,10 @@ inbox = []
 
 # Current system status.
 status = {}
+
+def offline(machine):
+  if machine in machines: return not machines[machine]["online"]
+  return False
 
 def refresh():
   # Add alerts from inbox.
@@ -281,38 +309,39 @@ def refresh():
   # Refresh jobs scheduler status.
   schedulers = []
   for s in config.schedulers:
+    if offline(s.machine): continue
     scheduler = {
       "machine": s.machine,
       "link": '<a href="%s">%s</a>' % (s.url, s.machine),
     }
     schedulers.append(scheduler)
     try:
-      r = session.get(s["url"] + "/summary")
-      r.raise_for_status()
+      r = pool.request("GET", s["url"] + "/summary", timeout=2)
       store = sling.Store(commons)
-      summary = store.parse(r.content, json=True)
+      summary = store.parse(r.data, json=True)
       scheduler["status"] = "OK"
       scheduler["running"] = summary[n_running]
       scheduler["pending"] = summary[n_pending]
       scheduler["done"] = summary[n_completed]
       scheduler["failed"] = summary[n_failed]
     except Exception as e:
-      scheduler["status"] = str(e)
+      scheduler["status"] = "Error"
       scheduler["failed"] = 1
+      traceback.print_exc()
 
   # Refresh monitor status.
   monitors = []
   for m in config.monitors:
+    if offline(m.machine): continue
     monitor = {
       "machine": m.machine,
       "link": '<a href="%s">%s</a>' % (m.url, m.machine),
     }
     monitors.append(monitor)
     try:
-      r = session.get(m["url"] + "/_status?format=xml")
-      r.raise_for_status()
+      r = pool.request("GET", m["url"] + "/_status?format=xml", timeout=2)
       store = sling.Store(commons)
-      data = store.parse(r.content, xml=True, idsym=n_idsym)
+      data = store.parse(r.data, xml=True, idsym=n_idsym)
       monit = data[n_monit]
 
       # Get system information.
@@ -336,13 +365,27 @@ def refresh():
       monitor["failures"] = failures
 
     except Exception as e:
-      monitor["status"] = str(e)
+      monitor["status"] = "Error"
+      monitor["failures"] = 1
+      traceback.print_exc()
+
+  # Refresh machine controller status.
+  controllers = []
+  for c in config.controllers:
+    mach = machines[c.machine]
+    controller = {
+      "machine": c.machine,
+      "status": "Online" if mach["online"] else "Offline",
+      "since": time.asctime(time.localtime(mach["last"])),
+    }
+    controllers.append(controller)
 
   global status
   status = {
     "alerts": alerts,
     "schedulers": schedulers,
     "monitors": monitors,
+    "controllers": controllers,
   }
 
 def notify(subject, message):
@@ -353,9 +396,20 @@ def notify(subject, message):
         "chat_id": n.chat,
         "text": subject + "\n" + message,
       }
-      session.get(url + "/sendMessage", params=params)
+      pool.request("GET", url + "/sendMessage", fields=params)
     else:
       log.error("unknown notification type:", n.type)
+
+def wake_on_lan(macaddr):
+  octets = []
+  for octet in macaddr.split(":"): octets.append(int(octet, 16))
+  hwa =  bytes(octets)
+  msg = b"\xff\xff\xff\xff\xff\xff" + hwa * 16
+
+  sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+  sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+  sock.sendto(msg, ("255.255.255.255", 9))
+  sock.close()
 
 @app.route("/status")
 def status_page(request):
@@ -376,6 +430,31 @@ def ack_handler(request):
         break
   else:
     return 404
+
+@app.route("/on", method="POST")
+def on_handler(request):
+  machine = request.param("machine")
+  log.info("machine online", machine)
+  mach = machines[machine]
+  if mach is None: return 404
+
+  wake_on_lan(mach["hwa"])
+
+  mach["online"] = True
+  mach["last"] = int(time.time())
+
+@app.route("/off", method="POST")
+def on_handler(request):
+  machine = request.param("machine")
+  log.info("machine offline", machine)
+  mach = machines[machine]
+  if mach is None: return 404
+
+  cmd = "ssh %s sudo systemctl suspend --no-wall" % mach["host"]
+  os.system(cmd)
+
+  mach["online"] = False
+  mach["last"] = int(time.time())
 
 next_inbox_id = 0
 
