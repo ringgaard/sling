@@ -16,6 +16,7 @@
 
 import zipfile
 import csv
+import codecs
 import sling
 import sling.org.bizreg
 
@@ -507,7 +508,6 @@ lei.close()
 print(num_companies, "companies", num_redirects, "successors")
 
 # Read entity relationships (level 2).
-
 print("Reading GLEIF relationships")
 lines = []
 rr = zipfile.ZipFile("data/c/lei/rr.xml.zip", "r")
@@ -575,20 +575,22 @@ print(num_relations, "relations")
 
 # Add SWIFT BIC codes to companies.
 print("Adding SWITFT/BIC codes")
-bicfile = open("data/c/lei/bic.csv", "r")
-bicreader = csv.reader(bicfile)
+bic = zipfile.ZipFile("data/c/lei/bic.zip", "r")
+bicfile = bic.open(bic.namelist()[0], "r")
+bicreader = csv.reader(codecs.iterdecode(bicfile, 'utf-8'))
 bicreader.__next__()  # skip header
 num_bic = 0
 for row in bicreader:
-  bic = row[0]
-  lei = row[1]
-  company = find_lei(lei)
+  lei_id = row[0]
+  bic_id = row[1]
+  company = find_lei(lei_id)
   if company is None:
-    print("LEI not found:", lei, "for BIC", bic)
+    print("LEI not found:", lei_id, "for BIC", bic_id)
     continue
-  company.append(n_swift_bic_code, bic)
+  company.append(n_swift_bic_code, bic_id)
   num_bic += 1
 bicfile.close()
+bic.close()
 print(num_bic, "BIC-to-LEI mappings")
 
 # Write companies to record file.

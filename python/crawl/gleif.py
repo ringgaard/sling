@@ -63,9 +63,11 @@ for dataset in ["lei2", "rr", "repex"]:
 # Download BIC-to-LEI mapping file.
 r = requests.get("https://www.gleif.org/en/lei-data/lei-mapping/" +
                  "download-bic-to-lei-relationship-files")
-m = re.search(r'<a download href="([^"]+)">', str(r.content))
+m = re.search(
+    r'<a href="(https:\/\/mapping.gleif.org\/api\/v2\/bic-lei\/[^"]+)">',
+    str(r.content))
 bicurl = m.group(1)
-bicfn = flags.arg.dir + "/bic.csv"
+bicfn = flags.arg.dir + "/bic.zip"
 
 print("Download", bicurl)
 download(bicurl, bicfn)
