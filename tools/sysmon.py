@@ -104,7 +104,8 @@ app.page("/",
           <md-data-field field="link" html=1>Machine</md-data-field>
           <md-data-field field="status">Status</md-data-field>
           <md-data-field field="running" class="right">Running</md-data-field>
-          <md-data-field field="pending" class="right">Pending</md-data-field>
+          <md-data-field field="waiting" class="right">Waiting</md-data-field>
+          <md-data-field field="running" class="right">Running</md-data-field>
           <md-data-field field="done" class="right">Done</md-data-field>
           <md-data-field field="failed" class="right">Failed</md-data-field>
         </md-data-table>
@@ -251,6 +252,7 @@ commons = sling.Store()
 config = commons.load(flags.arg.cfg)
 
 n_running = commons["running"]
+n_waiting = commons["waiting"]
 n_pending = commons["pending"]
 n_completed = commons["completed"]
 n_failed = commons["failed"]
@@ -321,6 +323,7 @@ def refresh():
       summary = store.parse(r.data, json=True)
       scheduler["status"] = "OK"
       scheduler["running"] = summary[n_running]
+      scheduler["waiting"] = summary[n_waiting]
       scheduler["pending"] = summary[n_pending]
       scheduler["done"] = summary[n_completed]
       scheduler["failed"] = summary[n_failed]

@@ -46,6 +46,11 @@ flags.define("--port",
              type=int,
              metavar="PORT")
 
+# Scheduler status.
+tasks = {}
+queues = {}
+jobs = []
+
 # Parse command line flags.
 flags.parse()
 
@@ -99,7 +104,9 @@ class Task:
     self.program = None
     self.args = []
     argv = config.program
-    if type(argv) is str:
+    if argv is None:
+      self.program = None
+    elif type(argv) is str:
       self.program = argv
     elif self.shell:
       self.program = '; '.join(argv)
@@ -111,9 +118,15 @@ class Task:
       for key, value in config.args:
         self.args.append((key.id, value))
     self.queue = config.queue
+
+    self.dependencies = []
+    for dependency in config("await"):
+      self.dependencies.append(dependency)
+
     self.triggers = []
     for trigger in config("trigger"):
       self.triggers.append(Trigger(trigger))
+
     self.monitor = config.monitor
     self.statistics = config.statistics
 
@@ -136,12 +149,14 @@ class Job:
     self.state = Job.PENDING
     self.process = None
     self.submitted = time.time()
+    self.ready = None
     self.started = None
     self.ended = None
     self.stdout = None
     self.stderr = None
     self.status = None
     self.error = ""
+    self.awaits = None
 
   def runtime(self):
     if self.started is None:
@@ -150,6 +165,12 @@ class Job:
       return time.time() - self.started
     else:
       return self.ended - self.started
+
+  def readytime(self):
+    if self.ready is None:
+      return 0
+    else:
+      return time.time() - self.ready
 
   def waittime(self):
     if self.submitted is None:
@@ -171,6 +192,9 @@ class Job:
       if arg[0] == argname: return True
     return False
 
+  def noop(self):
+    return self.task.program is None
+
   def command(self):
     if self.task.shell:
       cmd = self.task.program
@@ -178,7 +202,7 @@ class Job:
         for arg in args:
           if arg[0] is None or arg[1] is None: continue
           cmd = cmd.replace("[" + arg[0] + "]", str(arg[1]))
-    else:
+    elif self.task.program:
       cmd = [self.task.program]
       for arg in self.task.args:
         if self.hasarg(arg[0]): continue
@@ -203,6 +227,8 @@ class Job:
         cmd.append(flags.arg.logpath)
         cmd.append("--jobid")
         cmd.append(self.id)
+    else:
+      cmd = None
 
     return cmd
 
@@ -259,50 +285,64 @@ class Queue(threading.Thread):
   def execute(self, job):
     # Wait if job is paused.
     while job.state == Job.PAUSED: time.sleep(5)
+    job.ready = time.time()
 
-    # Get command for executing job.
-    log.info("execute job", job.id, str(job))
-    cmd = job.command()
-    log.info("command:", cmd)
+    # Wait for dependencies.
+    for dependency in job.task.dependencies:
+      log.info(job.task.name, "waiting for", dependency)
+      job.state = Job.WAITING
+      job.awaits = dependency
+      queue = queues.get(dependency)
+      if queue: queue.wait()
+      job.awaits = None
 
-    # Output files for stdout and strerr.
-    job.stdout = flags.arg.logpath + "/" + job.id + ".log"
-    job.stderr = flags.arg.logpath + "/" + job.id + ".err"
-    if job.task.statistics:
-      job.status = flags.arg.logpath + "/" + job.id + ".json"
-    out = open(job.stdout, "w")
-    err = open(job.stderr, "w")
-    if type(cmd) is list:
-      out.write("# cmd: %s\n" % " ".join(cmd))
+    if job.noop():
+      job.started = time.time()
+      rc = 0
     else:
-      out.write("# cmd: %s\n" % str(cmd))
-    out.flush()
+      # Get command for executing job.
+      log.info("execute job", job.id, str(job))
+      cmd = job.command()
+      log.info("command:", cmd)
 
-    # Run job.
-    try:
-      job.run(out, err)
-      job.process.wait()
-    except Exception as e:
-      job.error = e
-    finally:
-      rc = job.process.returncode
-      job.process = None
-      out.close()
-      err.close()
+      # Output files for stdout and strerr.
+      job.stdout = flags.arg.logpath + "/" + job.id + ".log"
+      job.stderr = flags.arg.logpath + "/" + job.id + ".err"
+      if job.task.statistics:
+        job.status = flags.arg.logpath + "/" + job.id + ".json"
+      out = open(job.stdout, "w")
+      err = open(job.stderr, "w")
+      if type(cmd) is list:
+        out.write("# cmd: %s\n" % " ".join(cmd))
+      else:
+        out.write("# cmd: %s\n" % str(cmd))
+      out.flush()
 
-    # Remove empty log files.
-    if os.path.getsize(job.stdout) == 0:
-      os.remove(job.stdout)
-      job.stdout = None
-    if os.path.getsize(job.stderr) == 0:
-      os.remove(job.stderr)
-      job.stderr = None
-    if job.status is not None:
-      if not os.path.exists(job.status):
-        job.status = None
-      elif os.path.getsize(job.status) == 0:
-        os.remove(job.status)
-        job.status = None
+      # Run job.
+      try:
+        job.run(out, err)
+        job.process.wait()
+      except Exception as e:
+        job.error = e
+      finally:
+        rc = job.process.returncode
+        job.process = None
+        out.close()
+        err.close()
+
+      # Remove empty log files.
+      if os.path.getsize(job.stdout) == 0:
+        os.remove(job.stdout)
+        job.stdout = None
+      if os.path.getsize(job.stderr) == 0:
+        os.remove(job.stderr)
+        job.stderr = None
+      if job.status is not None:
+        if not os.path.exists(job.status):
+          job.status = None
+        elif os.path.getsize(job.status) == 0:
+          os.remove(job.status)
+          job.status = None
 
     # Get job results.
     job.ended = time.time()
@@ -364,12 +404,18 @@ class Queue(threading.Thread):
       finally:
         self.pending.task_done()
 
-tasks = {}
-queues = {}
-jobs = []
+  def wait(self):
+    # Wait for all jobs on queue to finish.
+    self.pending.join()
 
-main_queue = Queue("main")
-queues["main"] = main_queue
+def get_queue(name):
+  queue = queues.get(name)
+  if queue is None:
+    queue = Queue(name)
+    queues[name] = queue
+  return queue
+
+main_queue = get_queue("main")
 last_task_timestamp = None
 
 def get_job(jobid):
@@ -408,16 +454,11 @@ def submit_job(taskname, queuename, args):
   task = tasks.get(taskname)
   if task is None: return None
 
-  # Get queue name for new job.
+  # Get queue for new job.
   if queuename is None:
     queuename = task.queue
     if queuename is None: queuename = "main"
-
-  # Get or create queue for new job.
-  queue = queues.get(queuename)
-  if queue is None:
-    queue = Queue(queuename)
-    queues[queuename] = queue
+  queue = get_queue(queuename)
 
   # Submit job to queue.
   job = Job(task, args)
@@ -537,12 +578,12 @@ app.page("/",
 
     <md-content>
 
-      <md-card id="services">
+      <job-card id="daemons">
         <md-card-toolbar>
           <div>Daemons</div>
         </md-card-toolbar>
 
-        <md-data-table id="daemons">
+        <md-data-table>
           <md-data-field field="job">Job</md-data-field>
           <md-data-field field="pid">PID</md-data-field>
           <md-data-field field="task">Task</md-data-field>
@@ -550,14 +591,14 @@ app.page("/",
           <md-data-field field="started">Started</md-data-field>
           <md-data-field field="time">Time</md-data-field>
         </md-data-table>
-      </md-card>
+      </job-card>
 
-      <md-card id="running">
+      <job-card id="running">
         <md-card-toolbar>
           <div>Running jobs</div>
         </md-card-toolbar>
 
-        <md-data-table id="running-jobs">
+        <md-data-table>
           <md-data-field field="job">Job</md-data-field>
           <md-data-field field="pid">PID</md-data-field>
           <md-data-field field="task">Task</md-data-field>
@@ -567,14 +608,30 @@ app.page("/",
           <md-data-field field="time">Time</md-data-field>
           <md-data-field field="status" html=1>Status</md-data-field>
         </md-data-table>
-      </md-card>
+      </job-card>
 
-      <md-card id="pending">
+      <job-card id="waiting">
+        <md-card-toolbar>
+          <div>Waiting jobs</div>
+        </md-card-toolbar>
+
+        <md-data-table>
+          <md-data-field field="job">Job</md-data-field>
+          <md-data-field field="task">Task</md-data-field>
+          <md-data-field field="command">Command</md-data-field>
+          <md-data-field field="queue">Queue</md-data-field>
+          <md-data-field field="ready">Ready</md-data-field>
+          <md-data-field field="time">Time</md-data-field>
+          <md-data-field field="awaits">Awaits</md-data-field>
+        </md-data-table>
+      </job-card>
+
+      <job-card id="pending">
         <md-card-toolbar>
           <div>Pending jobs</div>
         </md-card-toolbar>
 
-        <md-data-table id="pending-jobs">
+        <md-data-table>
           <md-data-field field="job">Job</md-data-field>
           <md-data-field field="task">Task</md-data-field>
           <md-data-field field="command">Command</md-data-field>
@@ -582,14 +639,14 @@ app.page("/",
           <md-data-field field="submitted">Submitted</md-data-field>
           <md-data-field field="time">Time</md-data-field>
         </md-data-table>
-      </md-card>
+      </job-card>
 
-      <md-card id="terminated">
+      <job-card id="terminated">
         <md-card-toolbar>
           <div>Terminated jobs</div>
         </md-card-toolbar>
 
-        <md-data-table id="terminated-jobs">
+        <md-data-table>
           <md-data-field field="job">Job</md-data-field>
           <md-data-field field="task">Task</md-data-field>
           <md-data-field field="command">Command</md-data-field>
@@ -599,7 +656,7 @@ app.page("/",
           <md-data-field field="time" style="text-align: right">Time</md-data-field>
           <md-data-field field="status" html=1>Status</md-data-field>
         </md-data-table>
-      </md-card>
+      </job-card>
 
     </md-content>
   </scheduler-app>
@@ -610,7 +667,7 @@ app.page("/",
 app.js("/scheduler.js",
 """
 import {Component} from "/common/lib/component.js";
-import {MdApp} from "/common/lib/material.js";
+import {MdApp, MdCard} from "/common/lib/material.js";
 
 class SchedulerApp extends MdApp {
   onconnected() {
@@ -634,9 +691,10 @@ class SchedulerApp extends MdApp {
 
   onupdate() {
     this.find("#daemons").update(this.state.daemons);
-    this.find("#running-jobs").update(this.state.running);
-    this.find("#pending-jobs").update(this.state.pending);
-    this.find("#terminated-jobs").update(this.state.terminated);
+    this.find("#running").update(this.state.running);
+    this.find("#waiting").update(this.state.waiting);
+    this.find("#pending").update(this.state.pending);
+    this.find("#terminated").update(this.state.terminated);
   }
 
   host() {
@@ -645,10 +703,20 @@ class SchedulerApp extends MdApp {
     } else {
       return window.location.hostname + ":" + window.location.port;
     }
-  };
+  }
 }
 
 Component.register(SchedulerApp);
+
+class JobCard extends MdCard {
+  visible() { return this.state && this.state.length > 0; }
+
+  onupdate() {
+    this.find("md-data-table").update(this.state);
+  }
+}
+
+Component.register(JobCard);
 
 document.body.style = null;
 """)
@@ -697,6 +765,7 @@ app.page("/report",
 def jobs_request(request):
   daemons = []
   running = []
+  waiting = []
   pending = []
   terminated = []
 
@@ -709,6 +778,15 @@ def jobs_request(request):
         "started": ts2str(job.started),
         "time": dur2str(job.runtime()),
         "pid": job.process.pid,
+      })
+    elif job.state == Job.WAITING:
+      waiting.append({
+        "job": job.id,
+        "task": job.task.description,
+        "command": str(job),
+        "ready": ts2str(job.ready),
+        "time": dur2str(job.readytime()),
+        "awaits": job.awaits,
       })
     elif job.state == Job.RUNNING:
       status = ""
@@ -778,12 +856,14 @@ def jobs_request(request):
       })
 
   terminated.reverse()
+  del terminated[500:]
 
   return {
     "daemons": daemons,
     "running": running,
+    "waiting": waiting,
     "pending": pending,
-    "terminated": terminated
+    "terminated": terminated,
   }
 
 @app.route("/summary")
@@ -794,6 +874,7 @@ def summary_request(request):
 
   return {
     "running": summary.get(Job.RUNNING, 0),
+    "waiting": summary.get(Job.WAITING, 0),
     "pending": summary.get(Job.PENDING, 0),
     "completed": summary.get(Job.COMPLETED, 0),
     "failed": summary.get(Job.FAILED, 0),
