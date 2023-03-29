@@ -27,6 +27,10 @@ async function lookup(context, name) {
   }
 }
 
+function element_text(parent, selector) {
+  return parent.querySelector(selector).innerText.trim();
+}
+
 export default class FamousBirthdaysPlugin {
   async process(action, query, context) {
     let url = new URL(query);
@@ -66,12 +70,12 @@ export default class FamousBirthdaysPlugin {
 
     // Parse HTML.
     let doc = new DOMParser().parseFromString(html, "text/html");
-    let main = doc.getElementsByClassName("main-info")[0];
+    let main = doc.querySelector("div.bio-module__info");
 
     // Get bio.
-    let name = main.getElementsByTagName("h1")[0].innerText.trim();
-    let title = main.getElementsByClassName("person-title")[0].innerText.trim();
-    let stats = main.querySelectorAll("div.stats div.box");
+    let name = element_text(main, "span.bio-module__first-name");
+    let title = element_text(main, "p.bio-module__profession");
+    let stats = main.querySelectorAll("div.bio-module__person-attributes p");
 
     let bday = stats[0].innerText.trim();
     let m = bday.match(/^(Happy )?Birthday!?\s+([A-Z][a-z]+)\w+ (\d+), (\d+)/);
@@ -79,7 +83,7 @@ export default class FamousBirthdaysPlugin {
     date_parser(`${m[2]} ${m[3]}, ${m[4]}`, results);
     let dob = results[0].value
 
-    let place = stats[1].innerText.replace(/\s+/g, " ").trim();
+    let place = stats[2].innerText.replace(/\s+/g, " ").trim();
     m = place.match(/^Birthplace\s+(.+)/)
     let pob = await lookup(context, m[1].trim());
 
@@ -87,7 +91,6 @@ export default class FamousBirthdaysPlugin {
 
     // Add bio to topic.
     topic.put(n_name, name);
-    topic.put(n_description, title);
     topic.put(n_instance_of, n_human);
     topic.put(n_date_of_birth, dob);
     topic.put(n_place_of_birth, pob);
