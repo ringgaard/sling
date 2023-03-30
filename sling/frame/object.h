@@ -45,6 +45,11 @@ class Handles : public std::vector<Handle>, public External {
     range->end = data() + size();
   }
 
+  // Add handle to vector.
+  void add(Handle handle) {
+    push_back(handle);
+  }
+
   // Check if vector contains handle.
   bool contains(Handle handle) const {
     for (Handle h : *this) {

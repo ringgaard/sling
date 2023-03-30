@@ -36,6 +36,7 @@ SchemaService::SchemaService(Store *kb) {
   // Initialize local store for pre-encoded schema.
   Store store(kb);
   Handle n_role = store.Lookup("role");
+  Handle n_value = store.Lookup("value");
   Handle n_inverse_label_item = store.Lookup("P7087");
 
   // Build set of properties and inverse properties.
@@ -53,17 +54,27 @@ SchemaService::SchemaService(Store *kb) {
   for (Handle prop : propset) properties.push_back(prop);
   Array property_list(&store, properties);
 
+  // Collect languages.
+  Handles languages(&store);
+  for (const Slot &s : Frame(kb, kb->Lookup("/lang/wikilang"))) {
+    if (s.name != n_value) continue;
+    languages.add(s.value);
+  }
+  Array language_list(&store, languages);
+
   // Build schema frame.
   Builder schema(&store);
   schema.Add("properties", property_list);
+  schema.Add("languages", language_list);
   Frame schemas = schema.Create();
 
   // Pre-encode schema.
   StringEncoder encoder(&store);
-  for (Handle p : properties) {
-    encoder.Encode(p);
-  }
+  for (Handle p : properties) encoder.Encode(p);
+  for (Handle p : languages) encoder.Encode(p);
   encoder.Encode(schemas);
+
+
   encoded_schemas_ = encoder.buffer();
   compress_buffer(encoded_schemas_, &compressed_schemas_);
   timestamp_ = time(0);
