@@ -141,7 +141,7 @@ curl -X POST localhost:7070/mount?name=test
 A database can be taken offline with the unmount command:
 
 ```
-curl -X POST localhost:7070/mount?name=test
+curl -X POST localhost:7070/unmount?name=test
 ```
 
 For security reasons there is no command to remove a database. To delete a

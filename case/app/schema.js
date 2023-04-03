@@ -3,8 +3,6 @@
 
 // Knowledge base schema.
 
-import {Component} from "/common/lib/component.js";
-import {MdSearchResult} from "/common/lib/material.js";
 import {Frame} from "/common/lib/frame.js";
 import {store, frame, settings} from "./global.js";
 import {SearchIndex} from "./search.js";

@@ -165,6 +165,17 @@ var plugins = [
   ],
 },
 
+// E-books from libgen.
+{
+  name: "libgen",
+  module: "libgen.js",
+  actions: [PASTEURL, SEARCHURL],
+  patterns: [
+    /^http\:\/\/library\.lol\//,
+    /^https:\/\/libgen.is\/book\/index.php\?md5=/,
+  ],
+},
+
 // Se & Hør profiles from hjemmestrik.dk.
 {
   name: "hjemmestrik",
