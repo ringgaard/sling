@@ -4,8 +4,10 @@
 // SLING case plug-in for adding e-books from Library Genesis.
 
 import {store, frame} from "/case/app/global.js";
+import {inform} from "/common/lib/material.js";
 import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 import {date_parser} from "/case/app/value.js";
+import {Drive} from "/case/app/drive.js";
 
 const n_name = frame("name");
 const n_description = frame("description");
@@ -57,8 +59,7 @@ export default class LibgenPlugin {
 
   async populate(context, topic, md5) {
     // Retrieve meta information for e-book.
-    let url = `http://library.lol/main/${md5}`;
-    let r = await context.fetch(url);
+    let r = await context.fetch(`http://library.lol/main/${md5}`);
     let html = await r.text();
 
     // Parse HTML.
@@ -67,22 +68,31 @@ export default class LibgenPlugin {
 
     // Get book metadata.
     var authors, publisher, year, isbns, cover, summary, subtitle;
+
     let title = info.querySelector("h1").innerText.trim();
-    let colon = title.indexOf(": ");
-    if (colon != -1) {
-      subtitle = title.slice(colon + 1).trim();
-      title = title.slice(0, colon).trim();
+    let split = title.indexOf(":");
+    if (split == -1) split = title.indexOf(";");
+    if (split != -1) {
+      subtitle = title.slice(split + 1).trim();
+      title = title.slice(0, split).trim();
     }
+
     let img = info.querySelector("img");
-    if (img) cover = "http://library.lol/" + img.getAttribute("src");
+    if (img) {
+      let src = img.getAttribute("src");
+      if (src != "/img/blank.png") cover = "http://library.lol" + src;
+    }
+
     for (let p of info.querySelectorAll("p")) {
       let text = p.innerText;
       if (text.startsWith("Author(s): ")) {
         authors = new Array();
-        for (let name of text.slice(11).split("; ")) {
+        for (let name of text.slice(11).split(";")) {
           let comma = name.indexOf(",");
           if (comma != -1) {
-            name = `${name.slice(comma + 1)} ${name.slice(0, comma)}`;
+            let lastname = name.slice(comma + 1).trim();
+            let firstname = name.slice(0, comma).trim();
+            name = firstname + " " + lastname;
           }
           authors.push(name.trim());
         }
@@ -103,7 +113,7 @@ export default class LibgenPlugin {
         summary = text.slice(12).trim();
       }
     }
-    let download = decodeURI(info.querySelector("#download h2 a").href);
+    let url = decodeURI(info.querySelector("#download h2 a").href);
 
     // Add book information to topic.
     topic.put(n_name, title);
@@ -119,7 +129,7 @@ export default class LibgenPlugin {
     if (summary) {
       topic.add(null, summary);
     }
-    topic.put(n_full_work_url, download);
+    topic.put(n_full_work_url, url);
     if (isbns) {
       for (let isbn of isbns) {
         topic.put(isbn.length < 13 ? n_isbn10 : n_isbn13, isbn);
@@ -128,7 +138,27 @@ export default class LibgenPlugin {
     topic.put(n_libgen, md5);
     topic.put(n_media, cover);
 
+    // Download book in background.
+    let ext = url.split('.').pop();
+    let filename = title + "." + ext;
+    this.download(context, topic, url, filename);
+
     context.updated(topic);
+  }
+
+  async download(context, topic, url, filename) {
+    let r = await context.fetch(url);
+    let content = await r.blob();
+
+    // Save book to drive.
+    let file = new File([content], filename);
+    let driveurl = await Drive.save(file);
+
+    // Update topic.
+    topic.set(n_full_work_url, driveurl);
+    context.update(topic);
+
+    inform(`Book downloaded: ${filename}`);
   }
 }
 

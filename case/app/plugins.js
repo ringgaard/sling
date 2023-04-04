@@ -395,6 +395,11 @@ export class Context {
     this.editor.mark_dirty();
   }
 
+  update(topic) {
+    this.editor.topic_updated(topic);
+    this.editor.update_topic(topic);
+  }
+
   async refresh() {
     if (this.added) {
       this.editor.topic_updated(this.added);
@@ -404,8 +409,7 @@ export class Context {
       }
     } else if (this.updates) {
       for (let topic of this.updates) {
-        this.editor.topic_updated(topic);
-        this.editor.update_topic(topic);
+        this.update(topic);
       }
     }
   }
