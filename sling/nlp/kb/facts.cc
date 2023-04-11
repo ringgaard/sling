@@ -663,7 +663,7 @@ Handle Taxonomy::Classify(const Frame &item) {
   for (const Slot &s : item) {
     if (s.name == catalog_->p_instance_of_) {
       Handle type = store->Resolve(s.value);
-      types.push_back(type);
+      if (store->IsFrame(type)) types.push_back(type);
     }
   }
 

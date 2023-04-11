@@ -220,7 +220,7 @@ export default class IMDBPlugin {
     let doc = new DOMParser().parseFromString(html, "text/html");
 
     // Get name from title.
-    let title = doc.getElementsByTagName("h3")[0];
+    let title = doc.querySelectorAll("div.parent")[0];
     let name = title.innerText.trim();
 
     // Get basic information from overview table.
