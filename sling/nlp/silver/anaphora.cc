@@ -70,9 +70,9 @@ class AnaphoraAnnotator : public Annotator {
   }
 
   // Resolve anaphora in document.
-  void Annotate(Document *document) override {
+  bool Annotate(Document *document) override {
     // Skip annotation if anaphora resolution is not supported by language.
-    if (disabled_) return;
+    if (disabled_) return true;
 
     // Get document topic.
     Handle topic = document->top().GetHandle(n_page_item_);
@@ -200,6 +200,8 @@ class AnaphoraAnnotator : public Annotator {
         t++;
       }
     }
+
+    return true;
   }
 
  private:

@@ -117,6 +117,9 @@ class SilverWorkflow:
       # Map document through silver annotation pipeline and split corpus.
       mapper = self.wf.task("corpus-split", "labeler")
 
+      mapper.add_annotator("document-item-filter")
+      mapper.add_annotator("document-prologue")
+
       mapper.add_annotator("mentions")
       mapper.add_annotator("anaphora")
       #mapper.add_annotator("phrase-structure")

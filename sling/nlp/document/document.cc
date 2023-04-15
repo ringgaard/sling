@@ -756,6 +756,17 @@ void Document::ClearAnnotations() {
   themes_.clear();
 }
 
+void Document::Swap(Document *other) {
+  std::swap(top_, other->top_);
+  text_.swap(other->text_);
+  tokens_.swap(other->tokens_);
+  std::swap(tokens_changed_, other->tokens_changed_);
+  spans_.swap(other->spans_);
+  themes_.swap(other->themes_);
+  std::swap(extras_, other->extras_);
+  std::swap(names_, other->names_);
+}
+
 }  // namespace nlp
 }  // namespace sling
 

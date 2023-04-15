@@ -117,6 +117,9 @@ struct PyPlausibility : public PyBase {
   // Return fact plausibility score for item.
   PyObject *Score(PyObject *args);
 
+  // Check if fact is in model.
+  PyObject *Has(PyObject *args);
+
   // Fact extractor for plausibility model.
   PyFactExtractor *pyextractor;
 

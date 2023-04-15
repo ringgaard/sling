@@ -27,7 +27,7 @@ class NominalPruningAnnotator : public Annotator {
     task->Fetch("keep_typed_nominals", &keep_typed_nominals_);
   }
 
-  void Annotate(Document *document) override {
+  bool Annotate(Document *document) override {
     // Collect all the local targets for slots in evoked frames.
     Store *store = document->store();
     Handles evoked(store);
@@ -52,6 +52,8 @@ class NominalPruningAnnotator : public Annotator {
       }
       if (!is_target) document->DeleteSpan(span);
     }
+
+    return true;
   }
 
   bool IsNominal(Span *span) const {

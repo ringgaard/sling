@@ -325,13 +325,13 @@ PyObject *PyTaxonomy::Classify(PyObject *item) {
   return pyframe->pystore->PyValue(type);
 }
 
-
 void PyPlausibility::Define(PyObject *module) {
   InitType(&type, "sling.PlausibilityModel", sizeof(PyPlausibility), true);
   type.tp_init = method_cast<initproc>(&PyPlausibility::Init);
   type.tp_dealloc = method_cast<destructor>(&PyPlausibility::Dealloc);
 
   methods.Add("score", &PyPlausibility::Score);
+  methods.Add("has", &PyPlausibility::Has);
   type.tp_methods = methods.table();
 
   RegisterType(&type, module, "PlausibilityModel");
@@ -387,6 +387,15 @@ PyObject *PyPlausibility::Score(PyObject *args) {
   float score = model->Score(premise, hypothesis);
 
   return PyFloat_FromDouble(score);
+}
+
+PyObject *PyPlausibility::Has(PyObject *args) {
+  // Get fact from argument list.
+  PyArray *pyfact = nullptr;
+  if (!PyArg_ParseTuple(args, "O", &pyfact)) return nullptr;
+  if (!PyArray::TypeCheck(pyfact)) return nullptr;
+  Array fact(pyfact->pystore->store, pyfact->handle());
+  return PyBool_FromLong(model->Lookup(fact) != -1);
 }
 
 class WikipediaExtractor : public nlp::WikiLinkResolver {

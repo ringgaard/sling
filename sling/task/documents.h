@@ -56,6 +56,7 @@ class DocumentProcessor : public FrameProcessor {
 
   // Statistics.
   Counter *num_documents_;
+  Counter *num_filtered_;
   Counter *num_tokens_;
   Counter *num_spans_;
 };

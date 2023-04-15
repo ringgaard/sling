@@ -123,6 +123,14 @@ struct PyArray : public PyBase, public Root {
   // Dereference array reference.
   ArrayDatum *array() { return pystore->store->Deref(handle())->AsArray(); }
 
+  // Type checking.
+  static bool TypeCheck(PyBase *object) {
+    return PyBase::TypeCheck(object, &type);
+  }
+  static bool TypeCheck(PyObject *object) {
+    return PyBase::TypeCheck(object, &type);
+  }
+
   // Store for array.
   PyStore *pystore;
 

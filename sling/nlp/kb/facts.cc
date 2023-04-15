@@ -74,15 +74,35 @@ void FactCatalog::Init(Store *store) {
     "Q43229",     // organization
     "Q6881511",   // enterprise
     "Q783794",    // company
+    "Q4830453",   // business
+    "Q167037",    // corporation
+    "Q3914",      // school
     "Q2385804",   // educational institution
+    "Q4671277",   // academic institution
     "Q294163",    // public institution
+    "Q2659904",   // government organization
+    "Q2085381",   // publisher
     "Q15401930",  // product
     "Q12737077",  // occupation
+    "Q16532929",  // administrator
+    "Q55645123",  // health care provider
+    "Q108289408", // creative and performing artist
+    "Q327055",    // worker
     "Q192581",    // job
     "Q4164871",   // position
+    "Q28640",     // profession
     "Q216353",    // title
+    "Q41176",     // building
+    "Q56061",     // administrative territorial entity
+    "Q27096235",  // artificial geographic entity
+    "Q15284",     // municipality
+    "Q2097994",   // municipal corporation
+    "Q3257686",   // locality
+    "Q486972",    // human settlement
+    "Q515",       // city
     nullptr,
   };
+
   for (const char **id = baseids; *id != nullptr; ++id) {
     base_items_.insert(store_->Lookup(*id));
   }
@@ -155,6 +175,7 @@ Taxonomy *FactCatalog::CreateEntityTaxonomy() {
     "Q13226383",    // facility
     "Q17334923",    // location
     "Q43229",       // organization
+    "Q178706",      // institution
     "Q12737077",    // occupation
     "Q216353",      // title
     "Q4164871",     // position
@@ -162,6 +183,7 @@ Taxonomy *FactCatalog::CreateEntityTaxonomy() {
     "Q386724",      // work
     "Q1047113",     // specialty
     "Q14795564",    // relative point in time
+    "Q41176",       // building
     "/w/quantity",  // quantity
     "/w/time",      // time
     "/w/geo",       // geopoint
@@ -177,17 +199,14 @@ bool FactCatalog::ItemInClosure(Handle property, Handle coarse, Handle fine) {
   closure.push_back(fine);
   int current = 0;
   while (current < closure.size()) {
+    if (IsBaseItem(closure[current])) continue;
     Frame f(store_, closure[current++]);
     for (const Slot &s : f) {
-      if (s.name == property) {
-        Handle value = store_->Resolve(s.value);
-        if (value == coarse) {
-          return true;
-        } else if (!IsBaseItem(value)) {
-          bool known = closure.contains(value);
-          if (!known) closure.push_back(value);
-        }
-      }
+      if (s.name != property) continue;
+      Handle value = store_->Resolve(s.value);
+      if (value == coarse) return true;
+      bool known = closure.contains(value);
+      if (!known) closure.push_back(value);
     }
   }
 
@@ -343,16 +362,17 @@ void Facts::ExtractClosure(Handle item, Handle relation) {
   while (current < closure.size()) {
     Handle h = closure[current++];
     if (!store_->IsFrame(h)) continue;
-    if (catalog_->IsBaseItem(h)) continue;
     AddFact(h);
-    Frame f(store_, h);
-    for (const Slot &s : f) {
-      if (s.name != relation) continue;
+    if (!catalog_->IsBaseItem(h)) {
+      Frame f(store_, h);
+      for (const Slot &s : f) {
+        if (s.name != relation) continue;
 
-      // Add new item unless it is already known.
-      Handle newitem = store_->Resolve(s.value);
-      bool known = closure.contains(newitem);
-      if (!known) closure.push_back(newitem);
+        // Add new item unless it is already known.
+        Handle newitem = store_->Resolve(s.value);
+        bool known = closure.contains(newitem);
+        if (!known) closure.push_back(newitem);
+      }
     }
   }
 }

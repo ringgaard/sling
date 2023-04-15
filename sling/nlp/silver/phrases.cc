@@ -77,7 +77,7 @@ class PhraseStructureAnnotator : public Annotator {
   }
 
   // Annotate multi-word expressions in document with phrase structures.
-  void Annotate(Document *document) override {
+  bool Annotate(Document *document) override {
     // Find all resolved multi-word expressions.
     Store *store = document->store();
     for (Span *span : document->spans()) {
@@ -113,6 +113,8 @@ class PhraseStructureAnnotator : public Annotator {
         }
       }
     }
+
+    return true;
   }
 
   // Analyze phrase structure and return frame evoke from phrase.

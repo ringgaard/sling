@@ -120,9 +120,7 @@ cc_library(
 
     "//sling/nlp/parser:parser-trainer",
 
-    "//sling/nlp/silver:idf",
-    "//sling/nlp/silver:annotators",
-    "//sling/nlp/silver:corpus-split",
+    "//sling/nlp/silver:components",
 
     "//sling/task:documents",
     "//sling/task:frame-store-reader",

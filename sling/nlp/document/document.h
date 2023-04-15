@@ -383,6 +383,9 @@ class Document {
   // Clears annotations (mentions and themes) from document.
   void ClearAnnotations();
 
+  // Swap document content and annotations with another document.
+  void Swap(Document *other);
+
   // Document schema.
   const DocumentNames *names() const { return names_; }
 

@@ -35,7 +35,7 @@ class Annotator : public Component<Annotator> {
   virtual void Init(task::Task *task, Store *commons);
 
   // Annotate document.
-  virtual void Annotate(Document *document) = 0;
+  virtual bool Annotate(Document *document) = 0;
 };
 
 #define REGISTER_ANNOTATOR(type, component) \
@@ -50,7 +50,7 @@ class Pipeline {
   void Init(task::Task *task, Store *commons);
 
   // Annotate document.
-  void Annotate(Document *document);
+  bool Annotate(Document *document);
 
   // Check for no-op pipeline.
   bool empty() const { return annotators_.empty(); }
@@ -70,7 +70,7 @@ class DocumentAnnotation : public task::Environment {
   void Init(Store *commons, const string &spec);
 
   // Annotate document.
-  void Annotate(Document *document);
+  bool Annotate(Document *document);
 
   // Environment interface.
   task::Counter *GetCounter(const string &name) override;

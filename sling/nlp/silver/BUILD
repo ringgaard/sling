@@ -91,6 +91,18 @@ cc_library(
 )
 
 cc_library(
+  name = "filters",
+  srcs = ["filters.cc"],
+  deps = [
+    "//sling/nlp/document",
+    "//sling/nlp/document:annotator",
+    "//sling/nlp/kb:facts",
+    "//sling/string:text",
+  ],
+  alwayslink = 1,
+)
+
+cc_library(
   name = "types",
   srcs = ["types.cc"],
   deps = [
@@ -130,6 +142,16 @@ cc_library(
     ":relations",
     ":types",
     ":nominal-pruning",
+  ],
+)
+
+cc_library(
+  name = "components",
+  deps = [
+    ":idf",
+    ":annotators",
+    ":corpus-split",
+    ":filters",
   ],
 )
 

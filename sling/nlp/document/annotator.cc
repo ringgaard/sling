@@ -42,8 +42,11 @@ void Pipeline::Init(Task *task, Store *commons) {
   for (Annotator *a : annotators_) a->Init(task, commons);
 }
 
-void Pipeline::Annotate(Document *document) {
-  for (Annotator *a : annotators_) a->Annotate(document);
+bool Pipeline::Annotate(Document *document) {
+  for (Annotator *a : annotators_) {
+    if (!a->Annotate(document)) return false;
+  }
+  return true;
 }
 
 DocumentAnnotation::DocumentAnnotation() : task_(this) {}
@@ -79,11 +82,11 @@ void DocumentAnnotation::Init(Store *commons, const string &spec) {
   Init(commons, config);
 }
 
-void DocumentAnnotation::Annotate(Document *document) {
-  if (!pipeline_.empty()) {
-    pipeline_.Annotate(document);
-    document->Update();
-  }
+bool DocumentAnnotation::Annotate(Document *document) {
+  if (pipeline_.empty()) return true;
+  bool keep = pipeline_.Annotate(document);
+  document->Update();
+  return keep;
 }
 
 Counter *DocumentAnnotation::GetCounter(const string &name) { return &dummy_; }

@@ -28,9 +28,10 @@ class ParserAnnotator : public Annotator {
     parser_.Load(commons, model);
   }
 
-  void Annotate(Document *document) override {
+  bool Annotate(Document *document) override {
     // Parse document.
     parser_.Parse(document);
+    return true;
   }
 
  private:
@@ -47,7 +48,7 @@ class MentionNameAnnotator : public Annotator {
     names_.Bind(commons);
   }
 
-  void Annotate(Document *document) override {
+  bool Annotate(Document *document) override {
     Handles evoked(document->store());
     for (Span *span : document->spans()) {
       span->AllEvoked(&evoked);
@@ -58,6 +59,7 @@ class MentionNameAnnotator : public Annotator {
         }
       }
     }
+    return true;
   }
 
  private:
@@ -70,8 +72,9 @@ REGISTER_ANNOTATOR("mention-name", MentionNameAnnotator);
 // Document annotator for deleting existing annotations.
 class ClearAnnotator : public Annotator {
  public:
-  void Annotate(Document *document) override {
+  bool Annotate(Document *document) override {
     document->ClearAnnotations();
+    return true;
   }
 };
 

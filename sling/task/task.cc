@@ -376,7 +376,6 @@ std::vector<string> Task::Get(const string &name,
   return values;
 }
 
-
 std::vector<int> Task::Get(const string &name, const std::vector<int> &defval) {
   static const std::vector<string> empty;
   const std::vector<string> values = Get(name, empty);

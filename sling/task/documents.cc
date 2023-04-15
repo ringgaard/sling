@@ -33,6 +33,7 @@ void DocumentProcessor::Start(Task *task) {
 
   // Statistics.
   num_documents_ = task->GetCounter("documents");
+  num_filtered_ = task->GetCounter("filtered");
   num_tokens_ = task->GetCounter("tokens");
   num_spans_ = task->GetCounter("spans");
 }
@@ -43,7 +44,10 @@ void DocumentProcessor::Process(Slice key, uint64 serial, const Frame &frame) {
 
   // Run preprocessing pipeline on document.
   if (!pipeline_.empty()) {
-    pipeline_.Annotate(&document);
+    if (!pipeline_.Annotate(&document)) {
+      num_filtered_->Increment();
+      return;
+    }
     document.Update();
   }
 

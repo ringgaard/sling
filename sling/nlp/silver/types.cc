@@ -35,7 +35,7 @@ class TypeAnnotator : public Annotator {
   }
 
   // Annotate types for all evoked frames in document.
-  void Annotate(Document *document) override {
+  bool Annotate(Document *document) override {
     Store *store = document->store();
     Handles evoked(store);
     for (Span *span : document->spans()) {
@@ -52,6 +52,8 @@ class TypeAnnotator : public Annotator {
         Builder(store, h).AddIsA(type).Update();
       }
     }
+
+    return true;
   }
 
  private:
@@ -72,7 +74,7 @@ class ClearReferencesAnnotator : public Annotator {
     names_.Bind(commons);
   }
 
-  void Annotate(Document *document) override {
+  bool Annotate(Document *document) override {
     Store *store = document->store();
     Handles evoked(store);
     for (Span *span : document->spans()) {
@@ -87,6 +89,8 @@ class ClearReferencesAnnotator : public Annotator {
         b.Update();
       }
     }
+
+    return true;
   }
 
  private:

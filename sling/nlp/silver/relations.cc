@@ -67,7 +67,7 @@ class RelationAnnotator : public Annotator {
   }
 
   // Annotate relations in document.
-  void Annotate(Document *document) override {
+  bool Annotate(Document *document) override {
     // Process each sentence separately so we do not annotate relations between
     // mentions in different sentences.
     Store *store = document->store();
@@ -183,6 +183,8 @@ class RelationAnnotator : public Annotator {
         }
       }
     }
+
+    return true;
   }
 
  private:

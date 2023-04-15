@@ -1486,13 +1486,14 @@ class MentionAnnotator : public Annotator {
     annotator_.Init(commons, resources);
   }
 
-  void Annotate(Document *document) override {
+  bool Annotate(Document *document) override {
     // Make a copy of the input document and clear annotations for output.
     Document original(*document);
     document->ClearAnnotations();
 
     // Annotate document.
     annotator_.Annotate(original, document);
+    return true;
   }
 
  private:
