@@ -3,7 +3,7 @@
 
 // SLING case plug-in for adding images from gallery.
 
-import {store, frame, settings} from "/case/app/global.js";
+import {store, frame, settings} from "/common/lib/global.js";
 
 const n_is = frame("is");
 const n_media = frame("media");

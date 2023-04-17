@@ -3,7 +3,8 @@
 
 // SLING case plug-in for adding links to the knowledge base.
 
-import {store} from "/case/app/global.js";
+import {store} from "/common/lib/global.js";
+
 import {PASTEURL} from "/case/app/plugins.js";
 
 const n_is = store.is;

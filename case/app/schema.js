@@ -4,7 +4,8 @@
 // Knowledge base schema.
 
 import {Frame} from "/common/lib/frame.js";
-import {store, frame, settings} from "./global.js";
+import {store, frame, settings} from "/common/lib/global.js";
+
 import {SearchIndex} from "./search.js";
 
 const n_is = store.is;

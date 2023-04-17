@@ -4,7 +4,8 @@
 // SLING case plug-in for adding topic for web article.
 
 import {Store} from "/common/lib/frame.js";
-import {store, frame} from "/case/app/global.js";
+import {store, frame} from "/common/lib/global.js";
+
 import {match_link} from "/case/app/social.js";
 import {SEARCHURL} from "/case/app/plugins.js";
 

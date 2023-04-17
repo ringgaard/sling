@@ -3,10 +3,11 @@
 
 // SLING case plug-in for adding e-books from Library Genesis.
 
-import {store, frame} from "/case/app/global.js";
+import {store, frame} from "/common/lib/global.js";
 import {inform} from "/common/lib/material.js";
+import {date_parser} from "/common/lib/datatype.js";
+
 import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
-import {date_parser} from "/case/app/value.js";
 import {Drive} from "/case/app/drive.js";
 
 const n_name = frame("name");

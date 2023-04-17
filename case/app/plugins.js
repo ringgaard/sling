@@ -3,7 +3,8 @@
 
 // SLING case plug-ins.
 
-import {store, frame, settings} from "./global.js";
+import {store, frame, settings} from "/common/lib/global.js";
+
 import {xref_patterns} from "./social.js";
 
 // Actions.

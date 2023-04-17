@@ -1,7 +1,7 @@
 // Copyright 2020 Ringgaard Research ApS
 // Licensed under the Apache License, Version 2
 
-import {Store} from "/common/lib/frame.js";
+import {Store} from "./frame.js";
 
 // Global SLING store.
 export var store = new Store();

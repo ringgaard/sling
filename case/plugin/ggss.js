@@ -3,8 +3,8 @@
 
 // SLING case plug-in for adding history from glamourgirlsofthesilverscreen.com.
 
-import {store, frame} from "/case/app/global.js";
-import {date_parser} from "/case/app/value.js";
+import {store, frame} from "/common/lib/global.js";
+import {date_parser} from "/common/lib/datatype.js";
 
 const n_is = store.is;
 const n_time = frame("P585");

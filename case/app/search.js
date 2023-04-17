@@ -3,8 +3,7 @@
 
 import {Component} from "/common/lib/component.js";
 import {MdSearchResult} from "/common/lib/material.js";
-
-import {store, frame, settings} from "./global.js";
+import {store, frame, settings} from "/common/lib/global.js";
 
 const n_name = frame("name");
 const n_alias = frame("alias");

@@ -3,7 +3,8 @@
 
 // SLING case plug-in for adding topic from listal.com.
 
-import {store, frame} from "/case/app/global.js";
+import {store, frame} from "/common/lib/global.js";
+
 import {SocialTopic} from "/case/app/social.js";
 import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 

@@ -3,7 +3,7 @@
 
 // SLING case plug-in for adding phone number.
 
-import {store, frame} from "/case/app/global.js";
+import {store, frame} from "/common/lib/global.js";
 
 const n_phone_number = frame("P1329");
 

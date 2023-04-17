@@ -4,11 +4,12 @@
 import {Component} from "/common/lib/component.js";
 import {inform} from "/common/lib/material.js";
 import {Frame, QString} from "/common/lib/frame.js";
-import {store, frame, settings} from "./global.js";
-import {Time, LabelCollector, latlong} from "./value.js";
+import {store, frame, settings} from "/common/lib/global.js";
+import {Time, LabelCollector, latlong} from "/common/lib/datatype.js";
+import {PhotoGallery, censor, imageurl, mediadb} from "/common/lib/gallery.js";
+
 import {url_format} from "./schema.js";
 import {get_widget} from "./plugins.js";
-import {PhotoGallery, censor, imageurl, mediadb} from "/common/lib/gallery.js";
 
 const n_id = store.id;
 const n_is = store.is;

@@ -10,10 +10,11 @@ import {
   inform
 } from "/common/lib/material.js";
 import {Frame, QString, Printer} from "/common/lib/frame.js";
+import {store, frame, settings} from "/common/lib/global.js";
 import {imageurl} from "/common/lib/gallery.js";
-import {store, frame, settings} from "./global.js";
+import {LabelCollector, value_parser} from "/common/lib/datatype.js";
+
 import {get_schema, inverse_property} from "./schema.js";
-import {LabelCollector, value_parser} from "./value.js";
 import {search, kbsearch} from "./search.js";
 import "./item.js"
 import "./fact.js"

@@ -3,8 +3,8 @@
 
 // SLING importer plug-in for importing data from QuickStatements files.
 
-import {store, frame} from "/case/app/global.js";
-import {Time} from "/case/app/value.js";
+import {store, frame} from "/common/lib/global.js";
+import {Time} from "/common/lib/datatype.js";
 
 const n_is = store.is;
 const n_isa = store.isa;

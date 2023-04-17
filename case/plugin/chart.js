@@ -5,8 +5,8 @@
 
 import {Component} from "/common/lib/component.js";
 import {MdDialog} from "/common/lib/material.js";
-import {store, frame, settings} from "/case/app/global.js";
-import {ItemCollector} from "/case/app/value.js";
+import {store, frame, settings} from "/common/lib/global.js";
+import {ItemCollector} from "/common/lib/datatype.js";
 
 const n_depicts = frame("P180");
 const n_property = frame("P2306");

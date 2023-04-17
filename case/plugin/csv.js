@@ -3,9 +3,10 @@
 
 // SLING importer plug-in for importing data from RFC-4180 CSV files.
 
-import {store, frame} from "/case/app/global.js";
+import {store, frame} from "/common/lib/global.js";
+import {parsers} from "/common/lib/datatype.js";
+
 import {get_property_index} from "/case/app/schema.js";
-import {parsers} from "/case/app/value.js";
 
 const n_id = store.id;
 const n_is = store.is;

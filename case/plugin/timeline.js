@@ -5,8 +5,9 @@
 
 import {Component} from "/common/lib/component.js";
 import {MdDialog} from "/common/lib/material.js";
-import {store, frame, settings} from "/case/app/global.js";
-import {ItemCollector, LabelCollector, Time} from "/case/app/value.js";
+import {store, frame, settings} from "/common/lib/global.js";
+import {ItemCollector, LabelCollector, Time} from "/common/lib/datatype.js";
+
 import {qualified} from "/case/app/schema.js";
 
 const n_name = frame("name");

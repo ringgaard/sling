@@ -3,8 +3,9 @@
 
 // SLING case plug-in for biographies from imdb.com.
 
-import {store, frame} from "/case/app/global.js";
-import {date_parser, ItemCollector} from "/case/app/value.js";
+import {store, frame} from "/common/lib/global.js";
+import {date_parser, ItemCollector} from "/common/lib/datatype.js";
+
 import {SocialTopic} from "/case/app/social.js";
 import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 

@@ -3,7 +3,8 @@
 
 import {Component} from "/common/lib/component.js";
 import * as material from "/common/lib/material.js";
-import {store, settings, save_settings} from "./global.js";
+import {store, settings, save_settings} from "/common/lib/global.js";
+
 import {search, kbsearch} from "./search.js";
 
 function pad2(num) {

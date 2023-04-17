@@ -1,7 +1,7 @@
 // Copyright 2020 Ringgaard Research ApS
 // Licensed under the Apache License, Version 2
 
-import {store, frame} from "./global.js";
+import {store, frame} from "/common/lib/global.js";
 
 const n_is = frame("is");
 const n_title = frame("P1476");

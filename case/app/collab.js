@@ -3,7 +3,7 @@
 
 import {inform} from "/common/lib/material.js";
 import {Encoder, Decoder} from "/common/lib/frame.js";
-import {store, frame} from "./global.js";
+import {store, frame} from "/common/lib/global.js";
 
 const n_topics = frame("topics");
 

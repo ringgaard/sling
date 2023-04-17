@@ -5,8 +5,9 @@ import {Component} from "/common/lib/component.js";
 import {MdApp, MdDialog, StdDialog, MdIcon, MdSearchResult, inform}
        from "/common/lib/material.js";
 import {Store, Frame, Encoder, Printer, Reader} from "/common/lib/frame.js";
+import {store, frame, settings} from "/common/lib/global.js";
+import {LabelCollector, ItemCollector} from "/common/lib/datatype.js";
 
-import {store, frame, settings} from "./global.js";
 import * as plugins from "./plugins.js";
 import * as importers from "./importers.js";
 import {NewFolderDialog} from "./folder.js";
@@ -15,7 +16,6 @@ import {wikidata_initiate, wikidata_export} from "./wikibase.js";
 import {generate_key, encrypt} from "./crypto.js";
 import {Collaboration} from "./collab.js";
 import {SearchIndex, kbsearch} from "./search.js";
-import {LabelCollector, ItemCollector} from "./value.js";
 import "./topic.js";
 
 const n_is = store.is;

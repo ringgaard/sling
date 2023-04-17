@@ -3,7 +3,7 @@
 
 // SLING case plug-in for adding topic from Wikidata item.
 
-import {store} from "/case/app/global.js";
+import {store} from "/common/lib/global.js";
 
 export default class WikidataPlugin {
   process(action, query, context) {

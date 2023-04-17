@@ -3,7 +3,8 @@
 
 // SLING case plug-in for adding images from instagram.
 
-import {frame} from "/case/app/global.js";
+import {frame} from "/common/lib/global.js";
+
 import {Drive} from "/case/app/drive.js";
 
 const n_media = frame("media");

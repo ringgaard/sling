@@ -3,7 +3,8 @@
 
 // SLING case plug-in for adding topic from babepedia.com.
 
-import {store, frame} from "/case/app/global.js";
+import {store, frame} from "/common/lib/global.js";
+
 import {SocialTopic, strip_emojis} from "/case/app/social.js";
 import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 

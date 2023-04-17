@@ -4,7 +4,7 @@
 // Local case database.
 
 import {Store, Encoder, Decoder} from "/common/lib/frame.js";
-import {store, frame} from "./global.js";
+import {store, frame} from "/common/lib/global.js";
 
 const n_name = frame("name");
 const n_description = frame("description");

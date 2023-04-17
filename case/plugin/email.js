@@ -3,7 +3,7 @@
 
 // SLING case plug-in for adding email address.
 
-import {store, frame} from "/case/app/global.js";
+import {store, frame} from "/common/lib/global.js";
 
 const n_email_address = frame("P968");
 

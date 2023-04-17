@@ -3,7 +3,8 @@
 
 // SLING case plug-in for adding topic from VIAF.
 
-import {store} from "/case/app/global.js";
+import {store} from "/common/lib/global.js";
+
 import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 
 export default class VIAFPlugin {

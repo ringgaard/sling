@@ -5,10 +5,10 @@
 
 import {Component} from "/common/lib/component.js";
 import {MdDialog} from "/common/lib/material.js";
-import {store, frame, settings} from "/case/app/global.js";
-import {Time} from "/case/app/value.js";
+import {store, frame, settings} from "/common/lib/global.js";
+import {Time} from "/common/lib/datatype.js";
 import {Frame, QString} from "/common/lib/frame.js";
-import {ItemCollector} from "/case/app/value.js";
+import {ItemCollector} from "/common/lib/datatype.js";
 
 const n_name = frame("name");
 const n_description = frame("description");

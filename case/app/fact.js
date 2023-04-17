@@ -4,8 +4,10 @@
 import {Component} from "/common/lib/component.js";
 import {MdSearchList} from "/common/lib/material.js";
 import {Frame, QString, Printer} from "/common/lib/frame.js";
-import {store, frame, settings} from "./global.js";
-import {value_text, value_parser, LabelCollector} from "./value.js";
+import {store, frame, settings} from "/common/lib/global.js";
+import {value_text, value_parser, LabelCollector}
+       from "/common/lib/datatype.js";
+
 import {Context} from "./plugins.js";
 import {search, kbsearch} from "./search.js";
 import {qualified, psearch} from "./schema.js";

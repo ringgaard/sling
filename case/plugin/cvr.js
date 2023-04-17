@@ -3,7 +3,8 @@
 
 // SLING case plug-in for adding topic from CVR (Danish Business Register).
 
-import {store, frame, settings} from "/case/app/global.js";
+import {store, frame, settings} from "/common/lib/global.js";
+
 import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 
 const n_is = store.is;

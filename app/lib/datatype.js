@@ -1,7 +1,7 @@
 // Copyright 2020 Ringgaard Research ApS
 // Licensed under the Apache License, Version 2
 
-import {Frame, QString} from "/common/lib/frame.js";
+import {Frame, QString} from "./frame.js";
 import {store, frame, settings} from "./global.js";
 
 const n_is = store.is;

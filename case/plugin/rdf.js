@@ -4,9 +4,10 @@
 // SLING case plug-in for pasting topic(s) in JSON-LD format.
 
 import {Store, Frame} from "/common/lib/frame.js";
-import {store, frame} from "/case/app/global.js";
+import {store, frame} from "/common/lib/global.js";
+import {Time} from "/common/lib/datatype.js";
+
 import {match_link} from "/case/app/social.js";
-import {Time} from "/case/app/value.js";
 
 const property_mapping = {
   "PSCHM/description": "description",

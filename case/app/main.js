@@ -5,8 +5,8 @@
 
 import {Component} from "/common/lib/component.js";
 import {StdDialog, inform} from "/common/lib/material.js";
+import {store, frame, settings} from "/common/lib/global.js";
 
-import {store, frame, settings} from "./global.js";
 import {casedb} from "./database.js";
 import {Collaboration} from "./collab.js";
 import {decrypt} from "./crypto.js";

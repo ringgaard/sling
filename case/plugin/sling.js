@@ -4,7 +4,7 @@
 // SLING importer plug-in for importing data from SLING frames.
 
 import {Frame, Reader, Decoder} from "/common/lib/frame.js";
-import {store} from "/case/app/global.js";
+import {store} from "/common/lib/global.js";
 
 export default class SLINGImporter {
   async process(file, context) {

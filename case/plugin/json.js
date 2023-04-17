@@ -3,7 +3,8 @@
 
 // SLING importer plug-in for importing data from JSON objects.
 
-import {store, frame} from "/case/app/global.js";
+import {store, frame} from "/common/lib/global.js";
+
 import {get_property_index} from "/case/app/schema.js";
 import {parsers} from "/case/app/value.js";
 

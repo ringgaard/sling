@@ -11,6 +11,8 @@ embed_data(
     "lib/gallery.js",
     "lib/material.js",
     "lib/frame.js",
+    "lib/global.js",
+    "lib/datatype.js",
     "lib/reddit.js",
 
     "image/appicon.ico",

@@ -1,8 +1,8 @@
 // Copyright 2020 Ringgaard Research ApS
 // Licensed under the Apache License, Version 2
 
-import {store, frame, settings, save_settings} from "./global.js";
 import {Frame, Encoder} from "/common/lib/frame.js";
+import {store, frame, settings, save_settings} from "/common/lib/global.js";
 
 const n_is = store.is;
 const n_topics = frame("topics");
