@@ -89,8 +89,6 @@ int SearchEngine::Search(Text query, Results *results) {
     }
 
     // Bail out if there are no more candidates.
-    VLOG(2) << "intersect " << (candidates_end - candidates_begin)
-            << " & " << term->num_entities() << " -> " << results.size();
     if (results.empty()) return 0;
 
     // Swap match arrays.
@@ -116,7 +114,7 @@ void SearchEngine::Results::Reset(const SearchEngine *search) {
   hits_.clear();
 }
 
-int SearchEngine::Results::Score(Text text, int popularity) const {
+int SearchEngine::Results::Score(Text text, int base) const {
   std::vector<uint64> tokens;
   search_->tokenize(text, &tokens);
   int unigrams = 0;
@@ -131,7 +129,7 @@ int SearchEngine::Results::Score(Text text, int popularity) const {
   }
   int boost = 100 * bigrams + 10 * unigrams + 1;
   if (unigrams == tokens.size()) boost++;
-  return (popularity + 1) * boost;
+  return (base + 1) * boost;
 }
 
 bool SearchEngine::Results::Unigram(uint64 term) const {

@@ -150,6 +150,8 @@ class WebPageAnalyzer : public HTMLParser {
 // Extract text from web page.
 class WebPageTextExtractor : public HTMLParser {
  public:
+  typedef std::vector<std::pair<string, string>> Meta;
+
   WebPageTextExtractor(WebsiteAnalysis *analysis) : analysis_(analysis) {}
 
   // HTML parse handlers.
@@ -158,13 +160,10 @@ class WebPageTextExtractor : public HTMLParser {
   bool Text(const char *str) override;
 
   // Web page meta data.
-  const string &url() const { return url_; }
-  const string &site() const { return site_; }
-  const string &type() const { return type_; }
-  const string &date() const { return date_; }
-  const string &title() const {
-    return title_.empty() ? page_title_ : title_;
-  }
+  const Meta &meta() const { return meta_; }
+
+  // Extracted text.
+  const string &text() const { return text_; }
 
   // Output HTML in extracted text.
   bool html_output() const { return html_output_; }
@@ -173,9 +172,6 @@ class WebPageTextExtractor : public HTMLParser {
   // Enable debug mode.
   bool debug() const { return debug_; }
   void set_debug(bool debug) { debug_ = debug; }
-
-  // Extracted text.
-  const string &text() const { return text_; }
 
  private:
   // Output debug information for text node.
@@ -208,12 +204,8 @@ class WebPageTextExtractor : public HTMLParser {
   std::vector<TagInfo> nesting_;
 
   // Web page meta information.
-  string url_;
-  string site_;
-  string type_;
-  string date_;
+  Meta meta_;
   string title_;
-  string page_title_;
 
   // Extracted text.
   string text_;

@@ -34,15 +34,15 @@ class SearchIndex {
     // Entity id.
     Text id() const { return Text(id_ptr(), *idlen_ptr()); }
 
-    // Entity frequency.
-    uint32 count() const { return *count_ptr(); }
+    // Base score for entity, e.g. popularity or frequency.
+    uint32 score() const { return *score_ptr(); }
 
    private:
-    // Entity frequency.
-    REPOSITORY_FIELD(uint32, count, 1, 0);
+    // Entity score.
+    REPOSITORY_FIELD(uint32, score, 1, 0);
 
     // Entity id.
-    REPOSITORY_FIELD(uint8, idlen, 1, AFTER(count));
+    REPOSITORY_FIELD(uint8, idlen, 1, AFTER(score));
     REPOSITORY_FIELD(char, id, *idlen_ptr(), AFTER(idlen));
   };
 

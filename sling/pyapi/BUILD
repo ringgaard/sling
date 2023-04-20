@@ -82,6 +82,7 @@ cc_library(
     "//sling/string:text",
     "//sling/util:mutex",
     "//sling/web:web-archive",
+    "//sling/web:rfc822-headers",
     "//third_party/jit:cpu",
   ],
   copts = [

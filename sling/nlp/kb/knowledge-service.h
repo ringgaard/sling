@@ -244,7 +244,6 @@ class KnowledgeService {
   Name n_lex_{names_, "lex"};
   Name n_document_{names_, "document"};
   Name n_matches_{names_, "matches"};
-  Name n_count_{names_, "count"};
   Name n_score_{names_, "score"};
   Name n_hits_{names_, "hits"};
   Name n_lang_{names_, "lang"};

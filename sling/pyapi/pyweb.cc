@@ -25,6 +25,8 @@ namespace sling {
 PyTypeObject PyWebArchive::type;
 PyTypeObject PyWebsiteAnalysis::type;
 PyMethodTable PyWebsiteAnalysis::methods;
+PyTypeObject PyWebPage::type;
+PyMethodTable PyWebPage::methods;
 
 void PyWebArchive::Define(PyObject *module) {
   InitType(&type, "sling.WebArchive", sizeof(PyWebArchive), true);
@@ -123,9 +125,9 @@ void PyWebsiteAnalysis::Dealloc() {
   Free();
 }
 
-PyObject *PyWebsiteAnalysis::Analyze(PyObject *html) {
+PyObject *PyWebsiteAnalysis::Analyze(PyObject *pycontent) {
   // Get HTML page content.
-  Text content = GetText(html);
+  Text content = GetText(pycontent);
   if (content.data() == nullptr) return nullptr;
 
   // Set up input stream for parsing.
@@ -138,23 +140,11 @@ PyObject *PyWebsiteAnalysis::Analyze(PyObject *html) {
   Py_RETURN_NONE;
 }
 
-PyObject *PyWebsiteAnalysis::Extract(PyObject *html) {
-  // Get HTML page content.
-  Text content = GetText(html);
-  if (content.data() == nullptr) return nullptr;
-
-  // Set up input stream for parsing.
-  ArrayInputStream stream(content.data(), content.size());
-  Input input(&stream);
-
-  // Extract HTTP headers.
-  RFC822Headers headers;
-  headers.Parse(&input);
-
-  // Extract text from HTML page.
-  nlp::WebPageTextExtractor extractor(analysis);
-  extractor.Parse(&input);
-  return AllocateString(extractor.text());
+PyObject *PyWebsiteAnalysis::Extract(PyObject *pycontent) {
+  // Return web page object.
+  PyWebPage *wp = PyObject_New(PyWebPage, &PyWebPage::type);
+  wp->Init(this, pycontent);
+  return wp->AsObject();
 }
 
 PyObject *PyWebsiteAnalysis::Fingerprints() {
@@ -165,6 +155,78 @@ PyObject *PyWebsiteAnalysis::Fingerprints() {
   // Return fingerprints as raw unsigned 64-bit integers.
   const char *data = reinterpret_cast<const char *>(fps.data());
   return PyBytes_FromStringAndSize(data, fps.size() * sizeof(uint64));
+}
+
+void PyWebPage::Define(PyObject *module) {
+  InitType(&type, "sling.WebPage", sizeof(PyWebPage), false);
+  type.tp_init = method_cast<initproc>(&PyWebPage::Init);
+  type.tp_dealloc = method_cast<destructor>(&PyWebPage::Dealloc);
+
+  methods.Add("text", &PyWebPage::GetExtractedText);
+  methods.Add("headers", &PyWebPage::GetHeaders);
+  methods.Add("metadata", &PyWebPage::GetMetaData);
+  type.tp_methods = methods.table();
+
+  RegisterType(&type, module, "WebPage");
+}
+
+int PyWebPage::Init(PyWebsiteAnalysis *analysis, PyObject *pycontent) {
+  // Keep reference to web site analyzer.
+  Py_INCREF(analysis);
+  pyanalysis = analysis;
+
+  // Get HTML page content.
+  Text content = GetText(pycontent);
+  if (content.data() == nullptr) return -1;
+
+  // Set up input stream for parsing.
+  ArrayInputStream stream(content.data(), content.size());
+  Input input(&stream);
+
+  // Extract HTTP headers.
+  headers = new RFC822Headers();
+  headers->Parse(&input);
+
+  // Extract text from HTML page.
+  extractor = new nlp::WebPageTextExtractor(pyanalysis->analysis);
+  extractor->Parse(&input);
+
+  return 0;
+}
+
+PyObject *PyWebPage::GetExtractedText() {
+  return AllocateString(extractor->text());
+}
+
+PyObject *PyWebPage::GetHeaders() {
+  PyObject *dict = PyDict_New();
+  for (auto &hdr : *headers) {
+   PyObject *key = AllocateString(hdr.first);
+   PyObject *value = AllocateString(hdr.second);
+   PyDict_SetItem(dict, key, value);
+   Py_DECREF(key);
+   Py_DECREF(value);
+  }
+  return dict;
+}
+
+PyObject *PyWebPage::GetMetaData() {
+  PyObject *dict = PyDict_New();
+  for (auto &prop : extractor->meta()) {
+   PyObject *key = AllocateString(prop.first);
+   PyObject *value = AllocateString(prop.second);
+   PyDict_SetItem(dict, key, value);
+   Py_DECREF(key);
+   Py_DECREF(value);
+  }
+  return dict;
+}
+
+void PyWebPage::Dealloc() {
+  delete headers;
+  delete extractor;
+  if (pyanalysis) Py_DECREF(pyanalysis);
+  Free();
 }
 
 }  // namespace sling

@@ -222,7 +222,8 @@ export default class IMDBPlugin {
 
     // Get name from title.
     let title = doc.querySelectorAll("div.parent")[0];
-    let name = title.innerText.trim();
+    if (!title) title = doc.getElementsByTagName("h3")[0];
+    let name = title && title.innerText.trim();
 
     // Get basic information from overview table.
     let bio = {}

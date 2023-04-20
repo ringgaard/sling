@@ -30,6 +30,9 @@
 #elif PYVER==39
 #include <python3.9/Python.h>
 #include <python3.9/structmember.h>
+#elif PYVER==310
+#include <python3.10/Python.h>
+#include <python3.10/structmember.h>
 #else
 #include <Python.h>
 #include <structmember.h>

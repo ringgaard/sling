@@ -329,32 +329,13 @@ bool WebPageTextExtractor::StartElement(const XMLElement &e) {
       if (!property) property = e.Get("name");
       const char *content = e.Get("content");
       if (property && content) {
-        if (TagEqual(property, "og:url")) {
-          url_ = content;
-        } else if (TagEqual(property, "og:title")) {
-          title_ = content;
-        } else if (TagEqual(property, "og:type")) {
-          type_ = content;
-        } else if (TagEqual(property, "og:site_name")) {
-          site_ = content;
-        } else if (TagEqual(property, "og:pubdate") ||
-                   TagEqual(property, "og:article:published_time") ||
-                   TagEqual(property, "article:published_time") ||
-                   TagEqual(property, "rnews:datePublished") ||
-                   TagEqual(property, "datePublished") ||
-                   TagEqual(property, "dateCreated") ||
-                   TagEqual(property, "date") ||
-                   TagEqual(property, "sailthru.date") ||
-                   TagEqual(property, "parsely-pub-date") ||
-                   TagEqual(property, "dc.date")) {
-          date_ = content;
-        }
+        meta_.emplace_back(property, content);
       }
     } else if (TagEqual(e.name, "link")) {
       const char *rel = e.Get("rel");
       const char *href = e.Get("href");
       if (rel && href && TagEqual(rel, "canonical")) {
-        url_ = href;
+        meta_.emplace_back("url", href);
       }
     } else if (TagEqual(e.name, "title")) {
       in_title_ = true;
@@ -404,7 +385,13 @@ bool WebPageTextExtractor::StartElement(const XMLElement &e) {
 bool WebPageTextExtractor::EndElement(const char *name) {
   // End title.
   if (in_title_) {
-    if (TagEqual(name, "title")) in_title_ = false;
+    if (TagEqual(name, "title")) {
+      if (!title_.empty()) {
+        meta_.emplace_back("title", title_);
+        title_.clear();
+      }
+      in_title_ = false;
+    }
   }
 
   // Skip content in header.
@@ -436,7 +423,7 @@ bool WebPageTextExtractor::EndElement(const char *name) {
 
 bool WebPageTextExtractor::Text(const char *str) {
   // Get page title.
-  if (in_title_) page_title_.append(str);
+  if (in_title_) title_.append(str);
 
   // Skip text in header.
   if (!in_body_ || nesting_.empty()) return true;

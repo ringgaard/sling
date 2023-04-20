@@ -561,10 +561,8 @@ void KnowledgeService::HandleSearch(HTTPRequest *request,
     if (item.invalid()) continue;
     Builder match(ws.store());
     GetStandardProperties(item, &match, true);
-    int count = result->count();
     Text name = item.GetText(n_name_);
-    int score = results.Score(name, count);
-    match.Add(n_count_, count);
+    int score = results.Score(name, result->score());
     match.Add(n_score_, score);
     Handle h = match.Create().handle();
     matches.push_back(h);

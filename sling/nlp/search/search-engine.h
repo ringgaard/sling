@@ -29,7 +29,7 @@ class SearchEngine {
   typedef SearchIndex::Entity Entity;
   struct EntityCompare {
     bool operator()(const Entity *a, const Entity *b) {
-      return a->count() > b->count();
+      return a->score() > b->score();
     }
   };
 
@@ -48,7 +48,7 @@ class SearchEngine {
     const Hits hits() const { return hits_; }
 
     // Score result against query.
-    int Score(Text text, int popularity) const;
+    int Score(Text text, int base) const;
 
    private:
     // Check for unigram query match.

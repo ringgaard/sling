@@ -113,25 +113,14 @@ int main(int argc, char *argv[]) {
 
       if (FLAGS_html) {
         std::cout << "<hr>\n"
-                  << "<h1>" << extractor.title() << "</h1>\n"
                   << "<b>File:</b> <a href='file://" << filename << "'>"
                   << filename << "</a><br>\n"
-                  << "<b>URL:</b> <a href='" <<extractor.url() << "'>"
-                  << extractor.url() << "</a><br>\n"
-                  << "<b>Site:</b> " << extractor.site() << "<br>\n"
-                  << "<b>Type:</b> " << extractor.type() << "<br>\n"
-                  << "<b>Date:</b> " << extractor.date() << "<br>\n"
                   << "<div style='width: 700px;'>"
                   << extractor.text()
                   << "</div>\n";
       } else {
         std::cout << "-------------------------------------------------------\n"
                   << "File: " << filename << "\n"
-                  << "URL: " << extractor.url() << "\n"
-                  << "Site: " << extractor.site() << "\n"
-                  << "Title: " << extractor.title() << "\n"
-                  << "Type: " << extractor.type() << "\n"
-                  << "Date: " << extractor.date() << "\n"
                   << "\n" << extractor.text() << "\n\n";
       }
     }

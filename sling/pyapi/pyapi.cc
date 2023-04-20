@@ -93,6 +93,7 @@ static PyObject *RegisterPythonModule() {
   PyFactExtractor::Define(module);
   PyTaxonomy::Define(module);
   PyPlausibility::Define(module);
+
   PyWikipedia::Define(module);
   PyWikipediaPage::Define(module);
 
@@ -106,8 +107,11 @@ static PyObject *RegisterPythonModule() {
   PyJob::Define(module);
   PyResource::Define(module);
   PyTask::Define(module);
+
   PyWebArchive::Define(module);
   PyWebsiteAnalysis::Define(module);
+  PyWebPage::Define(module);
+
   PyHTTPServer::Define(module);
 
   return module;

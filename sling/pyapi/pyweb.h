@@ -17,6 +17,7 @@
 
 #include "sling/nlp/web/text-extractor.h"
 #include "sling/pyapi/pybase.h"
+#include "sling/web/rfc822-headers.h"
 #include "sling/web/web-archive.h"
 
 namespace sling {
@@ -29,7 +30,7 @@ struct PyWebArchive : public PyBase {
   // Return self as iterator.
   PyObject *Self();
 
-  // Return next record in archive as 2-tuple with web url and content.
+  // Return next record in archive as 3-tuple with web url, date, and content.
   PyObject *Next();
 
   // WARC file.
@@ -46,16 +47,45 @@ struct PyWebsiteAnalysis : public PyBase {
   void Dealloc();
 
   // Analyze web page and update analysis.
-  PyObject *Analyze(PyObject *html);
+  PyObject *Analyze(PyObject *pycontent);
 
-  // Extract text from HTML page.
-  PyObject *Extract(PyObject *html);
+  // Extract text and meta data from HTML page.
+  PyObject *Extract(PyObject *pycontent);
 
   // Return analysis fingerprints.
   PyObject *Fingerprints();
 
   // Web site analysis.
   nlp::WebsiteAnalysis *analysis;
+
+  // Registration.
+  static PyTypeObject type;
+  static PyMethodTable methods;
+  static void Define(PyObject *module);
+};
+
+// Python wrapper for web page.
+struct PyWebPage : public PyBase {
+  int Init(PyWebsiteAnalysis *analysis, PyObject *pycontent);
+  void Dealloc();
+
+  // Return extracted text.
+  PyObject *GetExtractedText();
+
+  // Return dictionary with HTTP headers.
+  PyObject *GetHeaders();
+
+  // Return dictionary with web page meta data.
+  PyObject *GetMetaData();
+
+  // Web site analysis.
+  PyWebsiteAnalysis *pyanalysis;
+
+  // HTTP headers.
+  RFC822Headers *headers;
+
+  // Web page extractor.
+  nlp::WebPageTextExtractor *extractor;
 
   // Registration.
   static PyTypeObject type;
