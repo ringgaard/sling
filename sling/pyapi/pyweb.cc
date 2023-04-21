@@ -165,6 +165,7 @@ void PyWebPage::Define(PyObject *module) {
   methods.Add("text", &PyWebPage::GetExtractedText);
   methods.Add("headers", &PyWebPage::GetHeaders);
   methods.Add("metadata", &PyWebPage::GetMetaData);
+  methods.Add("ldjson", &PyWebPage::GetLDJSON);
   type.tp_methods = methods.table();
 
   RegisterType(&type, module, "WebPage");
@@ -189,6 +190,7 @@ int PyWebPage::Init(PyWebsiteAnalysis *analysis, PyObject *pycontent) {
 
   // Extract text from HTML page.
   extractor = new nlp::WebPageTextExtractor(pyanalysis->analysis);
+  extractor->set_html_output(true);
   extractor->Parse(&input);
 
   return 0;
@@ -220,6 +222,15 @@ PyObject *PyWebPage::GetMetaData() {
    Py_DECREF(value);
   }
   return dict;
+}
+
+PyObject *PyWebPage::GetLDJSON() {
+  auto &ldjson = extractor->ldjson();
+  PyObject *list = PyList_New(ldjson.size());
+  for (int i = 0; i < ldjson.size(); ++i) {
+    PyList_SET_ITEM(list, i, AllocateString(ldjson[i]));
+  }
+  return list;
 }
 
 void PyWebPage::Dealloc() {

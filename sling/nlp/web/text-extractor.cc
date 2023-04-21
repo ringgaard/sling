@@ -335,10 +335,16 @@ bool WebPageTextExtractor::StartElement(const XMLElement &e) {
       const char *rel = e.Get("rel");
       const char *href = e.Get("href");
       if (rel && href && TagEqual(rel, "canonical")) {
-        meta_.emplace_back("url", href);
+        meta_.emplace_back("canonical", href);
       }
     } else if (TagEqual(e.name, "title")) {
       in_title_ = true;
+    } else if (TagEqual(e.name, "script")) {
+      const char *type = e.Get("type");
+      if (type && TagEqual(type, "application/ld+json")) {
+        in_ldjson_ = true;
+        ldjson_.push_back("");
+      }
     }
   }
   if (!in_body_) return true;
@@ -394,6 +400,11 @@ bool WebPageTextExtractor::EndElement(const char *name) {
     }
   }
 
+  // End LD-JSON.
+  if (in_ldjson_ && TagEqual(name, "script")) {
+    in_ldjson_ = false;
+  }
+
   // Skip content in header.
   if (!in_body_ || nesting_.empty()) return true;
 
@@ -424,6 +435,9 @@ bool WebPageTextExtractor::EndElement(const char *name) {
 bool WebPageTextExtractor::Text(const char *str) {
   // Get page title.
   if (in_title_) title_.append(str);
+
+  // Get LD-JSON content.
+  if (in_ldjson_) ldjson_.back().append(str);
 
   // Skip text in header.
   if (!in_body_ || nesting_.empty()) return true;
