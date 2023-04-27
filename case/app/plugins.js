@@ -211,6 +211,7 @@ var plugins = [
     /^https?:\/\/i\.redditmedia\.com\//,
     /^https?:\/\/preview\.redd\.it\//,
     /^https?:\/\/asset\.dr\.dk\//,
+    /^https?:\/\/imgchest\.com\/p\//,
   ],
 },
 

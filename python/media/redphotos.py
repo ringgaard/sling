@@ -107,6 +107,7 @@ photosites = set([
   "www.reddit.com",
   "i.redditmedia.com",
   "i.reddituploads.com",
+  "imgchest.com",
   "media.gettyimages.com",
   "i.pinimg.com",
   "pbs.twimg.com",

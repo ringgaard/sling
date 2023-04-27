@@ -126,11 +126,15 @@ n_stated_in = store["P248"]
 n_has_quality = store["P1552"]
 n_nsfw = store["Q2716583"]
 
-# Get API keys for Imgur.
+# Get API keys for Imgur and ImgChest.
 imgurkeys = None
 if os.path.exists("local/keys/imgur.json"):
   with open("local/keys/imgur.json", "r") as f:
     imgurkeys = json.load(f)
+imgchestkeys = None
+if os.path.exists("local/keys/imgchest.json"):
+  with open("local/keys/imgchest.json", "r") as f:
+    imgchestkeys = json.load(f)
 
 # Tri-state override.
 def tri(value, override):
@@ -649,6 +653,66 @@ class Profile:
       serial += 1
     return count
 
+  # Add imgchest album.
+  def add_imgchest_album(self, albumid, caption, nsfw_override=None):
+    print("Image chest album", albumid)
+    auth = {"Authorization": "Bearer " + imgchestkeys["token"]}
+    r = session.get("https://api.imgchest.com/v1/post/" + albumid, headers=auth)
+    if r.status_code == 404:
+      print("Skipping missing album", albumid)
+      return 0
+    if r.status_code == 403:
+      print("Skipping unaccessible album", albumid)
+      return 0
+    r.raise_for_status()
+    reply = r.json()["data"]
+    #print(json.dumps(reply, indent=2))
+
+    total = len(reply["images"])
+    album_title = reply.get("title")
+    if album_title is None:
+       album_title = caption
+    elif caption is not None and caption.startswith(album_title):
+      album_title = caption
+
+    count = 0
+    serial = 1
+    for image in reply["images"]:
+      link = image["link"]
+
+      # Remove query parameters.
+      qs = link.find("?")
+      if qs != -1: link = link[:qs]
+
+      # Skip anmated GIFs.
+      if (not flags.arg.video and image.get("animated", False)):
+        print("Skipping animated image", link);
+        continue
+
+      # Image caption.
+      if flags.arg.perimagecaption:
+        title = image.get("title")
+        if title is None:
+          title = image.get("description")
+      else:
+        title = None
+
+      if title is None and album_title != None:
+        if flags.arg.numbering:
+          title = album_title + " (%d/%d)" % (serial, total)
+        else:
+          title = album_title
+      if title != None:
+        title = title.replace("\n", " ").strip()
+
+      # NSFW flag.
+      nsfw = tri(reply["nsfw"] or image["nsfw"], nsfw_override)
+
+      # Add media frame to profile.
+      if self.add_photo(link, title, None, nsfw): count += 1
+      serial += 1
+    return count
+
   # Add media.
   def add_media(self, url, caption=None, nsfw=None):
     # Trim url.
@@ -740,6 +804,12 @@ class Profile:
     if m != None:
       q = urllib.parse.parse_qs(m.group(1))
       url = "https://%s/%s" % (q["server"][0], q["file"][0])
+
+    # Image chest album.
+    m = re.match("https://imgchest.com/p/(\w+)", url)
+    if m != None:
+      albumid = m.group(1)
+      return self.add_imgchest_album(albumid, caption, nsfw)
 
     # Listal thumb.
     m = re.match("(https://lthumb.lisimg.com/[0-9\/].jpg)\?.+", url)

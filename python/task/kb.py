@@ -89,10 +89,6 @@ class KnowledgeBaseWorkflow:
     """Resource for imdb profile database."""
     return self.wf.resource(corpora.imdb(), format="db/frames", serial=410)
 
-  def forum(self):
-    """Resource for forum profiles."""
-    return self.wf.resource(corpora.forumdb(), format="db/frames", serial=9030)
-
   def elf(self):
     """Resource for ISO 20275 ELF items."""
     return self.wf.resource("elf.rec",
@@ -170,7 +166,6 @@ class KnowledgeBaseWorkflow:
   #  610 factgrid items
   # 1000 case topics
   # 9020 photos
-  # 9030 forum
 
   def extended_item_sources(self):
     return self.wf.bundle(
@@ -179,7 +174,6 @@ class KnowledgeBaseWorkflow:
       self.wikipedia_media(),
       self.twitter(),
       self.imdb(),
-      self.forum(),
       self.photos(),
       self.data.wikipedia_summaries(),
       self.elf(),

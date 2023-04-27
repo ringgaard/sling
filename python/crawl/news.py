@@ -334,6 +334,36 @@ def get_canonical_url(uri, page):
   # Trim URL and Unescape HTML entities.
   return html.unescape(trim_url(url))
 
+def retrieve_article(url):
+  # Get news site name.
+  site = sitename(url)
+
+  # Determine HTTP headers for crawling site.
+  http_headers = default_headers
+  if site in http_site_headers:
+    http_headers = http_site_headers[site]
+
+  # Fetch news article from site.
+  r = crawlsession.get(url, headers=http_headers,
+                       timeout=flags.arg.timeout)
+  r.raise_for_status()
+
+  # Get target for redirected URL.
+  target_url = trim_url(r.url)
+  if r.url != url: site = sitename(r.url)
+
+  # Build HTML header.
+  h = ["HTTP/1.0 200 OK\r\n"]
+  for key, value in r.headers.items():
+    h.append(key)
+    h.append(": ")
+    h.append(value)
+    h.append("\r\n")
+  h.append("X-Domain: " + site + "\r\n")
+  h.append("\r\n")
+  headers = "".join(h).encode("utf8")
+  return headers + r.content
+
 def blocked(url):
   """Check if site is blocked."""
   if blocked_pat.match(url) is not None: return True

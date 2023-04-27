@@ -1214,7 +1214,7 @@ export class MdImage extends Component {
   }
 
   render() {
-    return `<img src="${this.state}" rel="noreferrer">`;
+    return `<img src="${this.state}" referrerpolicy="no-referrer">`;
   }
 }
 

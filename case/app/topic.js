@@ -1076,7 +1076,9 @@ class TopicPhoto extends Component {
     if (photo.bigger) label += " bigger";
     if (photo.smaller) label += " smaller";
     return `
-      <a href="${url}" target="_blank"><img src="${url}"></a>
+      <a href="${url}" target="_blank">
+        <img src="${url}" referrerpolicy="no-referrer">
+      </a>
       <div>
         <md-checkbox
           id="remove"
