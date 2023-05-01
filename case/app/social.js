@@ -325,7 +325,10 @@ let xrefs = [
     pattern: /^https?:\/\/(?:www\.)?wikitree\.com\/wiki\/([^#^\/]+)/,
     property: frame("P2949"),
   },
-
+  {
+    pattern: /^https?:\/\/(?:www\.)ibdb\.com\/broadway-cast-staff\/[a-z-]+(\d+)/,
+    property: frame("P1220"),
+  },
   {
     pattern: /^https?:\/\/([a-z0-9-]+)\.fandom\.com\/wiki\/([^#^\/]+)/,
     property: frame("P6262"),

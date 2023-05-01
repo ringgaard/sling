@@ -18,6 +18,7 @@ import {Collaboration} from "./collab.js";
 import {SearchIndex, kbsearch} from "./search.js";
 import "./topic.js";
 
+const n_id = store.id;
 const n_is = store.is;
 const n_name = frame("name");
 const n_alias = frame("alias");
@@ -133,6 +134,7 @@ class CaseEditor extends MdApp {
     this.attach(this.onexport, "click", "md-menu #export");
     this.attach(this.onupload, "click", "md-menu #upload");
     this.attach(this.oncopyall, "click", "md-menu #copyall");
+    this.attach(this.onstats, "click", "md-menu #stats");
 
     this.attach(this.oncut, "cut");
     this.attach(this.oncopy, "copy");
@@ -1433,6 +1435,54 @@ class CaseEditor extends MdApp {
     }
   }
 
+  onstats(e) {
+    // Tally up case statistics.
+    let num_topics = 0;
+    let num_facts = 0;
+    let num_folders = this.folders.length;
+    let num_names = 0;
+    let num_comments = 0;
+    let num_pictures = 0;
+    let num_redirs = 0;
+    for (let t of this.topics) {
+      num_topics += 1;
+      for (let [name, value] of t) {
+        if (name == n_name || name == n_alias) {
+          num_names += 1;
+        } if (name == null) {
+          num_comments += 1;
+        } if (name == n_media) {
+          num_pictures += 1;
+        } if (name == n_is) {
+          num_redirs += 1;
+        } if (name != n_id) {
+          num_facts += 1;
+        }
+      }
+    }
+
+    let created = new Date(this.casefile.get(n_created));
+    let modified = new Date(this.casefile.get(n_modified));
+
+    function number(n, kind) {
+      return `${n} ${kind}${kind == 1 ? "" : "s"}`;
+    }
+
+    let message = `
+      created: ${created.toDateString()}
+      modified: ${modified.toDateString()}
+
+      ${number(num_topics, "topic")}
+      ${number(num_facts, "fact")}
+      ${number(num_folders, "folder")}
+      ${number(num_names, "names")}
+      ${number(num_comments, "note")}
+      ${number(num_redirs, "extension")}
+      ${number(num_pictures, "picture")}
+    `;
+    StdDialog.info("Case statistics", message);
+  }
+
   async onaddlink(e) {
     let ok = await StdDialog.confirm(
       "Create linked case",
@@ -1682,6 +1732,7 @@ class CaseEditor extends MdApp {
           <md-menu-item id="export">Publish in Wikidata</md-menu-item>
           <md-menu-item id="imgcache">Cache images</md-menu-item>
           <md-menu-item id="copyall">Copy all</md-menu-item>
+          <md-menu-item id="stats">Statistics</md-menu-item>
         </md-menu>
       </md-toolbar>
 

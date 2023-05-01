@@ -125,6 +125,9 @@ class PhotoReportApp extends MdApp {
     if (e.code === "KeyS") {
       e.preventDefault();
       this.onsearch(e);
+    } else if (e.code === "KeyR") {
+      e.preventDefault();
+      this.onimgsearch(e);
     }
   }
 

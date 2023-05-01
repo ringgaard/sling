@@ -379,6 +379,11 @@ export class StdDialog extends MdDialog {
     return dialog.show();
   }
 
+  static info(title, message) {
+    let buttons = {"OK": true};
+    return StdDialog.choose(title, message, buttons, "info");
+  }
+
   static alert(title, message) {
     let buttons = {"OK": true};
     return StdDialog.choose(title, message, buttons, "warning");

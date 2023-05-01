@@ -15,6 +15,7 @@ const n_nickname = frame("P1449");
 const n_instance_of = frame("P31");
 const n_human = frame("Q5");
 const n_date_of_birth = frame("P569");
+const n_birthday = frame("P3150");
 const n_place_of_birth = frame("P19");
 const n_date_of_death = frame("P570");
 const n_place_of_death = frame("P20");
@@ -36,25 +37,28 @@ const n_relative = frame("P1038");
 const n_end_cause = frame("P1534");
 const n_divorce = frame("Q93190");
 const n_kinship = frame("P1039");
+const n_num_children = frame("P1971");
+
 
 const n_gender = frame("P21");
 const n_female = frame("Q6581072");
 const n_male = frame("Q6581097");
 
 const kinships = {
-  "Parents": {prop: n_parent, male: "father", female: "mother", rank: 13},
-  "father": {prop: n_father, gender: n_male, rank: 11},
-  "mother": {prop: n_mother, gender: n_female, rank: 12},
+  "Parents": {prop: n_parent, male: "Father", female: "Mother", rank: 13},
+  "Father": {prop: n_father, gender: n_male, rank: 11},
+  "Mother": {prop: n_mother, gender: n_female, rank: 12},
 
-  "sibling": {prop: n_sibling, rank: 20},
-  "half sibling": {prop: n_sibling, qual: frame("Q27965041"), rank: 21},
+  "Sibling": {prop: n_sibling, rank: 20},
+  "Half sibling": {prop: n_sibling, qual: frame("Q27965041"), rank: 21},
 
   "Spouse": {prop: frame("P26"), rank: 40},
+  "Spouses": {prop: frame("P26"), rank: 40},
   "Children": {prop: frame("P40"), rank: 50},
 
   "Relatives": {prop: n_relative, rank: 1000},
 
-  "grandparent": {
+  "Grandparent": {
     prop: n_relative,
     qual: frame("Q167918"),
     male: "grandfather",
@@ -62,49 +66,49 @@ const kinships = {
     rank: 102,
 
   },
-  "grandfather": {prop: n_relative, qual: frame("Q9238344"), rank: 101},
-  "grandmother": {prop: n_relative, qual: frame("Q9235758"), rank: 102},
+  "Grandfather": {prop: n_relative, qual: frame("Q9238344"), rank: 101},
+  "Grandmother": {prop: n_relative, qual: frame("Q9235758"), rank: 102},
 
-  "great grandparent": {
+  "Great grandparent": {
     prop: n_relative,
     qual: frame("Q2500619"),
-    male: "great grandfather",
-    female: "great grandmother",
+    male: "Great grandfather",
+    female: "Great grandmother",
     rank: 106,
   },
-  "great grandfather": {
+  "Great grandfather": {
     prop: n_relative,
     qual: frame("Q2500621"),
     rank: 104,
   },
-  "great grandmother": {
+  "Great grandmother": {
     prop: n_relative,
     qual: frame("Q2500620"),
     rank: 105,
   },
 
-  "aunt or uncle": {
+  "Aunt or Uncle": {
     prop: n_relative,
     qual: frame("Q21073936"),
     male: "uncle",
     female: "aunt",
     rank: 113,
   },
-  "uncle": {prop: n_relative, qual: frame("Q76557"), rank: 111},
-  "aunt": {prop: n_relative, qual: frame("Q76507"), rank: 112},
+  "Uncle": {prop: n_relative, qual: frame("Q76557"), rank: 111},
+  "Aunt": {prop: n_relative, qual: frame("Q76507"), rank: 112},
 
-  "niece or nephew": {
+  "Niece or Nephew": {
     prop: n_relative,
     qual: frame("Q76477"),
-    male: "nephew",
-    female: "niece",
+    male: "Nephew",
+    female: "Niece",
     rank: 123,
   },
-  "nephew": {prop: n_relative, qual: frame("Q15224724"), rank: 121},
-  "niece": {prop: n_relative, qual: frame("Q3403377"), rank: 122},
+  "Nephew": {prop: n_relative, qual: frame("Q15224724"), rank: 121},
+  "Niece": {prop: n_relative, qual: frame("Q3403377"), rank: 122},
 
-  "cousin": {prop: n_relative, qual: frame("Q23009870"), rank: 130},
-  "grandchild": {prop: n_relative, qual: frame("Q3603531"), rank: 140},
+  "Cousin": {prop: n_relative, qual: frame("Q23009870"), rank: 130},
+  "Grandchild": {prop: n_relative, qual: frame("Q3603531"), rank: 140},
 };
 
 const gender_words = {
@@ -149,6 +153,12 @@ function trim(s) {
   return s.replace(/[\n\u00a0]/g, " ").replace(/\s\s+/g, " ").trim()
 }
 
+function full_date(d) {
+  if (d < 10000) return d * 10000;
+  if (d < 1000000) return d * 100;
+  return d;
+}
+
 function parse_date(d) {
   if (!d) return undefined;
   let results = new Array();
@@ -158,11 +168,11 @@ function parse_date(d) {
 }
 
 async function parse_date_and_place(context, text) {
-  let m = text.match(/^(.+)\sin\s(.*)\s+\(((.*))\)/);
-  if (!m) m = text.match(/(.+)\sin\s(.*)/);
+  let m = text.match(/^(.+)\s·\s(.*)\s+\(((.*))\)/);
+  if (!m) m = text.match(/(.+)\s·\s(.*)/);
   if (!m) m = text.match(/(.+)/);
 
-  let date = parse_date(m[1]);
+  let date = m[1].match(/^\w+ \d+$/) ? m[1] : parse_date(m[1]);
 
   let location, country;
   if (m[2]) {
@@ -219,37 +229,50 @@ export default class IMDBPlugin {
 
     // Parse HTML.
     let doc = new DOMParser().parseFromString(html, "text/html");
-    console.log(doc);
 
     // Get name from title.
-    let title = doc.querySelectorAll("div.parent")[0];
-    if (!title) title = doc.getElementsByTagName("h3")[0];
-    let name = title && title.innerText.trim();
+    let bio = {}
+    let title = doc.querySelectorAll("h2")[0];
+    bio.name = title && title.innerText.trim();
+
+    // Find sections.
+    let sections = new Map();
+    let grid = doc.querySelector("div.ipc-page-grid");
+    let section_list = grid.querySelectorAll("section.ipc-page-section");
+    for (let section of section_list.values()) {
+      let section_title = section.querySelector("div.ipc-title");
+      if (!section_title) continue;
+      let section_name = section_title.innerText;
+      sections.set(section_name, section);
+    }
 
     // Get basic information from overview table.
-    let bio = {}
-    let overview = doc.getElementById("overviewTable");
+    let overview = sections.get("Overview");
     if (overview) {
-      for (let row of overview.querySelectorAll("tr").values()) {
-        let cols = row.querySelectorAll("td");
-        let label = cols[0].innerText;
-        let value = trim(cols[1].innerText);
+      let list = overview.querySelector("ul");
+      for (let row of list.querySelectorAll("li").values()) {
+        let span = row.querySelector("span");
+        let div = row.querySelector("div");
+        if (!span || !div) continue;
+        let label = span.innerText;
+        let value = trim(div.innerText);
+
         if (label == "Born") {
           bio.birth = await parse_date_and_place(context, value);
         } else if (label == "Died") {
           bio.death = await parse_date_and_place(context, value);
-        } else if (label == "Birth Name") {
+        } else if (label == "Birth name") {
           bio.birthname = value;
         } else if (label == "Nickname") {
           bio.nickname = value;
         } else if (label == "Nicknames") {
           // Skip if multiple nicknames.
         } else if (label == "Height") {
-          let m = value.match(/^\d+'(\s\d+[¼½¾]?")\s+\((\d)\.(\d+) m\)/);
+          let m = value.match(/(\d)\.(\d+) m/);
           if (m) {
-            let height = parseInt(m[3]);
-            if (m[3].length == 1) height *= 10;
-            height += parseInt(m[2]) * 100;
+            let height = parseInt(m[2]);
+            if (m[2].length == 1) height *= 10;
+            height += parseInt(m[1]) * 100;
             bio.height = store.frame();
             bio.height.add(n_amount, height);
             bio.height.add(n_unit, n_cm);
@@ -261,7 +284,8 @@ export default class IMDBPlugin {
     }
 
     // Get gender from Self-verified table.
-    let verified = doc.getElementById("selfVerifiedTable");
+    // TODO: port to new layout
+    let verified = sections.get("Self-verified");
     if (verified) {
       for (let row of verified.querySelectorAll("tr").values()) {
         let cols = row.querySelectorAll("td");
@@ -281,7 +305,7 @@ export default class IMDBPlugin {
     if (!bio.gender) {
       let male_score = 0;
       let female_score = 0;
-      for (let block of doc.querySelectorAll("div.soda").values()) {
+      for (let block of doc.querySelectorAll("div.ipc-html-content").values()) {
         let text = trim(block.innerText).toLowerCase();
         let tokens = text.split(/[\s\(\)\.,:&\-"]+/);
         for (let token of tokens) {
@@ -296,18 +320,19 @@ export default class IMDBPlugin {
         bio.gender =  male_score > female_score ? n_male : n_female;
       }
     }
-    if (!bio.gender) {
-      bio.gender = await gender_for_name(name);
+    if (!bio.gender && bio.name) {
+      bio.gender = await gender_for_name(bio.name);
     }
 
     // Add bio to topic.
-    topic.put(n_name, name);
+    topic.put(n_name, bio.name);
     topic.put(n_birth_name, bio.birthname);
     topic.put(n_nickname, bio.nickname);
     topic.put(n_instance_of, n_human);
     topic.put(n_gender, bio.gender);
     if (bio.birth) {
-      topic.put(n_date_of_birth, bio.birth.date);
+      let bday = isNaN(bio.birth.date) ? n_birthday : n_date_of_birth;
+      topic.put(bday, bio.birth.date);
       topic.put(n_place_of_birth, bio.birth.location);
     }
     if (bio.death) {
@@ -320,74 +345,76 @@ export default class IMDBPlugin {
     // Get relatives.
     let relatives = new Array();
     let collector = new ItemCollector(store);
-    let family = doc.getElementById("tableFamily");
+    let family = sections.get("Family");
     if (family) {
-      for (let row of family.querySelectorAll("tr").values()) {
-        let cols = row.querySelectorAll("td");
-        let label = cols[0].innerText.trim();
-        let value = cols[1];
+      let list = family.querySelector("ul");
+      for (let row of list.querySelectorAll("li").values()) {
+        let span = row.querySelector("span");
+        let div = row.querySelector("div");
+        if (!span || !div) continue;
 
         // Get kinship from label.
+        let label = span.innerText;
         let kinship = kinships[label];
         if (!kinship) {
           console.log("Unknown kinship: ", label);
           continue;
         }
 
-        // Parse text and links.
-        let links = new Map();
-        let lines = [];
-        let line = "";
-        for (let c = value.firstChild; c; c = c.nextSibling) {
-          if (c.nodeType == Node.TEXT_NODE) {
-            line += c.textContent;
-          } else if (c.nodeType == Node.ELEMENT_NODE) {
-            if (c.tagName == "A") {
-              let href = c.getAttribute("href");
-              let m = href.match(/^\/name\/(nm\d+)/);
-              let text = c.innerText;
-              if (m) links.set(text.trim(), m[1]);
-              line += text;
-            } else if (c.tagName == "BR") {
-              lines.push(trim(line));
-              line = "";
-            } else {
-              console.log(c.tagName);
-            }
-          }
-        }
-        if (line) lines.push(trim(line));
-
         // Add family member(s).
-        for (let l of lines) {
-          // Get name, period, relation, and cause.
+        let list = div.querySelector("ul.ipc-inline-list");
+        for (let item of list.children) {
+          let line = item.innerText;
+          let link;
+          let a = item.querySelector("a");
+          if (a) {
+            let href = a.getAttribute("href");
+            let m = href.match(/^\/name\/(nm\d+)/);
+            link = m[1];
+          }
+
+          // Get name, period, and relation.
           let r = {kinship}
-          let m = l.match(/^(.+?) \((.+?) - (.+?)\)( \((.+?)\))?/)
+          let m = line.match(/^(.+?)\((.+?) - (.+?)\)( \((.+?)\))?/)
           if (m) {
             r.name = m[1];
             r.start = parse_date(m[2]);
             r.end = parse_date(m[3]);
             r.relation = m[5];
           } else {
-            let m = l.match(/^(.+?) \((.+?)\)/);
+            let m = line.match(/^(.+?)\((.+?)\)/);
             if (m) {
               r.name = m[1];
               r.relation = m[2];
             } else {
-              r.name = l;
+              r.name = line;
             }
           }
-          if (r.relation in kinships) r.kinship = kinships[r.relation];
-          if (r.relation == "divorced") r.cause = n_divorce;
+
+          if (r.relation) {
+            for (let rel of r.relation.split(",")) {
+              rel = rel.trim();
+              if (rel in kinships) {
+                r.kinship = kinships[r.relation];
+              } else if (rel == "divorced") {
+                r.cause = n_divorce;
+              } else if (rel == "1 child") {
+                r.children = 1;
+              } else {
+                let m = rel.match(/(\d+) children/);
+                if (m) r.children = parseInt(m[1]);
+              }
+            }
+          }
           if (r.start == "?") r.start = undefined;
           if (r.end == "?" || r.end == "present") r.end = undefined;
           if (r.name == "None") continue;
 
           // Try to resolve name.
           r.relative = r.name;
-          r.link = links.get(r.name);
-          if (r.link) {
-            let item = await context.idlookup(n_imdb, r.link);
+          r,link = link;
+          if (link) {
+            let item = await context.idlookup(n_imdb, link);
             if (item) {
               r.item = item;
               r.relative = item;
@@ -419,14 +446,14 @@ export default class IMDBPlugin {
     }
     if (parents.length == 2) {
       if (parents[0].kinship.gender == n_male) {
-        parents[1].kinship = kinships["mother"];
+        parents[1].kinship = kinships["Mother"];
       } else if (parents[0].kinship.gender == n_female) {
-        parents[1].kinship = kinships["father"];
+        parents[1].kinship = kinships["Father"];
       }
       if (parents[1].kinship.gender == n_male) {
-        parents[0].kinship = kinships["mother"];
+        parents[0].kinship = kinships["Mother"];
       } else if (parents[1].kinship.gender == n_female) {
-        parents[0].kinship = kinships["father"];
+        parents[0].kinship = kinships["Father"];
       }
     }
 
@@ -436,7 +463,7 @@ export default class IMDBPlugin {
       if (r1.kinship.rank > r2.kinship.rank) return 1;
       let d1 = r1.start || r1.end;
       let d2 = r2.start || r2.end;
-      if (d1 && d2) return d1 < d2 ? -1 : 1;
+      if (d1 && d2) return full_date(d1) < full_date(d2) ? -1 : 1;
       if (d1) return -1;
       if (d2) return 1;
       return 0;
@@ -452,6 +479,7 @@ export default class IMDBPlugin {
         if (r.end) v.add(n_end_time, r.end);
         if (r.cause) v.add(n_end_cause, r.cause);
         if (r.kinship.qual) v.add(n_kinship, r.kinship.qual);
+        if (r.children) v.add(n_num_children, r.children);
         if (r.link) v.add(n_imdb, r.link);
         topic.add(r.kinship.prop, v);
       } else {
@@ -481,14 +509,11 @@ export default class IMDBPlugin {
     let doc = new DOMParser().parseFromString(html, "text/html");
 
     // Add social links.
-    let extsites = doc.getElementById("external_sites_content");
-    if (extsites) {
-      let sites = extsites.querySelectorAll("a.tracked-offsite-link");
-      for (let link of sites.values()) {
-        let href = link.getAttribute("href");
-        if (href.includes(".blogspot.com")) continue;
-        await social.add_link(href);
-      }
+    let sites = doc.querySelectorAll("a.ipc-metadata-list-item__label");
+    for (let link of sites.values()) {
+      let href = link.getAttribute("href");
+      if (href.includes(".blogspot.com")) continue;
+      await social.add_link(href);
     }
   }
 }
