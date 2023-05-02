@@ -119,17 +119,6 @@ const gender_words = {
   "his": n_male,
 };
 
-async function lookup(context, name) {
-  if (!name) return undefined;
-  let r = await context.kblookup(name, {fullmatch: 1});
-  let data = await r.json();
-  if (data.matches.length > 0) {
-    return frame(data.matches[0].ref);
-  } else {
-    return name;
-  }
-}
-
 var name_gender;
 
 async function gender_for_name(name) {
@@ -178,13 +167,13 @@ async function parse_date_and_place(context, text) {
   if (m[2]) {
     location = m[2].split(/, /);
     country = location.pop();
-    location = await lookup(context, location.join(", "));
-    country = await lookup(context, country);
+    location = await context.lookup(location.join(", "));
+    country = await context.lookup(country);
   }
 
   let cause = m[3];
   if (cause == "undisclosed") cause = undefined;
-  cause = await lookup(context, cause);
+  cause = await context.lookup(cause);
 
   return {date, location, country, cause};
 }

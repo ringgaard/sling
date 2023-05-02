@@ -217,10 +217,6 @@ let xrefs = [
     property: frame("P2471"),
   },
   {
-    pattern: /^https?:\/\/www\.iafd\.com\/person\.rme\/perfid=(\w+)\/?/,
-    property: frame("P3869"),
-  },
-  {
     pattern: /^https?:\/\/www\.adultfilmdatabase\.com\/actor.cfm\?actorid=(\w+)/,
     property: frame("P3351"),
   },

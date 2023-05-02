@@ -144,17 +144,6 @@ const tagsdir = {
 
 const anchors = new Set(["IMDB profile"]);
 
-async function lookup(context, name) {
-  if (name.length == 0) return null;
-  let r = await context.kblookup(name, {fullmatch: 1});
-  let data = await r.json();
-  if (data.matches.length > 0) {
-    return frame(data.matches[0].ref);
-  } else {
-    return name;
-  }
-}
-
 function date2sling(d) {
   return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
 }
@@ -269,7 +258,7 @@ export default class ListalPlugin {
     // Country.
     let country = fields.get("Country of origin");
     if (country) {
-      country = await lookup(context, country);
+      country = await context.lookup(country);
       if (!topic.has(n_place_of_birth, country)) {
         topic.put(n_country_of_citizenship, country);
       }
@@ -285,7 +274,7 @@ export default class ListalPlugin {
     // Residence.
     let residence = fields.get("Currently Residing In");
     if (residence) {
-      residence = await lookup(context, residence);
+      residence = await context.lookup(residence);
       topic.put(n_residence, residence);
     }
 

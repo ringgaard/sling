@@ -1475,7 +1475,7 @@ class CaseEditor extends MdApp {
       ${number(num_topics, "topic")}
       ${number(num_facts, "fact")}
       ${number(num_folders, "folder")}
-      ${number(num_names, "names")}
+      ${number(num_names, "name")}
       ${number(num_comments, "note")}
       ${number(num_redirs, "extension")}
       ${number(num_pictures, "picture")}

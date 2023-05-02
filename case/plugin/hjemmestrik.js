@@ -129,17 +129,6 @@ const zodiac = {
   "fisk": pisces,
 };
 
-async function lookup(context, name) {
-  if (name.length == 0) return null;
-  let r = await context.kblookup(name, {fullmatch: 1});
-  let data = await r.json();
-  if (data.matches.length > 0) {
-    return frame(data.matches[0].ref);
-  } else {
-    return name;
-  }
-}
-
 export default class HjemmestrikPlugin {
   async process(action, query, context) {
     let url = new URL(query);
@@ -240,7 +229,7 @@ export default class HjemmestrikPlugin {
     // Add residence.
     let city = props["By"];
     if (city) {
-      let location = await lookup(context, city);
+      let location = await context.lookup(city);
       topic.put(n_residence, location);
     }
     topic.put(n_country, n_denmark);
@@ -248,7 +237,7 @@ export default class HjemmestrikPlugin {
     // Add occupation.
     let job = props["Beskæftigelse"];
     if (job) {
-      let occupation = await lookup(context, job);
+      let occupation = await context.lookup(job);
       topic.put(n_occupation, occupation);
     }
 

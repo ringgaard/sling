@@ -66,17 +66,6 @@ function date2sling(d) {
   }
 }
 
-async function lookup(context, name) {
-  if (name.length == 0) return null;
-  let r = await context.kblookup(name, {fullmatch: 1});
-  let data = await r.json();
-  if (data.matches.length > 0) {
-    return frame(data.matches[0].ref);
-  } else {
-    return name;
-  }
-}
-
 export default class BabepediaPlugin {
   async process(action, query, context) {
     let url = new URL(query);
@@ -158,8 +147,8 @@ export default class BabepediaPlugin {
         if (country == "Republic of") {
           country = "Republic of " + location.pop();
         }
-        location = await lookup(context, location.join(", "));
-        country = await lookup(context, country);
+        location = await context.lookup(location.join(", "));
+        country = await context.lookup(country);
         if (location) {
           topic.put(n_place_of_birth, location);
           topic.put(n_country_of_citizenship, country);
@@ -175,7 +164,7 @@ export default class BabepediaPlugin {
           if (occ in occupations) {
             occ = occupations[occ];
           } else {
-            occ = await lookup(context, occ);
+            occ = await context.lookup(occ);
           }
           if (occ && !topic.has(n_occupation, occ)) {
             topic.put(n_occupation, occ);

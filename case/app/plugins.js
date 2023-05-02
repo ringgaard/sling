@@ -146,6 +146,16 @@ var plugins = [
   ],
 },
 
+// IAFD profiles.
+{
+  name: "iafd",
+  module: "iafd.js",
+  actions: [PASTEURL, SEARCHURL],
+  patterns: [
+    /^https?:\/\/www\.iafd\.com\/person\.rme\/perfid=(\w+)\/?/,
+  ],
+},
+
 // Actresses from glamourgirlsofthesilverscreen.com.
 {
   name: "ggss",
@@ -456,6 +466,17 @@ export class Context {
     qs.append("fmt", "cjson");
     let url = `${settings.kbservice}/kb/query?${qs}`;
     return fetch(url);
+  }
+
+  async lookup(name) {
+    if (!name) return undefined;
+    let r = await this.kblookup(name, {fullmatch: 1});
+    let data = await r.json();
+    if (data.matches.length > 0) {
+      return frame(data.matches[0].ref);
+    } else {
+      return name;
+    }
   }
 
   async idlookup(prop, identifier) {

@@ -17,17 +17,6 @@ const n_place_of_birth = frame("P19");
 const n_occupation = frame("P106");
 const n_famousbdays = frame("P11194");
 
-async function lookup(context, name) {
-  if (name.length == 0) return null;
-  let r = await context.kblookup(name, {fullmatch: 1});
-  let data = await r.json();
-  if (data.matches.length > 0) {
-    return frame(data.matches[0].ref);
-  } else {
-    return name;
-  }
-}
-
 function element_text(parent, selector) {
   return parent.querySelector(selector).innerText.trim();
 }
@@ -86,9 +75,9 @@ export default class FamousBirthdaysPlugin {
 
     let place = stats[2].innerText.replace(/\s+/g, " ").trim();
     m = place.match(/^Birthplace\s+(.+)/)
-    let pob = await lookup(context, m[1].trim());
+    let pob = await context.lookup(m[1].trim());
 
-    let occ = await lookup(context, title);
+    let occ = await context.lookup(title);
 
     // Add bio to topic.
     topic.put(n_name, name);
