@@ -97,6 +97,11 @@ flags.define("--cont",
              default=False,
              action="store_true")
 
+flags.define("--aic",
+             help="add albums in comments",
+             default=False,
+             action="store_true")
+
 flags.define("url",
              nargs="*",
              help="photo URLs",
@@ -231,7 +236,10 @@ else:
   else:
     # Fetch photo urls.
     for url in flags.arg.url:
-      num_added += profile.add_media(url, flags.arg.caption, nsfw_override)
+      if flags.arg.aic:
+        num_added = profile.add_albums_in_comments(url, nsfw_override)
+      else:
+        num_added += profile.add_media(url, flags.arg.caption, nsfw_override)
 
   # Remove duplicates.
   if flags.arg.dedup: num_removed += profile.dedup()

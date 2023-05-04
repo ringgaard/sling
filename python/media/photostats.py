@@ -14,6 +14,8 @@
 
 """Photo database statistics."""
 
+from urllib.parse import urlparse
+import re
 import requests
 import sling
 import sling.flags as flags
@@ -33,6 +35,11 @@ flags.define("--published",
              default=False,
              action="store_true")
 
+flags.define("--sites",
+             help="statistics for photo sites",
+             default=False,
+             action="store_true")
+
 flags.define("--large",
              help="Large profile size",
              default=1000,
@@ -45,7 +52,6 @@ num_profiles = 0
 num_photos = 0
 num_nsfw = 0
 num_new = 0
-hum_legacy = 0
 
 store = sling.Store()
 n_id = store["id"]
@@ -65,6 +71,37 @@ large_profiles = {}
 max_photos = 0
 topic_names = {}
 topics = set()
+sites = {}
+
+site_patterns = [
+  re.compile(r"www\.(.*)"),
+  re.compile(r"i\.(.*)"),
+  re.compile(r"images\d*\.(.*)"),
+  re.compile(r"img\d*\.(.*)"),
+  re.compile(r"ist\d-\d\.(.*)"),
+  re.compile(r"farm\d+\.(.*)"),
+  re.compile(r".+\.(\w\w\w+\.\w+)"),
+]
+
+def add_media(media):
+  global num_nsfw
+  if type(media) is sling.Frame:
+    if media[n_subject_of] == n_nsfw or media[n_has_quality] == n_nsfw:
+      num_nsfw += 1
+    url = media[n_is]
+  else:
+    url = media
+
+  if url.startswith("!"):
+    url = url[1:]
+    num_nsfw += 1
+  if flags.arg.sites:
+    host = urlparse(url).netloc
+    domain = host
+    for pattern in site_patterns:
+      m = pattern.fullmatch(domain)
+      if m != None: domain = m.group(1)
+    sites[domain] = sites.get(domain, 0) + 1
 
 if flags.arg.profiles:
   photodb = sling.Database("vault/photo")
@@ -77,26 +114,16 @@ if flags.arg.profiles:
     topics.add(id)
 
     count = 0
-    legacy = False
     for m in profile(n_media):
       num_photos += 1
       count += 1
-      if type(m) is sling.Frame:
-        if m[n_subject_of] == n_nsfw or m[n_has_quality] == n_nsfw:
-          num_nsfw += 1
-          hum_legacy += 1
-          legacy = True
-        elif m[n_is].startswith('!'):
-          num_nsfw += 1
-      elif m.startswith('!'):
-        num_nsfw += 1
+      add_media(m)
 
     b = int(count / bin_size)
     profile_bins[b] += 1
     photo_bins[b] += count
     if count > flags.arg.large: large_profiles[str(key)] = count;
     if count > max_photos: max_photos = count
-    if legacy: print(key, "has legacy nsfw")
   photodb.close()
 
 if flags.arg.cases:
@@ -106,7 +133,6 @@ if flags.arg.cases:
     if n_topics not in casefile: continue
     if flags.arg.published and not casefile[n_publish]: continue
 
-    legacy = False
     for topic in casefile[n_topics]:
       num_profiles += 1
       count = 0
@@ -123,15 +149,7 @@ if flags.arg.cases:
       for m in topic(n_media):
         num_photos += 1
         count += 1
-        if type(m) is sling.Frame:
-          if m[n_subject_of] == n_nsfw or m[n_has_quality] == n_nsfw:
-            num_nsfw += 1
-            hum_legacy += True
-            legacy = True
-          elif m[n_is].startswith('!'):
-            num_nsfw += 1
-        elif m.startswith('!'):
-          num_nsfw += 1
+        add_media(m)
 
       b = int(count / bin_size)
       profile_bins[b] += 1
@@ -140,7 +158,6 @@ if flags.arg.cases:
         large_profiles[topic.id] = count;
         topic_names[topic.id] = topic.name
       if count > max_photos: max_photos = count
-    if legacy: print("Case #", key, "has legacy nsfw")
   casedb.close()
 
 print(num_profiles, "profiles")
@@ -151,7 +168,6 @@ print("%d photos, %s sfw, %s nsfw (%f%%)" %
 print(len(topics), "topics")
 if num_new > 0: print(num_new, "new")
 print(max_photos, "photos in largest profile")
-if hum_legacy > 0: print(hum_legacy, "photos with legacy nsfw")
 print()
 
 acc_profiles = 0
@@ -182,4 +198,9 @@ for k, v in sorted(large_profiles.items(), key=lambda item: -item[1]):
   if name is None: name = topic_names.get(k)
   print("%3d. %5d %s (%s)" % (n, v, name, k))
   n += 1
+
+if flags.arg.sites:
+  print()
+  for site, count in sorted(sites.items(), key=lambda item: -item[1]):
+    if count > 1: print("%5d %s" % (count, site))
 

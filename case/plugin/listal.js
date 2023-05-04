@@ -265,7 +265,7 @@ export default class ListalPlugin {
     }
     let place = fields.get("Born and residing in");
     if (place) {
-      place = await lookup(context, place);
+      place = await context.lookup(place);
       if (!topic.has(n_place_of_birth, country)) {
         topic.put(n_country_of_citizenship, place);
       }

@@ -273,13 +273,16 @@ export default class IMDBPlugin {
     }
 
     // Get gender from Self-verified table.
-    // TODO: port to new layout
-    let verified = sections.get("Self-verified");
+    let verified = sections.get("Self-verified on IMDbPro");
     if (verified) {
-      for (let row of verified.querySelectorAll("tr").values()) {
-        let cols = row.querySelectorAll("td");
-        let label = cols[0].innerText;
-        let value = trim(cols[1].innerText);
+      let list = verified.querySelector("ul");
+      for (let row of list.querySelectorAll("li").values()) {
+        let span = row.querySelector("span");
+        let div = row.querySelector("div");
+        if (!span || !div) continue;
+        let label = span.innerText;
+        let value = trim(div.innerText);
+
         if (label == "Gender / Gender identity") {
           if (value == "Male") {
             bio.gender =  n_male;

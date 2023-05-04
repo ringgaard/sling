@@ -839,6 +839,11 @@ class Profile:
           print("Album", m[1])
           count += self.add_media(m[1], None, nsfw)
 
+      if count == 0:
+        for m in re.finditer("(https?:\/\/imgchest\.com\/p\/\w+)", body):
+          print("Album", m[1])
+          count += self.add_media(m[1], None, nsfw)
+
     return count
 
   # Remove duplicate photos.
