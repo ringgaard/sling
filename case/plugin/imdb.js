@@ -404,7 +404,7 @@ export default class IMDBPlugin {
 
           // Try to resolve name.
           r.relative = r.name;
-          r,link = link;
+          r.link = link;
           if (link) {
             let item = await context.idlookup(n_imdb, link);
             if (item) {

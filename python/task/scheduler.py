@@ -139,6 +139,7 @@ class Job:
   COMPLETED = 4
   FAILED    = 5
   DAEMON    = 6
+  CANCELED  = 7
 
   def __init__(self, task, args):
     self.task = task
@@ -283,6 +284,9 @@ class Queue(threading.Thread):
     jobs.append(job)
 
   def execute(self, job):
+    # Skip job if it has been canceled.
+    if job.state == Job.CANCELED: return
+
     # Wait if job is paused.
     while job.state == Job.PAUSED: time.sleep(5)
     job.ready = time.time()
@@ -495,6 +499,7 @@ def cancel_job(jobid):
     job.process.terminate()
   elif job.state == Job.PENDING:
     jobs.remove(job)
+    job.state = Job.CANCELED
   else:
     return None
 
