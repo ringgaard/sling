@@ -109,6 +109,14 @@ def cache_images(media):
       num_errors += 1
       continue
 
+    # Check content length.
+    if "Content-Length" in r.headers:
+      length = int(r.headers["Content-Length"])
+      if length != len(image):
+        print("length mismatch", length, "vs", len(image), url)
+        num_errors += 1
+        continue
+
     # Save image in media database.
     mediadb.put(url, image, version=last_modified, mode=sling.DBNEWER)
 

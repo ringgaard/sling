@@ -227,6 +227,12 @@ for url in media:
     print("empty", url)
     continue
 
+  # Check content length.
+  if "Content-Length" in r.headers:
+    length = int(r.headers["Content-Length"])
+    if length != len(image):
+      print("length mismatch", length, "vs", len(image), url)
+
   # Check if image is HTML-like.
   if image.startswith(b"<!doctype html>") or \
      image.startswith(b"<!DOCTYPE html>"):
