@@ -33,7 +33,7 @@ export async function oauth_callback() {
   let authurl = encodeURIComponent(window.location.href);
   let url = `/case/wikibase/access?authid=${authid}&authurl=${authurl}`;
   let r = await fetch(url);
-  let response = await r.json()
+  let response = await r.json();
   if (!response.key) {
     console.log("Error accessing wikidata client token", response);
     return false;

@@ -164,12 +164,15 @@ export class Store {
   }
 
   // Parse input data and return first object.
-  parse(data) {
+  async parse(data) {
     if (data instanceof Response) {
-      return data.arrayBuffer().then(data => this.parse(data));
+      if (!data.ok) {
+        throw `Error retrieving data from ${data.url}: ${data.statusText}`;
+      }
+      data = await data.arrayBuffer();
     }
     if (data instanceof Blob) {
-      return data.arrayBuffer().then(data => this.parse(data));
+      data = await data.arrayBuffer();
     }
 
     if (has_binary_marker(data)) {

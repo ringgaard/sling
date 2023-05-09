@@ -87,6 +87,7 @@ export async function kbsearch(query, results, options) {
     params += `&q=${encodeURIComponent(query)}`;
 
     let response = await fetch(`${settings.kbservice}${path}?${params}`);
+    if (!response.ok) throw `Search failed: ${response.statusText}`;
     let data = await response.json();
     let twiddle = true;
     for (let item of data.matches) {
