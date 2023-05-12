@@ -23,6 +23,7 @@ const n_media = frame("media");
 const n_internal = frame("internal");
 const n_casefile = frame("casefile");
 const n_main = frame("main");
+const n_lex = frame("lex");
 
 const n_item_type = frame("/w/item");
 const n_lexeme_type = frame("/w/lexeme");
@@ -536,6 +537,49 @@ class XrefPanel extends PropertyPanel {
 
 Component.register(XrefPanel);
 
+class DocumentPanel extends Component {
+  render() {
+    return this.state;
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        padding: 4px 8px;
+        font-size: 16px;
+      }
+    `;
+  }
+}
+
+Component.register(DocumentPanel);
+
+class DocumentPanels extends Component {
+  visible() {
+    return this.state && this.state.length > 0;
+  }
+
+  render() {
+    if (!this.state) return;
+    let h = new Array();
+    for (let doc of this.state) {
+      h.push(new DocumentPanel(doc));
+    }
+    return h;
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        display: flex;
+        flex-direction: column;
+      }
+    `;
+  }
+}
+
+Component.register(DocumentPanels);
+
 class PicturePanel extends Component {
   onconnected() {
     this.bind(null, "click", e => this.onopen(e));
@@ -779,6 +823,7 @@ class ItemPanel extends Component {
     let xrefs = new Frame(store);
     let gallery = [];
     let subtopics = new Array();
+    let docs = new Array();
     for (let [name, value] of item) {
       if (name === n_media) {
         let url = store.resolve(value);
@@ -799,6 +844,8 @@ class ItemPanel extends Component {
         if (!top || n != title) names.push(n);
       } else if (name === n_description) {
         description = value;
+      } else if (name === n_lex) {
+        docs.push(value);
       } else if (name === n_internal) {
         // Skip internals.
       } else if ((name instanceof Frame) && name.get(n_target) == n_xref_type) {
@@ -819,6 +866,7 @@ class ItemPanel extends Component {
     this.find("#names").update(names.join(" • "));
     this.find("#description").update(description);
     this.find("#properties").update(props);
+    this.find("#documents").update(docs);
     this.find("#widget").update(widget);
     this.find("#picture").update(gallery);
     this.find("#xrefs").update(xrefs);
@@ -848,6 +896,8 @@ class ItemPanel extends Component {
         <div class="left">
           <property-panel id="properties">
           </property-panel>
+          <document-panels id="documents">
+          </document-panels>
         </div>
 
         <div id="vruler"></div>

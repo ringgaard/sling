@@ -7,7 +7,9 @@ embed_data(
   srcs = [
     "lib/component.js",
     "lib/oneof.js",
+    "lib/document.js",
     "lib/docview.js",
+    "lib/docviewer.js",
     "lib/gallery.js",
     "lib/material.js",
     "lib/frame.js",

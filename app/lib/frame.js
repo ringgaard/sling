@@ -164,15 +164,15 @@ export class Store {
   }
 
   // Parse input data and return first object.
-  async parse(data) {
+  parse(data) {
     if (data instanceof Response) {
       if (!data.ok) {
         throw `Error retrieving data from ${data.url}: ${data.statusText}`;
       }
-      data = await data.arrayBuffer();
+      return data.arrayBuffer().then(data => this.parse(data));
     }
     if (data instanceof Blob) {
-      data = await data.arrayBuffer();
+      return data.arrayBuffer().then(data => this.parse(data));
     }
 
     if (has_binary_marker(data)) {
@@ -1035,7 +1035,7 @@ const keywords = new Map([
 // Read objects in text format and convert these to the internal object format.
 export class Reader {
   // Initialize reader.
-  constructor(store, data) {
+  constructor(store, data, bare) {
     this.store = store ? store : new Store();
     if (data instanceof ArrayBuffer) data = strdecoder.decode(data);
     this.input = data.toString();
@@ -1046,7 +1046,7 @@ export class Reader {
     this.value = null;
     this.refs = [];
     this.read();
-    this.next();
+    if (!bare) this.next();
   }
 
   // Get next character in input.
