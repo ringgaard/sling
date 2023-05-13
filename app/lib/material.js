@@ -354,7 +354,9 @@ export class StdDialog extends MdDialog {
     let h = [];
     if (s.title) {
       h.push("<md-dialog-top>");
-      if (s.icon) h.push(`<md-icon icon="${s.icon}"></md-icon>`);
+      if (s.icon) {
+        h.push(`<md-icon icon="${s.icon}" style="${s.style || ''}"></md-icon>`);
+      }
       h.push(Component.escape(s.title));
       h.push("</md-dialog-top>");
     }
@@ -374,24 +376,25 @@ export class StdDialog extends MdDialog {
     return h.join("");
   }
 
-  static choose(title, message, buttons, icon) {
-    let dialog = new StdDialog({title, message, buttons, icon});
+  static choose(title, message, buttons, icon, style) {
+    let dialog = new StdDialog({title, message, buttons, icon, style});
     return dialog.show();
   }
 
   static info(title, message) {
     let buttons = {"OK": true};
-    return StdDialog.choose(title, message, buttons, "info");
+    return StdDialog.choose(title, message, buttons, "info", "color: blue");
   }
 
   static alert(title, message) {
     let buttons = {"OK": true};
-    return StdDialog.choose(title, message, buttons, "warning");
+    return StdDialog.choose(title, message, buttons, "warning",
+                            "color: orange");
   }
 
   static error(message) {
     let buttons = {"OK": true};
-    return StdDialog.choose("Error", message, buttons, "error");
+    return StdDialog.choose("Error", message, buttons, "cancel", "color: red");
   }
 
   static ask(title, message, yes = "Yes", no = "No") {

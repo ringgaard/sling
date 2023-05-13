@@ -1443,9 +1443,12 @@ class CaseEditor extends MdApp {
     let num_names = 0;
     let num_comments = 0;
     let num_pictures = 0;
+    let num_with_pictures = 0;
+    let num_nsfw_pictures = 0;
     let num_redirs = 0;
     for (let t of this.topics) {
       num_topics += 1;
+      let has_picture = false;
       for (let [name, value] of t) {
         if (name == n_name || name == n_alias) {
           num_names += 1;
@@ -1453,12 +1456,16 @@ class CaseEditor extends MdApp {
           num_comments += 1;
         } if (name == n_media) {
           num_pictures += 1;
+          has_picture = true;
+          let url = store.resolve(value);
+          if (url.startsWith("!")) num_nsfw_pictures += 1;
         } if (name == n_is) {
           num_redirs += 1;
         } if (name != n_id) {
           num_facts += 1;
         }
       }
+      if (has_picture) num_with_pictures += 1;
     }
 
     let created = new Date(this.casefile.get(n_created));
@@ -1473,12 +1480,15 @@ class CaseEditor extends MdApp {
       modified: ${modified.toDateString()}
 
       ${number(num_topics, "topic")}
+      ${number(num_redirs, "existing topic")}
+      ${number(num_topics - num_redirs, "new topic")}
+      ${number(num_with_pictures, "picture topic")}
       ${number(num_facts, "fact")}
       ${number(num_folders, "folder")}
       ${number(num_names, "name")}
       ${number(num_comments, "note")}
-      ${number(num_redirs, "extension")}
       ${number(num_pictures, "picture")}
+      ${number(num_nsfw_pictures, "NSFW picture")}
     `;
     StdDialog.info("Case statistics", message);
   }

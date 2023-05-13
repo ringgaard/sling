@@ -43,12 +43,7 @@ export async function search(queries, backends, options = {}) {
     // Collect search results from backends.
     if (query.length > 0) {
       for (let backend of backends) {
-        let start = performance.now();
         await backend(query, items, options);
-        let time = Math.round(performance.now() - start);
-        if (time > 10) {
-          console.log(`search ${backend.name} ${time} ms`);
-        }
       }
     }
   }

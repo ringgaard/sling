@@ -607,6 +607,14 @@ export function date_parser(value, results) {
     let month = monthnum(m[1]);
     if (month) add_date_result(results, m[2], month, null);
   }
+
+  // Parse YO in YYYY.
+  m = value.match(/^(\d\d) in (\d\d\d\d)$/);
+  if (m) {
+    let age = parseInt(m[1]);
+    let year = parseInt(m[2]);
+    add_date_result(results, year - age, null, null);
+  }
 }
 
 export function quantity_parser(value, results) {
