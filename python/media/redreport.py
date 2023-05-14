@@ -507,10 +507,15 @@ class SubredditCard extends MdCard {
     let sr = this.state
     let h = []
 
+    // Compute coverage.
+    let dups = 0;
+    for (let item of sr.matched) {
+      if (item.dup) dups++;
+    }
+    let unknown = sr.total - sr.matches;
+    let known = sr.matches - dups;
+
     // Render header.
-    let coverage = sr.total ? Math.round(sr.matches / sr.total * 100) : 0;
-    let gw = coverage * 2;
-    let rw = (100 - coverage) * 2;
     h.push(`
       <h1>
         <a id="${sr.name}"
@@ -518,13 +523,28 @@ class SubredditCard extends MdCard {
            target="_blank">
           ${sr.name}
         </a>
-      </h1>
-      <table class="coverage"><tr>
-        <td class="hits" style="width: ${gw}px;"></td>
-        <td class="miss" style="width: ${rw}px;"></td>
-        <td class="stat">${sr.matches} / ${sr.total} matched (${coverage}%)</td>
-      </tr></table>
-    `);
+      </h1>`
+    );
+    if (sr.total > 0) {
+      let coverage = sr.total ? Math.round(known / sr.total * 100) : 0;
+      let scale = Math.round(200 / sr.total);
+
+      let hw = known * scale;
+      let kw = dups * scale;
+      let mw = unknown * scale;
+
+      h.push(`
+        <table class="coverage"><tr>
+          <td class="hits" style="width: ${hw}px;"></td>
+          <td class="known" style="width: ${kw}px;"></td>
+          <td class="miss" style="width: ${mw}px;"></td>
+          <td class="stat">
+            ${sr.matches} / ${sr.total} matched (${coverage}%)
+            ${dups > 1 ? ", " + dups + " dups" : ""}
+          </td>
+        </tr></table>
+      `);
+    }
 
     // Render postings.
     let items = hits ? sr.matched : sr.unmatched;
@@ -562,6 +582,10 @@ class SubredditCard extends MdCard {
       }
       $ .hits {
         background: green;
+        padding: 0;
+      }
+      $ .known {
+        background: darkseagreen;
         padding: 0;
       }
       $ .miss {

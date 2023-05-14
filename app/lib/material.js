@@ -414,8 +414,8 @@ export class StdDialog extends MdDialog {
         min-width: 200px;
       }
       $ md-icon {
-         font-size: 32px;
-         margin-right: 6px;
+         font-size: 48px;
+         margin-right: 8px;
       }
     `;
   }
