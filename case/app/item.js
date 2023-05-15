@@ -6,6 +6,7 @@ import {inform} from "/common/lib/material.js";
 import {Frame, QString} from "/common/lib/frame.js";
 import {store, frame, settings} from "/common/lib/global.js";
 import {Time, LabelCollector, latlong} from "/common/lib/datatype.js";
+import {DocumentViewer} from "/common/lib/docviewer.js";
 import {PhotoGallery, censor, imageurl, mediadb} from "/common/lib/gallery.js";
 
 import {url_format} from "./schema.js";
@@ -538,23 +539,6 @@ class XrefPanel extends PropertyPanel {
 Component.register(XrefPanel);
 
 class DocumentPanel extends Component {
-  render() {
-    return this.state;
-  }
-
-  static stylesheet() {
-    return `
-      $ {
-        padding: 4px 8px;
-        font-size: 16px;
-      }
-    `;
-  }
-}
-
-Component.register(DocumentPanel);
-
-class DocumentPanels extends Component {
   visible() {
     return this.state && this.state.length > 0;
   }
@@ -563,7 +547,7 @@ class DocumentPanels extends Component {
     if (!this.state) return;
     let h = new Array();
     for (let doc of this.state) {
-      h.push(new DocumentPanel(doc));
+      h.push(new DocumentViewer(doc));
     }
     return h;
   }
@@ -578,7 +562,7 @@ class DocumentPanels extends Component {
   }
 }
 
-Component.register(DocumentPanels);
+Component.register(DocumentPanel);
 
 class PicturePanel extends Component {
   onconnected() {
@@ -896,8 +880,8 @@ class ItemPanel extends Component {
         <div class="left">
           <property-panel id="properties">
           </property-panel>
-          <document-panels id="documents">
-          </document-panels>
+          <document-panel id="documents">
+          </document-panel>
         </div>
 
         <div id="vruler"></div>

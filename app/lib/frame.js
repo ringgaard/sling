@@ -1063,6 +1063,11 @@ export class Reader {
     return this.token == -1;
   }
 
+  // Check if all input has been read.
+  end() {
+    return this.ch == -1;
+  }
+
   // Read next token from input.
   next() {
     // Keep reading until we either read a token or reach the end of the input.
@@ -1077,7 +1082,7 @@ export class Reader {
       }
 
       // Check for end of input.
-      if (this.ch == -1) {
+      if (this.end()) {
         this.token = -1;
         return;
       }
@@ -1140,7 +1145,7 @@ export class Reader {
       if (this.ch == 92) this.read();  // '\'
       this.read();
     }
-    if (this.ch == -1) throw "Unterminated string";
+    if (this.end()) throw "Unterminated string";
     this.read();
     this.value = JSON.parse(this.input.slice(start - 1, this.pos - 1));
     this.token = -5;
@@ -1172,7 +1177,7 @@ export class Reader {
       while (this.ch >= 48 && this.ch <= 57) this.read();
     }
 
-    let end = this.ch == -1 ? this.pos : this.pos - 1;
+    let end = this.end() ? this.pos : this.pos - 1;
     let str = this.input.slice(start, end);
     this.value = integer ? parseInt(str) : parseFloat(str);
     this.token = -6;
@@ -1182,7 +1187,7 @@ export class Reader {
   parse_index() {
     let start = this.pos - 1;
     while (this.ch >= 48 && this.ch <= 57) this.read();
-    let end = this.ch == -1 ? this.pos : this.pos - 1;
+    let end = this.end() ? this.pos : this.pos - 1;
     this.value = parseInt(this.input.slice(start, end));
     this.token = -7;
   }
