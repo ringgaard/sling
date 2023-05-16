@@ -10,10 +10,18 @@ export function detag(html) {
 }
 
 export class Mention {
-  constructor(begin, end, annotation) {
+  constructor(document, index, begin, end, annotation) {
+    this.document = document;
+    this.index = index;
     this.begin = begin;
     this.end = end;
     this.annotation = annotation;
+  }
+
+  text(plain) {
+    let text = this.document.text.slice(this.begin, this.end);
+    if (plain) text = detag(text);
+    return text;
   }
 }
 
@@ -39,6 +47,7 @@ export class Document {
         case 124: { // '|'
           if (stack.length == 0) {
             text += '|';
+            r.read();
           } else {
             r.read();
             r.next();
@@ -46,10 +55,24 @@ export class Document {
             let end = text.length;
             for (;;) {
               let obj = r.parse();
-              this.mentions.push(new Mention(begin, end, obj));
+              let index = this.mentions.length;
+              this.mentions.push(new Mention(this, index, begin, end, obj));
               if (r.token == 93 || r.end()) break;
             }
           }
+          break;
+        }
+
+        case 93: { // ']'
+          if (stack.length == 0) {
+            text += ']';
+          } else {
+            let begin = stack.pop();
+            let end = text.length;
+            let index = this.mentions.length;
+            this.mentions.push(new Mention(this, index, begin, end));
+          }
+          r.read();
           break;
         }
 
