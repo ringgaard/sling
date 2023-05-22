@@ -309,7 +309,7 @@ int ParseEntityRef(const char *str, int len, int *consumed) {
         }
       }
     } else {
-      // &#x123; (decimal)
+      // &#123; (decimal)
       while (p < end) {
         if (*p >= '0' && *p <= '9') {
           code = code * 10 + (*p++ - '0');

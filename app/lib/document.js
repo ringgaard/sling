@@ -6,7 +6,11 @@
 import {Store, Reader} from "./frame.js";
 
 export function detag(html) {
-  return html.replace(/<\/?[^>]+(>|$)/g, "");
+  return html
+    .replace(/<\/?[^>]+(>|$)/g, "")
+    .replace(/&#(\d+);/g, (match, digits) => {
+      return String.fromCharCode(parseInt(digits));
+    });
 }
 
 export class Mention {

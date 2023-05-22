@@ -334,11 +334,16 @@ string ToHTML(const Document &document) {
     } else {
       for (char c : word) {
         switch (c) {
-          case '&':  output.Write("&amp;", 5); break;
-          case '<':  output.Write("&lt;", 4); break;
-          case '>':  output.Write("&gt;", 4); break;
-          case '"':  output.Write("&quot;", 6); break;
-          case '\'': output.Write("&#39;", 5);  break;
+          case '&':  output.Write("&#38;", 5); break;
+          case '<':  output.Write("&#60;", 5); break;
+          case '>':  output.Write("&#62;", 5); break;
+          case '{':  output.Write("&#123;", 6); break;
+          case '|':  output.Write("&#124;", 6); break;
+          case '}':  output.Write("&#125;", 6); break;
+          case '[':  output.Write("&#91;", 5); break;
+          case ']':  output.Write("&#93;", 5); break;
+          case '"':  output.Write("&#34;", 5); break;
+          case '\'': output.Write("&#39;", 5); break;
           default: output.WriteChar(c);
         }
       }
