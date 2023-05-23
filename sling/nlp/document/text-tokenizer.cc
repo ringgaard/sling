@@ -523,7 +523,7 @@ static const char *kBreakingTags[] = {
   "/h5", "h6", "/h6", "hr", "li", "noframes", "/noframes", "ol",
   "/ol", "option", "/option", "p", "/p", "select", "/select",
   "table", "/table", "/title", "tr", "/tr", "ul", "/ul",
-  "blockquote", "/blockquote", nullptr
+  "blockquote", "/blockquote", "aside", "/aside", nullptr
 };
 
 #define TS(s) ((1ULL * s) << TOKEN_STYLE_SHIFT)
@@ -554,6 +554,8 @@ static const struct { const char *tag; uint64 flags; } kStyleTags[] = {
 
   {"<blockquote>",  TS(STYLE_QUOTE_BEGIN)},
   {"</blockquote>", TS(STYLE_QUOTE_END)},
+  {"<aside>",  TS(STYLE_BREAKOUT_BEGIN)},
+  {"</aside>", TS(STYLE_BREAKOUT_END)},
 
   {nullptr, 0}
 };

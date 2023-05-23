@@ -194,7 +194,7 @@ export default class HjemmestrikPlugin {
         let href = e.getAttribute("href");
         let m = href.match(/^https:\/\/hjemmestrik\.dk\/pige\//);
         if (m) {
-          hslinks.push(href);
+          if (e.getAttribute("title") == name) hslinks.push(href);
         } else {
           shlinks.push(href);
         }

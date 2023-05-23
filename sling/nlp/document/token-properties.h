@@ -57,6 +57,10 @@ enum TokenStyles {
   // Block quotes.
   STYLE_QUOTE_BEGIN      = 11,
   STYLE_QUOTE_END        = 12,
+
+  // break-out boxes.
+  STYLE_BREAKOUT_BEGIN   = 13,
+  STYLE_BREAKOUT_END     = 14,
 };
 
 // Token style flags.
@@ -74,6 +78,8 @@ enum TokenStyleFlags {
   LISTITEM_END     = (1 << STYLE_LISTITEM_END),
   QUOTE_BEGIN      = (1 << STYLE_QUOTE_BEGIN),
   QUOTE_END        = (1 << STYLE_QUOTE_END),
+  BREAKOUT_BEGIN   = (1 << STYLE_BREAKOUT_BEGIN),
+  BREAKOUT_END     = (1 << STYLE_BREAKOUT_END),
 
   // Mask for begin and end styles.
   BEGIN_STYLE = BOLD_BEGIN |
@@ -81,13 +87,15 @@ enum TokenStyleFlags {
                 HEADING_BEGIN |
                 ITEMIZE_BEGIN |
                 LISTITEM_BEGIN |
-                QUOTE_BEGIN,
+                QUOTE_BEGIN |
+                BREAKOUT_BEGIN,
   END_STYLE   = BOLD_END |
                 ITALIC_END |
                 HEADING_END |
                 ITEMIZE_END |
                 LISTITEM_END |
-                QUOTE_END,
+                QUOTE_END |
+                BREAKOUT_END,
 };
 
 }  // namespace nlp
