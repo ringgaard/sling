@@ -129,6 +129,8 @@ const zodiac = {
   "fisk": pisces,
 };
 
+const recurse = false;
+
 export default class HjemmestrikPlugin {
   async process(action, query, context) {
     let url = new URL(query);
@@ -194,7 +196,7 @@ export default class HjemmestrikPlugin {
         let href = e.getAttribute("href");
         let m = href.match(/^https:\/\/hjemmestrik\.dk\/pige\//);
         if (m) {
-          if (e.getAttribute("title") == name) hslinks.push(href);
+          if (recurse && e.getAttribute("title") == name) hslinks.push(href);
         } else {
           shlinks.push(href);
         }

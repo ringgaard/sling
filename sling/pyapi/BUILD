@@ -147,6 +147,9 @@ cc_binary(
   deps = [
     ":pyapi",
     ":tasks",
+    "//app:roboto-font",
+    "//app:anubis-font",
+    "//app:material-icons",
     "//sling/base",
     "//sling/file:posix",
   ],

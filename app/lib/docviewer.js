@@ -3,37 +3,28 @@
 
 // Document viewer web component.
 
-import {Component} from "./component.js";
-import {MdDialog} from "./material.js";
+import {Component, stylesheet} from "./component.js";
 import {store} from "./global.js";
 import {Document} from "./document.js";
 
-class AnnotationBox extends MdDialog {
-  onconnected() {
-    this.attach(this.cancel, "click");
-  }
+stylesheet("@import url(/common/font/anubis.css)");
 
+class AnnotationBox extends Component {
   render() {
     let mention = this.state;
     let annotation = mention.annotation;
     if (typeof(annotation) === 'string') {
       let url = annotation;
       return `
-        <md-icon-button id=close icon="close"></md-icon-button>
-        <div id="content">
           <div>"${Component.escape(mention.text(true))}"</div>
           <div><a href="${url}">${Component.escape(url)}</a></div>
-        </div>
       `;
     } else {
       return `
-        <md-icon-button id=close icon="close"></md-icon-button>
-        <div id="content">
           <div>"${Component.escape(mention.text(true))}"</div>
           <code>
             ${annotation && Component.escape(annotation.text())}
           </code>
-        </div>
       `;
     }
   }
@@ -41,39 +32,79 @@ class AnnotationBox extends MdDialog {
   static stylesheet() {
     return `
       $ {
-        padding: 1px;
-      }
-      $ #content {
-        padding: 16px 32px 16px 16px;
-      }
-      $ #close {
         position: absolute;
-        right: 0;
+        left: 0;
+        top: 1em;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+
+        font-family: Roboto,Helvetica,sans-serif;
+        font-size: 16px;
+        font-weight: normal;
+        line-height: 1;
+
+        color: black;
+        background: #f8f8f8;
+        border: 1px solid #a0a0a0;
+        box-shadow: 0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22);
+
+        padding: 8px;
+        min-width: 300px;
+
       }
     `;
   }
-
 };
 
 Component.register(AnnotationBox);
 
 export class DocumentViewer extends Component {
   onconnected() {
-    this.attach(this.onclick, "click");
+    this.attach(this.onmouse, "mouseover");
+    this.attach(this.onleave, "mouseleave");
   }
 
-  onclick(e) {
+  onmouse(e) {
+    // Ignore if selecting text or ctrl or shift is down.
+    var selection = window.getSelection();
+    if (selection && selection.type === 'Range') return;
+    if (e.ctrlKey || e.shiftKey) return;
+
+    // Close existing popup.
     let span = e.target;
+    let original = span;
+    if (this.popup && !this.popup.contains(span)) {
+      this.clear_popup();
+    }
+
+    // Find first enclosing span.
+    while (span != this) {
+      if (span.tagName === 'SPAN') break;
+      span = span.parentElement;
+    }
+
+    // Get mention for span.
     let mid = span.getAttribute("mention");
     if (!mid) return;
     let mention = this.doc.mentions[parseInt(mid)];
-    this.onmention && this.onmention(span, mention);
+
+    // Open new annotation box popup.
+    this.clear_popup();
+    this.popup = new AnnotationBox(mention);
+    span.append(this.popup);
   }
 
-  async onmention(span, mention) {
-    let box = new AnnotationBox(mention);
-    let result = await box.show();
-    if (result) console.log("result", result);
+  onleave(e) {
+    // Close popups when leaving document viewer.
+    this.clear_popup();
+  }
+
+  clear_popup() {
+    if (this.popup) {
+      this.popup.remove();
+      this.popup = null;
+    }
   }
 
   visible() { return this.state; }
@@ -134,10 +165,13 @@ export class DocumentViewer extends Component {
   static stylesheet() {
     return `
       $ {
-        font: 18px georgia, times, serif;
+        font-family: anubis, georgia, times, serif;
+        font-size: 1rem;
+        line-height: 1.5;
         padding: 4px 8px;
       }
       $ span {
+        position: relative;
         color: #0b0080;
         cursor: pointer;
       }

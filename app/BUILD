@@ -101,6 +101,17 @@ embed_data(
 )
 
 embed_data(
+  name = "anubis-font",
+  srcs = [
+    "font/anubis.css",
+    "font/anubis-400.woff2",
+    "font/anubis-500.woff2",
+    "font/anubis-700.woff2",
+    "font/anubis-italic.woff2",
+  ],
+)
+
+embed_data(
   name = "material-icons",
   srcs = [
     "font/material.woff2",
