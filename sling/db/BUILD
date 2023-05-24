@@ -53,8 +53,6 @@ cc_library(
     ":db",
     ":dbprotocol",
     "//app",
-    "//app:roboto-font",
-    "//app:material-icons",
     "//sling/base",
     "//sling/file:embed",
     "//sling/net:http-server",

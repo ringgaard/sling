@@ -2,8 +2,18 @@ package(default_visibility = ["//visibility:public"])
 
 load("//tools:embed.bzl", "embed_data")
 
-embed_data(
+cc_library(
   name = "app",
+  deps = [
+    ":lib",
+    ":roboto-font",
+    ":anubis-font",
+    ":material-icons",
+  ],
+)
+
+embed_data(
+  name = "lib",
   srcs = [
     "lib/component.js",
     "lib/oneof.js",

@@ -96,8 +96,6 @@ cc_binary(
   ],
   deps = [
     "//app",
-    "//app:roboto-font",
-    "//app:material-icons",
     "//sling/base",
     "//sling/file",
     "//sling/file:embed",

@@ -65,8 +65,6 @@ cc_library(
     ":app",
     ":job",
     "//app",
-    "//app:roboto-font",
-    "//app:material-icons",
     "//app:digital-font",
     "//sling/base",
     "//sling/base:clock",
