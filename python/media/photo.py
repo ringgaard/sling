@@ -706,7 +706,7 @@ class Profile:
         title = title.replace("\n", " ").strip()
 
       # NSFW flag.
-      nsfw = tri(reply["nsfw"] or image["nsfw"], nsfw_override)
+      nsfw = tri(reply["nsfw"], nsfw_override)
 
       # Add media frame to profile.
       if self.add_photo(link, title, None, nsfw): count += 1

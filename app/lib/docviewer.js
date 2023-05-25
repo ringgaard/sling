@@ -4,29 +4,66 @@
 // Document viewer web component.
 
 import {Component, stylesheet} from "./component.js";
-import {store} from "./global.js";
+import {store, frame} from "./global.js";
+import {Frame, QString} from "./frame.js";
 import {Document} from "./document.js";
+import {value_text, LabelCollector} from "./datatype.js";
+
+const n_is = store.is;
 
 stylesheet("@import url(/common/font/anubis.css)");
+
+function html_prop(prop) {
+  let [text, encoded] = value_text(prop);
+  return Component.escape(text);
+}
+
+function html_value(value, prop) {
+  if (prop == n_is) prop = undefined;
+  let [text, encoded] = value_text(value, prop);
+  if (encoded) {
+    let ref = value && value.id;
+    if (!ref) {
+      if (value instanceof Frame) {
+        ref = value.text(false, true);
+      } else if (value instanceof QString) {
+        ref = value.stringify(store);
+      } else {
+        ref = value;
+      }
+    }
+    return `<doclink ref="${ref}">${Component.escape(text)}</doclink>`;
+  } else {
+    return Component.escape(text);
+  }
+}
 
 class AnnotationBox extends Component {
   render() {
     let mention = this.state;
     let annotation = mention.annotation;
+    let h = new Array();
+    let phrase = mention.text(true);
+    h.push(`<div class="phrase">${Component.escape(phrase)}</div>`);
     if (typeof(annotation) === 'string') {
       let url = annotation;
-      return `
-          <div>"${Component.escape(mention.text(true))}"</div>
-          <div><a href="${url}">${Component.escape(url)}</a></div>
-      `;
-    } else {
-      return `
-          <div>"${Component.escape(mention.text(true))}"</div>
-          <code>
-            ${annotation && Component.escape(annotation.text())}
-          </code>
-      `;
+      let anchor = Component.escape(url);
+      h.push(`<div class="url"><a href="${url}">${anchor}</a></div>`);
+    } else if (annotation instanceof Frame) {
+      if (annotation.isanonymous()) {
+        for (let [name, value] of annotation) {
+          let p = html_prop(name);
+          let v = html_value(store.resolve(value), name);
+          h.push(`<div class="prop">${p}: ${v}</div>`);
+        }
+      } else {
+        let v = html_value(store.resolve(annotation));
+        h.push(`<div class="link">${v}</div>`);
+      }
+
+      //h.push(`<code>${Component.escape(annotation.text())}</code>`);
     }
+    return h.join("");
   }
 
   static stylesheet() {
@@ -51,7 +88,29 @@ class AnnotationBox extends Component {
 
         padding: 8px;
         min-width: 300px;
-
+        cursor: default;
+      }
+      $ .phrase {
+        font-style: italic;
+        padding: 4px 0px;
+      }
+      $ .url {
+        padding-top: 4px;
+      }
+      $ .prop {
+        padding-top: 4px;
+      }
+      $ .link {
+        padding-top: 4px;
+        color: #0000dd;
+      }
+      $ doclink {
+        color: #0000dd;
+        cursor: pointer;
+      }
+      $ code {
+        padding-top: 8px;
+        font-size: 12px;
       }
     `;
   }
@@ -65,7 +124,7 @@ export class DocumentViewer extends Component {
     this.attach(this.onleave, "mouseleave");
   }
 
-  onmouse(e) {
+  async onmouse(e) {
     // Ignore if selecting text or ctrl or shift is down.
     var selection = window.getSelection();
     if (selection && selection.type === 'Range') return;
@@ -88,6 +147,17 @@ export class DocumentViewer extends Component {
     let mid = span.getAttribute("mention");
     if (!mid) return;
     let mention = this.doc.mentions[parseInt(mid)];
+
+    // Fetch labels for annotations.
+    if (mention.annotation instanceof Frame) {
+      let collector = new LabelCollector(store);
+      if (mention.annotation.isanonymous()) {
+        collector.add(mention.annotation);
+      } else {
+        collector.add_item(mention.annotation);
+      }
+      await collector.retrieve();
+    }
 
     // Open new annotation box popup.
     this.clear_popup();
@@ -165,8 +235,7 @@ export class DocumentViewer extends Component {
   static stylesheet() {
     return `
       $ {
-        font-family: anubis, georgia, times, serif;
-        font-size: 1rem;
+        font: 1rem anubis, serif;
         line-height: 1.5;
         padding: 4px 8px;
       }

@@ -1352,7 +1352,7 @@ class FactValue extends FactField {
         min-height: 1.25em;
       }
       $.encoded {
-        color: #0000dd; /*#0645AD;*/ /*#0b0080;*/
+        color: #0000dd;
       }
     `;
   }

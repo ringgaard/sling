@@ -34,6 +34,7 @@ export class Document {
     this.store = store;
     this.mentions = new Array();
     this.themes = new Array();
+    this.mapping = new Map();
   }
 
   parse(lex) {
@@ -60,7 +61,9 @@ export class Document {
             for (;;) {
               let obj = r.parse();
               let index = this.mentions.length;
-              this.mentions.push(new Mention(this, index, begin, end, obj));
+              let mention = new Mention(this, index, begin, end, obj);
+              this.mentions.push(mention);
+              this.mapping.set(obj, mention);
               if (r.token == 93 || r.end()) break;
             }
           }
@@ -74,7 +77,8 @@ export class Document {
             let begin = stack.pop();
             let end = text.length;
             let index = this.mentions.length;
-            this.mentions.push(new Mention(this, index, begin, end));
+            let mention = new Mention(this, index, begin, end);
+            this.mentions.push(mention);
           }
           r.read();
           break;
