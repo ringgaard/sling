@@ -32,19 +32,34 @@ function html_value(value, prop) {
         ref = value;
       }
     }
-    return `<doclink ref="${ref}">${Component.escape(text)}</doclink>`;
+    return `<span class="link" ref="${ref}">${Component.escape(text)}</span>`;
   } else {
     return Component.escape(text);
   }
 }
 
 class AnnotationBox extends Component {
+  onconnected() {
+    this.attach(this.onclick, "click");
+  }
+
+  onclick(e) {
+    e.stopPropagation(); // needed?
+    let ref = e.target.getAttribute("ref");
+    if (ref) {
+      this.dispatch("docnav", ref, true);
+    } else if (e.target.className == "annotate") {
+      this.dispatch("annotate", this.state, true);
+    }
+  }
+
   render() {
     let mention = this.state;
     let annotation = mention.annotation;
     let h = new Array();
     let phrase = mention.text(true);
     h.push(`<div class="phrase">${Component.escape(phrase)}</div>`);
+    h.push(`<div class="annotate">&#8853;</div>`);
     if (typeof(annotation) === 'string') {
       let url = annotation;
       let anchor = Component.escape(url);
@@ -52,16 +67,21 @@ class AnnotationBox extends Component {
     } else if (annotation instanceof Frame) {
       if (annotation.isanonymous()) {
         for (let [name, value] of annotation) {
+          let m = mention.document.mapping.get(value);
           let p = html_prop(name);
-          let v = html_value(store.resolve(value), name);
+          let v;
+          if (m) {
+            let label = Component.escape(m.text(true));
+            v = `<span class="docref">${label}</span>`;
+          } else {
+           v = html_value(value, name);
+         }
           h.push(`<div class="prop">${p}: ${v}</div>`);
         }
       } else {
         let v = html_value(store.resolve(annotation));
         h.push(`<div class="link">${v}</div>`);
       }
-
-      //h.push(`<code>${Component.escape(annotation.text())}</code>`);
     }
     return h.join("");
   }
@@ -100,17 +120,28 @@ class AnnotationBox extends Component {
       $ .prop {
         padding-top: 4px;
       }
-      $ .link {
-        padding-top: 4px;
+      $ .docref {
         color: #0000dd;
+        font-style: italic;
+        cursor: default;
       }
-      $ doclink {
+      $ .docref:hover {
+        text-decoration: none;
+      }
+      $ .link {
         color: #0000dd;
         cursor: pointer;
       }
-      $ code {
-        padding-top: 8px;
-        font-size: 12px;
+      $ .link:hover {
+        text-decoration: underline;
+      }
+      $ .annotate {
+        position: absolute;
+        top: 0;
+        right: 0;
+        padding: 8px;
+        font-size: 20px;
+        cursor: pointer;
       }
     `;
   }
@@ -132,7 +163,6 @@ export class DocumentViewer extends Component {
 
     // Close existing popup.
     let span = e.target;
-    let original = span;
     if (this.popup && !this.popup.contains(span)) {
       this.clear_popup();
     }

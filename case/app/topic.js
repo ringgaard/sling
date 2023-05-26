@@ -421,15 +421,24 @@ class TopicCard extends Component {
       }
     });
 
-    this.bind(null, "click", e => this.onclick(e));
-    this.bind(null, "mousedown", e => this.ondown(e));
-    this.bind(null, "keydown", e => this.onkeydown(e));
-    this.bind(null, "focus", e => this.onfocus(e));
+    this.attach(this.onclick, "click");
+    this.attach(this.ondown, "mousedown");
+    this.attach(this.onkeydown, "keydown");
+    this.attach(this.onfocus, "focus");
 
     this.bind(null, "nsfw", e => this.onnsfw(e, true));
     this.bind(null, "sfw", e => this.onnsfw(e, false));
     this.bind(null, "delimage", e => this.ondelimage(e));
     this.bind(null, "picedit", e => this.refresh());
+
+    this.bind(null, "docnav", e => {
+      let ref = e.detail;
+      console.log("docnav", ref);
+    });
+    this.bind(null, "annotate", e => {
+      let mention = e.detail;
+      console.log("annotate", mention);
+    });
 
     this.update_mode(false);
     this.update_title();
