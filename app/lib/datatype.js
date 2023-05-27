@@ -117,7 +117,7 @@ const month_mapping = {
   "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
   "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
 
-  "maj": 5, "okt": 10,
+  "mär": 3, "maj": 5, "mai": 5, "okt": 10, "dez": 12,
 };
 
 function monthnum(name) {

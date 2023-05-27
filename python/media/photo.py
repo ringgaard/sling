@@ -163,6 +163,13 @@ video_prefixes = [
   "https://v.redd.it/"
 ]
 
+album_patterns = [
+  re.compile(r"\[(.+)\]\((https?:\/\/imgur.com\/a\/\w+)\)"),
+  re.compile(r"\[(.+)\]\((https?:\/\/(?:www\.)?imgchest\.com\/p\/\w+)\)"),
+  re.compile(r"(https?:\/\/imgur\.com\/a\/\w+)"),
+  re.compile(r"(https?:\/\/(?:www\.)?imgchest\.com\/p\/\w+)"),
+]
+
 commons_base_url = "https://upload.wikimedia.org/wikipedia/commons"
 
 def is_video(url):
@@ -806,7 +813,7 @@ class Profile:
       url = "https://%s/%s" % (q["server"][0], q["file"][0])
 
     # Image chest album.
-    m = re.match("https://imgchest.com/p/(\w+)", url)
+    m = re.match("https://(?:www\.)?imgchest.com/p/(\w+)", url)
     if m != None:
       albumid = m.group(1)
       return self.add_imgchest_album(albumid, caption, nsfw)
@@ -830,19 +837,15 @@ class Profile:
       comment = comment["data"]
       body = comment["body"]
 
-      for m in re.finditer("\[(.+)\]\((https?:\/\/imgur.com\/a\/\w+)\)", body):
-        print("Album link", m[2], m[1])
-        count += self.add_media(m[2], m[1], nsfw)
-
-      if count == 0:
-        for m in re.finditer("(https?:\/\/imgur\.com\/a\/\w+)", body):
-          print("Album", m[1])
-          count += self.add_media(m[1], None, nsfw)
-
-      if count == 0:
-        for m in re.finditer("(https?:\/\/imgchest\.com\/p\/\w+)", body):
-          print("Album", m[1])
-          count += self.add_media(m[1], None, nsfw)
+      for pat in album_patterns:
+        for m in pat.finditer(body):
+          if len(m.groups()) == 2:
+            print("Album link", m[1], m[2])
+            count += self.add_media(m[2], m[1], nsfw)
+          else:
+            print("Album link", m[1])
+            count += self.add_media(m[1], None, nsfw)
+        if count > 0: break
 
     return count
 
