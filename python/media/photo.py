@@ -722,6 +722,11 @@ class Profile:
 
   # Add media.
   def add_media(self, url, caption=None, nsfw=None):
+    # NSFW urls.
+    if url.startswith("!"):
+      nsfw = True
+      url = url[1:]
+
     # Trim url.
     url = url.replace("/i.imgur.com/", "/imgur.com/")
     url = url.replace("/www.imgur.com/", "/imgur.com/")

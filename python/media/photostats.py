@@ -52,6 +52,7 @@ num_profiles = 0
 num_photos = 0
 num_nsfw = 0
 num_new = 0
+num_nophotos = 0
 
 store = sling.Store()
 n_id = store["id"]
@@ -146,10 +147,13 @@ if flags.arg.cases:
       else:
         topics.add(redir.id)
 
+      has_photos = False
       for m in topic(n_media):
         num_photos += 1
         count += 1
+        has_photos = True
         add_media(m)
+      if not has_photos: num_nophotos += 1
 
       b = int(count / bin_size)
       profile_bins[b] += 1
@@ -167,6 +171,8 @@ print("%d photos, %s sfw, %s nsfw (%f%%)" %
   (num_photos, num_sfw, num_nsfw, pct))
 print(len(topics), "topics")
 if num_new > 0: print(num_new, "new")
+if num_nophotos > 0: print(num_nophotos, "without photos")
+
 print(max_photos, "photos in largest profile")
 print()
 

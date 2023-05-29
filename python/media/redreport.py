@@ -135,7 +135,7 @@ class PhotoReportApp extends MdApp {
     let selection = window.getSelection();
     let query = selection.toString();
     let url = `https://ringgaard.com/kb/?q=${encodeURIComponent(query)}`;
-    window.open(url, "knolbase");
+    if (query) window.open(url, "knolbase");
   }
 
   onimgsearch(e) {
@@ -143,7 +143,7 @@ class PhotoReportApp extends MdApp {
     let query = selection.toString();
     let url = `https://ringgaard.com/photosearch?q="${encodeURIComponent(query)}"`;
     if (!sfw) url += "&nsfw=1";
-    window.open(url, "_blank");
+    if (query) window.open(url, "_blank");
   }
 }
 
@@ -163,11 +163,19 @@ class PhotoDialog extends MdDialog {
       aic: this.find("#aic").checked,
       captions: this.find("#captions").checked,
       dedup: this.find("#dedup").checked,
+      more: this.state.more && this.find("#more").checked,
     });
   }
 
   render() {
     let p = this.state;
+    let more = "";
+    if (p.more) {
+      more = `
+        <md-checkbox id="more" label="${p.more} more">
+        </md-checkbox>
+      `;
+    }
     return `
       <md-dialog-top>Add photo</md-dialog-top>
       <div id="content">
@@ -194,6 +202,7 @@ class PhotoDialog extends MdDialog {
           </md-checkbox>
           <md-checkbox id="dedup" label="dedup">
           </md-checkbox>
+          ${more}
         </div>
       </div>
       <md-dialog-bottom>
@@ -272,6 +281,7 @@ class RedditPosting extends Component {
       name: name,
       id: item.match ? item.match : "",
       nsfw: posting.over_18,
+      more: item.more.length,
     });
     dialog.show().then(result => {
       if (result) {
@@ -300,6 +310,7 @@ class RedditPosting extends Component {
         aic: options.aic,
         captions: options.captions,
         dedup: options.dedup,
+        more: options.more ? this.state.more : null,
       }),
     })
     .then((response) => {
@@ -553,12 +564,26 @@ class SubredditCard extends MdCard {
       if (sfw && item.posting.over_18) continue;
       if (xpost && !item.posting.crosspost_parent_list) continue;
       if (general && !item.query) continue;
+      item.more = this.more(items, item);
       h.push(new RedditPosting(item));
       empty = false;
     }
 
     this.style.display = empty ? "none" : "";
     return h;
+  }
+
+  more(items, item) {
+    let title = item.posting.title;
+    let same = [];
+    for (let i of items) {
+      if (i != item && i.posting.title == title) {
+        let url = i.posting.url;
+        if (i.posting.over_18) url = "!" + url;
+        same.push(url);
+      }
+    }
+    return same;
   }
 
   static stylesheet() {
@@ -654,6 +679,7 @@ def add_media(request):
   aic = r.get("aic")
   captions = r.get("captions")
   dedup = r.get("dedup")
+  more = r.get("more");
 
   print("***", r)
   if id is None or id == "" or " " in id: return 400
@@ -666,6 +692,9 @@ def add_media(request):
     n = profile.add_albums_in_comments(url, nsfw)
   else:
     n = profile.add_media(url, legend, nsfw)
+  if more:
+    for u in more:
+      n += profile.add_media(u, legend, nsfw)
 
   # Dedup if requested.
   dups = 0
