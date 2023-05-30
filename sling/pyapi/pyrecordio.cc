@@ -295,7 +295,10 @@ PyObject *PyRecordWriter::Write(PyObject *args) {
   // Get key and value argument.
   PyObject *pykey;
   PyObject *pyvalue;
-  if (!PyArg_ParseTuple(args, "OO", &pykey, &pyvalue)) return nullptr;
+  uint64 version = 0;
+  if (!PyArg_ParseTuple(args, "OO|l", &pykey, &pyvalue, &version)) {
+    return nullptr;
+  }
 
   // Get key and value data buffers.
   Slice key;
@@ -328,7 +331,7 @@ PyObject *PyRecordWriter::Write(PyObject *args) {
   }
 
   // Write record.
-  if (!CheckIO(writer->Write(key, value))) return nullptr;
+  if (!CheckIO(writer->Write(key, version, value))) return nullptr;
   Py_RETURN_NONE;
 }
 
