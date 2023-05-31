@@ -119,6 +119,8 @@ pages = [
   ("KB item",              re.compile(r"^\/kb\/[A-Z](.+)$")),
   ("KB item",              re.compile(r"^\/kb\/t\/\d+\/\d+$")),
   ("KB item",              re.compile(r"^\/kb\/c\/\d+$")),
+  ("KB topic entry",       re.compile(r"^\/kb\/\?t=")),
+  ("KB query entry",       re.compile(r"^\/kb\/\?q=")),
 
   ("photo search",         re.compile(r"^\/photosearch\/")),
   ("redreport",            re.compile(r"^\/redreport\/")),

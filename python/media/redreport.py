@@ -537,7 +537,7 @@ class SubredditCard extends MdCard {
       </h1>`
     );
     if (sr.total > 0) {
-      let coverage = sr.total ? Math.round(known / sr.total * 100) : 0;
+      let coverage = sr.total ? Math.round((known + dups) / sr.total * 100) : 0;
       let scale = Math.round(200 / sr.total);
 
       let hw = known * scale;

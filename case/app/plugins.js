@@ -222,6 +222,7 @@ var plugins = [
     /^https?:\/\/preview\.redd\.it\//,
     /^https?:\/\/asset\.dr\.dk\//,
     /^https?:\/\/imgchest\.com\/p\//,
+    /^https?:\/\/www\.imgchest\.com\/p\//,
   ],
 },
 

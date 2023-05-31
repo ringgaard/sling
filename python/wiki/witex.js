@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2
 
 import {Store, Reader, Frame} from "/common/lib/frame.js";
+import {Document} from "/common/lib/document.js";
 import {Component} from "/common/lib/component.js";
 import {MdApp, MdCard, inform} from "/common/lib/material.js";
 
@@ -19,7 +20,7 @@ var last_template = "";
 
 const lib = {
   "age": function(value) {
-    if (value instanceof Document) value = value.text;
+    if (value instanceof Document) value = value.plain();
     let age = value && parseInt(value);
     if (!age) return;
     let frame = this.store.frame();
@@ -33,7 +34,7 @@ const lib = {
     if (value instanceof Document) {
       let a = value.annotation(0);
       if (a && a.get(n_isa) == n_time) return value;
-      value = value.text;
+      value = value.plain();
     }
     let dateval = value.toString();
     let d = new Date(dateval);
@@ -49,7 +50,7 @@ const lib = {
   "id": (value) => value && value.id,
 
   "int": (value) => {
-    if (value instanceof Document) value = value.text;
+    if (value instanceof Document) value = value.plain();
     return value && parseInt(value);
   },
 
@@ -62,10 +63,10 @@ const lib = {
       if (!this.links) this.links = new Map();
       let link = value.mentions[0] && value.mentions[0].annotation;
       if (link) {
-        this.links.set(value.text, link);
+        this.links.set(value.plain(), link);
         value = link;
       } else {
-        value = this.links.get(value.text) || value.text;
+        value = this.links.get(value.text) || value.text(true);
       }
     }
     return value;
@@ -73,14 +74,14 @@ const lib = {
 
   "phrase": value => {
     if (value instanceof Document) {
-      return value.phrase(0) || value;
+      return value.phrase(0, true) || value;
     } else {
       return value;
     }
   },
 
   "text": (value) => {
-    if (value instanceof Document) return value.text;
+    if (value instanceof Document) return value.plain();
   },
 };
 
@@ -157,108 +158,6 @@ function parse_template(template, columns) {
     parts.push(template.slice(start, pos));
   }
   return parts;
-}
-
-function detag(html) {
-  return html.replace(/<\/?[^>]+(>|$)/g, "");
-}
-
-class Mention {
-  constructor(begin, end, annotation) {
-    this.begin = begin;
-    this.end = end;
-    this.annotation = annotation;
-  }
-}
-
-class Document {
-  constructor(store, text) {
-    this.store = store;
-    this.text = text;
-    this.mentions = new Array();
-    this.themes = new Array();
-  }
-
-  mention(idx) {
-    return this.mentions[idx];
-  }
-
-  annotation(idx) {
-    let mention = this.mentions[idx];
-    return mention && mention.annotation;
-  }
-
-  phrase(idx) {
-    let mention = this.mentions[idx];
-    if (!mention) return null;
-    return this.text.slice(mention.begin, mention.end);
-  }
-}
-
-function delex(document, lex) {
-  let text = "";
-  let stack = new Array();
-  let level = 0;
-  let pos = 0;
-  while (pos < lex.length) {
-    let c = lex[pos++];
-    switch (c) {
-      case "[":
-        stack.push(text.length);
-        break;
-
-      case "]": {
-        let begin = stack.pop();
-        let end = pos;
-        document.mentions.push(new Mention(begin, end));
-        break;
-      }
-
-      case "|": {
-        if (stack.length == 0) {
-          text += c;
-        } else {
-          let nesting = 0;
-          let start = pos;
-          while (pos < lex.length) {
-            let c = lex[pos++];
-            if (c == '{') {
-              nesting++;
-            } else if (c == '}') {
-              nesting--;
-            } else if (c == ']') {
-              if (nesting == 0) break;
-            }
-          }
-          let reader = new Reader(document.store, lex.slice(start, pos - 1));
-          let obj = reader.parseall();
-          document.mentions.push(new Mention(stack.pop(), text.length, obj));
-        }
-        break;
-      }
-
-      case "{": {
-        let nesting = 0;
-        let start = pos;
-        while (pos < lex.length) {
-          let c = lex[pos++];
-          if (c == '{') {
-            nesting++;
-          } else if (c == '}') {
-            if (--nesting == 0) break;
-          }
-        }
-        let reader = new Reader(document.store, lex.slice(start - 1, pos));
-        let obj = reader.parseall();
-        document.themes.push(obj);
-        break;
-      }
-
-      default:
-        text += c;
-    }
-  }
-  document.text = text;
 }
 
 class Record {
@@ -413,7 +312,7 @@ class WikiTable extends MdCard {
           record.fields.push(null);
         } else {
           let doc = new Document(store);
-          delex(doc, detag(cell));
+          doc.parse(cell)
           record.fields.push(doc);
         }
       }
@@ -435,7 +334,7 @@ class WikiTable extends MdCard {
                 result += annotation.id || annotation.text(false, true);
               }
             } else {
-              let phrase = piece.phrase(0);
+              let phrase = piece.phrase(0, true);
               result += JSON.stringify(phrase || piece.text)
             }
           } else if (piece instanceof Frame) {
