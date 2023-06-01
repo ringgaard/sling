@@ -374,7 +374,7 @@ Component.register(CaseApp);
 //-----------------------------------------------------------------------------
 
 document.body.innerHTML = `
-<case-app id="app" selected="case-manager">
+<case-app id="app">
   <case-manager id="manager"></case-manager>
   <case-editor id="editor"></case-editor>
 </case-app>

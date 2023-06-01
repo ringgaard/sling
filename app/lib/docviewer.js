@@ -40,26 +40,30 @@ function html_value(value, prop) {
 
 class AnnotationBox extends Component {
   onconnected() {
-    this.attach(this.onclick, "click");
+    this.attach(this.onpointerdown, "pointerdown");
   }
 
-  onclick(e) {
-    e.stopPropagation(); // needed?
+  onpointerdown(e) {
+    e.preventDefault();
     let ref = e.target.getAttribute("ref");
     if (ref) {
-      this.dispatch("docnav", ref, true);
+      this.dispatch("docnavigate", ref, true);
     } else if (e.target.className == "annotate") {
-      this.dispatch("annotate", this.state, true);
+      this.dispatch("docannotate", this.state, true);
     }
   }
 
   render() {
     let mention = this.state;
     let annotation = mention.annotation;
-    let h = new Array();
     let phrase = mention.text(true);
-    h.push(`<div class="phrase">${Component.escape(phrase)}</div>`);
-    h.push(`<div class="annotate">&#8853;</div>`);
+
+    let h = new Array();
+    h.push(`<div>
+      <span class="phrase">${Component.escape(phrase)}</span>
+      <span class="annotate">&#8853;</span>
+    </div>`);
+
     if (typeof(annotation) === 'string') {
       let url = annotation;
       let anchor = Component.escape(url);
@@ -114,6 +118,10 @@ class AnnotationBox extends Component {
         font-style: italic;
         padding: 4px 0px;
       }
+      $ .phrase:hover {
+        text-decoration: none;
+        cursor: default;
+      }
       $ .url {
         padding-top: 4px;
       }
@@ -132,16 +140,17 @@ class AnnotationBox extends Component {
         color: #0000dd;
         cursor: pointer;
       }
-      $ .link:hover {
+      $ link:hover {
         text-decoration: underline;
       }
       $ .annotate {
-        position: absolute;
-        top: 0;
-        right: 0;
-        padding: 8px;
+        padding: 4px;
         font-size: 20px;
+        font-weight: normal;
         cursor: pointer;
+      }
+      $ .annotate:hover {
+        text-decoration: none;
       }
     `;
   }
