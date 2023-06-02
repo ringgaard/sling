@@ -10,6 +10,7 @@ import {Document} from "./document.js";
 import {value_text, LabelCollector} from "./datatype.js";
 
 const n_is = store.is;
+const n_isa = store.isa;
 
 stylesheet("@import url(/common/font/anubis.css)");
 
@@ -46,11 +47,16 @@ class AnnotationBox extends Component {
   onpointerdown(e) {
     e.preventDefault();
     let ref = e.target.getAttribute("ref");
+    let source = this.match("topic-card");
+    var position = source && source.state;
+
     if (ref) {
-      this.dispatch("docnavigate", ref, true);
+      this.dispatch("navigate", {ref, position, event: e}, true);
     } else if (e.target.className == "annotate") {
-      this.dispatch("docannotate", this.state, true);
+      let mention = this.state;
+      this.dispatch("annotate", {mention, position, event: e}, true);
     }
+    this.remove();
   }
 
   render() {
@@ -70,17 +76,24 @@ class AnnotationBox extends Component {
       h.push(`<div class="url"><a href="${url}">${anchor}</a></div>`);
     } else if (annotation instanceof Frame) {
       if (annotation.isanonymous()) {
-        for (let [name, value] of annotation) {
-          let m = mention.document.mapping.get(value);
-          let p = html_prop(name);
-          let v;
-          if (m) {
-            let label = Component.escape(m.text(true));
-            v = `<span class="docref">${label}</span>`;
-          } else {
-           v = html_value(value, name);
-         }
-          h.push(`<div class="prop">${p}: ${v}</div>`);
+        let dt = annotation.get(n_isa);
+        if (dt) {
+          let [text, encoded] = value_text(store.resolve(annotation), null, dt);
+          let v = Component.escape(text);
+          h.push(`<div class="value">${v}</div>`);
+        } else {
+          for (let [name, value] of annotation) {
+            let m = mention.document.mapping.get(value);
+            let p = html_prop(name);
+            let v;
+            if (m) {
+              let label = Component.escape(m.text(true));
+              v = `<span class="docref">${label}</span>`;
+            } else {
+             v = html_value(value, name);
+           }
+            h.push(`<div class="prop">${p}: ${v}</div>`);
+          }
         }
       } else {
         let v = html_value(store.resolve(annotation));
@@ -142,6 +155,9 @@ class AnnotationBox extends Component {
       }
       $ link:hover {
         text-decoration: underline;
+      }
+      $ .value {
+        color: #0000dd;
       }
       $ .annotate {
         padding: 4px;

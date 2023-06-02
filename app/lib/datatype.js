@@ -731,8 +731,8 @@ export function value_parser(value, results) {
   geo_parser(value, results);
 }
 
-export function value_text(val, prop) {
-  let dt = prop instanceof Frame ? prop.get(n_target) : n_item_type;
+export function value_text(val, prop, dt) {
+  dt = dt || (prop instanceof Frame && prop.get(n_target)) || n_item_type;
 
   if (val === null) {
     return ["⚫︎", false];

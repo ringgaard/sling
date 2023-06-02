@@ -54,6 +54,7 @@ const n_retrieved = frame("P813");
 const n_url = frame("P2699");
 const n_data_size = frame("P3575");
 const n_media_type = frame("P1163");
+const n_described_by_source = frame("P1343");
 
 const media_file_types = [
   "image/gif",
@@ -141,6 +142,7 @@ class CaseEditor extends MdApp {
     this.attach(this.onpaste, "paste");
 
     this.attach(this.onnavigate, "navigate");
+    this.attach(this.onannotate, "annotate");
 
     document.addEventListener("keydown", e => this.onkeydown(e));
     window.addEventListener("beforeunload", e => this.onbeforeunload(e));
@@ -196,6 +198,40 @@ class CaseEditor extends MdApp {
       // Open external knowledge browser for item.
       window.open(`${settings.kbservice}/kb/${ref}`, "_blank");
     }
+  }
+
+  async onannotate(e) {
+    if (this.readonly) return;
+    console.log("annotate", e.detail);
+    let mention = e.detail.mention;
+    let annotation = mention.annotation;
+    let link = store.resolve(annotation);
+
+    // Create new topic unless there is already a topic for the item.
+    let topic = link && this.get_index().ids.get(link.id);
+    if (!topic) {
+      topic = await this.new_topic(null, e.detail.position);
+      topic.put(n_name, mention.text(true));
+      if (link) topic.put(n_is, link);
+      if (annotation && !link) annotation.put(n_is, topic);
+    }
+
+    // Add annotations from document.
+    if (annotation) {
+      for (let [name, value] of annotation) {
+        if (name == n_is) continue;
+        topic.put(name, store.resolve(value));
+      }
+    }
+
+    // Add source.
+    if (e.detail.position) {
+      topic.put(n_described_by_source, e.detail.position);
+    }
+
+    this.update_topic(topic);
+    this.topic_updated(topic);
+    await this.update_topics();
   }
 
   editing() {

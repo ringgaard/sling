@@ -431,15 +431,6 @@ class TopicCard extends Component {
     this.bind(null, "delimage", e => this.ondelimage(e));
     this.bind(null, "picedit", e => this.refresh());
 
-    this.bind(null, "docnavigate", e => {
-      let ref = e.detail;
-      console.log("doc navigate", ref);
-    });
-    this.bind(null, "docannotate", e => {
-      let mention = e.detail;
-      console.log("doc annotate", mention);
-    });
-
     this.update_mode(false);
     this.update_title();
   }

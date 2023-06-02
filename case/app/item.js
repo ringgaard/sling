@@ -557,6 +557,7 @@ class DocumentPanel extends Component {
       $ {
         display: flex;
         flex-direction: column;
+        border-top: 1px solid lightgray;
       }
     `;
   }
