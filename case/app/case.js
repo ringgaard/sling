@@ -20,6 +20,7 @@ import "./topic.js";
 
 const n_id = store.id;
 const n_is = store.is;
+const n_isa = store.isa;
 const n_name = frame("name");
 const n_alias = frame("alias");
 const n_description = frame("description");
@@ -202,7 +203,6 @@ class CaseEditor extends MdApp {
 
   async onannotate(e) {
     if (this.readonly) return;
-    console.log("annotate", e.detail);
     let mention = e.detail.mention;
     let annotation = mention.annotation;
     let link = store.resolve(annotation);
@@ -212,15 +212,28 @@ class CaseEditor extends MdApp {
     if (!topic) {
       topic = await this.new_topic(null, e.detail.position);
       topic.put(n_name, mention.text(true));
-      if (link) topic.put(n_is, link);
+      if (link && !link.isanonymous()) topic.put(n_is, link);
       if (annotation && !link) annotation.put(n_is, topic);
     }
 
     // Add annotations from document.
     if (annotation) {
       for (let [name, value] of annotation) {
-        if (name == n_is) continue;
-        topic.put(name, store.resolve(value));
+        if (name == n_is || name == n_isa) continue;
+        let target = store.resolve(value);
+        let qualifiers = store.frame();
+        if ((value instanceof Frame) && value.isanonymous()) {
+          for (let [qname, qvalue] of value) {
+            if (qname == n_is || qname == n_isa) continue;
+            qualifiers.put(qname, store.resolve(qvalue));
+          }
+        }
+        if (qualifiers.length == 0) {
+          topic.put(name, target);
+        } else {
+          qualifiers.insert(0, n_is, target);
+          topic.put(name, qualifiers);
+        }
       }
     }
 

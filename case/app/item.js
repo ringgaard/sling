@@ -547,7 +547,9 @@ class DocumentPanel extends Component {
     if (!this.state) return;
     let h = new Array();
     for (let doc of this.state) {
-      h.push(new DocumentViewer(doc));
+      let viewer = new DocumentViewer(doc);
+      viewer.index = h.length;
+      h.push(viewer);
     }
     return h;
   }

@@ -3,11 +3,12 @@
 
 // Document viewer web component.
 
-import {Component, stylesheet} from "./component.js";
 import {store, frame} from "./global.js";
 import {Frame, QString} from "./frame.js";
 import {Document} from "./document.js";
+import {Component, stylesheet} from "./component.js";
 import {value_text, LabelCollector} from "./datatype.js";
+import "./material.js";
 
 const n_is = store.is;
 const n_isa = store.isa;
@@ -46,17 +47,18 @@ class AnnotationBox extends Component {
 
   onpointerdown(e) {
     e.preventDefault();
-    let ref = e.target.getAttribute("ref");
+    let target = e.target;
+    let ref = target.getAttribute("ref");
     let source = this.match("topic-card");
     var position = source && source.state;
 
     if (ref) {
       this.dispatch("navigate", {ref, position, event: e}, true);
-    } else if (e.target.className == "annotate") {
+    } else if (target.className == "annotate") {
       let mention = this.state;
       this.dispatch("annotate", {mention, position, event: e}, true);
     }
-    this.remove();
+    if (target.tagName != "A") this.remove();
   }
 
   render() {
@@ -65,9 +67,9 @@ class AnnotationBox extends Component {
     let phrase = mention.text(true);
 
     let h = new Array();
-    h.push(`<div>
+    h.push(`<div class="title">
       <span class="phrase">${Component.escape(phrase)}</span>
-      <span class="annotate">&#8853;</span>
+      <md-icon icon="add" class="annotate"></md-icon>
     </div>`);
 
     if (typeof(annotation) === 'string') {
@@ -127,9 +129,13 @@ class AnnotationBox extends Component {
         min-width: 300px;
         cursor: default;
       }
+      $ .title {
+        display: flex;
+        align-items: center;
+      }
       $ .phrase {
         font-style: italic;
-        padding: 4px 0px;
+        padding: 4px 4px 4px 0px;
       }
       $ .phrase:hover {
         text-decoration: none;
@@ -164,6 +170,7 @@ class AnnotationBox extends Component {
         font-size: 20px;
         font-weight: normal;
         cursor: pointer;
+        user-select: inherit;
       }
       $ .annotate:hover {
         text-decoration: none;
@@ -178,6 +185,8 @@ export class DocumentViewer extends Component {
   onconnected() {
     this.attach(this.onmouse, "mouseover");
     this.attach(this.onleave, "mouseleave");
+    this.attach(this.onedit, "select", "#edit");
+    this.attach(this.ondelete, "select", "#delete");
   }
 
   async onmouse(e) {
@@ -186,16 +195,18 @@ export class DocumentViewer extends Component {
     if (selection && selection.type === 'Range') return;
     if (e.ctrlKey || e.shiftKey) return;
 
-    // Close existing popup.
-    let span = e.target;
-    if (this.popup && !this.popup.contains(span)) {
-      this.clear_popup();
-    }
 
     // Find first enclosing span.
+    let span = e.target;
     while (span != this) {
+      if (span == this.popup) return;
       if (span.tagName === 'SPAN') break;
       span = span.parentElement;
+    }
+
+    // Close existing popup.
+    if (this.popup && !this.popup.contains(span)) {
+      this.clear_popup();
     }
 
     // Get mention for span.
@@ -225,6 +236,14 @@ export class DocumentViewer extends Component {
     this.clear_popup();
   }
 
+  onedit(e) {
+    this.dispatch("docedit", this.state, true);
+  }
+
+  ondelete(e) {
+    this.dispatch("docdelete", this.state, true);
+  }
+
   clear_popup() {
     if (this.popup) {
       this.popup.remove();
@@ -236,6 +255,19 @@ export class DocumentViewer extends Component {
 
   render() {
     if (!this.state) return;
+    let h = new Array();
+
+    // Document menu.
+    h.push(`
+      <md-menu>
+        <md-menu-item id="edit">
+          <md-icon icon="edit"></md-icon>Edit
+        </md-menu-item>
+        <md-menu-item id="delete">
+         <md-icon icon="delete"></md-icon>Delete
+        </md-menu-item>
+      </md-menu>
+    `);
 
     // Parse LEX document.
     this.doc = new Document(store);
@@ -248,7 +280,6 @@ export class DocumentViewer extends Component {
     ends.sort((a, b) => a.end - b.end || b.begin - a.begin);
 
     // Generate HTML with spans.
-    let h = new Array();
     let from = 0;
     let text = this.doc.text;
     let n = this.doc.mentions.length;
@@ -289,6 +320,18 @@ export class DocumentViewer extends Component {
 
   static stylesheet() {
     return `
+      $ md-menu {
+        float: right;
+        font-family: Roboto,Helvetica,sans-serif;
+        font-size: 16px;
+        font-weight: normal;
+        line-height: 1;
+        margin-right: -16px;
+        display: none;
+      }
+      $:hover md-menu {
+        display: inline-block;
+      }
       $ {
         font: 1rem anubis, serif;
         line-height: 1.5;

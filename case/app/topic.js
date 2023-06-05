@@ -26,6 +26,7 @@ const n_alias = frame("alias");
 const n_case_file = frame("Q108673968");
 const n_instance_of = frame("P31");
 const n_media = frame("media");
+const n_lex = frame("lex");
 const n_has_quality = frame("P1552");
 const n_not_safe_for_work = frame("Q2716583");
 
@@ -427,9 +428,11 @@ class TopicCard extends Component {
     this.attach(this.onfocus, "focus");
 
     this.bind(null, "nsfw", e => this.onnsfw(e, true));
-    this.bind(null, "sfw", e => this.onnsfw(e, false));
     this.bind(null, "delimage", e => this.ondelimage(e));
     this.bind(null, "picedit", e => this.refresh());
+
+    this.attach(this.ondocedit, "docedit");
+    this.attach(this.ondocdelete, "docdelete");
 
     this.update_mode(false);
     this.update_title();
@@ -548,6 +551,32 @@ class TopicCard extends Component {
         break;
       }
     }
+  }
+
+  async ondocedit(e) {
+    if (this.readonly) return;
+    let viewer = e.target;
+    let dialog = new DocumentEditDialog(viewer.state);
+    let content = await dialog.show();
+    if (content) {
+      let n = 0;
+      this.state.apply((name, value) => {
+        if (name == n_lex && n++ == viewer.index) {
+          return [n_lex, content];
+        }
+      });
+      this.mark_dirty();
+      this.refresh();
+    }
+  }
+
+  ondocdelete(e) {
+    if (this.readonly) return;
+    let viewer = e.target;
+    let n = 0;
+    this.state.purge((name, value) => name == n_lex && n++ == viewer.index);
+    this.mark_dirty();
+    this.refresh();
   }
 
   async onsave(e) {
@@ -1015,7 +1044,7 @@ Component.register(TopicCard);
 
 class RawEditDialog extends MdDialog {
   onconnected() {
-    this.bind("textarea", "keydown", e => this.onkeydown(e));
+    this.attach(this.onkeydown, "keydown", "textarea");
   }
 
   onkeydown(e) {
@@ -1067,6 +1096,49 @@ class RawEditDialog extends MdDialog {
 }
 
 Component.register(RawEditDialog);
+
+class DocumentEditDialog extends MdDialog {
+  onconnected() {
+    this.attach(this.onkeydown, "keydown", "textarea");
+  }
+
+  onkeydown(e) {
+    if ((e.ctrlKey || e.metaKey) && e.code === "KeyS") {
+      this.submit();
+      e.preventDefault()
+    }
+    e.stopPropagation()
+  }
+
+  submit() {
+    let content = this.find("textarea").value;
+    this.close(content);
+  }
+
+  render() {
+    let content = this.state;
+    return `
+      <md-dialog-top>Edit document</md-dialog-top>
+        <textarea
+          spellcheck="false">${Component.escape(content)}</textarea>
+      <md-dialog-bottom>
+        <button id="cancel">Cancel</button>
+        <button id="submit">Update</button>
+      </md-dialog-bottom>
+    `;
+  }
+
+  static stylesheet() {
+    return `
+      $ textarea {
+        width: calc(100vw * 0.8);
+        height: calc(100vh * 0.8);
+      }
+    `;
+  }
+}
+
+Component.register(DocumentEditDialog);
 
 class TopicPhoto extends Component {
   render() {

@@ -486,7 +486,7 @@ export class MdMenu extends Component {
     content.style.display = "block";
     content.focus();
     current_menu = this;
-    this.scrollIntoView();
+    //this.scrollIntoView();
   }
 
   close() {
@@ -515,7 +515,6 @@ export class MdMenu extends Component {
       content.appendChild(item);
     }
     h.push(content);
-
     return h;
   }
 
