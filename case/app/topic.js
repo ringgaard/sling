@@ -428,6 +428,7 @@ class TopicCard extends Component {
     this.attach(this.onfocus, "focus");
 
     this.bind(null, "nsfw", e => this.onnsfw(e, true));
+    this.bind(null, "sfw", e => this.onnsfw(e, false));
     this.bind(null, "delimage", e => this.ondelimage(e));
     this.bind(null, "picedit", e => this.refresh());
 

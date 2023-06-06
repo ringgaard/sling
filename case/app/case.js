@@ -16,6 +16,7 @@ import {wikidata_initiate, wikidata_export} from "./wikibase.js";
 import {generate_key, encrypt} from "./crypto.js";
 import {Collaboration} from "./collab.js";
 import {SearchIndex, kbsearch} from "./search.js";
+import {get_property_index} from "./schema.js";
 import "./topic.js";
 
 const n_id = store.id;
@@ -212,12 +213,13 @@ class CaseEditor extends MdApp {
     if (!topic) {
       topic = await this.new_topic(null, e.detail.position);
       topic.put(n_name, mention.text(true));
-      if (link && !link.isanonymous()) topic.put(n_is, link);
+      if (link && link.id) topic.put(n_is, link);
       if (annotation && !link) annotation.put(n_is, topic);
     }
 
     // Add annotations from document.
     if (annotation) {
+      let propidx = await get_property_index();
       for (let [name, value] of annotation) {
         if (name == n_is || name == n_isa) continue;
         let target = store.resolve(value);
@@ -225,6 +227,7 @@ class CaseEditor extends MdApp {
         if ((value instanceof Frame) && value.isanonymous()) {
           for (let [qname, qvalue] of value) {
             if (qname == n_is || qname == n_isa) continue;
+            if (!propidx.allowed_qualifier(name, qname)) continue;
             qualifiers.put(qname, store.resolve(qvalue));
           }
         }

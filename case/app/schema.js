@@ -109,6 +109,20 @@ class Properties {
     }
   }
 
+  allowed_qualifier(prop, qual) {
+    if (!(prop instanceof Frame)) return false;
+    if (!(qual instanceof Frame)) return false;
+
+    for (let c of prop.all(n_property_constraint)) {
+      if (store.resolve(c) == n_allowed_qualifiers_constraint) {
+        for (let p of c.all(n_property)) {
+          if (store.resolve(p) == qual) return true;
+        }
+      }
+    }
+    return false;
+  }
+
   async match(query, options = {}) {
     // Add property shortcut matches.
     let matches = new Map();

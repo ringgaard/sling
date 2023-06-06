@@ -51,6 +51,7 @@ n_modified = commons["modified"]
 n_topics = commons["topics"]
 n_internal = commons["internal"]
 n_media = commons["media"]
+n_lex = commons["lex"]
 n_has_part = commons["P527"]
 n_publication_date = commons["P577"]
 n_described_by_source = commons["P1343"]
@@ -104,9 +105,10 @@ for rec in casedb.values():
     # Do not publish main topic.
     if topic == main: continue
 
-    # Remove notes and internals.
+    # Remove notes, documents, and internals.
     del topic[None]
     del topic[n_internal]
+    del topic[n_lex]
 
     # Add case source to topic.
     topic.append(n_described_by_source, main)

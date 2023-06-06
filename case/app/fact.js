@@ -17,6 +17,7 @@ const n_is = store.is;
 const n_name = frame("name");
 const n_media = frame("media");
 const n_internal = frame("internal");
+const n_lex = frame("lex");
 const n_target = frame("target");
 const n_item_type = frame("/w/item");
 const n_quantity_type = frame("/w/quantity");
@@ -804,9 +805,15 @@ class FactEditor extends Component {
     }
 
     // Add media.
-    for (let id of topic.all(n_media)) {
+    for (let media of topic.all(n_media)) {
       s.push(n_media);
-      s.push(id);
+      s.push(media);
+    }
+
+    // Add documents.
+    for (let doc of topic.all(n_lex)) {
+      s.push(n_lex);
+      s.push(doc);
     }
 
     // Add internals.
@@ -826,7 +833,12 @@ class FactEditor extends Component {
     let h = new Array();
     for (let i = 0; i < topic.length; ++i) {
       let prop = topic.name(i);
-      if (prop == n_id || prop == n_media || prop == n_internal) continue;
+
+      if (prop == n_id ||
+          prop == n_media ||
+          prop == n_internal ||
+          prop == n_lex) continue;
+
       let value = topic.value(i);
       if (qualified(value)) {
         h.push(new FactStatement({property: prop, value: value.get(n_is)}));
