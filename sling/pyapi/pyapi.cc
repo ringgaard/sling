@@ -43,6 +43,7 @@ static PyMethodDef py_funcs[] = {
   {"get_job_statistics", (PyCFunction) PyGetJobStatistics, METH_NOARGS, ""},
   {"finalize_dashboard", (PyCFunction) PyFinalizeDashboard, METH_NOARGS, ""},
   {"tolex", (PyCFunction) PyToLex, METH_VARARGS, ""},
+  {"lexify", (PyCFunction) PyLexify, METH_VARARGS, ""},
   {"evaluate_frames", (PyCFunction) PyEvaluateFrames, METH_VARARGS, ""},
   {"cpus", (PyCFunction) PyCPUs, METH_NOARGS, ""},
   {"cores", (PyCFunction) PyCores, METH_NOARGS, ""},

@@ -19,6 +19,7 @@
 
 #include "sling/base/types.h"
 #include "sling/frame/serialization.h"
+#include "sling/frame/object.h"
 #include "sling/nlp/document/document.h"
 #include "sling/string/ctype.h"
 
@@ -183,6 +184,33 @@ static void OutputStyle(int style, Output *output) {
   }
 }
 
+static void OutputToken(const string &word, Output *output) {
+  if (word == "``") {
+    output->Write("“");
+  } else if (word == "''") {
+    output->Write("”");
+  } else if (word == "--") {
+    output->Write("–");
+  } else if (word == "...") {
+    output->Write("…");
+  } else {
+    for (char c : word) {
+      switch (c) {
+        case '&':  output->Write("&#38;", 5); break;
+        case '<':  output->Write("&#60;", 5); break;
+        case '>':  output->Write("&#62;", 5); break;
+        case '{':  output->Write("&#123;", 6); break;
+        case '|':  output->Write("&#124;", 6); break;
+        case '}':  output->Write("&#125;", 6); break;
+        case '[':  output->Write("&#91;", 5); break;
+        case ']':  output->Write("&#93;", 5); break;
+        case '"':  output->Write("&#34;", 5); break;
+        default: output->WriteChar(c);
+      }
+    }
+  }
+}
+
 string ToLex(const Document &document) {
   // Set up frame printer for output.
   string lex;
@@ -207,13 +235,14 @@ string ToLex(const Document &document) {
       switch (token.brk()) {
         case NO_BREAK: break;
         case SPACE_BREAK: output.WriteChar(' '); break;
-        case LINE_BREAK: output.WriteChar('\n'); break;
+        case LINE_BREAK: output.Write("<br/>\n", 6); break;
         case SENTENCE_BREAK: output.Write("  ", 2); break;
         case PARAGRAPH_BREAK:
-        case SECTION_BREAK:
-        case CHAPTER_BREAK:
           output.Write("\n\n", 2);
+          if (!(style & HEADING_BEGIN)) output.Write("<p>", 3);
           break;
+        case SECTION_BREAK: output.Write("\n<section>\n"); break;
+        case CHAPTER_BREAK: output.Write("\n<chapter>\n"); break;
       }
     }
 
@@ -231,14 +260,7 @@ string ToLex(const Document &document) {
     }
 
     // Add token word. Escape reserved characters.
-    for (char c : token.word()) {
-      switch (c) {
-        case '{': case '[': c = '('; break;
-        case '}': case ']': c = ')'; break;
-        case '|': c = '!'; break;
-      }
-      output.WriteChar(c);
-    }
+    OutputToken(token.word(), &output);
 
     // Add span close brackets.
     for (Span *s = span; s != nullptr; s = s->parent()) {
@@ -295,8 +317,8 @@ string ToHTML(const Document &document) {
         case LINE_BREAK: output.Write("<br/>", 5); break;
         case SENTENCE_BREAK: output.Write("  ", 2); break;
         case PARAGRAPH_BREAK: output.Write("<p>", 3); break;
-        case SECTION_BREAK: output.Write("<center>***</center>"); break;
-        case CHAPTER_BREAK: output.Write("<hr>"); break;
+        case SECTION_BREAK: output.Write("<section>"); break;
+        case CHAPTER_BREAK: output.Write("<chapter>"); break;
       }
     }
 
@@ -323,33 +345,8 @@ string ToHTML(const Document &document) {
       }
     }
 
-    // Add token word. Escape reserved characters.
-    const string &word = token.word();
-    if (word == "``") {
-      output.Write("“");
-    } else if (word == "''") {
-      output.Write("”");
-    } else if (word == "--") {
-      output.Write("–");
-    } else if (word == "...") {
-      output.Write("…");
-    } else {
-      for (char c : word) {
-        switch (c) {
-          case '&':  output.Write("&#38;", 5); break;
-          case '<':  output.Write("&#60;", 5); break;
-          case '>':  output.Write("&#62;", 5); break;
-          case '{':  output.Write("&#123;", 6); break;
-          case '|':  output.Write("&#124;", 6); break;
-          case '}':  output.Write("&#125;", 6); break;
-          case '[':  output.Write("&#91;", 5); break;
-          case ']':  output.Write("&#93;", 5); break;
-          case '"':  output.Write("&#34;", 5); break;
-          case '\'': output.Write("&#39;", 5); break;
-          default: output.WriteChar(c);
-        }
-      }
-    }
+    // Add token word.
+    OutputToken(token.word(), &output);
 
     // Add span end.
     for (Span *s = span; s != nullptr; s = s->parent()) {
@@ -366,6 +363,17 @@ string ToHTML(const Document &document) {
 
   output.Flush();
   return html;
+}
+
+void Lexify(Document *document) {
+  string lex = ToLex(*document);
+  Builder b(document->top());
+  b.Delete(document->names()->n_tokens);
+  b.Delete(document->names()->n_mention);
+  b.Delete(document->names()->n_theme);
+  b.Delete(document->names()->n_text);
+  b.Set(document->names()->n_lex, lex);
+  b.Update();
 }
 
 }  // namespace nlp

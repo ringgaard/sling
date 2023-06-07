@@ -100,6 +100,9 @@ struct PyAnalyzer : public PyBase {
 // Return document frame in LEX-encoded format.
 PyObject *PyToLex(PyObject *self, PyObject *args);
 
+// Convert document tokens, mentions, and themes to LEX format.
+PyObject *PyLexify(PyObject *self, PyObject *args);
+
 // Evaluate frame annotations.
 PyObject *PyEvaluateFrames(PyObject *self, PyObject *args);
 

@@ -207,6 +207,12 @@ for k, v in sorted(large_profiles.items(), key=lambda item: -item[1]):
 
 if flags.arg.sites:
   print()
+  acc = 0
   for site, count in sorted(sites.items(), key=lambda item: -item[1]):
-    if count > 1: print("%5d %s" % (count, site))
+    if count < 2: break
+    acc += count
+    print("%6.2f%% %6.2f%% %5d %s" % (
+      count / num_photos * 100,
+      acc / num_photos * 100,
+      count, site))
 

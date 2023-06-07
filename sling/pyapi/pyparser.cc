@@ -253,6 +253,22 @@ PyObject *PyToLex(PyObject *self, PyObject *args) {
   return PyUnicode_FromStringAndSize(lex.data(), lex.size());
 }
 
+PyObject *PyLexify(PyObject *self, PyObject *args) {
+  // Get arguments.
+  PyFrame *pyframe;
+  if (!PyArg_ParseTuple(args, "O", &pyframe)) return nullptr;
+  if (!PyFrame::TypeCheck(pyframe)) return nullptr;
+
+  // Initialize document from frame.
+  Frame top(pyframe->pystore->store, pyframe->handle());
+  nlp::Document document(top);
+
+  // Convert tokens, mentions, and themes to LEX format.
+  nlp::Lexify(&document);
+
+  Py_RETURN_NONE;
+}
+
 PyObject *PyEvaluateFrames(PyObject *self, PyObject *args) {
   // Get arguments.
   PyStore *pystore;

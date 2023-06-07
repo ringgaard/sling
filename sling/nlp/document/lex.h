@@ -54,6 +54,9 @@ string ToLex(const Document &document);
 // Convert document to HTML format.
 string ToHTML(const Document &document);
 
+// Convert tokens, mentions, and themes to LEX format in document.
+void Lexify(Document *document);
+
 }  // namespace nlp
 }  // namespace sling
 

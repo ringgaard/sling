@@ -40,6 +40,7 @@ struct DocumentNames : public SharedNames {
   Name n_title{*this, "title"};
   Name n_url{*this, "url"};
   Name n_text{*this, "text"};
+  Name n_lex{*this, "lex"};
   Name n_tokens{*this, "tokens"};
   Name n_mention{*this, "mention"};
   Name n_theme{*this, "theme"};

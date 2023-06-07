@@ -1287,7 +1287,10 @@ export class Reader {
         return sym;
 
       case 123: // '{'
-        return this.parse_frame();
+        this.next();  // skip open bracket
+        let frame = this.parse_frame();
+        this.next();  // skip close bracket
+        return frame;
 
       case 91: // '['
         return this.parse_array();
@@ -1299,9 +1302,6 @@ export class Reader {
 
   // Parse frame.
   parse_frame() {
-    // Skip open bracket.
-    this.next();
-
     // Parse slots.
     let slots = new Array();
     let frame = null;
@@ -1348,9 +1348,6 @@ export class Reader {
       // Skip commas between slots.
       if (this.token == 44) this.next();
     }
-
-    // Skip closing bracket.
-    this.next();
 
     // Add frame to store.
     if (frame == null) {

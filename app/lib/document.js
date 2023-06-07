@@ -85,9 +85,10 @@ export class Document {
         }
 
         case 123: { // '{'
+          r.read();
           r.next();
-          let obj = r.parse();
-          this.themes.push(obj);
+          let theme = r.parse_frame();
+          this.themes.push(theme);
           break;
         }
 
