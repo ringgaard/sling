@@ -10,7 +10,7 @@ import {value_text, value_parser, LabelCollector}
 
 import {Context} from "./plugins.js";
 import {search, kbsearch} from "./search.js";
-import {qualified, psearch} from "./schema.js";
+import {qualified, psearch, get_property_index} from "./schema.js";
 
 const n_id = store.id;
 const n_is = store.is;
@@ -1308,7 +1308,7 @@ function newtopic(query, editor, field, results) {
     ref: query,
     name: query,
     description: "new topic",
-    newtopic: true,
+    field: field,
     context: new Context(null, editor.casefile, editor),
     onitem: async item => {
       // Create new topic stub.
@@ -1316,21 +1316,20 @@ function newtopic(query, editor, field, results) {
       let topic = await item.context.new_topic(position);
       if (!topic) return;
       topic.put(n_name, item.name.trim());
+      let prop = item.field && item.field.parentElement.property().value();
 
       // Move xref qualifiers to new topic.
+      let propidx = await get_property_index();
       let e = field.parentElement.nextSibling;
-      while (e) {
-        if (!e.qualified) break;
-        let prop = e.property().value();
-        let value = e.value().value();
-        if (prop.get && prop.get(n_target) == n_xref_type) {
-          topic.put(prop, value);
-          let next = e.nextSibling;
+      while (e && e.qualified) {
+        let qprop = e.property().value();
+        let qvalue = e.value().value();
+        let next = e.nextSibling;
+        if (!prop || !propidx.allowed_qualifier(prop, qprop)) {
+          topic.put(qprop, qvalue);
           e.remove();
-          e = next;
-        } else {
-          e = e.nextSibling;
         }
+        e = next;
       }
 
       item.context.select = false;
