@@ -327,10 +327,10 @@ export class DocumentViewer extends Component {
         font-weight: normal;
         line-height: 1;
         margin-right: -16px;
-        display: none;
+        visibility: hidden;
       }
       $:hover md-menu {
-        display: inline-block;
+        visibility: visible;
       }
       $ {
         font: 1rem anubis, serif;

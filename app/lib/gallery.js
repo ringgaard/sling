@@ -71,6 +71,7 @@ export class PhotoGallery extends MdModal {
     this.attach(this.onopennew, "click", "#open");
     this.attach(this.onfullsize, "click", "#fullsize");
     this.attach(this.onfullscreen, "click", "#fullscreen");
+    this.attach(this.oncopyurl, "click", "#copyurl");
     this.attach(this.close, "click", "#close");
     this.attach(this.onsource, "click", ".domain");
     this.attach(this.onkeypress, "keydown");
@@ -183,6 +184,12 @@ export class PhotoGallery extends MdModal {
     e.stopPropagation();
     let photo = this.find(".photo");
     photo.classList.toggle("full");
+  }
+
+  oncopyurl(e) {
+    e.stopPropagation();
+    let photo = this.photos[this.current];
+    navigator.clipboard.writeText(photo.url);
   }
 
   onclose(e) {
@@ -301,6 +308,8 @@ export class PhotoGallery extends MdModal {
         <md-icon-button id="fullsize" icon="fit_screen">
         </md-icon-button>
         <md-icon-button id="fullscreen" icon="fullscreen">
+        </md-icon-button>
+        <md-icon-button id="copyurl" icon="content_copy">
         </md-icon-button>
         <md-icon-button id="close" icon="close">
         </md-icon-button>
