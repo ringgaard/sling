@@ -78,8 +78,14 @@ struct PyWebPage : public PyBase {
   // Return dictionary with web page meta data.
   PyObject *GetMetaData();
 
+  // Return dictionary with consolidated web page properties.
+  PyObject *GetProperties();
+
   // Return array with LD-JSON blocks.
   PyObject *GetLDJSON();
+
+  // Add item to dictionary.
+  static void AddItem(PyObject *dict, Text key, Text value);
 
   // Web site analysis.
   PyWebsiteAnalysis *pyanalysis;

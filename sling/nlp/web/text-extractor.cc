@@ -65,26 +65,24 @@ static void GetTagIdentifier(const XMLElement &e, string *ident) {
   }
 }
 
-bool WebsiteAnalysis::AddPage(const string &url) {
-  if (!url.empty()) {
-    uint64 fp = Fingerprint(url.data(), url.size());
-    if (urls_.count(fp) > 0) return false;
-    urls_.insert(fp);
-  }
-  num_pages_++;
-  return true;
-}
-
-void WebsiteAnalysis::AddTag(uint64 signature, int score) {
-  scores_[signature] += score;
-}
-
-void WebsiteAnalysis::PreserveTag(uint64 signature) {
+void WebsiteAnalysis::Preserve(uint64 signature) {
   sticky_.insert(signature);
 }
 
+void WebsiteAnalysis::Preserve(const char *tag, const char *cls) {
+  Preserve(TagFingerprint(tag, cls));
+}
+
+void WebsiteAnalysis::Block(uint64 signature) {
+  blocked_.insert(signature);
+}
+
 void WebsiteAnalysis::Block(const char *tag, const char *cls) {
-  blocked_.insert(TagFingerprint(tag, cls));
+  Block(TagFingerprint(tag, cls));
+}
+
+void WebsiteAnalysis::ScoreTag(uint64 signature, int score) {
+  scores_[signature] += score;
 }
 
 void WebsiteAnalysis::AddPhrase(const char *phrase, uint64 signature) {
@@ -142,22 +140,8 @@ void WebsiteAnalysis::GetFingerprints(std::vector<uint64> *fingerprints) const {
 
 bool WebPageAnalyzer::StartElement(const XMLElement &e) {
   // Only parse body markup.
-  bool is_body = false;
-  if (!in_body_) {
-    if (TagEqual(e.name, "body")) {
-      in_body_ = true;
-      is_body = true;
-      if (!analysis_->AddPage(url_)) return false;
-    } else if (TagEqual(e.name, "meta")) {
-      const char *property = e.Get("property");
-      const char *content = e.Get("content");
-      if (property && content) {
-       if (TagEqual(property, "og:url")) {
-         url_ = content;
-       }
-      }
-    }
-  }
+  bool is_body = TagEqual(e.name, "body");
+  if (!in_body_ && is_body) in_body_ = true;
   if (!in_body_) return true;
 
   // Skip style sheets and scripts.
@@ -251,7 +235,7 @@ bool WebPageAnalyzer::EndElement(const char *name) {
       // Keep tag if children contain contents.
       if (taginfo.keep_children) {
         taginfo.keep = true;
-        analysis_->PreserveTag(taginfo.signature);
+        analysis_->Preserve(taginfo.signature);
       }
     }
 
@@ -262,7 +246,7 @@ bool WebPageAnalyzer::EndElement(const char *name) {
   }
 
   // Vote on content.
-  analysis_->AddTag(taginfo.signature, taginfo.keep ? 1 : -1);
+  analysis_->ScoreTag(taginfo.signature, taginfo.keep ? 1 : -1);
 
   nesting_.pop_back();
   return true;
@@ -363,10 +347,7 @@ bool WebPageTextExtractor::StartElement(const XMLElement &e) {
   uint64 signature = FingerprintCat(parent.signature, fp);
 
   // Check if we should keep the contents of the tag.
-  bool keep = false;
-  if (parent.keep) {
-    keep = analysis_->Keep(signature);
-  }
+  bool keep = parent.keep && analysis_->Keep(signature);
 
   // Add tag to stack.
   nesting_.emplace_back(signature, keep);
@@ -603,6 +584,97 @@ void WebPageTextExtractor::DebugText(const char *str) {
   } else {
     text_.append(html_output_ ? "</span>" : "}");
   }
+}
+
+WebPageMetadata::WebPageMetadata(const WebPageTextExtractor &page)
+    : meta(page.meta()) {
+  // OpenGraph meta properties.
+  type = GetMeta("og:type");
+  title = GetMeta("og:title");
+  summary = GetMeta("og:description");
+  url = GetMeta("og:url");
+  image = GetMeta("og:image");
+  site = GetMeta("og:site_name");
+  language = GetMeta("og:locale");
+  author = GetMeta("og:author");
+  if (author.empty()) author = GetMeta("article:author");
+  publisher = GetMeta("article:publisher");
+  published = GetMeta("article:published_time");
+  if (published.empty()) published = GetMeta("og:article:published_time");
+  if (published.empty()) published = GetMeta("og:pubdate");
+
+  // Twitter card meta properties.
+  if (title.empty()) title = GetMeta("twitter:title");
+  if (summary.empty()) summary = GetMeta("twitter:description");
+  if (domain.empty()) domain = GetMeta("twitter:domain");
+  if (site.empty()) site = GetMeta("twitter:site");
+  if (creator.empty()) creator = GetMeta("twitter:creator");
+  if (image.empty()) image = GetMeta("twitter:image:src");
+
+  // Dublin Core meta information.
+  if (type.empty()) type = GetMeta("dc.type");
+  if (title.empty()) title = GetMeta("dc.title");
+  if (summary.empty()) summary = GetMeta("dc.description");
+  if (publisher.empty()) publisher = GetMeta("dc.publisher");
+  if (published.empty()) published = GetMeta("dc.date");
+  if (summary.empty()) summary = GetMeta("dcterms.abstract");
+  if (published.empty()) published = GetMeta("dcterms.created");
+  if (published.empty()) published = GetMeta("DC.date.issued");
+
+  // Sailthru meta information.
+  if (title.empty()) title = GetMeta("sailthru.title");
+  if (summary.empty()) summary = GetMeta("sailthru.description");
+  if (image.empty()) image = GetMeta("sailthru.image.full");
+  if (author.empty()) author = GetMeta("sailthru.author");
+  if (published.empty()) published = GetMeta("sailthru.date");
+
+  // Generic meta information.
+  if (type.empty()) type = GetMeta("pagetype");
+  if (title.empty()) title = GetMeta("title");
+  if (summary.empty()) summary = GetMeta("description");
+  if (author.empty()) author = GetMeta("author");
+  if (published.empty()) published = GetMeta("date");
+  if (image.empty()) image = GetMeta("image");
+  if (url.empty()) url = GetMeta("canonical");
+
+  // Ekstrabladet.
+  if (summary == "Læs mere her") summary = nullptr;
+
+  // Berlingske.
+  if (summary == "Læs mere her.") summary = nullptr;
+
+  // Trim fields.
+  title = Truncate(title, '|');
+  title = Truncate(title, " - ");
+  author = Truncate(author, '|');
+  summary = Truncate(summary, '|');
+  image = Truncate(image, ';');
+}
+
+Text WebPageMetadata::GetMeta(Text field) {
+  for (auto &m : meta) {
+    if (field == m.first) {
+      Text value = m.second;
+      return value.trim();
+    }
+  }
+  return nullptr;
+}
+
+Text WebPageMetadata::Truncate(Text text, char delim) {
+  if (!text.empty()) {
+    int pos = text.find(delim);
+    if (pos != -1) return text.substr(0, pos).trim();
+  }
+  return text;
+}
+
+Text WebPageMetadata::Truncate(Text text, Text delim) {
+  if (!text.empty()) {
+    int pos = text.find(delim);
+    if (pos != -1) return text.substr(0, pos).trim();
+  }
+  return text;
 }
 
 }  // namespace nlp

@@ -22,14 +22,17 @@ class FrameBuilder:
 
   # Add slot.
   def __setitem__(self, name, value):
+    if value is None: return
     self.slots.append((name, value))
 
   # Add new slot.
   def add(self, name, value):
+    if value is None: return
     self.slots.append((name, value))
 
   # Add new unique slot.
   def put(self, name, value):
+    if value is None: return
     for slot in self.slots:
       if slot[0] == name and slot[1] == value:
         return False

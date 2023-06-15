@@ -182,11 +182,13 @@ class AnnotationBox extends Component {
 Component.register(AnnotationBox);
 
 export class DocumentViewer extends Component {
-  onconnected() {
+  onrendered() {
     this.attach(this.onmouse, "mouseover");
     this.attach(this.onleave, "mouseleave");
-    this.attach(this.onedit, "select", "#edit");
-    this.attach(this.ondelete, "select", "#delete");
+    if (this.editable) {
+      this.attach(this.onedit, "select", "#edit");
+      this.attach(this.ondelete, "select", "#delete");
+    }
   }
 
   async onmouse(e) {
@@ -258,16 +260,18 @@ export class DocumentViewer extends Component {
     let h = new Array();
 
     // Document menu.
-    h.push(`
-      <md-menu>
-        <md-menu-item id="edit">
-          <md-icon icon="edit"></md-icon>Edit
-        </md-menu-item>
-        <md-menu-item id="delete">
-         <md-icon icon="delete"></md-icon>Delete
-        </md-menu-item>
-      </md-menu>
-    `);
+    if (this.editable) {
+      h.push(`
+        <md-menu>
+          <md-menu-item id="edit">
+            <md-icon icon="edit"></md-icon>Edit
+          </md-menu-item>
+          <md-menu-item id="delete">
+           <md-icon icon="delete"></md-icon>Delete
+          </md-menu-item>
+        </md-menu>
+      `);
+    }
 
     // Parse LEX document.
     this.doc = new Document(store);

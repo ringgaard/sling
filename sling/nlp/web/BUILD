@@ -10,6 +10,7 @@ cc_library(
     "//sling/stream:input",
     "//sling/string:ctype",
     "//sling/string:strcat",
+    "//sling/string:text",
     "//sling/util:fingerprint",
     "//sling/web:html-parser",
   ],

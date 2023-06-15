@@ -165,6 +165,7 @@ void PyWebPage::Define(PyObject *module) {
   methods.Add("text", &PyWebPage::GetExtractedText);
   methods.Add("headers", &PyWebPage::GetHeaders);
   methods.Add("metadata", &PyWebPage::GetMetaData);
+  methods.Add("properties", &PyWebPage::GetProperties);
   methods.Add("ldjson", &PyWebPage::GetLDJSON);
   type.tp_methods = methods.table();
 
@@ -200,27 +201,51 @@ PyObject *PyWebPage::GetExtractedText() {
   return AllocateString(extractor->text());
 }
 
+void PyWebPage::AddItem(PyObject *dict, Text key, Text value) {
+  if (key.empty() || value.empty()) return;
+  LOG(INFO) << "K: " << key << " V: " << value;
+  PyObject *k = AllocateString(key);
+  PyObject *v = AllocateString(value);
+  PyDict_SetItem(dict, k, v);
+  Py_DECREF(k);
+  Py_DECREF(v);
+}
+
 PyObject *PyWebPage::GetHeaders() {
   PyObject *dict = PyDict_New();
   for (auto &hdr : *headers) {
-   PyObject *key = AllocateString(hdr.first);
-   PyObject *value = AllocateString(hdr.second);
-   PyDict_SetItem(dict, key, value);
-   Py_DECREF(key);
-   Py_DECREF(value);
+    AddItem(dict, hdr.first, hdr.second);
   }
   return dict;
 }
 
 PyObject *PyWebPage::GetMetaData() {
+  LOG(INFO) << "Meta:";
   PyObject *dict = PyDict_New();
   for (auto &prop : extractor->meta()) {
-   PyObject *key = AllocateString(prop.first);
-   PyObject *value = AllocateString(prop.second);
-   PyDict_SetItem(dict, key, value);
-   Py_DECREF(key);
-   Py_DECREF(value);
+    AddItem(dict, prop.first, prop.second);
   }
+  return dict;
+}
+
+PyObject *PyWebPage::GetProperties() {
+  LOG(INFO) << "Props:";
+  nlp::WebPageMetadata props(*extractor);
+
+  PyObject *dict = PyDict_New();
+  AddItem(dict, "type", props.type);
+  AddItem(dict, "title", props.title);
+  AddItem(dict, "summary", props.summary);
+  AddItem(dict, "url", props.url);
+  AddItem(dict, "image", props.image);
+  AddItem(dict, "site", props.site);
+  AddItem(dict, "domain", props.domain);
+  AddItem(dict, "language", props.language);
+  AddItem(dict, "author", props.author);
+  AddItem(dict, "creator", props.creator);
+  AddItem(dict, "publisher", props.publisher);
+  AddItem(dict, "published", props.published);
+
   return dict;
 }
 

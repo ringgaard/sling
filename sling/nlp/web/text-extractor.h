@@ -9,6 +9,7 @@
 #include "sling/base/logging.h"
 #include "sling/base/types.h"
 #include "sling/stream/input.h"
+#include "sling/string/text.h"
 #include "sling/util/fingerprint.h"
 #include "sling/web/html-parser.h"
 
@@ -18,17 +19,16 @@ namespace nlp {
 // Analysis results for web site.
 class WebsiteAnalysis {
  public:
-  // Add web page to analysis. Return false if this is a duplicate page.
-  bool AddPage(const string &url);
-
-  // Add tag score.
-  void AddTag(uint64 signature, int score);
-
   // Preserve tag.
-  void PreserveTag(uint64 signature);
+  void Preserve(uint64 signature);
+  void Preserve(const char *tag, const char *cls);
 
   // Block tag.
+  void Block(uint64 signature);
   void Block(const char *tag, const char *cls);
+
+  // Add tag score.
+  void ScoreTag(uint64 signature, int score);
 
   // Add text phrase with tag signature.
   void AddPhrase(const char *phrase, uint64 signature);
@@ -88,9 +88,6 @@ class WebsiteAnalysis {
   // Phrase map for detecting repeated phrases. The key is the fingerprint of
   // the context tag signature and the phrase text.
   std::unordered_map<uint64, PhraseInfo> phrases_;
-
-  // URL map with URL fingerprints of all analyzed pages.
-  std::unordered_set<uint64> urls_;
 };
 
 // Analyze web page and gather statistics on web text contents.
@@ -139,9 +136,6 @@ class WebPageAnalyzer : public HTMLParser {
 
   // Tag stack for nested tags.
   std::vector<TagInfo> nesting_;
-
-  // URL for page extracted from meta data.
-  string url_;
 
   // Analysis results for web site.
   WebsiteAnalysis *analysis_;
@@ -223,6 +217,36 @@ class WebPageTextExtractor : public HTMLParser {
 
   // In debug mode, all text is extracted but annotated with debug information.
   bool debug_ = false;
+};
+
+// Web page meta data.
+struct WebPageMetadata {
+  // Extract metadata from web page.
+  WebPageMetadata(const WebPageTextExtractor &page);
+
+  // Get meta data field.
+  Text GetMeta(Text field);
+
+  // Truncate text at character.
+  static Text Truncate(Text text, char delim);
+  static Text Truncate(Text text, Text delim);
+
+  // Metadata fields from text extractor.
+  const WebPageTextExtractor::Meta &meta;
+
+  // Consolidated web page metadata.
+  Text type;       // web page type
+  Text title;      // page title
+  Text summary;    // article summary
+  Text url;        // (canonical) page url
+  Text image;      // image url
+  Text site;       // web site identifier
+  Text domain;     // web site domain
+  Text language;   // page language
+  Text author;     // page author
+  Text creator;    // page creator
+  Text publisher;  // web page publisher
+  Text published;  // publication date
 };
 
 }  // namespace nlp

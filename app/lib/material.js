@@ -1591,6 +1591,12 @@ export class MdInput extends Component {
     if (value) this.find("input").value = value;
   }
 
+  clear() {
+    let input = this.find("input");
+    input.value = null;
+    input.focus();
+  }
+
   render() {
     let attrs = [];
     if (this.attrs.type) {

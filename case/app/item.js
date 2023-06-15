@@ -549,6 +549,7 @@ class DocumentPanel extends Component {
     for (let doc of this.state) {
       let viewer = new DocumentViewer(doc);
       viewer.index = h.length;
+      viewer.editable = true;
       h.push(viewer);
     }
     return h;

@@ -369,7 +369,7 @@ class CaseEditor extends MdApp {
     this.find("md-drawer").toogle();
   }
 
-  onsave(e) {
+  async onsave(e) {
     if (this.readonly) return;
     if (this.dirty) {
       // Update modification time.
@@ -380,7 +380,7 @@ class CaseEditor extends MdApp {
       this.purge_scraps();
 
       // Save case to local database.
-      this.match("#app").save_case(this.casefile);
+      await this.match("#app").save_case(this.casefile);
       this.mark_clean();
     }
   }
