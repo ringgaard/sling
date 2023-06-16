@@ -14,6 +14,8 @@
 
 # News reader.
 
+import re
+
 import sling
 import sling.flags as flags
 import sling.log as log
@@ -88,8 +90,9 @@ app.page("/news",
 
 app.js("/news/app.js",
 """
-import {store, frame} from "/common/lib/global.js";
+import {store, frame, settings} from "/common/lib/global.js";
 import {Component} from "/common/lib/component.js";
+import {value_text, LabelCollector} from "/common/lib/datatype.js";
 import {DocumentViewer} from "/common/lib/docviewer.js";
 import {MdApp, MdCard, inform} from "/common/lib/material.js";
 
@@ -97,6 +100,11 @@ const n_name = frame("name");
 const n_description = frame("description");
 const n_media = frame("media");
 const n_lex = frame("lex");
+const n_publisher = frame("P123");
+const n_published = frame("P577");
+const n_url = frame("P953");
+const n_item_type = frame("/w/item");
+const n_time_type = frame("/w/time");
 
 class NewsApp extends MdApp {
   onconnected() {
@@ -131,6 +139,9 @@ class NewsApp extends MdApp {
         display: flex;
         max-width: 600px;
       }
+      $ md-input input {
+        font-size: 16px;
+      }
       $ #title {
         padding-right: 16px;
       }
@@ -140,8 +151,44 @@ class NewsApp extends MdApp {
 
 Component.register(NewsApp);
 
+class KbLink extends Component {
+  onconnected() {
+    this.attach(this.onclick, "click");
+  }
+
+  onclick(e) {
+    console.log("click", this.attrs.ref);
+    window.open(`${settings.kbservice}/kb/${this.attrs.ref}`, "_blank");
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        cursor: pointer;
+        color: #0b0080;
+      }
+
+      $:hover {
+        cursor: pointer;
+        text-decoration: underline;
+      }
+    `;
+  }
+}
+
+Component.register(KbLink);
+
 class ArticlePanel extends MdCard {
   visible() { return this.state; }
+
+  async onupdate() {
+    let article = this.state;
+    if (article) {
+      let collector = new LabelCollector(store);
+      collector.add(article);
+      await collector.retrieve();
+    }
+  }
 
   onupdated() {
     let article = this.state;
@@ -152,14 +199,52 @@ class ArticlePanel extends MdCard {
   }
 
   render() {
-    return `
-        <div class="content">
-          <md-text id="title"></md-text>
-          <md-text id="summary"></md-text>
-          <md-image id="image"></md-image>
-          <document-viewer id="document"></document-viewer>
-        </div>
-    `;
+    function sitename(url) {
+      let host = new URL(url).hostname;
+      if (host.startsWith("www.")) host = host.slice(4);
+      return host;
+    }
+
+    function html(value, dt) {
+      if (value === undefined) return "";
+      let [text, encoded] = value_text(value, null, dt);
+      let anchor = Component.escape(text);
+      if (encoded && dt != n_time_type) {
+        let ref = value && value.id;
+        return `<kb-link ref="${ref}">${anchor}</kb-link>`;
+      } else {
+        return anchor;
+      }
+    }
+
+    let article = this.state;
+    let publisher = article.get(n_publisher);
+    let published = article.get(n_published);
+    let url = article.get(n_url);
+
+    let h = new Array();
+    h.push('<div class="content">');
+    h.push('<md-text id="title"></md-text>');
+
+    h.push('<div class="source">');
+    if (publisher) {
+      h.push(`<span id="publisher">${html(publisher, n_item_type)}</span>`);
+    }
+    if (url) {
+      h.push(`<a id="newsurl" href="${url}" target="_blank" rel="noreferrer">`);
+      h.push(sitename(url));
+      h.push('</a>');
+    }
+    h.push('</div>');
+
+    if (published) {
+      h.push(`<div id="published">${html(published, n_time_type)}</div>`);
+    }
+    h.push('<md-text id="summary"></md-text>');
+    h.push('<md-image id="image"></md-image>');
+    h.push('<document-viewer id="document"></document-viewer>');
+    h.push('</div>');
+    return h.join("");
   }
   static stylesheet() {
     return `
@@ -174,6 +259,21 @@ class ArticlePanel extends MdCard {
         display: block;
         font: bold 40px helvetica;
         padding: 12px 0px;
+      }
+      $ .source {
+        display: flex;
+        gap: 8px;
+      }
+      $ #publisher {
+        font-weight: bold;
+      }
+      $ #newsurl {
+        text-decoration: none;
+        cursor: pointer;
+        color: green;
+      }
+      $ #newsurl:hover {
+        text-decoration: underline;
       }
       $ #summary {
         display: block;
@@ -199,6 +299,18 @@ Component.register(ArticlePanel);
 document.body.style = null;
 """)
 
+def sling_date(y, m, d):
+  return y * 10000 + m * 100 + d
+
+def parse_date(s):
+  if s is None: return None
+
+  m = re.match("^(\d\d\d\d)-(\d\d)-(\d\d)", s)
+  if m != None:
+    return sling_date(int(m[1]), int(m[2]), int(m[3]))
+
+  return s
+
 def fetch_news(url):
   # Trim news url.
   trimmed_url = news.trim_url(url)
@@ -211,6 +323,7 @@ def fetch_news(url):
     trimmed_url = article[10:]
     log.info("redirect", trimmed_url)
     article = self.crawldb[trimmed_url];
+    if article: print("cached", trimmed_url)
 
   # Fetch directly if article not in database.
   if article is None:
@@ -236,33 +349,35 @@ def handle_fetch(request):
   # Analyze web page.
   webanalyzer.analyze(article)
 
-  #fps = array.array("Q", webanalyzer.fingerprints())
-  #print("fingerprints", fps)
-
   # Extract meta data and content from article.
   page = webanalyzer.extract(article)
 
-  #meta = page.metadata()
-  #for k, v in meta.items():
+  props = page.properties()
+  #for k, v in props.items():
   #  print(k, ":", v)
 
-  #for ld in page.ldjson():
-  #  print("LD-JSON:", ld)
+  # Get site information.
+  store = sling.Store(commons)
+  url = props.get("url", url)
+  sitename = news.sitename(url)
+  site = news.sites.get(sitename)
+  if site is not None and site.qid is not None:
+    publisher = store[site.qid]
+  elif site is not None and  site.name is not None:
+    publisher = site.name
+  else:
+    publisher = props.get("publisher")
 
-  props = page.properties()
-  for k, v in props.items():
-    print("prop", k, ":", v)
-
-  print(page.text())
+  # Get publication date.
+  published = parse_date(props.get("published"))
 
   # Build article frame.
-  store = sling.Store(commons)
   b = sling.util.FrameBuilder(store)
   b.add(n_name, props.get("title"))
   b.add(n_description, props.get("summary"))
-  b.add(n_publisher, props.get("publisher"))
-  b.add(n_publication_date, props.get("published"))
-  b.add(n_full_work, props.get("url", url))
+  b.add(n_publisher, publisher)
+  b.add(n_publication_date, published)
+  b.add(n_full_work, url)
   b.add(n_media, props.get("image"))
   b.add(n_author_name_string, props.get("author"))
   b.add(n_creator, props.get("creator"))

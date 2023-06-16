@@ -588,21 +588,6 @@ void WebPageTextExtractor::DebugText(const char *str) {
 
 WebPageMetadata::WebPageMetadata(const WebPageTextExtractor &page)
     : meta(page.meta()) {
-  // OpenGraph meta properties.
-  type = GetMeta("og:type");
-  title = GetMeta("og:title");
-  summary = GetMeta("og:description");
-  url = GetMeta("og:url");
-  image = GetMeta("og:image");
-  site = GetMeta("og:site_name");
-  language = GetMeta("og:locale");
-  author = GetMeta("og:author");
-  if (author.empty()) author = GetMeta("article:author");
-  publisher = GetMeta("article:publisher");
-  published = GetMeta("article:published_time");
-  if (published.empty()) published = GetMeta("og:article:published_time");
-  if (published.empty()) published = GetMeta("og:pubdate");
-
   // Twitter card meta properties.
   if (title.empty()) title = GetMeta("twitter:title");
   if (summary.empty()) summary = GetMeta("twitter:description");
@@ -610,6 +595,21 @@ WebPageMetadata::WebPageMetadata(const WebPageTextExtractor &page)
   if (site.empty()) site = GetMeta("twitter:site");
   if (creator.empty()) creator = GetMeta("twitter:creator");
   if (image.empty()) image = GetMeta("twitter:image:src");
+
+  // OpenGraph meta properties.
+  if (type.empty()) type = GetMeta("og:type");
+  if (title.empty()) title = GetMeta("og:title");
+  if (summary.empty()) summary = GetMeta("og:description");
+  if (url.empty()) url = GetMeta("og:url");
+  if (image.empty()) image = GetMeta("og:image");
+  if (site.empty()) site = GetMeta("og:site_name");
+  if (language.empty()) language = GetMeta("og:locale");
+  if (author.empty()) author = GetMeta("og:author");
+  if (author.empty()) author = GetMeta("article:author");
+  if (publisher.empty()) publisher = GetMeta("article:publisher");
+  if (published.empty()) published = GetMeta("article:published_time");
+  if (published.empty()) published = GetMeta("og:article:published_time");
+  if (published.empty()) published = GetMeta("og:pubdate");
 
   // Dublin Core meta information.
   if (type.empty()) type = GetMeta("dc.type");
@@ -646,8 +646,10 @@ WebPageMetadata::WebPageMetadata(const WebPageTextExtractor &page)
   // Trim fields.
   title = Truncate(title, '|');
   title = Truncate(title, " - ");
+  title = Truncate(title, " – ");
   author = Truncate(author, '|');
   summary = Truncate(summary, '|');
+  summary = Truncate(summary, " - ");
   image = Truncate(image, ';');
 }
 

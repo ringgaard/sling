@@ -203,7 +203,6 @@ PyObject *PyWebPage::GetExtractedText() {
 
 void PyWebPage::AddItem(PyObject *dict, Text key, Text value) {
   if (key.empty() || value.empty()) return;
-  LOG(INFO) << "K: " << key << " V: " << value;
   PyObject *k = AllocateString(key);
   PyObject *v = AllocateString(value);
   PyDict_SetItem(dict, k, v);
@@ -220,7 +219,6 @@ PyObject *PyWebPage::GetHeaders() {
 }
 
 PyObject *PyWebPage::GetMetaData() {
-  LOG(INFO) << "Meta:";
   PyObject *dict = PyDict_New();
   for (auto &prop : extractor->meta()) {
     AddItem(dict, prop.first, prop.second);
@@ -229,7 +227,6 @@ PyObject *PyWebPage::GetMetaData() {
 }
 
 PyObject *PyWebPage::GetProperties() {
-  LOG(INFO) << "Props:";
   nlp::WebPageMetadata props(*extractor);
 
   PyObject *dict = PyDict_New();
