@@ -78,6 +78,8 @@ app.page("/news",
         type="search"
         placeholder="News URL...">
       </md-input>
+      <md-spacer></md-spacer>
+      <md-icon-button id="copy" icon="content_copy"></md-icon-button>
     </md-toolbar>
     <md-content>
       <article-panel id="article">
@@ -108,6 +110,7 @@ const n_time_type = frame("/w/time");
 
 class NewsApp extends MdApp {
   onconnected() {
+    this.attach(this.oncopy, "click", "#copy");
     window.onkeydown = e => {
       if (e.key === "Enter") this.onfetch();
       if (e.key === "Escape") this.onclear();
@@ -131,6 +134,11 @@ class NewsApp extends MdApp {
 
   onclear() {
     this.find("#query").clear();
+  }
+
+  oncopy(e) {
+    let article = this.find("article-panel");
+    if (article) article.copy();
   }
 
   static stylesheet() {
@@ -180,6 +188,11 @@ Component.register(KbLink);
 
 class ArticlePanel extends MdCard {
   visible() { return this.state; }
+
+  copy() {
+    let article = this.state;
+    navigator.clipboard.writeText(article.text());
+  }
 
   async onupdate() {
     let article = this.state;
@@ -355,6 +368,9 @@ def handle_fetch(request):
   props = page.properties()
   #for k, v in props.items():
   #  print(k, ":", v)
+
+  for j in page.ldjson():
+    print(j)
 
   # Get site information.
   store = sling.Store(commons)
