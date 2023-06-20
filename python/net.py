@@ -18,6 +18,7 @@ import json
 import os
 import os.path
 import signal
+import socket
 import time
 import traceback
 import urllib.parse
@@ -326,4 +327,17 @@ def json_page(value, request, response):
 def json_page(value, request, response):
   response.ct = "application/sling"
   response.body = value.data(binary=True, shallow=False)
+
+checked_hostnames = set()
+
+def private(url):
+  # Check that url is not on local network.
+  addr = urllib.parse.urlsplit(url)
+  if addr.hostname in checked_hostnames: return False
+  ipaddr = socket.gethostbyname(addr.hostname)
+  if ipaddr.startswith("10."): return True
+  if ipaddr.startswith("192.168."): return True
+  if ipaddr.startswith("127."): return True
+  checked_hostnames.add(addr.hostname)
+  return False
 

@@ -81,8 +81,8 @@ struct PyWebPage : public PyBase {
   // Return dictionary with consolidated web page properties.
   PyObject *GetProperties();
 
-  // Return array with LD-JSON blocks.
-  PyObject *GetLDJSON();
+  // Return array with JSON-LD blocks.
+  PyObject *GetJSONLD();
 
   // Add item to dictionary.
   static void AddItem(PyObject *dict, Text key, Text value);

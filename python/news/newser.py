@@ -15,6 +15,7 @@
 # News reader.
 
 import re
+import json
 
 import sling
 import sling.flags as flags
@@ -213,9 +214,13 @@ class ArticlePanel extends MdCard {
 
   render() {
     function sitename(url) {
-      let host = new URL(url).hostname;
-      if (host.startsWith("www.")) host = host.slice(4);
-      return host;
+      try {
+        let host = new URL(url).hostname;
+        if (host.startsWith("www.")) host = host.slice(4);
+        return host;
+      } catch (e) {
+        return "???";
+      }
     }
 
     function html(value, dt) {
@@ -324,6 +329,8 @@ def parse_date(s):
 
   return s
 
+checked_hostnames = set()
+
 def fetch_news(url):
   # Trim news url.
   trimmed_url = news.trim_url(url)
@@ -340,6 +347,7 @@ def fetch_news(url):
 
   # Fetch directly if article not in database.
   if article is None:
+    if sling.net.private(url): return 403
     try:
         article = news.retrieve_article(trimmed_url)
     except Exception as e:
@@ -347,6 +355,43 @@ def fetch_news(url):
       article = None
 
   return trimmed_url, article
+
+ldtypes = [
+  "Article",
+  "NewsArticle",
+  "ReportageNewsArticle",
+  "article",
+]
+
+def extract_jsonld(ld, props):
+  if type(ld) is not dict: return;
+  if ld.get("@type") not in ldtypes: return
+
+  url = ld.get("url")
+  if url and "url" not in props: props["url"] = url
+
+  publisher = ld.get("publisher")
+  if publisher is not None and "publisher" not in props:
+    if type(publisher) is list: publisher = publisher[0]
+    name = publisher.get("name");
+    if name is not None: props["publisher"] = name
+
+  published = ld.get("datePublished")
+  if published is not None and "published" not in props:
+    props["published"] = published
+
+  headline = ld.get("headline")
+  if published is not None and "title" not in props:
+    props["title"] = headline
+
+  description = ld.get("description")
+  if description is not None and "summary" not in props:
+    props["summary"] = description
+
+  image = ld.get("image")
+  if image is not None and "image" not in props:
+    url = image.get("url");
+    if url is not None: props["image"] = url
 
 @app.route("/news/fetch")
 def handle_fetch(request):
@@ -369,8 +414,17 @@ def handle_fetch(request):
   #for k, v in props.items():
   #  print(k, ":", v)
 
-  for j in page.ldjson():
-    print(j)
+  for j in page.jsonld():
+    ld = json.loads(j)
+    print(json.dumps(ld, indent=2))
+    if type(ld) is list:
+      for part in ld: extract_jsonld(part, props)
+    else:
+      graph = ld.get("@graph")
+      if graph is not None:
+        for part in graph: extract_jsonld(part, props)
+      else:
+        extract_jsonld(ld, props)
 
   # Get site information.
   store = sling.Store(commons)
@@ -398,7 +452,9 @@ def handle_fetch(request):
   b.add(n_author_name_string, props.get("author"))
   b.add(n_creator, props.get("creator"))
   b.add(n_language, props.get("language"))
-  b.add(n_lex, page.text())
+
+  text = page.text()
+  if text is not None and len(text) > 0: b.add(n_lex, text)
 
   return b.create()
 

@@ -166,7 +166,7 @@ void PyWebPage::Define(PyObject *module) {
   methods.Add("headers", &PyWebPage::GetHeaders);
   methods.Add("metadata", &PyWebPage::GetMetaData);
   methods.Add("properties", &PyWebPage::GetProperties);
-  methods.Add("ldjson", &PyWebPage::GetLDJSON);
+  methods.Add("jsonld", &PyWebPage::GetJSONLD);
   type.tp_methods = methods.table();
 
   RegisterType(&type, module, "WebPage");
@@ -205,9 +205,15 @@ void PyWebPage::AddItem(PyObject *dict, Text key, Text value) {
   if (key.empty() || value.empty()) return;
   PyObject *k = AllocateString(key);
   PyObject *v = AllocateString(value);
-  PyDict_SetItem(dict, k, v);
-  Py_DECREF(k);
-  Py_DECREF(v);
+  if (k && v) {
+    PyDict_SetItem(dict, k, v);
+  } else {
+    if (!k) LOG(WARNING) << "Bad dict item key: " << key;
+    if (!v) LOG(WARNING) << "Bad dict item value: " << value;
+    PyErr_Clear();
+  }
+  if (k) Py_DECREF(k);
+  if (v) Py_DECREF(v);
 }
 
 PyObject *PyWebPage::GetHeaders() {
@@ -246,11 +252,11 @@ PyObject *PyWebPage::GetProperties() {
   return dict;
 }
 
-PyObject *PyWebPage::GetLDJSON() {
-  auto &ldjson = extractor->ldjson();
-  PyObject *list = PyList_New(ldjson.size());
-  for (int i = 0; i < ldjson.size(); ++i) {
-    PyList_SET_ITEM(list, i, AllocateString(ldjson[i]));
+PyObject *PyWebPage::GetJSONLD() {
+  auto &jsonld = extractor->jsonld();
+  PyObject *list = PyList_New(jsonld.size());
+  for (int i = 0; i < jsonld.size(); ++i) {
+    PyList_SET_ITEM(list, i, AllocateString(jsonld[i]));
   }
   return list;
 }

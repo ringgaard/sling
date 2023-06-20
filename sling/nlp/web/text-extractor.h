@@ -157,7 +157,7 @@ class WebPageTextExtractor : public HTMLParser {
   const Meta &meta() const { return meta_; }
 
   // Linked data.
-  const std::vector<string> &ldjson() const { return ldjson_; }
+  const std::vector<string> &jsonld() const { return jsonld_; }
 
   // Extracted text.
   const string &text() const { return text_; }
@@ -196,7 +196,7 @@ class WebPageTextExtractor : public HTMLParser {
   bool in_style_ = false;
   bool in_script_ = false;
   bool in_title_ = false;
-  bool in_ldjson_ = false;
+  bool in_jsonld_ = false;
 
   // Tag stack for nested tags.
   std::vector<TagInfo> nesting_;
@@ -204,7 +204,7 @@ class WebPageTextExtractor : public HTMLParser {
   // Web page meta information.
   Meta meta_;
   string title_;
-  std::vector<string> ldjson_;
+  std::vector<string> jsonld_;
 
   // Extracted text.
   string text_;

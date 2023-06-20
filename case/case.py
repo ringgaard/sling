@@ -16,9 +16,7 @@
 
 import datetime
 import json
-import socket
 import time
-import urllib.parse
 import urllib3
 
 import sling
@@ -215,7 +213,6 @@ non_proxy_headers = set([
   "strict-transport-security",
 ])
 
-checked_hostnames = set()
 proxy_pool = urllib3.PoolManager()
 
 @app.route("/case/proxy")
@@ -224,13 +221,7 @@ def service_request(request):
   url = request.params()["url"][0]
 
   # Check that request is not for local network.
-  addr = urllib.parse.urlsplit(url)
-  if addr.hostname not in checked_hostnames:
-    ipaddr = socket.gethostbyname(addr.hostname)
-    if ipaddr.startswith("10."): return 403
-    if ipaddr.startswith("192.168."): return 403
-    if ipaddr.startswith("127."): return 403
-    checked_hostnames.add(addr.hostname)
+  if sling.net.private(url): return 403
 
   # Set up request headers.
   headers = {}

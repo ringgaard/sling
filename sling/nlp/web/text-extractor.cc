@@ -326,8 +326,8 @@ bool WebPageTextExtractor::StartElement(const XMLElement &e) {
     } else if (TagEqual(e.name, "script")) {
       const char *type = e.Get("type");
       if (type && TagEqual(type, "application/ld+json")) {
-        in_ldjson_ = true;
-        ldjson_.push_back("");
+        in_jsonld_ = true;
+        jsonld_.push_back("");
       }
     }
   }
@@ -381,9 +381,9 @@ bool WebPageTextExtractor::EndElement(const char *name) {
     }
   }
 
-  // End LD-JSON.
-  if (in_ldjson_ && TagEqual(name, "script")) {
-    in_ldjson_ = false;
+  // End JSON-LD.
+  if (in_jsonld_ && TagEqual(name, "script")) {
+    in_jsonld_ = false;
   }
 
   // Skip content in header.
@@ -417,8 +417,8 @@ bool WebPageTextExtractor::Text(const char *str) {
   // Get page title.
   if (in_title_) title_.append(str);
 
-  // Get LD-JSON content.
-  if (in_ldjson_) ldjson_.back().append(str);
+  // Get JSON-LD content.
+  if (in_jsonld_) jsonld_.back().append(str);
 
   // Skip text in header.
   if (!in_body_ || nesting_.empty()) return true;
@@ -606,7 +606,7 @@ WebPageMetadata::WebPageMetadata(const WebPageTextExtractor &page)
   if (language.empty()) language = GetMeta("og:locale");
   if (author.empty()) author = GetMeta("og:author");
   if (author.empty()) author = GetMeta("article:author");
-  if (publisher.empty()) publisher = GetMeta("article:publisher");
+  //if (publisher.empty()) publisher = GetMeta("article:publisher");
   if (published.empty()) published = GetMeta("article:published_time");
   if (published.empty()) published = GetMeta("og:article:published_time");
   if (published.empty()) published = GetMeta("og:pubdate");
