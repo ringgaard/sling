@@ -231,6 +231,11 @@ struct WebPageMetadata {
   static Text Truncate(Text text, char delim);
   static Text Truncate(Text text, Text delim);
 
+  // Set field from meta data if not empty.
+  void SetField(Text *field, const char *name) {
+    if (!field->empty()) *field = GetMeta(name);
+  }
+
   // Metadata fields from text extractor.
   const WebPageTextExtractor::Meta &meta;
 

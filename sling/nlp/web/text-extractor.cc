@@ -481,7 +481,22 @@ bool WebPageTextExtractor::Text(const char *str) {
           }
 
           // Output character.
-          text_.push_back(ch);
+          if (html_output_) {
+            switch (ch) {
+              case '&':  text_.append("&#38;"); break;
+              case '<':  text_.append("&#60;"); break;
+              case '>':  text_.append("&#62;"); break;
+              case '{':  text_.append("&#123;"); break;
+              case '|':  text_.append("&#124;"); break;
+              case '}':  text_.append("&#125;"); break;
+              case '[':  text_.append("&#91;"); break;
+              case ']':  text_.append("&#93;"); break;
+              case '"':  text_.append("&#34;"); break;
+              default: text_.push_back(ch);
+            }
+          } else {
+            text_.push_back(ch);
+          }
         }
       }
     }
@@ -589,53 +604,53 @@ void WebPageTextExtractor::DebugText(const char *str) {
 WebPageMetadata::WebPageMetadata(const WebPageTextExtractor &page)
     : meta(page.meta()) {
   // Twitter card meta properties.
-  if (title.empty()) title = GetMeta("twitter:title");
-  if (summary.empty()) summary = GetMeta("twitter:description");
-  if (domain.empty()) domain = GetMeta("twitter:domain");
-  if (site.empty()) site = GetMeta("twitter:site");
-  if (creator.empty()) creator = GetMeta("twitter:creator");
-  if (image.empty()) image = GetMeta("twitter:image:src");
+  SetField(&title, "twitter:title");
+  SetField(&summary, "twitter:description");
+  SetField(&domain, "twitter:domain");
+  SetField(&site, "twitter:site");
+  SetField(&creator, "twitter:creator");
+  SetField(&image, "twitter:image:src");
 
   // OpenGraph meta properties.
-  if (type.empty()) type = GetMeta("og:type");
-  if (title.empty()) title = GetMeta("og:title");
-  if (summary.empty()) summary = GetMeta("og:description");
-  if (url.empty()) url = GetMeta("og:url");
-  if (image.empty()) image = GetMeta("og:image");
-  if (site.empty()) site = GetMeta("og:site_name");
-  if (language.empty()) language = GetMeta("og:locale");
-  if (author.empty()) author = GetMeta("og:author");
-  if (author.empty()) author = GetMeta("article:author");
-  //if (publisher.empty()) publisher = GetMeta("article:publisher");
-  if (published.empty()) published = GetMeta("article:published_time");
-  if (published.empty()) published = GetMeta("og:article:published_time");
-  if (published.empty()) published = GetMeta("og:pubdate");
+  SetField(&type, "og:type");
+  SetField(&title, "og:title");
+  SetField(&summary, "og:description");
+  SetField(&url, "og:url");
+  SetField(&image, "og:image");
+  SetField(&site, "og:site_name");
+  SetField(&language, "og:locale");
+  SetField(&author, "og:author");
+  SetField(&author, "article:author");
+  //SetField(&publisher, "article:publisher");
+  SetField(&published, "article:published_time");
+  SetField(&published, "og:article:published_time");
+  SetField(&published, "og:pubdate");
 
   // Dublin Core meta information.
-  if (type.empty()) type = GetMeta("dc.type");
-  if (title.empty()) title = GetMeta("dc.title");
-  if (summary.empty()) summary = GetMeta("dc.description");
-  if (publisher.empty()) publisher = GetMeta("dc.publisher");
-  if (published.empty()) published = GetMeta("dc.date");
-  if (summary.empty()) summary = GetMeta("dcterms.abstract");
-  if (published.empty()) published = GetMeta("dcterms.created");
-  if (published.empty()) published = GetMeta("DC.date.issued");
+  SetField(&type, "dc.type");
+  SetField(&title, "dc.title");
+  SetField(&summary, "dc.description");
+  SetField(&publisher, "dc.publisher");
+  SetField(&published, "dc.date");
+  SetField(&published, "dcterms.created");
+  SetField(&published, "DC.date.issued");
+  SetField(&summary, "dcterms.abstract");
 
   // Sailthru meta information.
-  if (title.empty()) title = GetMeta("sailthru.title");
-  if (summary.empty()) summary = GetMeta("sailthru.description");
-  if (image.empty()) image = GetMeta("sailthru.image.full");
-  if (author.empty()) author = GetMeta("sailthru.author");
-  if (published.empty()) published = GetMeta("sailthru.date");
+  SetField(&title, "sailthru.title");
+  SetField(&summary, "sailthru.description");
+  SetField(&image, "sailthru.image.full");
+  SetField(&author, "sailthru.author");
+  SetField(&published, "sailthru.date");
 
   // Generic meta information.
-  if (type.empty()) type = GetMeta("pagetype");
-  if (title.empty()) title = GetMeta("title");
-  if (summary.empty()) summary = GetMeta("description");
-  if (author.empty()) author = GetMeta("author");
-  if (published.empty()) published = GetMeta("date");
-  if (image.empty()) image = GetMeta("image");
-  if (url.empty()) url = GetMeta("canonical");
+  SetField(&type, "pagetype");
+  SetField(&title, "title");
+  SetField(&summary, "description");
+  SetField(&author, "author");
+  SetField(&published, "date");
+  SetField(&image, "image");
+  SetField(&url, "canonical");
 
   // Ekstrabladet.
   if (summary == "Læs mere her") summary = nullptr;
