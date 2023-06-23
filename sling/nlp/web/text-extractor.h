@@ -233,7 +233,7 @@ struct WebPageMetadata {
 
   // Set field from meta data if not empty.
   void SetField(Text *field, const char *name) {
-    if (!field->empty()) *field = GetMeta(name);
+    if (field->empty()) *field = GetMeta(name);
   }
 
   // Metadata fields from text extractor.

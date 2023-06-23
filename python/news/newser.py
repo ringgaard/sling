@@ -295,7 +295,8 @@ class ArticlePanel extends MdCard {
       }
       $ #summary {
         display: block;
-        font: 1.2rem helvetica;
+        font: 500 1.2rem anubis, serif;
+        line-height: 1.5;
         padding: 12px 0px;
       }
       $ #image {
@@ -410,12 +411,22 @@ def handle_fetch(request):
   # Extract meta data and content from article.
   page = webanalyzer.extract(article)
 
+  for k, v in page.metadata().items():
+    print("meta", k, ":", v)
+
+  print("props start");
   props = page.properties()
-  #for k, v in props.items():
-  #  print(k, ":", v)
+  for k, v in props.items():
+    print("prop", k, ":", v)
+  print("props end");
 
   for j in page.jsonld():
-    ld = json.loads(j)
+    try:
+      ld = json.loads(j)
+    except Exception as e:
+      print("JSON-LD error:", e, ld)
+      continue
+
     print(json.dumps(ld, indent=2))
     if type(ld) is list:
       for part in ld: extract_jsonld(part, props)

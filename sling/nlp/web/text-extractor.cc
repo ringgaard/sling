@@ -366,6 +366,19 @@ bool WebPageTextExtractor::StartElement(const XMLElement &e) {
     }
   }
 
+  // Extract formatting.
+  if (keep && html_output_) {
+    if (TagEqual(e.name, "em") ||
+        TagEqual(e.name, "b") ||
+        TagEqual(e.name, "ol") ||
+        TagEqual(e.name, "ul") ||
+        TagEqual(e.name, "li")) {
+      text_.push_back('<');
+      text_.append(e.name);
+      text_.push_back('>');
+    }
+  }
+
   return true;
 }
 
@@ -394,6 +407,21 @@ bool WebPageTextExtractor::EndElement(const char *name) {
     if (TagEqual(name, "style")) in_style_ = false;
   } else if (in_script_) {
     if (TagEqual(name, "script")) in_script_ = false;
+  }
+  if (in_style_ || in_script_) return true;
+
+  // Extract formatting.
+  if (html_output_ && nesting_.back().keep) {
+    if (TagEqual(name, "em") ||
+        TagEqual(name, "b") ||
+        TagEqual(name, "ol") ||
+        TagEqual(name, "ul") ||
+        TagEqual(name, "li")) {
+      text_.push_back('<');
+      text_.push_back('/');
+      text_.append(name);
+      text_.push_back('>');
+    }
   }
 
   // Check for paragraph break.
