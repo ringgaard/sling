@@ -102,6 +102,7 @@ HTMLParser::TagType HTMLParser::GetTagType(const char *tag) {
     case 's': case 'S':
       if (strcasecmp(tag, "script") == 0) return UNPARSED;
       if (strcasecmp(tag, "source") == 0) return SINGLE;
+      if (strcasecmp(tag, "style") == 0) return UNPARSED;
       break;
 
     case 't': case 'T':

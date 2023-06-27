@@ -36,6 +36,7 @@ var plugins = [
   ],
 },
 
+/*
 // Twitter profiles.
 {
   name: "twitter",
@@ -45,6 +46,7 @@ var plugins = [
     /^https:\/\/(mobile\.)?twitter\.com\//,
   ],
 },
+*/
 
 // IMDB biographies.
 {
