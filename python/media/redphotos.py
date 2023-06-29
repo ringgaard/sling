@@ -89,6 +89,11 @@ flags.define("--dryrun",
              default=False,
              action="store_true")
 
+flags.define("--refetch",
+             help="re-fetch postings",
+             default=False,
+             action="store_true")
+
 flags.define("--all",
              help="allow all subreddits",
              default=False,
@@ -165,7 +170,9 @@ if flags.arg.subreddits:
   for fn in flags.arg.subreddits.split(","):
     with open(fn, "r") as f:
       for line in f.readlines():
-        f = line.strip().split(' ')
+        line = line.strip()
+        if len(line) == 0 or line[0] == '#': continue;
+        f = line.split(' ')
         sr = f[0]
         itemid = f[1] if len(f) > 1 else None
         if sr in skipped_subreddits: continue
@@ -320,7 +327,7 @@ for key, value in postings:
   seen.add(url)
 
   # Refetch posting from Reddit to check if it has been deleted.
-  posting = fetch_posting(store, key)
+  if flags.arg.refetch: posting = fetch_posting(store, key)
   if posting is None or \
      posting["removed_by_category"] or \
      posting["title"] == "[deleted by user]":

@@ -20,7 +20,6 @@ import sys
 import collections
 import xml.etree.ElementTree as ET
 import sling.flags as flags
-import sling.crawl.dnscache
 import sling.crawl.news as news
 
 flags.define("--daily",

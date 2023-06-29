@@ -1492,6 +1492,7 @@ class CaseEditor extends MdApp {
     let num_topics = 0;
     let num_facts = 0;
     let num_folders = this.folders.length;
+    let num_topics_in_folder = this.folder.length;
     let num_names = 0;
     let num_comments = 0;
     let num_pictures = 0;
@@ -1535,6 +1536,7 @@ class CaseEditor extends MdApp {
       ${number(num_redirs, "existing topic")}
       ${number(num_topics - num_redirs, "new topic")}
       ${number(num_with_pictures, "topic")} with pictures
+      ${number(num_topics_in_folder, "topic")} in folder
       ${number(num_facts, "fact")}
       ${number(num_folders, "folder")}
       ${number(num_names, "name")}
