@@ -118,6 +118,9 @@ class CaseEditor extends MdApp {
 
     this.attach(this.ondrawer, "click", "#drawer");
     this.attach(this.onmerge, "click", "#merge");
+    this.attach(this.ondrawerdown, "pointerdown", "#drawer-resizer");
+    this.attach(this.ondrawerup, "pointerup", "#drawer-resizer");
+    this.attach(this.ondrawermove, "mousemove", "#drawer-resizer");
     if (settings.userscripts) {
       this.attach(this.onscript, "click", "#script");
     }
@@ -275,6 +278,25 @@ class CaseEditor extends MdApp {
         this.prev_folder();
       }
     }
+  }
+
+  ondrawerdown(e) {
+    let resizer = e.target;
+    resizer.setPointerCapture(e.pointerId);
+    this.drawer_x = e.clientX;
+    this.drawer_capture = true;
+  }
+
+  ondrawerup(e) {
+    this.drawer_capture = false;
+  }
+
+  ondrawermove(e) {
+    if (!this.drawer_capture) return;
+    let drawer = this.find("#folders");
+    let offset = e.clientX - this.drawer_x;
+    drawer.style.width = `${drawer.offsetWidth + offset}px`;
+    this.drawer_x = e.clientX;
   }
 
   async search(query, results, options = {}) {
@@ -1800,19 +1822,24 @@ class CaseEditor extends MdApp {
         </md-menu>
       </md-toolbar>
 
-      <md-row-layout>
-        <md-drawer>
-          <div id="folders-top">
-            Folders
-            <md-spacer></md-spacer>
-            <md-icon-button
-              id="newfolder"
-              icon="create_new_folder"
-              tooltip="Create new folder"
-              tooltip-align="right">
-            </md-icon-button>
+      <div id="container">
+        <md-drawer id="folders">
+          <div id="drawer-rows">
+            <div id="drawer-cols">
+              <div id="folders-top">
+                Folders
+                <md-spacer></md-spacer>
+                <md-icon-button
+                  id="newfolder"
+                  icon="create_new_folder"
+                  tooltip="Create new folder"
+                  tooltip-align="right">
+                </md-icon-button>
+              </div>
+              <folder-list></folder-list>
+            </div>
+            <div id="drawer-resizer"></div>
           </div>
-          <folder-list></folder-list>
         </md-drawer>
         <md-content>
           <topic-list></topic-list>
@@ -1828,9 +1855,14 @@ class CaseEditor extends MdApp {
       $ #title {
         white-space: nowrap;
       }
-      $ md-row-layout {
+      $ #container {
+        display: flex;
+        flex-direction: row;
         overflow: auto;
         height: 100%;
+        width: 100%;
+        min-width: 100%;
+
       }
       $ md-toolbar md-icon-button.tool {
         margin-left: -8px;
@@ -1855,10 +1887,24 @@ class CaseEditor extends MdApp {
         fill: #808080;
       }
       $ md-drawer {
-        min-width: 200px;
-        padding: 3px;
+        min-width: 150px;
+        padding: 3px 0px 3px 3px;
         overflow-x: clip;
         overflow-y: auto;
+      }
+      $ #drawer-rows {
+        display: flex;
+        flex-direction: row;
+        height: 100%;
+      }
+      $ #drawer-cols {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+      }
+      $ #drawer-resizer {
+        cursor: col-resize;
+        width: 3px;
       }
       $ #folders-top {
         display: flex;

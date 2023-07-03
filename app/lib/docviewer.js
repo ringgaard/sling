@@ -185,9 +185,8 @@ export class DocumentViewer extends Component {
   onrendered() {
     this.attach(this.onmouse, "mouseover");
     this.attach(this.onleave, "mouseleave");
-    if (this.editable) {
-      this.attach(this.onedit, "select", "#edit");
-      this.attach(this.ondelete, "select", "#delete");
+    if (this.menu) {
+      this.attach(this.onmenu, "select", "md-menu");
     }
   }
 
@@ -238,12 +237,8 @@ export class DocumentViewer extends Component {
     this.clear_popup();
   }
 
-  onedit(e) {
-    this.dispatch("docedit", this.state, true);
-  }
-
-  ondelete(e) {
-    this.dispatch("docdelete", this.state, true);
+  onmenu(e) {
+    this.dispatch("docmenu", e.target.id, true);
   }
 
   clear_popup() {
@@ -260,17 +255,15 @@ export class DocumentViewer extends Component {
     let h = new Array();
 
     // Document menu.
-    if (this.editable) {
-      h.push(`
-        <md-menu>
-          <md-menu-item id="edit">
-            <md-icon icon="edit"></md-icon>Edit
-          </md-menu-item>
-          <md-menu-item id="delete">
-           <md-icon icon="delete"></md-icon>Delete
-          </md-menu-item>
-        </md-menu>
-      `);
+    if (this.menu) {
+      h.push('<md-menu>');
+      for (let item of this.menu) {
+        h.push(`<md-menu-item id="${item.id}">`);
+        if (item.icon) h.push(`<md-icon icon="${item.icon}"></md-icon>`);
+        h.push(item.text);
+        h.push('</md-menu-item>');
+      }
+      h.push('</md-menu>');
     }
 
     // Parse LEX document.

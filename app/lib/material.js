@@ -569,13 +569,13 @@ Component.register(MdMenu);
 
 export class MdMenuItem extends Component {
   onconnected() {
-    this.bind(null, "click", e => this.onclick(e));
+    this.attach(this.onclick, "click");
   }
 
   onclick(e) {
     this.match("md-menu").close();
     e.stopPropagation();
-    this.dispatch("select");
+    this.dispatch("select", this, true);
   }
 
   static stylesheet() {

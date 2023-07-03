@@ -432,8 +432,7 @@ class TopicCard extends Component {
     this.bind(null, "delimage", e => this.ondelimage(e));
     this.bind(null, "picedit", e => this.refresh());
 
-    this.attach(this.ondocedit, "docedit");
-    this.attach(this.ondocdelete, "docdelete");
+    this.attach(this.ondocmenu, "docmenu");
 
     this.update_mode(false);
     this.update_title();
@@ -554,30 +553,29 @@ class TopicCard extends Component {
     }
   }
 
-  async ondocedit(e) {
+  async ondocmenu(e) {
     if (this.readonly) return;
     let viewer = e.target;
-    let dialog = new DocumentEditDialog(viewer.state);
-    let content = await dialog.show();
-    if (content) {
+    let command = e.detail;
+    if (command == "edit") {
+      let dialog = new DocumentEditDialog(viewer.state);
+      let content = await dialog.show();
+      if (content) {
+        let n = 0;
+        this.state.apply((name, value) => {
+          if (name == n_lex && n++ == viewer.index) {
+            return [n_lex, content];
+          }
+        });
+        this.mark_dirty();
+        this.refresh();
+      }
+    } else if  (command == "delete") {
       let n = 0;
-      this.state.apply((name, value) => {
-        if (name == n_lex && n++ == viewer.index) {
-          return [n_lex, content];
-        }
-      });
+      this.state.purge((name, value) => name == n_lex && n++ == viewer.index);
       this.mark_dirty();
       this.refresh();
     }
-  }
-
-  ondocdelete(e) {
-    if (this.readonly) return;
-    let viewer = e.target;
-    let n = 0;
-    this.state.purge((name, value) => name == n_lex && n++ == viewer.index);
-    this.mark_dirty();
-    this.refresh();
   }
 
   async onsave(e) {
@@ -775,6 +773,9 @@ class TopicCard extends Component {
     } else if (e.ctrlKey && !e.shiftKey && e.code === "KeyI") {
       e.preventDefault();
       this.onimport(e);
+    } else if (this.editing && e.code === "Tab") {
+      e.preventDefault();
+      this.find("fact-editor").focus();
     }
   }
 

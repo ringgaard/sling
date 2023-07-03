@@ -538,6 +538,11 @@ class XrefPanel extends PropertyPanel {
 
 Component.register(XrefPanel);
 
+const docmenu = [
+  {id: "edit", icon: "edit", text: "Edit"},
+  {id: "delete", icon: "delete", text: "Delete"},
+];
+
 class DocumentPanel extends Component {
   visible() {
     return this.state && this.state.length > 0;
@@ -549,7 +554,7 @@ class DocumentPanel extends Component {
     for (let doc of this.state) {
       let viewer = new DocumentViewer(doc);
       viewer.index = h.length;
-      viewer.editable = true;
+      viewer.menu = docmenu;
       h.push(viewer);
     }
     return h;

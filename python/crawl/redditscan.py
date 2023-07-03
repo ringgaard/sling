@@ -75,14 +75,14 @@ def fetch_new_postings():
       if sid in redditdb: break
 
       title = posting["title"]
-      print("###", sr, sid, title)
+      log.info("###", sr, sid, title)
       redditdb[sid] = json.dumps(posting)
 
 while True:
   try:
-    log.info("Scan for new postings")
+    log.info("Scanning for new postings")
     fetch_new_postings()
-    log.info("Scan done")
+    log.info("Scanning done")
     time.sleep(flags.arg.interval)
 
   except KeyboardInterrupt as error:
