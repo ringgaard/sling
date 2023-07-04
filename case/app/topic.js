@@ -575,6 +575,9 @@ class TopicCard extends Component {
       this.state.purge((name, value) => name == n_lex && n++ == viewer.index);
       this.mark_dirty();
       this.refresh();
+    } else if  (command == "pin") {
+      let sidebar = document.getElementById("sidebar");
+      sidebar.update(viewer.state);
     }
   }
 

@@ -583,7 +583,7 @@ export class MdMenuItem extends Component {
       $ {
         display: flex;
         align-items: center;
-        padding: 8px 24px 8px 24px;
+        padding: 8px 16px 8px 16px;
         white-space: nowrap;
         user-select: none;
         cursor: pointer;

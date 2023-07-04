@@ -539,6 +539,7 @@ class XrefPanel extends PropertyPanel {
 Component.register(XrefPanel);
 
 const docmenu = [
+  {id: "pin", icon: "push_pin", text: "Pin"},
   {id: "edit", icon: "edit", text: "Edit"},
   {id: "delete", icon: "delete", text: "Delete"},
 ];

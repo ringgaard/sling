@@ -17,6 +17,7 @@ import {generate_key, encrypt} from "./crypto.js";
 import {Collaboration} from "./collab.js";
 import {SearchIndex, kbsearch} from "./search.js";
 import {get_property_index} from "./schema.js";
+import "./sidebar.js";
 import "./topic.js";
 
 const n_id = store.id;
@@ -120,7 +121,7 @@ class CaseEditor extends MdApp {
     this.attach(this.onmerge, "click", "#merge");
     this.attach(this.ondrawerdown, "pointerdown", "#drawer-resizer");
     this.attach(this.ondrawerup, "pointerup", "#drawer-resizer");
-    this.attach(this.ondrawermove, "mousemove", "#drawer-resizer");
+    this.attach(this.ondrawermove, "pointermove", "#drawer-resizer");
     if (settings.userscripts) {
       this.attach(this.onscript, "click", "#script");
     }
@@ -900,7 +901,7 @@ class CaseEditor extends MdApp {
       if (position && this.folder.includes(position)) {
         position = this.folder.indexOf(position) + 1;
       }
-      if (position >= 0) {
+      if (typeof(position) === 'number' && position >= 0) {
         this.folder.splice(position, 0, topic);
       } else {
         this.folder.push(topic);
@@ -1844,6 +1845,7 @@ class CaseEditor extends MdApp {
         <md-content>
           <topic-list></topic-list>
         </md-content>
+        <side-bar id="sidebar"></side-bar>
       </md-row-layout>
     `;
   }
