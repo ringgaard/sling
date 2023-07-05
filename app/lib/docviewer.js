@@ -268,7 +268,7 @@ export class DocumentViewer extends Component {
 
     // Parse LEX document.
     this.doc = new Document(store);
-    this.doc.parse(this.state);
+    this.doc.parse(store.resolve(this.state));
 
     // Spans sorted by begin and end positions.
     let starts = this.doc.mentions.slice();

@@ -544,6 +544,53 @@ const docmenu = [
   {id: "delete", icon: "delete", text: "Delete"},
 ];
 
+class DocumentHeader extends Component {
+  onconnected() {
+    this.attach(this.onclick, "click");
+  }
+
+  onclick(e) {
+    if (this.state.expanded) {
+      this.state.viewer.update(null);
+      this.state.expanded = false;
+    } else {
+      this.state.viewer.update(this.state.document);
+      this.state.expanded = true;
+    }
+    this.update(this.state);
+  }
+
+  render() {
+    if (!this.state) return;
+    let doc = this.state.document;
+    let name = doc instanceof Frame && doc.get(n_name);
+    if (!name) name = `Document ${this.state.index + 1}`;
+
+    return `
+      <md-icon icon="expand_${this.state.expanded ? "less" : "more"}"></md-icon>
+      <md-icon icon="description"></md-icon>
+      <div>${Component.escape(name)}</div>
+    `;
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        font-size: 16px;
+        padding: 8px 8px 0px 8px;
+      }
+      $ div {
+        padding-left: 8px;
+      }
+    `;
+  }
+}
+
+Component.register(DocumentHeader);
+
 class DocumentPanel extends Component {
   visible() {
     return this.state && this.state.length > 0;
@@ -552,11 +599,15 @@ class DocumentPanel extends Component {
   render() {
     if (!this.state) return;
     let h = new Array();
-    for (let doc of this.state) {
-      let viewer = new DocumentViewer(doc);
-      viewer.index = h.length;
+    let index = 0;
+    for (let document of this.state) {
+      let viewer = new DocumentViewer(null);
+      viewer.index = index;
       viewer.menu = docmenu;
+      let header = new DocumentHeader({document, viewer, index});
+      h.push(header);
       h.push(viewer);
+      index++;
     }
     return h;
   }
