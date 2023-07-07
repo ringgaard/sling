@@ -214,10 +214,10 @@ const char *property_order[] = {
   "P1290",      // godparent
 
   // Career.
-  "P106",       // occupation
-  "P101",       // field of work
-  "P5021",      // test taken
   "P69",        // educated at
+  "P101",       // field of work
+  "P106",       // occupation
+  "P5021",      // test taken
   "P803",       // professorship
   "P512",       // academic degree
   "P812",       // academic major

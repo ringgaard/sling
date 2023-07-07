@@ -50,7 +50,7 @@ const kinships = {
   "Mother": {prop: n_mother, gender: n_female, rank: 12},
 
   "Sibling": {prop: n_sibling, rank: 20},
-  "Half sibling": {prop: n_sibling, qual: frame("Q27965041"), rank: 21},
+  "Half Sibling": {prop: n_sibling, qual: frame("Q27965041"), rank: 21},
 
   "Spouse": {prop: frame("P26"), rank: 40},
   "Spouses": {prop: frame("P26"), rank: 40},
@@ -61,8 +61,8 @@ const kinships = {
   "Grandparent": {
     prop: n_relative,
     qual: frame("Q167918"),
-    male: "grandfather",
-    female: "grandmother",
+    male: "Grandfather",
+    female: "Grandmother",
     rank: 102,
 
   },
@@ -90,8 +90,8 @@ const kinships = {
   "Aunt or Uncle": {
     prop: n_relative,
     qual: frame("Q21073936"),
-    male: "uncle",
-    female: "aunt",
+    male: "Uncle",
+    female: "Aunt",
     rank: 113,
   },
   "Uncle": {prop: n_relative, qual: frame("Q76557"), rank: 111},

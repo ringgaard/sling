@@ -1335,7 +1335,7 @@ class CaseEditor extends MdApp {
         StdDialog.error(`Error executing script: ${e.message}`);
       }
       if (this.log) {
-        StdDialog.alert("Script output", this.log.join(" "));
+        StdDialog.info("Script output", this.log.join(" "));
       }
       this.log = null;
     }
@@ -1588,7 +1588,13 @@ class CaseEditor extends MdApp {
   print() {
     if (!this.log) this.log = new Array();
     for (let msg of arguments) {
-      this.log.push(msg.toString());
+      if (msg === null) {
+        this.log.push("null");
+      } else if (msg === undefined) {
+        this.log.push("undefined");
+      } else {
+        this.log.push(msg.toString());
+      }
     }
     this.log.push("\n");
   }
