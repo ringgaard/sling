@@ -199,6 +199,16 @@ var plugins = [
   ],
 },
 
+// VEF postings.
+{
+  name: "vef",
+  module: "vef.js",
+  actions: [SEARCHURL],
+  patterns: [
+    /^http:\/\/vintage-erotica-forum\.com\/showpost.php/,
+  ],
+},
+
 // Social media profiles from r/BeautifulFemales etc.
 {
   name: "beautyfem",
