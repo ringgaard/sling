@@ -555,15 +555,16 @@ class TopicCard extends Component {
 
   async ondocmenu(e) {
     if (this.readonly) return;
-    let viewer = e.target;
-    let command = e.detail;
+    let command = e.detail.command;
+    let doc = e.detail.document;
+    let index = e.detail.index;
     if (command == "edit") {
-      let dialog = new DocumentEditDialog(viewer.state);
+      let dialog = new DocumentEditDialog(doc);
       let content = await dialog.show();
       if (content) {
         let n = 0;
         this.state.apply((name, value) => {
-          if (name == n_lex && n++ == viewer.index) {
+          if (name == n_lex && n++ == index) {
             return [n_lex, content];
           }
         });
@@ -572,12 +573,12 @@ class TopicCard extends Component {
       }
     } else if  (command == "delete") {
       let n = 0;
-      this.state.purge((name, value) => name == n_lex && n++ == viewer.index);
+      this.state.purge((name, value) => name == n_lex && n++ == index);
       this.mark_dirty();
       this.refresh();
     } else if  (command == "pin") {
       let sidebar = document.getElementById("sidebar");
-      sidebar.update(viewer.state);
+      sidebar.update(doc);
     }
   }
 

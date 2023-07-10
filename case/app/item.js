@@ -538,15 +538,13 @@ class XrefPanel extends PropertyPanel {
 
 Component.register(XrefPanel);
 
-const docmenu = [
-  {id: "pin", icon: "push_pin", text: "Pin"},
-  {id: "edit", icon: "edit", text: "Edit"},
-  {id: "delete", icon: "delete", text: "Delete"},
-];
-
 class DocumentHeader extends Component {
   onconnected() {
     this.attach(this.onclick, "click");
+  }
+
+  onrendered() {
+    this.attach(this.onmenu, "select", "md-menu");
   }
 
   onclick(e) {
@@ -560,6 +558,13 @@ class DocumentHeader extends Component {
     this.update(this.state);
   }
 
+  onmenu(e) {
+    let command = e.target.id;
+    let index = this.state.index;
+    let document = this.state.document;
+    this.dispatch("docmenu", {command, document, index}, true);
+  }
+
   render() {
     if (!this.state) return;
     let doc = this.state.document;
@@ -570,6 +575,18 @@ class DocumentHeader extends Component {
       <md-icon icon="expand_${this.state.expanded ? "less" : "more"}"></md-icon>
       <md-icon icon="description"></md-icon>
       <div>${Component.escape(name)}</div>
+      <md-spacer></md-spacer>
+      <md-menu>
+        <md-menu-item id="pin">
+          <md-icon icon="push_pin"></md-icon>Pin
+        </md-menu-item>
+        <md-menu-item id="edit" icon="edit">
+          <md-icon icon="edit"></md-icon>Edit
+        </md-menu-item>
+        <md-menu-item id="delete" icon="delete">
+          <md-icon icon="delete"></md-icon>Delete
+        </md-menu-item>
+      </md-menu>
     `;
   }
 
@@ -580,7 +597,7 @@ class DocumentHeader extends Component {
         align-items: center;
         cursor: pointer;
         font-size: 16px;
-        padding: 8px 8px 0px 8px;
+        padding: 4px 0px 4px 8px;
       }
       $ div {
         padding-left: 8px;
@@ -600,13 +617,15 @@ class DocumentPanel extends Component {
     if (!this.state) return;
     let h = new Array();
     let index = 0;
-    for (let document of this.state) {
+    for (let doc of this.state) {
+      let box = document.createElement("div");
+      box.className = "docbox";
       let viewer = new DocumentViewer(null);
       viewer.index = index;
-      viewer.menu = docmenu;
-      let header = new DocumentHeader({document, viewer, index});
-      h.push(header);
-      h.push(viewer);
+      let header = new DocumentHeader({document: doc, viewer, index});
+      box.append(header);
+      box.append(viewer);
+      h.push(box);
       index++;
     }
     return h;
@@ -617,7 +636,13 @@ class DocumentPanel extends Component {
       $ {
         display: flex;
         flex-direction: column;
-        border-top: 1px solid lightgray;
+      }
+      $ div.docbox {
+        display: flex;
+        flex-direction: column;
+        border: 1px solid lightgray;
+        margin: 4px 0px;
+        padding-right: 8px;
       }
     `;
   }

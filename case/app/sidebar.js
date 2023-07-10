@@ -4,20 +4,19 @@
 import {Component} from "/common/lib/component.js";
 import {DocumentViewer} from "/common/lib/docviewer.js";
 
-const menu = [
-  {id: "close", icon: "close", text: "Close"},
-];
-
 class SideBar extends Component {
   visible() { return this.state; }
 
   onrendered() {
-    let viewer = this.find("document-viewer");
-    viewer.menu = menu;
     this.attach(this.onmenu, "docmenu");
     this.attach(this.onresizedown, "pointerdown", "#sidebar-resizer");
     this.attach(this.onresizeup, "pointerup", "#sidebar-resizer");
     this.attach(this.onresizemove, "pointermove", "#sidebar-resizer");
+    this.attach(this.onclose, "click", "#close");
+  }
+
+  onclose(e) {
+    this.update(null);
   }
 
   onresizedown(e) {
@@ -53,6 +52,7 @@ class SideBar extends Component {
     return `
       <div id="sidebar-resizer"></div>
       <document-viewer></document-viewer>
+      <md-icon-button id="close" icon="keyboard_arrow_right"></md-icon-button>
     `;
   }
 
@@ -61,6 +61,7 @@ class SideBar extends Component {
       $ {
         display: flex;
         flex-direction: row;
+        position: relative;
         overflow: auto;
         width: 30vw;
         max-width: 10vw;
@@ -74,6 +75,11 @@ class SideBar extends Component {
       $ #sidebar-resizer {
         cursor: col-resize;
         width: 8px;
+      }
+      $ #close {
+        position: absolute;
+        right: 4px;
+        top: 4px;
       }
     `;
   }

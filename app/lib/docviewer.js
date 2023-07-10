@@ -185,9 +185,6 @@ export class DocumentViewer extends Component {
   onrendered() {
     this.attach(this.onmouse, "mouseover");
     this.attach(this.onleave, "mouseleave");
-    if (this.menu) {
-      this.attach(this.onmenu, "select", "md-menu");
-    }
   }
 
   async onmouse(e) {
@@ -237,10 +234,6 @@ export class DocumentViewer extends Component {
     this.clear_popup();
   }
 
-  onmenu(e) {
-    this.dispatch("docmenu", e.target.id, true);
-  }
-
   clear_popup() {
     if (this.popup) {
       this.popup.remove();
@@ -253,18 +246,6 @@ export class DocumentViewer extends Component {
   render() {
     if (!this.state) return;
     let h = new Array();
-
-    // Document menu.
-    if (this.menu) {
-      h.push('<md-menu>');
-      for (let item of this.menu) {
-        h.push(`<md-menu-item id="${item.id}">`);
-        if (item.icon) h.push(`<md-icon icon="${item.icon}"></md-icon>`);
-        h.push(item.text);
-        h.push('</md-menu-item>');
-      }
-      h.push('</md-menu>');
-    }
 
     // Parse LEX document.
     this.doc = new Document(store);
@@ -317,18 +298,6 @@ export class DocumentViewer extends Component {
 
   static stylesheet() {
     return `
-      $ md-menu {
-        float: right;
-        font-family: Roboto,Helvetica,sans-serif;
-        font-size: 16px;
-        font-weight: normal;
-        line-height: 1;
-        margin-right: -16px;
-        visibility: hidden;
-      }
-      $:hover md-menu {
-        visibility: visible;
-      }
       $ {
         font: 1rem anubis, serif;
         line-height: 1.5;

@@ -86,10 +86,13 @@ export default class VEFPlugin {
           text += e.innerText;
         } else if (e.tagName == "A") {
           if (e.href.startsWith("https://www.imagevenue.com/")) {
+            // Continuation.
+            let m = text.match(/^,?\s*and\s+/);
+            if (m) text = text.slice(m[0].length);
+
             // Track date.
-            if (text.startsWith("and ")) text = text.slice(4).trim();
             for (;;) {
-              let m = text.match(/(\d+)(st|nd|rd|th)\s*,?/)
+              let m = text.match(/^(\d+)(st|nd|rd|th)\s*,?/)
               if (!m) break;
               day = parseInt(m[1]);
               text = text.slice(m[0].length).trim()
@@ -98,7 +101,7 @@ export default class VEFPlugin {
             let date = year * 10000 + month * 100 + day;
 
             // Parse name and age.
-            let m = text.match(/([A-Za-z\- ]+)\s*(\(\d+\))?/)
+            m = text.match(/^([A-Za-z\- ]+)\s*(\(\d+\))?/)
             if (m) {
               name = m[1];
               age = m[2] && parseInt(m[2].slice(1, m[2].length - 1));
@@ -111,8 +114,8 @@ export default class VEFPlugin {
             if (!topic) {
               topic = await context.new_topic();
               if (name) topic.put(n_name, name);
-              if (text) topic.put(n_description, text);
               if (p9) topic.put(n_description, "Side 9 pige");
+              if (text) topic.put(n_description, text);
               topic.put(n_instance_of, n_human);
               topic.put(n_gender, n_female);
               if (age) topic.put(n_date_of_birth, year - age);
