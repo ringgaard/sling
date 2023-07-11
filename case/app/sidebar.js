@@ -9,9 +9,9 @@ class SideBar extends Component {
 
   onrendered() {
     this.attach(this.onmenu, "docmenu");
-    this.attach(this.onresizedown, "pointerdown", "#sidebar-resizer");
-    this.attach(this.onresizeup, "pointerup", "#sidebar-resizer");
-    this.attach(this.onresizemove, "pointermove", "#sidebar-resizer");
+    this.attach(this.onresizedown, "pointerdown", "#sidebar-left");
+    this.attach(this.onresizeup, "pointerup", "#sidebar-left");
+    this.attach(this.onresizemove, "pointermove", "#sidebar-left");
     this.attach(this.onclose, "click", "#close");
   }
 
@@ -50,9 +50,10 @@ class SideBar extends Component {
 
   render() {
     return `
-      <div id="sidebar-resizer"></div>
+      <div id="sidebar-left">
+        <md-icon id="close" icon="keyboard_arrow_right"></md-icon>
+      </div>
       <document-viewer></document-viewer>
-      <md-icon-button id="close" icon="keyboard_arrow_right"></md-icon-button>
     `;
   }
 
@@ -62,24 +63,28 @@ class SideBar extends Component {
         display: flex;
         flex-direction: row;
         position: relative;
-        overflow: auto;
         width: 30vw;
         max-width: 10vw;
         max-width: 70vw;
         border-left: 1px #a0a0a0 solid;
       }
       $ document-viewer {
-        padding: 16px 16px 16px 8px;
         width: 100%;
+        overflow: auto;
       }
-      $ #sidebar-resizer {
+      $ #sidebar-left {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
         cursor: col-resize;
-        width: 8px;
+        width: 16px;
+        color: white;
+      }
+      $ #sidebar-left:hover {
+        color: #a0a0a0;
       }
       $ #close {
-        position: absolute;
-        right: 4px;
-        top: 4px;
+        cursor: e-resize;
       }
     `;
   }

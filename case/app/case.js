@@ -1200,6 +1200,12 @@ class CaseEditor extends MdApp {
       for (let [id, topic] of import_mapping.entries()) {
         let proxy = store.find(id);
         if (proxy) this.redirect(proxy, topic);
+        topic.apply((name, value) => {
+          if (name == n_is) {
+            let redirect = import_mapping.get(value);
+            if (redirect) return [name, redirect.id];
+          }
+        });
       }
 
       // Update topic list.
