@@ -21,6 +21,7 @@ import io
 import re
 import requests
 import ssl
+import time
 import urllib.parse
 import urllib3
 
@@ -569,8 +570,12 @@ class Profile:
   # Add Reddit gallery.
   def add_reddit_gallery(self, galleryid, caption, nsfw_override=None):
     print("Redit posting", galleryid)
-    r = requests.get("https://api.reddit.com/api/info/?id=t3_" + galleryid,
-                     headers = {"User-agent": "SLING Bot 1.0"})
+    while True:
+      r = requests.get("https://api.reddit.com/api/info/?id=t3_" + galleryid,
+                       headers = {"User-agent": "SLING Bot 1.0"})
+      if r.status_code != 429: break;
+      print("Reddit API throttle down")
+      time.sleep(60)
     r.raise_for_status()
     children = r.json()["data"]["children"]
     if len(children) == 0:

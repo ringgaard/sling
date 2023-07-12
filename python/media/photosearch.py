@@ -209,7 +209,7 @@ class SearchResult extends Component {
             </a>
           </div>
           <div class="info">
-            <span class="${p.marker}">NSFW</span>
+            <span class="${p.nsfw ? "nsfw" : "sfw"}">NSFW</span>
             Submitted on ${date} by ${p.author} to
             <a href="https://www.reddit.com/r/${p.sr}" target="_blank">
               r/${p.sr}
@@ -234,7 +234,7 @@ class SearchResult extends Component {
   }
 
   posturl() {
-    return `https://www.reddit.com${this.state.permalink}`;
+    return (this.state.nsfw ? "!" : "") + this.state.url;
   }
 
   static stylesheet() {
@@ -367,7 +367,7 @@ class SearchResults extends MdCard {
         width: thumb.width,
         height: thumb.height,
         title: posting["title"],
-        marker: posting["over_18"] ? "nsfw" : "sfw",
+        nsfw: posting["over_18"],
         permalink: posting["permalink"],
         sid: posting["name"],
         sr: posting["subreddit"],
