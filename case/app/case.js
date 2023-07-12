@@ -753,15 +753,19 @@ class CaseEditor extends MdApp {
       if (topic === target) continue;
       let updated = false;
       for (let n = 0; n < topic.length; ++n) {
-        let v = topic.value(n);
-        if (source == v) {
+        let name = topic.value(n);
+        let value = topic.value(n);
+        if (source == value) {
           topic.set_value(n, target);
           updated = true;
-        } else if (v instanceof Frame) {
-          if (v.isanonymous() && v.has(n_is)) {
-            for (let m = 0; m < v.length; ++m) {
-              if (source == v.value(m)) {
-                v.set_value(m, target);
+        } else if (name == n_is && value == source.id) {
+          topic.set_value(n, target.id);
+          updated = true;
+        } else if (value instanceof Frame) {
+          if (value.isanonymous() && value.has(n_is)) {
+            for (let m = 0; m < value.length; ++m) {
+              if (source == value.value(m)) {
+                value.set_value(m, target);
                updated = true;
               }
             }
