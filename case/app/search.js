@@ -51,6 +51,8 @@ export async function search(queries, backends, options = {}) {
   // Convert items to search results filtering out duplicates.
   let results = new Array();
   let seen = new Set();
+  let ignore = options.ignore;
+
   for (let item of items) {
     let ref = item.ref;
     if (options.local) {
@@ -59,7 +61,7 @@ export async function search(queries, backends, options = {}) {
     }
 
     if (ref) {
-      if (ref == options.ignore) continue;
+      if (ignore && ignore.includes(ref)) continue;
       if (seen.has(ref)) continue;
       seen.add(ref);
     }

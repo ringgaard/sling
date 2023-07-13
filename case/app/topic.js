@@ -25,6 +25,7 @@ const n_name = frame("name");
 const n_alias = frame("alias");
 const n_case_file = frame("Q108673968");
 const n_instance_of = frame("P31");
+const n_different_from = frame("P1889");
 const n_media = frame("media");
 const n_lex = frame("lex");
 const n_has_quality = frame("P1552");
@@ -711,11 +712,19 @@ class TopicCard extends Component {
     if (this.readonly) return;
     let topic = this.state;
     let queries = new Array();
+    let ignore = new Array();
     for (let name of topic.all(n_name)) {
       queries.push(name.toString());
     }
     for (let name of topic.all(n_alias)) {
       queries.push(name.toString());
+    }
+    ignore.push(topic.id);
+    for (let other of topic.all(n_different_from)) {
+      ignore.push(other.id);
+    }
+    for (let same of topic.links()) {
+      ignore.push(same.id);
     }
     if (queries.length == 0) return;
 
@@ -726,7 +735,7 @@ class TopicCard extends Component {
     ];
     let options = {
       full: true,
-      ignore: topic.id,
+      ignore: ignore,
       local: editor.get_index(),
     };
 
