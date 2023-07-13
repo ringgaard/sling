@@ -228,12 +228,14 @@ def get_photo_id(fingerprint):
 
 # Fetch posting from Reddit.
 session = requests.Session()
-def fetch_posting(store, sid):
-  r = session.get("https://api.reddit.com/api/info/?id=" + sid,
+def fetch_posting(store, permalink):
+  r = session.get("https://reddit.com" + permalink + ".json",
                    headers = {"User-agent": "SLING Bot 1.0"})
-  if r.status_code != 200: return None
+  if r.status_code != 200:
+    print("refetch", r.status_code)
+    return None
   reply = store.parse(r.content, json=True)
-  children = reply["data"]["children"]
+  children = reply[0]["data"]["children"]
   if len(children) == 0: return None
   return children[0]["data"]
 
@@ -302,6 +304,7 @@ for key, value in postings:
   # Parse reddit posting.
   store = sling.Store(commons)
   posting = store.parse(value, json=True)
+  sr = posting[n_subreddit]
   title = posting[n_title]
   if type(key) is bytes: key = key.decode()
 
@@ -327,7 +330,7 @@ for key, value in postings:
   seen.add(url)
 
   # Refetch posting from Reddit to check if it has been deleted.
-  if flags.arg.refetch: posting = fetch_posting(store, key)
+  if flags.arg.refetch: posting = fetch_posting(store, posting["permalink"])
   if posting is None or \
      posting["removed_by_category"] or \
      posting["title"] == "[deleted by user]":
@@ -344,7 +347,6 @@ for key, value in postings:
   nsfw = True if posting[n_over_18] else None
 
   # Check for personal subreddit.
-  sr = posting[n_subreddit]
   itemid = person_subreddits.get(sr)
   general = sr in general_subreddits or flags.arg.all
   if itemid is None and not general: continue

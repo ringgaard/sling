@@ -1289,6 +1289,7 @@ class CaseEditor extends MdApp {
     // Merge the rest of the topics into the first topic.
     let target = selected[0];
     let sources = selected.slice(1);
+    let updated_folders = new Set();
     for (let topic of sources) {
       // Add properties from topic to target.
       for (let [name, value] of topic) {
@@ -1303,17 +1304,29 @@ class CaseEditor extends MdApp {
 
       // Redirect references to topic to target.
       this.redirect(topic, target);
-    }
 
-    if (sources.length == 1 &&
-        this.folder.includes(sources[0]) &&
-        !this.folder.includes(target)) {
-      // Make source an alias for target.
-      this.folder[this.folder.indexOf(sources[0])] = target;
+      // Replace source with target in all folders. Delete it if target is in
+      // the same folder.
+      for (let [n, f] of this.folders) {
+        let pos = f.indexOf(topic);
+        if (pos != -1) {
+          if (f.includes(target)) {
+            f.splice(pos, 1);
+          } else {
+            f[pos] = target;
+          }
+          updated_folders.add(f);
+        }
+      }
     }
 
     // Delete merged topics from folder.
     await this.delete_topics(sources);
+
+    // Update folders.
+    for (let f of updated_folders) {
+      this.folder_updated(f);
+    }
 
     // Update target topic.
     this.topic_updated(target);

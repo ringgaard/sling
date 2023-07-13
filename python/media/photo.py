@@ -838,8 +838,12 @@ class Profile:
   # Add albums in comments.
   def add_albums_in_comments(self, url, nsfw=None):
     print("Redit albums in commens", url)
-    r = requests.get(url + ".json",
-                     headers = {"User-agent": "SLING Bot 1.0"})
+    while True:
+      r = requests.get(url + ".json",
+                       headers = {"User-agent": "SLING Bot 1.0"})
+      if r.status_code != 429: break;
+      print("Reddit API throttle down for album")
+      time.sleep(60)
     r.raise_for_status()
     comments = r.json()[1]["data"]["children"]
     count = 0
