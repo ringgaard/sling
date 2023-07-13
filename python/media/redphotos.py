@@ -20,6 +20,7 @@ import requests
 import datetime
 import re
 import sys
+import time
 import traceback
 from urllib.parse import urlparse
 from collections import defaultdict
@@ -228,9 +229,15 @@ def get_photo_id(fingerprint):
 
 # Fetch posting from Reddit.
 session = requests.Session()
-def fetch_posting(store, permalink):
-  r = session.get("https://reddit.com" + permalink + ".json",
-                   headers = {"User-agent": "SLING Bot 1.0"})
+def refetch_posting(store, posting):
+  while True:
+    r = session.get("https://reddit.com" + posting["permalink"] + ".json",
+                    headers = {"User-agent": "SLING Bot 1.0"})
+    if r.status_code != 429: break
+    reset = int(r.headers.get("x-ratelimit-reset", 60))
+    print("refetch rate limit", reset, "secs")
+    time.sleep(reset)
+
   if r.status_code != 200:
     print("refetch", r.status_code)
     return None
@@ -330,7 +337,7 @@ for key, value in postings:
   seen.add(url)
 
   # Refetch posting from Reddit to check if it has been deleted.
-  if flags.arg.refetch: posting = fetch_posting(store, posting["permalink"])
+  if flags.arg.refetch: posting = refetch_posting(store, posting)
   if posting is None or \
      posting["removed_by_category"] or \
      posting["title"] == "[deleted by user]":

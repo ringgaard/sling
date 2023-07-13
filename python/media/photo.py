@@ -573,9 +573,11 @@ class Profile:
     while True:
       r = requests.get("https://api.reddit.com/api/info/?id=t3_" + galleryid,
                        headers = {"User-agent": "SLING Bot 1.0"})
-      if r.status_code != 429: break;
-      print("Reddit API throttle down")
-      time.sleep(60)
+      if r.status_code != 429: break
+      reset = int(r.headers.get("x-ratelimit-reset", 60))
+      print("gallery rate limit", reset, "secs")
+      time.sleep(reset)
+
     r.raise_for_status()
     children = r.json()["data"]["children"]
     if len(children) == 0:
@@ -841,9 +843,10 @@ class Profile:
     while True:
       r = requests.get(url + ".json",
                        headers = {"User-agent": "SLING Bot 1.0"})
-      if r.status_code != 429: break;
-      print("Reddit API throttle down for album")
-      time.sleep(60)
+      if r.status_code != 429: break
+      reset = int(r.headers.get("x-ratelimit-reset", 60))
+      print("album rate limit", reset, "secs")
+      time.sleep(reset)
     r.raise_for_status()
     comments = r.json()[1]["data"]["children"]
     count = 0
