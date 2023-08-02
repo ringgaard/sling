@@ -248,6 +248,17 @@ var plugins = [
   ],
 },
 
+
+// Images from ImageVenue thumbs.
+{
+  name: "imagevenue",
+  module: "imagevenue.js",
+  actions: [PASTEURL],
+  patterns: [
+    /^https:\/\/cdn-thumbs.imagevenue.com\//,
+  ],
+},
+
 // Images from forum posts.
 {
   name: "forum",

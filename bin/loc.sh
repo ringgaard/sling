@@ -59,6 +59,7 @@ loc "python/crawl"
 loc "python/media"
 loc "python/dataset"
 loc "python/org"
+loc "python/wiki"
 
 loc "case"
 loc "case/service"

@@ -26,6 +26,7 @@ embed_data(
     "lib/global.js",
     "lib/datatype.js",
     "lib/reddit.js",
+    "lib/hash.js",
 
     "image/appicon.ico",
     "image/rr-logo.svg",

@@ -4,6 +4,7 @@
 // SLING case plug-in for photos from forum post to topics.
 
 import {store, frame, settings} from "/common/lib/global.js";
+import {MD5} from "/common/lib/hash.js";
 
 const n_is = frame("is");
 const n_media = frame("media");
@@ -24,6 +25,15 @@ const images_services = [
     let doc = new DOMParser().parseFromString(html, "text/html");
     let img = doc.querySelector(".card-body img");
     return img && img.src ? img.src : null;
+  },
+  convert: (thumb) => {
+    let base = thumb.slice(thumb.lastIndexOf("/") + 1);
+    let hires = base.replace("_t", "_o");
+    let d = MD5(hires);
+    let path = `${d[0]}${d[1]}/${d[2]}${d[3]}/${d[4]}${d[5]}`
+    let photo = "https://cdn-images.imagevenue.com/" +
+                path + "/" + hires;
+    return photo;
   },
   nsfw: true,
 },
@@ -263,6 +273,7 @@ export default class AlbumPlugin {
 
     // Find links to images.
     let hrefs = new Array();
+    let thumbs = new Map();
     let gallery = container.querySelectorAll("div.galleryPics");
     if (gallery.length > 0) {
       for (let photo of gallery.values()) {
@@ -278,7 +289,8 @@ export default class AlbumPlugin {
     } else {
       for (let link of container.getElementsByTagName("a")) {
         // Get image link.
-        if (!link.querySelector("img")) continue;
+        let thumb = link.querySelector("img");
+        if (!thumb) continue;
         let href = link.getAttribute("href");
         if (!href) continue;
         try {
@@ -289,6 +301,8 @@ export default class AlbumPlugin {
         }
         if (hrefs.includes(href)) continue;
         hrefs.push(href);
+        let src = thumb.getAttribute("src");
+        if (src) thumbs.set(href, src);
       }
     }
 
@@ -320,7 +334,14 @@ export default class AlbumPlugin {
 
       // Fetch image.
       if (service) {
-        let photo = await service.fetch(href, context);
+        let photo;
+        if (service.convert) {
+          let thumb = thumbs.get(href);
+          if (thumb) photo = service.convert(thumb);
+        }
+        if (!photo) {
+          photo = await service.fetch(href, context);
+        }
         if (photo) {
           console.log("photo", photo, "href", href);
           // Check for duplicate.
