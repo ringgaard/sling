@@ -249,13 +249,14 @@ var plugins = [
 },
 
 
-// Images from ImageVenue thumbs.
+// Images from thumbs.
 {
-  name: "imagevenue",
-  module: "imagevenue.js",
+  name: "thumbs",
+  module: "thumbs.js",
   actions: [PASTEURL],
   patterns: [
     /^https:\/\/cdn-thumbs.imagevenue.com\//,
+    /^https:\/\/thumbs\d+.imagebam.com\//,
   ],
 },
 

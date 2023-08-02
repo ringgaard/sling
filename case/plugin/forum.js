@@ -85,6 +85,17 @@ const images_services = [
     let img = doc.querySelector("img.main-image");
     return img && img.src ? img.src : null;
   },
+  convert: (thumb) => {
+    let m = thumb.match(
+      /https\:\/\/thumbs(\d+)\.imagebam\.com\/\w+\/\w+\/\w+\/(.*)/);
+    let hostno = m[1];
+    let base = m[2];
+    let hires = base.replace("_t", "_o");
+    let d = MD5(hires);
+    let path = `${d[0]}${d[1]}/${d[2]}${d[3]}/${d[4]}${d[5]}`
+    let photo = `https://images${hostno}.imagebam.com/${path}/${hires}`;
+    return photo;
+  },
   nsfw: true,
 },
 
