@@ -257,6 +257,7 @@ var plugins = [
   patterns: [
     /^https:\/\/cdn-thumbs.imagevenue.com\//,
     /^https:\/\/thumbs\d+.imagebam.com\//,
+    /^https:\/\/thumbs\d+.imgbox.com\//,
   ],
 },
 

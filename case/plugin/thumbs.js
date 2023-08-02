@@ -17,7 +17,7 @@ export default class ThumbsPlugin {
       let hires = base.replace("_t", "_o");
       let d = MD5(hires);
       let path = `${d[0]}${d[1]}/${d[2]}${d[3]}/${d[4]}${d[5]}`
-      photo = `https://cdn-images.imagevenue.com/${path}/${hires}`;
+      photo = `!https://cdn-images.imagevenue.com/${path}/${hires}`;
     } else if (url.match(/^https:\/\/thumbs\d+.imagebam.com/)) {
       let m = url.match(
         /https\:\/\/thumbs(\d+)\.imagebam\.com\/\w+\/\w+\/\w+\/(.*)/);
@@ -26,11 +26,13 @@ export default class ThumbsPlugin {
       let hires = base.replace("_t", "_o");
       let d = MD5(hires);
       let path = `${d[0]}${d[1]}/${d[2]}${d[3]}/${d[4]}${d[5]}`
-      photo = `https://images${hostno}.imagebam.com/${path}/${hires}`;
+      photo = `!https://images${hostno}.imagebam.com/${path}/${hires}`;
+    } else if (url.match(/^https:\/\/thumbs\d+.imgbox.com/)) {
+      photo = "!" + url.replace("thumbs", "images").replace("_t", "_o");
     }
 
     if (photo) {
-      context.topic.add(n_media, "!" + photo);
+      context.topic.add(n_media, photo);
       context.updated(context.topic);
       return true;
     }

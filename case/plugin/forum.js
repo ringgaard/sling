@@ -71,6 +71,9 @@ const images_services = [
     let meta = doc.querySelector('meta[property="og:image"]');
     return meta && meta.content ? meta.content : null;
   },
+  convert: (thumb) => {
+    return thumb.replace("thumbs", "images").replace("_t", "_o");
+  },
   nsfw: true,
 },
 
