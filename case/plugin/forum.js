@@ -47,6 +47,10 @@ const images_services = [
     let img = doc.getElementById("image");
     return img && img.src ? img.src : null;
   },
+  convert: (thumb) => {
+    let m = thumb.match(/^https\:\/\/t(\d+)\.pixhost\.to\/thumbs\/(.*)/);
+    if (m) return `https://img${m[1]}.pixhost.to/images/${m[2]}`;
+  },
   nsfw: true,
 },
 

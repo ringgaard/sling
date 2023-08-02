@@ -29,6 +29,9 @@ export default class ThumbsPlugin {
       photo = `!https://images${hostno}.imagebam.com/${path}/${hires}`;
     } else if (url.match(/^https:\/\/thumbs\d+.imgbox.com/)) {
       photo = "!" + url.replace("thumbs", "images").replace("_t", "_o");
+    } else if (url.match(/^https\:\/\/t(\d+)\.pixhost\.to\//)) {
+      let m = url.match(/^https\:\/\/t(\d+)\.pixhost\.to\/thumbs\/(.*)/);
+      photo = `!https://img${m[1]}.pixhost.to/images/${m[2]}`;
     }
 
     if (photo) {

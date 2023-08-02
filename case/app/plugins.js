@@ -255,9 +255,10 @@ var plugins = [
   module: "thumbs.js",
   actions: [PASTEURL],
   patterns: [
-    /^https:\/\/cdn-thumbs.imagevenue.com\//,
-    /^https:\/\/thumbs\d+.imagebam.com\//,
-    /^https:\/\/thumbs\d+.imgbox.com\//,
+    /^https:\/\/cdn-thumbs\.imagevenue\.com\//,
+    /^https:\/\/thumbs\d+\.imagebam\.com\//,
+    /^https:\/\/thumbs\d+\.imgbox\.com\//,
+    /^https\:\/\/t(\d+)\.pixhost\.to\/thumbs\//,
   ],
 },
 
