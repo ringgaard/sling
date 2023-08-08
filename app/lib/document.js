@@ -3,7 +3,7 @@
 
 // SLING document.
 
-import {Store, Reader} from "./frame.js";
+import {Store, Frame, Reader} from "./frame.js";
 
 export function detag(html) {
   return html
@@ -30,17 +30,30 @@ export class Mention {
 }
 
 export class Document {
-  constructor(store) {
+  constructor(store, source) {
     this.store = store;
+    this.lex = store.resolve(source);
+    if (source instanceof Frame) this.source = source;
+
     this.mentions = new Array();
     this.themes = new Array();
     this.mapping = new Map();
-  }
 
-  parse(lex) {
+    // Build phrase mapping.
+    let phrasemap;
+    if (this.source) {
+      for (let [k, v] of this.source) {
+        if (typeof(k) === 'string') {
+          if (!phrasemap) phrasemap = new Map();
+          phrasemap.set(k, v);
+        }
+      }
+    }
+
+    // Parse LEX.
     let text = "";
     let stack = new Array();
-    let r = new Reader(this.store, lex, true);
+    let r = new Reader(this.store, this.lex, true);
     while (!r.end()) {
       switch (r.ch) {
         case 91: { // '['
@@ -64,6 +77,11 @@ export class Document {
               let mention = new Mention(this, index, begin, end, obj);
               this.mentions.push(mention);
               this.mapping.set(obj, mention);
+              if (phrasemap && (obj instanceof Frame)) {
+                let phrase = text.slice(begin, end);
+                let mapping = phrasemap.get(phrase);
+                if (mapping) obj.add(store.is, mapping);
+              }
               if (r.token == 93 || r.end()) break;
             }
           }
@@ -79,6 +97,11 @@ export class Document {
             let index = this.mentions.length;
             let mention = new Mention(this, index, begin, end);
             this.mentions.push(mention);
+            if (phrasemap) {
+              let phrase = text.slice(begin, end);
+              let mapping = phrasemap.get(phrase);
+              if (mapping) mention.annotation = mapping;
+            }
           }
           r.read();
           break;

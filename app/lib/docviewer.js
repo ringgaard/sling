@@ -12,6 +12,7 @@ import "./material.js";
 
 const n_is = store.is;
 const n_isa = store.isa;
+const n_phrases = frame("phrases");
 
 stylesheet("@import url(/common/font/anubis.css)");
 
@@ -182,6 +183,15 @@ class AnnotationBox extends Component {
 Component.register(AnnotationBox);
 
 export class DocumentViewer extends Component {
+  onconnect() { this.onupdate(); }
+  onupdate() {
+    if (this.state) {
+      this.doc = new Document(store, this.state);
+    } else {
+      this.doc = null;
+    }
+  }
+
   onrendered() {
     this.attach(this.onmouse, "mouseover");
     this.attach(this.onleave, "mouseleave");
@@ -244,12 +254,8 @@ export class DocumentViewer extends Component {
   visible() { return this.state; }
 
   render() {
-    if (!this.state) return;
+    if (!this.doc) return;
     let h = new Array();
-
-    // Parse LEX document.
-    this.doc = new Document(store);
-    this.doc.parse(store.resolve(this.state));
 
     // Spans sorted by begin and end positions.
     let starts = this.doc.mentions.slice();

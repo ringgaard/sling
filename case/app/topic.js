@@ -561,12 +561,12 @@ class TopicCard extends Component {
     let index = e.detail.index;
     if (command == "edit") {
       let dialog = new DocumentEditDialog(doc);
-      let content = await dialog.show();
-      if (content) {
+      let result = await dialog.show();
+      if (result) {
         let n = 0;
         this.state.apply((name, value) => {
           if (name == n_lex && n++ == index) {
-            return [n_lex, content];
+            return [n_lex, result];
           }
         });
         this.mark_dirty();
@@ -1127,11 +1127,15 @@ class DocumentEditDialog extends MdDialog {
 
   submit() {
     let content = this.find("textarea").value;
+    if (this.state instanceof Frame) {
+      this.state.set(n_is, content);
+      content = this.state;
+    }
     this.close(content);
   }
 
   render() {
-    let content = this.state;
+    let content = store.resolve(this.state);
     return `
       <md-dialog-top>Edit document</md-dialog-top>
         <textarea

@@ -269,13 +269,16 @@ bool XMLParser::Parse(Input *input) {
           // Skip whitespace after '='.
           ch = SkipWhitespace(ch);
 
-          // Expect '"' after '='.
-          if (ch != '"') return Error("'\"' expected before attribute value");
+          // Allow both " and ' as attribute value delimiters.
+          if (ch != '"' && ch != '\'') {
+            return Error("delimiter expected before attribute value");
+          }
+          char delim = ch;
           ch = ReadChar();
 
           // Read attribute value.
           element_.attrs[n].value = bufptr_;
-          while (ch != '"') {
+          while (ch != delim) {
             if (ch < 0) return Error("string not terminated");
 
             if (ch == '&') {
@@ -306,7 +309,7 @@ bool XMLParser::Parse(Input *input) {
           }
           Add(0);
 
-          // Skip '"' at end of attribute value.
+          // Skip delimiter at end of attribute value.
           ch = ReadChar();
 
           // Skip whitespace after attribute value.

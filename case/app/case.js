@@ -244,6 +244,11 @@ class CaseEditor extends MdApp {
       }
     }
 
+    // Add phrase mapping.
+    if (mention.document.source) {
+      mention.document.source.set(mention.text(), topic);
+    }
+
     // Add source.
     if (e.detail.position) {
       topic.put(n_described_by_source, e.detail.position);
