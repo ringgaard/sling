@@ -30,6 +30,9 @@ const n_media = frame("media");
 const n_lex = frame("lex");
 const n_has_quality = frame("P1552");
 const n_not_safe_for_work = frame("Q2716583");
+const n_full_work = frame("P953");
+const n_url = frame("P2699");
+const n_mime_type = frame("P1163");
 
 // Cross-reference configuration.
 var xrefs;
@@ -373,6 +376,9 @@ class TopicToolbox extends MdToolbox {
             tooltip="Delete topic\n(Del)"
             tooltip-align="right">
           </md-icon-button>
+          <md-menu id="topic-menu">
+            <md-menu-item id="extract">Extract text</md-menu-item>
+          </md-menu>
    `;
  }
 }
@@ -411,6 +417,13 @@ class TopicCard extends Component {
         this.onimgdups(e);
       } else if (action == "link") {
         this.ontopiclink(e);
+      }
+    });
+
+    this.bind("#topic-actions", "select", e => {
+      let action = e.detail.id;
+      if (action == "extract") {
+        this.onextract(e);
       }
     });
 
@@ -926,6 +939,59 @@ class TopicCard extends Component {
     navigator.clipboard.writeText(url.toString());
   }
 
+  async onextract(e) {
+    // Get document URL, MIME type, and filename.
+    let topic = this.state;
+    let url = topic.get(n_full_work) || topic.get(n_url);
+    let mime;
+    if (url instanceof Frame) {
+      mime = url.get(n_mime_type);
+      url = url.resolve();
+    }
+    if (!url) {
+      inform("No document found for text extraction");
+      return;
+    }
+    let slash = url.lastIndexOf("/")
+    let filename = slash != -1 ? url.slice(slash + 1) : undefined;
+
+    // Fetch document from source.
+    let r = await fetch(`/case/proxy?url=${encodeURIComponent(url)}`);
+    if (!r.ok) {
+      inform(`Error fetching document ${url}: ${r.status} ${r.statusText}`);
+      return;
+    }
+    let content = await r.blob();
+    if (!mime) mime = content.type;
+    console.log("url:", url, "filename:", filename, "mime:", mime, "size:",
+                content.size, "type:", content.type);
+
+    // Call extraction service to extract text from document.
+    let headers = {};
+    headers["Content-Disposition"] = `attachment; filename="${filename}"`;
+    if (mime) headers["Content-Type"] = mime;
+    r = await fetch("/case/extract", {
+      method: "POST",
+      headers: headers,
+      body: content,
+    });
+    if (!r.ok) {
+      if (r.status == 415) {
+        inform(`No extractor for document type ${mime}: ${url}`);
+      } else {
+        let error = `${r.status} ${r.statusText}`;
+        inform(`Error extracting document text for ${url}: ${error}`);
+      }
+      return;
+    }
+    let extraction = await store.parse(r);
+
+    // Add extraction to topic.
+    for (let [k, v] of extraction) topic.put(k, v);
+    this.mark_dirty();
+    this.refresh();
+  }
+
   ondown(e) {
     this.ofsx = e.offsetX;
     this.ofsy = e.offsetY;
@@ -1042,6 +1108,9 @@ class TopicCard extends Component {
       $ md-card-toolbar md-icon-button {
         margin-left: -8px;
       }
+      $ md-card-toolbar md-menu {
+        margin-left: -8px;
+      }
 
       $.selected::selection {
         background-color: transparent;
@@ -1128,6 +1197,8 @@ class DocumentEditDialog extends MdDialog {
   submit() {
     let content = this.find("textarea").value;
     if (this.state instanceof Frame) {
+      let title = this.find("#title").value;
+      this.state.set(n_name, title);
       this.state.set(n_is, content);
       content = this.state;
     }
@@ -1136,8 +1207,16 @@ class DocumentEditDialog extends MdDialog {
 
   render() {
     let content = store.resolve(this.state);
+    let title = (this.state instanceof Frame) && this.state.get(n_name);
     return `
       <md-dialog-top>Edit document</md-dialog-top>
+        <md-text-field
+          id="title"
+          value="${Component.escape(title)}"
+          label="Title"
+          ${title ? '' : 'class="hidden"'}
+        >
+        </md-text-field>
         <textarea
           spellcheck="false">${Component.escape(content)}</textarea>
       <md-dialog-bottom>
@@ -1151,7 +1230,17 @@ class DocumentEditDialog extends MdDialog {
     return `
       $ textarea {
         width: calc(100vw * 0.8);
-        height: calc(100vh * 0.8);
+        height: calc(100vh * 0.7);
+        background-color: #f5f5f5;
+        border: 0;
+        padding: 8px;
+        outline: none;
+      }
+      $ md-text-field {
+        padding-bottom: 8px;
+      }
+      $ .hidden {
+        display: none;
       }
     `;
   }

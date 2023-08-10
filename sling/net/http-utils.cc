@@ -47,6 +47,7 @@ static const MIMEMapping mimetypes[] = {
   {"zip", "application/zip"},
   {"json", "application/json"},
   {"jsonld", "application/ld+json"},
+  {"epub", "application/epub+zip"},
   {nullptr, nullptr},
 };
 

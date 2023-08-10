@@ -602,6 +602,12 @@ class DocumentHeader extends Component {
       $ div {
         padding-left: 8px;
       }
+      $ md-menu {
+        visibility: hidden;
+      }
+      $:hover md-menu {
+        visibility: visible;
+      }
     `;
   }
 }

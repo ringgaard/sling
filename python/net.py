@@ -328,7 +328,7 @@ def json_page(value, request, response):
   response.ct = "application/sling"
   response.body = value.data(binary=True, shallow=False)
 
-checked_hostnames = set()
+checked_hostnames = set(["drive.ringgaard.com"])
 
 def private(url):
   # Check that url is not on local network.

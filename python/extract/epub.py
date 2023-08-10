@@ -14,8 +14,9 @@
 
 """Convert epub books to LEX format."""
 
-import zipfile
+import io
 import re
+import zipfile
 
 import sling
 import sling.log as log
@@ -347,6 +348,11 @@ class EPUBBook:
       return "\n<%s>%s</%s>" % (tag.id, text, tag.id)
     else:
       return "<%s>%s</%s>" % (tag.id, text, tag.id)
+
+def extract(content, params):
+   file = io.BytesIO(content)
+   book = EPUBBook(file)
+   return book.extract()
 
 if __name__ == "__main__":
   import sling.flags as flags

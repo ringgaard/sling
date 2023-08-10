@@ -28,6 +28,7 @@ import sling.log as log
 import services
 import imgcache
 import wikibase
+import extract
 
 flags.define("--port",
              help="HTTP port",
@@ -279,6 +280,10 @@ def cache_images_request(request):
 @app.route("/case/wikibase", methods=["GET", "POST"])
 def wikibase_request(request):
   return wikibase.handle(request)
+
+@app.route("/case/extract", methods=["GET", "POST"])
+def wikibase_request(request):
+  return extract.handle(request)
 
 # Initialize services.
 services.init()
