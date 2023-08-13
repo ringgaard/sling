@@ -31,9 +31,9 @@ def handle(request):
 
   disposition = request["Content-Disposition"]
   if disposition:
-    m = re.fullmatch(r'\w+\s*;\s*filename="(.+)\.(\w+)', disposition)
+    m = re.fullmatch(r'\w+\s*;\s*filename=\"(.+)(\.\w+)\"', disposition)
     if m != None:
-      filename = m[1] + "." + m[2]
+      filename = m[1] + m[2]
       extension = m[2]
 
   # Find extractor for document using MIME type or file extension.

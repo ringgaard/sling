@@ -230,8 +230,10 @@ def get_photo_id(fingerprint):
 # Fetch posting from Reddit.
 session = requests.Session()
 def refetch_posting(store, posting):
+  permalink = posting[n_permalink]
+  if type(permalink) is bytes: return posting
   while True:
-    r = session.get("https://reddit.com" + posting[n_permalink] + ".json",
+    r = session.get("https://reddit.com" + permalink + ".json",
                     headers = {"User-agent": "SLING Bot 1.0"})
     if r.status_code != 429: break
     reset = int(r.headers.get("x-ratelimit-reset", 60))

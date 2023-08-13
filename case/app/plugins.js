@@ -249,6 +249,16 @@ var plugins = [
 },
 
 
+// Images from image scalers.
+{
+  name: "imgscale",
+  module: "imgscale.js",
+  actions: [PASTEURL],
+  patterns: [
+    /^https\:\/\/images.sidearmdev.com\//
+  ],
+},
+
 // Images from thumbs.
 {
   name: "thumbs",

@@ -968,8 +968,12 @@ class TopicCard extends Component {
 
     // Call extraction service to extract text from document.
     let headers = {};
-    headers["Content-Disposition"] = `attachment; filename="${filename}"`;
-    if (mime) headers["Content-Type"] = mime;
+    if (/^[\x00-\x7F]+$/.test(filename)) {
+      headers["Content-Disposition"] = `attachment; filename="${filename}"`;
+    }
+    if (mime) {
+      headers["Content-Type"] = mime;
+    }
     r = await fetch("/case/extract", {
       method: "POST",
       headers: headers,

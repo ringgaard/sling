@@ -61,6 +61,8 @@ n_dc_date = commons["dc:date"]
 n_dc_description = commons["dc:description"]
 n_dc_language = commons["dc:language"]
 n_dc_identifier = commons["dc:identifier"]
+n_opf_schema = commons["opf:scheme"]
+n_opf_role = commons["opf:role"]
 
 n_ncx = commons["ncx"]
 n_navmap = commons["navMap"]
@@ -76,7 +78,6 @@ n_body = commons["body"]
 n_title = commons["title"]
 n_class = commons["class"]
 n_role = commons["role"]
-
 
 languages = {
   None: None,
@@ -227,23 +228,40 @@ class EPUBBook:
 
     # Collect meta data.
     metadata = package[n_metadata]
-    self.title = content(metadata[n_dc_title])
-    self.add(n_title, self.title)
-    self.add(n_author, content(metadata[n_dc_creator]))
-    self.add(n_publisher, content(metadata[n_dc_publisher]))
-    self.add(n_language, languages.get(metadata[n_dc_language]))
-    pubdate = self.store.resolve(metadata[n_dc_date])
-    if "T" in pubdate: pubdate = pubdate[0:pubdate.find("T")]
-    if pubdate: self.add(n_pubdate, int(pubdate.replace("-", "")))
-    description = metadata[n_dc_description]
-    if description: self.add(None, re.sub(r"\s+", " ", detag(description)))
-    ident = content(metadata[n_dc_identifier])
-    if ident and ident.startswith("urn:isbn:"):
-      isbn = ident[9:]
-      if len(isbn) == 13:
-        self.add(n_isbn13, isbn)
-      else:
-        self.add(n_isbn10, isbn)
+    if type(metadata) is sling.Frame:
+      self.title = content(metadata[n_dc_title])
+      self.add(n_title, self.title)
+
+      creator = metadata[n_dc_creator]
+      if type(creator) is str:
+        self.add(n_author, creator)
+      elif type(creator) is sling.Frame:
+        role = creator[n_opf_role]
+        if role is None or role == "aut":
+          self.add(n_author, content(creator))
+
+      self.add(n_publisher, content(metadata[n_dc_publisher]))
+      self.add(n_language, languages.get(metadata[n_dc_language]))
+
+      pubdate = self.store.resolve(metadata[n_dc_date])
+      if "T" in pubdate: pubdate = pubdate[0:pubdate.find("T")]
+      if pubdate: self.add(n_pubdate, int(pubdate.replace("-", "")))
+
+      description = metadata[n_dc_description]
+      if description: self.add(None, re.sub(r"\s+", " ", detag(description)))
+
+      isbn = None
+      ident = content(metadata[n_dc_identifier])
+      if type(ident) is str:
+        if ident.startswith("urn:isbn:"): isbn = ident[9:]
+      elif type(ident) is sling.Frame:
+        schema = ident[n_opf_scema]
+        if schema == "ISBN": isbn = content(ident)
+      if isbn:
+        if len(isbn) == 13:
+          self.add(n_isbn13, isbn)
+        else:
+          self.add(n_isbn10, isbn)
 
     # Collect manifest.
     manifest = package[n_manifest]
@@ -316,9 +334,8 @@ class EPUBBook:
       log.warning("Unknown tag:", tag.id)
       action = KEEP
     elif type(action) is dict:
-      if type(content) is str:
-        cls = None
-      else:
+      cls = None
+      if type(content) is sling.Frame:
         cls = content[n_class]
         if cls is None: cls = content[n_role]
       if cls in action:
