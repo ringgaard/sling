@@ -230,8 +230,9 @@ def redirect_page(value, request, response):
   response["Location"] = value.location
 
 class HTTPServer:
-  def __init__(self, port, addr=""):
+  def __init__(self, port, addr="", cors=False):
     self.httpd = api.HTTPServer(addr, port)
+    if cors: self.httpd.cors()
     self.terminate = False
 
   def start(self):

@@ -580,10 +580,13 @@ class DocumentHeader extends Component {
         <md-menu-item id="pin">
           <md-icon icon="push_pin"></md-icon>Pin
         </md-menu-item>
-        <md-menu-item id="edit" icon="edit">
+        <md-menu-item id="edit">
           <md-icon icon="edit"></md-icon>Edit
         </md-menu-item>
-        <md-menu-item id="delete" icon="delete">
+        <md-menu-item id="analyze">
+          <md-icon icon="summarize"></md-icon>Analyze
+        </md-menu-item>
+        <md-menu-item id="delete">
           <md-icon icon="delete"></md-icon>Delete
         </md-menu-item>
       </md-menu>

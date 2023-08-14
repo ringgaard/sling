@@ -579,14 +579,10 @@ class SettingsDialog extends material.MdDialog {
     this.find("#picturesize").value = settings.picturesize;
     this.find("#kbservice").value = settings.kbservice;
     this.find("#collaburl").value = settings.collaburl;
+    this.find("#analyzer").value = settings.analyzer;
     this.find("#imagesearch").value = settings.imagesearch;
     this.find("#userscripts").checked = settings.userscripts;
     this.find("#nsfw").checked = settings.nsfw;
-    this.bind("#clearwd", "click", e => {
-      settings.wikidata_key = null;
-      settings.wikidata_secret = null;
-      material.inform("Wikidata keys cleared");
-    });
   }
 
   submit() {
@@ -594,6 +590,7 @@ class SettingsDialog extends material.MdDialog {
     settings.picturesize = this.find("#picturesize").value;
     settings.kbservice = this.find("#kbservice").value;
     settings.collaburl = this.find("#collaburl").value;
+    settings.analyzer = this.find("#analyzer").value;
     settings.imagesearch = this.find("#imagesearch").value;
     settings.userscripts = this.find("#userscripts").checked;
     settings.nsfw = this.find("#nsfw").checked;
@@ -610,10 +607,6 @@ class SettingsDialog extends material.MdDialog {
           label="Author topic ID">
         </md-text-field>
         <md-text-field
-          id="picturesize"
-          label="Profile picture size">
-        </md-text-field>
-        <md-text-field
           id="kbservice"
           label="Knowledge service URL">
         </md-text-field>
@@ -622,8 +615,16 @@ class SettingsDialog extends material.MdDialog {
           label="Collaboration service URL">
         </md-text-field>
         <md-text-field
+          id="analyzer"
+          label="Document analyzer service URL">
+        </md-text-field>
+        <md-text-field
           id="imagesearch"
           label="Image search URL">
+        </md-text-field>
+        <md-text-field
+          id="picturesize"
+          label="Profile picture size">
         </md-text-field>
         <md-switch id="userscripts" label="Enable user scripts"></md-switch>
         <md-switch id="nsfw" label="Show adult content (NSFW)"></md-switch>
@@ -631,7 +632,6 @@ class SettingsDialog extends material.MdDialog {
       </div>
       <md-dialog-bottom>
         <button id="cancel">Cancel</button>
-        <button id="clearwd">Clear Wikidata keys</button>
         <button id="submit">Save settings</button>
       </md-dialog-bottom>
     `;
@@ -641,6 +641,7 @@ class SettingsDialog extends material.MdDialog {
     return `
       $  {
         max-height: 75vh;
+        min-width: 500px;
         overflow: auto;
       }
       $ #content {

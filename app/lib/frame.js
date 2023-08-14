@@ -360,6 +360,18 @@ export class Frame {
     this.slots[n * 2 + 1] = value;
   }
 
+  // Return slot index of nth slot with name in frame.
+  slot(name, nth = 0) {
+    if (!this.slots) return;
+    let i = 0;
+    for (let n = 0; n < this.slots.length; ++n) {
+      if (this.slots[n * 2] === name) {
+        if (i == nth) return n;
+        i++;
+      }
+    }
+  }
+
   // Remove all slots with name or nth slot.
   remove(n) {
     if (!this.slots) return;

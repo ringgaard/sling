@@ -60,6 +60,7 @@ loc "python/media"
 loc "python/dataset"
 loc "python/org"
 loc "python/wiki"
+loc "python/extract"
 
 loc "case"
 loc "case/service"

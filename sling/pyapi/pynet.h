@@ -61,6 +61,9 @@ struct PyHTTPServer : public PyBase {
   // Stop HTTP server.
   PyObject *Stop();
 
+  // Enable CORS for server.
+  PyObject *Cors();
+
   // Add static content handler.
   PyObject *Static(PyObject *args, PyObject *kw);
 

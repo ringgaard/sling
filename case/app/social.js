@@ -165,10 +165,6 @@ let xrefs = [
     property: frame("P3943"),
   },
   {
-    pattern: /^https?:\/\/([^\s\/]+)\.blogspot\.com\/?/i,
-    property: frame("P8772"),
-  },
-  {
     pattern: /^https?:\/\/(?:www\.)?myspace\.com\/([^\/\?]+)/,
     property: frame("P3265"),
   },

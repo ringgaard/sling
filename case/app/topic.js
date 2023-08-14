@@ -576,18 +576,33 @@ class TopicCard extends Component {
       let dialog = new DocumentEditDialog(doc);
       let result = await dialog.show();
       if (result) {
-        let n = 0;
-        this.state.apply((name, value) => {
-          if (name == n_lex && n++ == index) {
-            return [n_lex, result];
-          }
-        });
+        let n = this.state.slot(n_lex, index);
+        this.state.set_value(n, result);
         this.mark_dirty();
         this.refresh();
       }
+    } else if  (command == "analyze") {
+      if (settings.analyzer) {
+        let r = await fetch(settings.analyzer, {
+          method: "POST",
+          headers: {"Content-Type": "text/lex"},
+          body: store.resolve(doc)
+        });
+        if (!r.ok) {
+          inform(`Error ${r.status} in document analyzer ${settings.analyzer}`);
+          return;
+        }
+        let result = await r.text();
+        let n = this.state.slot(n_lex, index);
+        this.state.set_value(n, result);
+        this.mark_dirty();
+        this.refresh();
+      } else {
+        inform("No document analyzer configured");
+      }
     } else if  (command == "delete") {
-      let n = 0;
-      this.state.purge((name, value) => name == n_lex && n++ == index);
+      let n = this.state.slot(n_lex, index);
+      this.state.remove(n);
       this.mark_dirty();
       this.refresh();
     } else if  (command == "pin") {

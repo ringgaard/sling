@@ -30,6 +30,7 @@ void PyHTTPServer::Define(PyObject *module) {
   methods.Add("start", &PyHTTPServer::Start);
   methods.Add("shutdown", &PyHTTPServer::Shutdown);
   methods.Add("stop", &PyHTTPServer::Stop);
+  methods.Add("cors", &PyHTTPServer::Cors);
   methods.Add("static", &PyHTTPServer::Static);
   methods.Add("dynamic", &PyHTTPServer::Dynamic);
   type.tp_methods = methods.table();
@@ -89,6 +90,11 @@ PyObject *PyHTTPServer::Shutdown() {
 PyObject *PyHTTPServer::Stop() {
   httpd->Shutdown();
   httpd->Wait();
+  Py_RETURN_NONE;
+}
+
+PyObject *PyHTTPServer::Cors() {
+  httpd->set_cors(true);
   Py_RETURN_NONE;
 }
 
