@@ -47,8 +47,6 @@ class DocumentSchema:
     self.phrase_length = store['length']
     self.phrase_evokes = store['evokes']
 
-    self.thing = store['thing']
-
 
 class Token(object):
   def __init__(self, document, frame, index):
@@ -299,6 +297,17 @@ class Document(object):
       self.themes.append(theme)
     self.themes_dirty = False
 
+  def parts(self, brk):
+    start = 0
+    for i in range(len(self.tokens)):
+      t = self.tokens[i]
+      if t.brk >= brk:
+        if i != start: yield start, i
+        start = i
+    yield start, len(self.tokens)
+
+  def sentences(self):
+    return self.parts(SENTENCE_BREAK)
 
 class Corpus:
   def __init__(self, filename, commons=None):

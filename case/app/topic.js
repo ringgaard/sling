@@ -593,8 +593,12 @@ class TopicCard extends Component {
           return;
         }
         let result = await r.text();
-        let n = this.state.slot(n_lex, index);
-        this.state.set_value(n, result);
+        if (doc instanceof Frame) {
+          doc.set(n_is, result);
+        } else {
+          let n = this.state.slot(n_lex, index);
+          this.state.set_value(n, result);
+        }
         this.mark_dirty();
         this.refresh();
       } else {
@@ -978,8 +982,6 @@ class TopicCard extends Component {
     }
     let content = await r.blob();
     if (!mime) mime = content.type;
-    console.log("url:", url, "filename:", filename, "mime:", mime, "size:",
-                content.size, "type:", content.type);
 
     // Call extraction service to extract text from document.
     let headers = {};

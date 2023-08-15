@@ -186,6 +186,8 @@ var plugins = [
   patterns: [
     /^http\:\/\/library\.lol\//,
     /^https:\/\/libgen.is\/book\/index.php\?md5=/,
+    /^https:\/\/libgen.st\/book\/index.php\?md5=/,
+    /^https:\/\/libgen.rs\/book\/index.php\?md5=/,
   ],
 },
 

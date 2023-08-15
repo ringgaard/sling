@@ -14,6 +14,7 @@
 
 """Convert PDF to epub."""
 
+import re
 import zipfile
 import fitz
 
@@ -258,12 +259,13 @@ class PDFBook:
       page.extract(p)
 
   def analyze_boilerplate(self):
+    foot_lines = int(self.meta.get("footlines", "1"))
     footer_positions = []
     body_positions = []
     for p in book.pages:
-      if len(p.lines) < 2: continue
-      last = p.lines[-1]
-      penultimate = p.lines[-2]
+      if len(p.lines) < foot_lines + 1: continue
+      last = p.lines[-foot_lines]
+      penultimate = p.lines[-foot_lines - 1]
       footer_positions.append(last.y0)
       body_positions.append(penultimate.y1)
 
@@ -272,11 +274,14 @@ class PDFBook:
     foot_sep = (foot_start + body_end) / 2
     print("footer: %d [%d-%d]" %
       (int(foot_sep), int(body_end), int(foot_start)))
-    if "footer" not in self.meta: self.meta["footer"] = foot_sep
+    if "footer" not in self.meta: self.meta["footer"] = str(foot_sep)
 
   def remove_boilerplate(self):
-    footer = self.meta.get("footer")
-    if type(footer) is str: footer = float(footer)
+    titles = set()
+    if "title" in self.meta: titles.add(self.meta["title"].lower())
+    for chapter in self.spine: titles.add(chapter.title.lower())
+
+    footer = float(self.meta.get("footer", "0"))
     pageno = 1
     for p in book.pages:
       if footer:
@@ -285,13 +290,15 @@ class PDFBook:
         for l in p.lines:
           if l.y0 > footer:
             if cut is None: cut = lineno
-            if l.text.isdigit():
-              num = int(l.text)
+            num = None
+            m = re.search(r"(\d+)", l.text)
+            if m:
+              num = int(m[1])
               if num != pageno:
                 print("expected page", pageno, ", got", num)
                 pageno = num
-            else:
-              print("footer", l.text, "page", pageno)
+            elif l.text.lower() not in titles:
+              print("page", pageno, "footer", l.text)
           lineno += 1
         if cut: p.lines = p.lines[:cut]
       p.pageno = pageno

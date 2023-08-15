@@ -89,6 +89,8 @@ languages = {
   "dan": commons["Q9035"],
 }
 
+LINE_BREAK = chr(2029)
+
 KEEP    = 1
 SKIP    = 2
 NOTAG   = 3
@@ -322,7 +324,7 @@ class EPUBBook:
           title = detag(self.extract_text(tag, heading))
 
     # Extract text from body.
-    text = self.extract_text(n_body, body)
+    text = self.extract_text(n_body, body).replace(LINE_BREAK, "\n")
 
     return title, text
 
@@ -359,12 +361,13 @@ class EPUBBook:
         else:
           text += self.extract_text(subtag, child)
 
+    text = re.sub(r"\s+", " ", text)
+    prefix = ""
     if action == NOTAG: return text
     if len(text) == 0: return ""
-    if action == NEWLINE:
-      return "\n<%s>%s</%s>" % (tag.id, text, tag.id)
-    else:
-      return "<%s>%s</%s>" % (tag.id, text, tag.id)
+    if action == NEWLINE: prefix = LINE_BREAK
+
+    return "%s<%s>%s</%s>" % (prefix, tag.id, text, tag.id)
 
 def extract(content, params):
    file = io.BytesIO(content)
