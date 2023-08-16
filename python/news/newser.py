@@ -206,9 +206,10 @@ class ArticlePanel extends MdCard {
 
   onupdated() {
     let article = this.state;
+    let lex = article.get(n_lex);
     this.find("#title").update(article.get(n_name));
     this.find("#summary").update(article.get(n_description));
-    this.find("#document").update(article.get(n_lex));
+    this.find("#document").update(lex && {source: lex});
     this.find("#image").update(article.get(n_media));
   }
 

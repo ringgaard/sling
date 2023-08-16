@@ -50,14 +50,12 @@ class AnnotationBox extends Component {
     e.preventDefault();
     let target = e.target;
     let ref = target.getAttribute("ref");
-    let source = this.match("topic-card");
-    var position = source && source.state;
+    let mention = this.state;
 
     if (ref) {
-      this.dispatch("navigate", {ref, position, event: e}, true);
+      this.dispatch("navigate", {ref, event: e}, true);
     } else if (target.className == "annotate") {
-      let mention = this.state;
-      this.dispatch("annotate", {mention, position, event: e}, true);
+      this.dispatch("annotate", {mention, event: e}, true);
     }
     if (target.tagName != "A") this.remove();
   }
@@ -186,7 +184,7 @@ export class DocumentViewer extends Component {
   onconnect() { this.onupdate(); }
   onupdate() {
     if (this.state) {
-      this.doc = new Document(store, this.state);
+      this.doc = new Document(store, this.state.source, this.state.context);
     } else {
       this.doc = null;
     }

@@ -570,48 +570,52 @@ class TopicCard extends Component {
   async ondocmenu(e) {
     if (this.readonly) return;
     let command = e.detail.command;
-    let doc = e.detail.document;
-    let index = e.detail.index;
+    let source = e.detail.source;
+    let context = e.detail.context;
     if (command == "edit") {
-      let dialog = new DocumentEditDialog(doc);
+      let dialog = new DocumentEditDialog(source);
       let result = await dialog.show();
       if (result) {
-        let n = this.state.slot(n_lex, index);
-        this.state.set_value(n, result);
+        let n = this.state.slot(n_lex, context.index);
+        context.topic.set_value(n, result);
         this.mark_dirty();
         this.refresh();
       }
     } else if  (command == "analyze") {
       if (settings.analyzer) {
-        let r = await fetch(settings.analyzer, {
-          method: "POST",
-          headers: {"Content-Type": "text/lex"},
-          body: store.resolve(doc)
-        });
-        if (!r.ok) {
-          inform(`Error ${r.status} in document analyzer ${settings.analyzer}`);
-          return;
+        try {
+          let r = await fetch(settings.analyzer, {
+            method: "POST",
+            headers: {"Content-Type": "text/lex"},
+            body: store.resolve(source),
+          });
+          if (!r.ok) {
+            inform(`Error ${r.status} in analyzer ${settings.analyzer}`);
+            return;
+          }
+          let result = await r.text();
+          if (source instanceof Frame) {
+            source.set(n_is, result);
+          } else {
+            let n = this.state.slot(n_lex, context.index);
+            context.topic.set_value(n, result);
+          }
+          this.mark_dirty();
+          this.refresh();
+        } catch (error) {
+          inform("Error analyzing document: " + error);
         }
-        let result = await r.text();
-        if (doc instanceof Frame) {
-          doc.set(n_is, result);
-        } else {
-          let n = this.state.slot(n_lex, index);
-          this.state.set_value(n, result);
-        }
-        this.mark_dirty();
-        this.refresh();
       } else {
         inform("No document analyzer configured");
       }
     } else if  (command == "delete") {
-      let n = this.state.slot(n_lex, index);
+      let n = this.state.slot(n_lex, context.index);
       this.state.remove(n);
       this.mark_dirty();
       this.refresh();
     } else if  (command == "pin") {
       let sidebar = document.getElementById("sidebar");
-      sidebar.update(doc);
+      sidebar.update({source, context});
     }
   }
 

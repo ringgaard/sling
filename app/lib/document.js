@@ -30,10 +30,10 @@ export class Mention {
 }
 
 export class Document {
-  constructor(store, source) {
+  constructor(store, source, context) {
     this.store = store;
-    this.lex = store.resolve(source);
-    if (source instanceof Frame) this.source = source;
+    this.source = source;
+    this.context = context;
 
     this.mentions = new Array();
     this.themes = new Array();
@@ -41,7 +41,7 @@ export class Document {
 
     // Build phrase mapping.
     let phrasemap;
-    if (this.source) {
+    if (this.source instanceof Frame) {
       for (let [k, v] of this.source) {
         if (typeof(k) === 'string') {
           if (!phrasemap) phrasemap = new Map();
@@ -51,9 +51,10 @@ export class Document {
     }
 
     // Parse LEX.
+    let lex = store.resolve(this.source)
     let text = "";
     let stack = new Array();
-    let r = new Reader(this.store, this.lex, true);
+    let r = new Reader(this.store, lex, true);
     while (!r.end()) {
       switch (r.ch) {
         case 91: { // '['

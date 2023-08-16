@@ -552,7 +552,7 @@ class DocumentHeader extends Component {
       this.state.viewer.update(null);
       this.state.expanded = false;
     } else {
-      this.state.viewer.update(this.state.document);
+      this.state.viewer.update(this.state.doc);
       this.state.expanded = true;
     }
     this.update(this.state);
@@ -560,16 +560,18 @@ class DocumentHeader extends Component {
 
   onmenu(e) {
     let command = e.target.id;
-    let index = this.state.index;
-    let document = this.state.document;
-    this.dispatch("docmenu", {command, document, index}, true);
+    let source = this.state.doc.source;
+    let context = this.state.doc.context;
+    this.dispatch("docmenu", {command, source, context}, true);
   }
 
   render() {
     if (!this.state) return;
-    let doc = this.state.document;
-    let name = doc instanceof Frame && doc.get(n_name);
-    if (!name) name = `Document ${this.state.index + 1}`;
+    let doc = this.state.doc;
+    let source = doc.source;
+    let context = doc.context;
+    let name = source instanceof Frame && source.get(n_name);
+    if (!name) name = `Document ${context.index + 1}`;
 
     return `
       <md-icon icon="expand_${this.state.expanded ? "less" : "more"}"></md-icon>
@@ -625,17 +627,14 @@ class DocumentPanel extends Component {
   render() {
     if (!this.state) return;
     let h = new Array();
-    let index = 0;
     for (let doc of this.state) {
       let box = document.createElement("div");
       box.className = "docbox";
       let viewer = new DocumentViewer(null);
-      viewer.index = index;
-      let header = new DocumentHeader({document: doc, viewer, index});
+      let header = new DocumentHeader({doc, viewer});
       box.append(header);
       box.append(viewer);
       h.push(box);
-      index++;
     }
     return h;
   }
@@ -924,7 +923,7 @@ class ItemPanel extends Component {
       } else if (name === n_description) {
         description = value;
       } else if (name === n_lex) {
-        docs.push(value);
+        docs.push({source: value, context: {topic: item, index: docs.length}});
       } else if (name === n_internal) {
         // Skip internals.
       } else if ((name instanceof Frame) && name.get(n_target) == n_xref_type) {

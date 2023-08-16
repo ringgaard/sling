@@ -88,7 +88,6 @@ class SideBar extends Component {
       }
     `;
   }
-
 }
 
 Component.register(SideBar);
