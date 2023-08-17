@@ -153,8 +153,10 @@ class CaseEditor extends MdApp {
     document.addEventListener("keydown", e => this.onkeydown(e));
     window.addEventListener("beforeunload", e => this.onbeforeunload(e));
 
-    let omnibox = this.find("omni-box");
+    this.sidebar = this.find("#sidebar");
     let app = this.match("#app");
+
+    let omnibox = this.find("omni-box");
     omnibox.add(this.search.bind(this));
     omnibox.add(kbsearch);
     omnibox.add(app.search.bind(app));
@@ -787,6 +789,23 @@ class CaseEditor extends MdApp {
         }
       }
       if (updated && !this.scraps.includes(topic)) this.topic_updated(topic);
+    }
+
+    if (this.sidebar) {
+      let doc = this.sidebar.state;
+      if (doc) {
+        let replacement;
+        if (replacement instanceof Frame) replacement = target;
+        for (let m of doc.mentions) {
+          if (m.annotation instanceof Frame) {
+            if (m.annotation == source) {
+              m.annotation = replacement;
+            } else if (m.annotation.get(n_is) == source) {
+              m.annotation.set(n_is) = replacement;
+            }
+          }
+        }
+      }
     }
   }
 
@@ -1892,6 +1911,7 @@ class CaseEditor extends MdApp {
       </md-row-layout>
     `;
   }
+
   static stylesheet() {
     return `
       $ md-toolbar {
