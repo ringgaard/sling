@@ -96,6 +96,7 @@ app.js("/news/app.js",
 import {store, frame, settings} from "/common/lib/global.js";
 import {Component} from "/common/lib/component.js";
 import {value_text, LabelCollector} from "/common/lib/datatype.js";
+import {Document} from "/common/lib/document.js";
 import {DocumentViewer} from "/common/lib/docviewer.js";
 import {MdApp, MdCard, inform} from "/common/lib/material.js";
 
@@ -207,9 +208,10 @@ class ArticlePanel extends MdCard {
   onupdated() {
     let article = this.state;
     let lex = article.get(n_lex);
+    let doc = lex && new Document(source, lex);
     this.find("#title").update(article.get(n_name));
     this.find("#summary").update(article.get(n_description));
-    this.find("#document").update(lex && {source: lex});
+    this.find("#document").update(doc);
     this.find("#image").update(article.get(n_media));
   }
 

@@ -13,6 +13,7 @@ import {Frame, QString, Printer} from "/common/lib/frame.js";
 import {store, frame, settings} from "/common/lib/global.js";
 import {imageurl} from "/common/lib/gallery.js";
 import {LabelCollector, value_parser} from "/common/lib/datatype.js";
+import {Document} from "/common/lib/document.js";
 
 import {get_schema, inverse_property} from "./schema.js";
 import {search, kbsearch} from "./search.js";
@@ -570,16 +571,22 @@ class TopicCard extends Component {
   async ondocmenu(e) {
     if (this.readonly) return;
     let command = e.detail.command;
-    let source = e.detail.source;
-    let context = e.detail.context;
+    let doc = e.detail.document;
+    let source = doc.source;
+    let context = doc.context;
+    let sidebar = document.getElementById("sidebar");
     if (command == "edit") {
       let dialog = new DocumentEditDialog(source);
       let result = await dialog.show();
       if (result) {
         let n = this.state.slot(n_lex, context.index);
         context.topic.set_value(n, result);
+
         this.mark_dirty();
         this.refresh();
+
+        let newdoc = new Document(store, result, context);
+        sidebar.onrefresh(newdoc);
       }
     } else if  (command == "analyze") {
       if (settings.analyzer) {
@@ -596,10 +603,17 @@ class TopicCard extends Component {
           let result = await r.text();
           if (source instanceof Frame) {
             source.set(n_is, result);
+
+            let newdoc = new Document(store, source, context);
+            sidebar.onrefresh(newdoc);
           } else {
             let n = this.state.slot(n_lex, context.index);
             context.topic.set_value(n, result);
+
+            let newdoc = new Document(store, result, context);
+            sidebar.onrefresh(newdoc);
           }
+
           this.mark_dirty();
           this.refresh();
         } catch (error) {
@@ -613,9 +627,9 @@ class TopicCard extends Component {
       this.state.remove(n);
       this.mark_dirty();
       this.refresh();
+      sidebar.ondelete(doc);
     } else if  (command == "pin") {
-      let sidebar = document.getElementById("sidebar");
-      sidebar.update({source, context});
+      sidebar.onrefresh(doc);
     }
   }
 

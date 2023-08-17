@@ -220,7 +220,13 @@ class CaseEditor extends MdApp {
       topic = await this.new_topic(null, doctopic);
       topic.put(n_name, mention.text(true));
       if (link && link.id) topic.put(n_is, link);
-      if (annotation && !link) annotation.put(n_is, topic);
+      if (!link) {
+        if (annotation) {
+          annotation.put(n_is, topic);
+        } else {
+          mention.annotation = topic;
+        }
+      }
     }
 
     // Add annotations from document.

@@ -3,7 +3,7 @@
 
 // SLING document.
 
-import {Store, Frame, Reader} from "./frame.js";
+import {Frame, Reader} from "./frame.js";
 
 export function detag(html) {
   return html
@@ -43,7 +43,7 @@ export class Document {
     let phrasemap;
     if (this.source instanceof Frame) {
       for (let [k, v] of this.source) {
-        if (typeof(k) === 'string') {
+        if (typeof(k) === 'string' && (v instanceof Frame)) {
           if (!phrasemap) phrasemap = new Map();
           phrasemap.set(k, v);
         }
@@ -51,7 +51,7 @@ export class Document {
     }
 
     // Parse LEX.
-    let lex = store.resolve(this.source)
+    let lex = this.store.resolve(this.source)
     let text = "";
     let stack = new Array();
     let r = new Reader(this.store, lex, true);
@@ -81,7 +81,7 @@ export class Document {
               if (phrasemap && (obj instanceof Frame)) {
                 let phrase = text.slice(begin, end);
                 let mapping = phrasemap.get(phrase);
-                if (mapping) obj.add(store.is, mapping);
+                if (mapping) obj.add(this.store.is, mapping);
               }
               if (r.token == 93 || r.end()) break;
             }

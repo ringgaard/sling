@@ -181,15 +181,6 @@ class AnnotationBox extends Component {
 Component.register(AnnotationBox);
 
 export class DocumentViewer extends Component {
-  onconnect() { this.onupdate(); }
-  onupdate() {
-    if (this.state) {
-      this.doc = new Document(store, this.state.source, this.state.context);
-    } else {
-      this.doc = null;
-    }
-  }
-
   onrendered() {
     this.attach(this.onmouse, "mouseover");
     this.attach(this.onleave, "mouseleave");
@@ -200,7 +191,6 @@ export class DocumentViewer extends Component {
     var selection = window.getSelection();
     if (selection && selection.type === 'Range') return;
     if (e.ctrlKey || e.shiftKey) return;
-
 
     // Find first enclosing span.
     let span = e.target;
@@ -218,7 +208,8 @@ export class DocumentViewer extends Component {
     // Get mention for span.
     let mid = span.getAttribute("mention");
     if (!mid) return;
-    let mention = this.doc.mentions[parseInt(mid)];
+    let doc = this.state;
+    let mention = doc.mentions[parseInt(mid)];
 
     // Fetch labels for annotations.
     if (mention.annotation instanceof Frame) {
@@ -252,19 +243,21 @@ export class DocumentViewer extends Component {
   visible() { return this.state; }
 
   render() {
-    if (!this.doc) return;
+    let doc = this.state;
+    if (!doc) return;
+
     let h = new Array();
 
     // Spans sorted by begin and end positions.
-    let starts = this.doc.mentions.slice();
-    let ends = this.doc.mentions.slice();
+    let starts = doc.mentions.slice();
+    let ends = doc.mentions.slice();
     starts.sort((a, b) => a.begin - b.begin || b.end - a.end);
     ends.sort((a, b) => a.end - b.end || b.begin - a.begin);
 
     // Generate HTML with spans.
     let from = 0;
-    let text = this.doc.text;
-    let n = this.doc.mentions.length;
+    let text = doc.text;
+    let n = doc.mentions.length;
     let si = 0;
     let ei = 0;
     let level = 0;

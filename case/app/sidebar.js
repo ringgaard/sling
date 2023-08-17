@@ -4,11 +4,18 @@
 import {Component} from "/common/lib/component.js";
 import {DocumentViewer} from "/common/lib/docviewer.js";
 
+function same(d1, d2) {
+  if (!d1 || !d2) return false;
+  if (d1 == d2) return true;
+  if (d1.context.topic != d2.context.topic) return false;
+  if (d1.context.index != d2.context.index) return false;
+  return true;
+}
+
 class SideBar extends Component {
   visible() { return this.state; }
 
   onrendered() {
-    this.attach(this.onmenu, "docmenu");
     this.attach(this.onresizedown, "pointerdown", "#sidebar-left");
     this.attach(this.onresizeup, "pointerup", "#sidebar-left");
     this.attach(this.onresizemove, "pointermove", "#sidebar-left");
@@ -37,15 +44,24 @@ class SideBar extends Component {
     this.style.width = `${this.width + offset}px`;
   }
 
-  onmenu(e) {
-    let command = e.detail;
-    if (command == "close") {
-      this.update(null);
+  onupdated() {
+    this.find("document-viewer").update(this.state);
+  }
+
+  onrefresh(newdoc) {
+    if (same(this.state, newdoc)) {
+      let viewer = this.find("document-viewer");
+      let scroll = viewer.scrollTop;
+      this.state = newdoc;
+      viewer.update(newdoc);
+      viewer.scrollTop = scroll;
+    } else {
+      this.update(newdoc);
     }
   }
 
-  onupdated() {
-    this.find("document-viewer").update(this.state);
+  ondelete(doc) {
+    if (same(this.state, doc)) this.update(null);
   }
 
   render() {

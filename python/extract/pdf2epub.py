@@ -280,8 +280,9 @@ class PDFBook:
     titles = set()
     if "title" in self.meta: titles.add(self.meta["title"].lower())
     for chapter in self.spine: titles.add(chapter.title.lower())
-
     footer = float(self.meta.get("footer", "0"))
+    pageskip = int(self.meta.get("pageskip", 10))
+
     pageno = 1
     for p in book.pages:
       if footer:
@@ -295,8 +296,11 @@ class PDFBook:
             if m:
               num = int(m[1])
               if num != pageno:
-                print("expected page", pageno, ", got", num)
-                pageno = num
+                if num < pageno or num > pageno + pageskip:
+                  print("ignore page no", num, ", expected", pageno)
+                else:
+                  print("expected page", pageno, ", got", num)
+                  pageno = num
             elif l.text.lower() not in titles:
               print("page", pageno, "footer", l.text)
           lineno += 1

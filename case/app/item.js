@@ -6,6 +6,7 @@ import {inform} from "/common/lib/material.js";
 import {Frame, QString} from "/common/lib/frame.js";
 import {store, frame, settings} from "/common/lib/global.js";
 import {Time, LabelCollector, latlong} from "/common/lib/datatype.js";
+import {Document} from "/common/lib/document.js";
 import {DocumentViewer} from "/common/lib/docviewer.js";
 import {PhotoGallery, censor, imageurl, mediadb} from "/common/lib/gallery.js";
 
@@ -539,6 +540,13 @@ class XrefPanel extends PropertyPanel {
 Component.register(XrefPanel);
 
 class DocumentHeader extends Component {
+  document() {
+    if (!this.doc) {
+      this.doc = new Document(store, this.state.source, this.state.context);
+    }
+    return this.doc;
+  }
+
   onconnected() {
     this.attach(this.onclick, "click");
   }
@@ -548,33 +556,31 @@ class DocumentHeader extends Component {
   }
 
   onclick(e) {
-    if (this.state.expanded) {
+    if (this.expanded) {
       this.state.viewer.update(null);
-      this.state.expanded = false;
+      this.expanded = false;
     } else {
-      this.state.viewer.update(this.state.doc);
-      this.state.expanded = true;
+      this.state.viewer.update(this.document());
+      this.expanded = true;
     }
     this.update(this.state);
   }
 
   onmenu(e) {
     let command = e.target.id;
-    let source = this.state.doc.source;
-    let context = this.state.doc.context;
-    this.dispatch("docmenu", {command, source, context}, true);
+    let document = this.document();
+    this.dispatch("docmenu", {command, document}, true);
   }
 
   render() {
     if (!this.state) return;
-    let doc = this.state.doc;
-    let source = doc.source;
-    let context = doc.context;
+    let source = this.state.source;
+    let context = this.state.context;
     let name = source instanceof Frame && source.get(n_name);
     if (!name) name = `Document ${context.index + 1}`;
 
     return `
-      <md-icon icon="expand_${this.state.expanded ? "less" : "more"}"></md-icon>
+      <md-icon icon="expand_${this.expanded ? "less" : "more"}"></md-icon>
       <md-icon icon="description"></md-icon>
       <div>${Component.escape(name)}</div>
       <md-spacer></md-spacer>
@@ -627,11 +633,14 @@ class DocumentPanel extends Component {
   render() {
     if (!this.state) return;
     let h = new Array();
-    for (let doc of this.state) {
+    for (let d of this.state) {
       let box = document.createElement("div");
       box.className = "docbox";
       let viewer = new DocumentViewer(null);
-      let header = new DocumentHeader({doc, viewer});
+      let header = new DocumentHeader({
+        source: d.source,
+        context: d.context,
+        viewer});
       box.append(header);
       box.append(viewer);
       h.push(box);
