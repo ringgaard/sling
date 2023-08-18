@@ -16,7 +16,7 @@ import {LabelCollector, value_parser} from "/common/lib/datatype.js";
 import {Document} from "/common/lib/document.js";
 
 import {get_schema, inverse_property} from "./schema.js";
-import {search, kbsearch} from "./search.js";
+import {search, kbsearch, SearchResultsDialog} from "./search.js";
 import "./item.js"
 import "./fact.js"
 
@@ -629,7 +629,7 @@ class TopicCard extends Component {
       this.refresh();
       sidebar.ondelete(doc);
     } else if  (command == "pin") {
-      sidebar.onrefresh(doc);
+      sidebar.update(doc);
     }
   }
 
@@ -792,7 +792,9 @@ class TopicCard extends Component {
     let results = await search(queries, backends, options);
     if (results.length == 0) return;
 
-    let dialog = new ReconcileDialog(results);
+    let dialog = new SearchResultsDialog({
+      title: "Reconcile with...",
+      items: results});
     let ref = await dialog.show();
     if (ref) {
       topic.put(n_is, ref);
@@ -1398,64 +1400,4 @@ class DedupDialog extends MdDialog {
 }
 
 Component.register(DedupDialog);
-
-export class ReconcileDialog extends MdDialog {
-  async onconnected() {
-    this.attach(this.onkeydown, "keydown");
-    this.attach(this.onselect, "select", "#search");
-    this.find("#search").update({items: this.state});
-  }
-
-  onkeydown(e) {
-    let list = this.find("#search");
-    if (e.keyCode == 40) {
-      list.next();
-    } else if (e.keyCode == 38) {
-      list.prev();
-    }
-  }
-
-  async onselect(e) {
-    let ref = e.detail.item.state.ref;
-    this.close(ref);
-  }
-
-  submit() {
-    let list = this.find("#search");
-    if (list.active) {
-      let ref = list.active.state.ref;
-      this.close(ref);
-    }
-  }
-
-  render() {
-    return `
-      <md-dialog-top>Reconcile with...</md-dialog-top>
-      <md-search-list id="search"></md-search-list>
-      <md-dialog-bottom>
-        <button id="cancel">Cancel</button>
-      </md-dialog-bottom>
-    `;
-  }
-
-  static stylesheet() {
-    return `
-      $ {
-        width: 500px;
-        max-height: 80vh;
-      }
-      $ md-search-list {
-        position: relative;
-      }
-      $ md-dialog-bottom {
-        padding-top: 16px;
-      }
-      $ #message {
-        font-style: italic;
-      }
-    `;
-  }
-}
-
-Component.register(ReconcileDialog);
 

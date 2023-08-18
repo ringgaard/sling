@@ -15,7 +15,7 @@ import {Drive} from "./drive.js";
 import {wikidata_initiate, wikidata_export} from "./wikibase.js";
 import {generate_key, encrypt} from "./crypto.js";
 import {Collaboration} from "./collab.js";
-import {SearchIndex, kbsearch} from "./search.js";
+import {SearchIndex, search, kbsearch, SearchResultsDialog} from "./search.js";
 import {get_property_index} from "./schema.js";
 import "./sidebar.js";
 import "./topic.js";
@@ -149,6 +149,7 @@ class CaseEditor extends MdApp {
 
     this.attach(this.onnavigate, "navigate");
     this.attach(this.onannotate, "annotate");
+    this.attach(this.onreconcile, "reconcile");
 
     document.addEventListener("keydown", e => this.onkeydown(e));
     window.addEventListener("beforeunload", e => this.onbeforeunload(e));
@@ -222,17 +223,15 @@ class CaseEditor extends MdApp {
       topic = await this.new_topic(null, doctopic);
       topic.put(n_name, mention.text(true));
       if (link && link.id) topic.put(n_is, link);
-      if (!link) {
-        if (annotation) {
-          annotation.put(n_is, topic);
-        } else {
-          mention.annotation = topic;
-        }
+      if (annotation && !annotation.id) {
+        annotation.set(n_is, topic);
+      } else {
+        mention.annotation = topic;
       }
     }
 
     // Add annotations from document.
-    if (annotation) {
+    if (annotation && !annotation.id) {
       let propidx = await get_property_index();
       for (let [name, value] of annotation) {
         if (name == n_is || name == n_isa) continue;
@@ -268,6 +267,39 @@ class CaseEditor extends MdApp {
     this.topic_updated(topic);
     await this.update_topics();
     this.navigate_to(topic);
+  }
+
+  async onreconcile(e) {
+    let mention = e.detail.mention;
+    let query = mention.text(true);
+
+    let backends = [this.search.bind(this), kbsearch];
+    let options = {
+      full: true,
+      submatch: true,
+      local: this.get_index(),
+    };
+
+    let results = await search(query, backends, options);
+    if (results.length == 0) return;
+
+    let dialog = new SearchResultsDialog({
+      title: "Reconcile with...",
+      items: results});
+    let ref = await dialog.show();
+    if (ref) {
+      let item = frame(ref);
+      if (mention.annotation) {
+        mention.annotation.set(n_is, item);
+      } else {
+        mention.annotation = item;
+      }
+
+      let source = mention.document.source;
+      if (source instanceof Frame) {
+        source.set(mention.text(), item);
+      }
+    }
   }
 
   editing() {

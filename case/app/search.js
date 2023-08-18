@@ -2,7 +2,7 @@
 // Licensed under the Apache License, Version 2
 
 import {Component} from "/common/lib/component.js";
-import {MdSearchResult} from "/common/lib/material.js";
+import {MdSearchResult, MdDialog} from "/common/lib/material.js";
 import {store, frame, settings} from "/common/lib/global.js";
 
 const n_name = frame("name");
@@ -177,7 +177,7 @@ export class SearchIndex {
       }
 
       // Add submatches.
-      if (options.keyword) {
+      if (options.keyword || options.submatch) {
         for (let topic of topics) {
           for (let name of topic.all(n_name)) {
             if (normalized(name).includes(normalized_query)) {
@@ -266,4 +266,61 @@ export class OmniBox extends Component {
 }
 
 Component.register(OmniBox);
+
+export class SearchResultsDialog extends MdDialog {
+  async onconnected() {
+    this.attach(this.onkeydown, "keydown");
+    this.attach(this.onselect, "select", "#items");
+    this.find("#items").update({items: this.state.items});
+  }
+
+  onkeydown(e) {
+    let list = this.find("#items");
+    if (e.keyCode == 40) {
+      list.next();
+    } else if (e.keyCode == 38) {
+      list.prev();
+    }
+  }
+
+  async onselect(e) {
+    let ref = e.detail.item.state.ref;
+    this.close(ref);
+  }
+
+  submit() {
+    let list = this.find("#items");
+    if (list.active) {
+      let ref = list.active.state.ref;
+      this.close(ref);
+    }
+  }
+
+  render() {
+    return `
+      <md-dialog-top>${this.state.title}</md-dialog-top>
+      <md-search-list id="items"></md-search-list>
+      <md-dialog-bottom>
+        <button id="cancel">Cancel</button>
+      </md-dialog-bottom>
+    `;
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        width: 500px;
+        max-height: 80vh;
+      }
+      $ md-search-list {
+        position: relative;
+      }
+      $ md-dialog-bottom {
+        padding-top: 16px;
+      }
+    `;
+  }
+}
+
+Component.register(SearchResultsDialog);
 

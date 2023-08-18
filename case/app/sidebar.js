@@ -49,15 +49,12 @@ class SideBar extends Component {
   }
 
   onrefresh(newdoc) {
-    if (same(this.state, newdoc)) {
-      let viewer = this.find("document-viewer");
-      let scroll = viewer.scrollTop;
-      this.state = newdoc;
-      viewer.update(newdoc);
-      viewer.scrollTop = scroll;
-    } else {
-      this.update(newdoc);
-    }
+    if (!same(this.state, newdoc)) return;
+    let viewer = this.find("document-viewer");
+    let scroll = viewer.scrollTop;
+    this.state = newdoc;
+    viewer.update(newdoc);
+    viewer.scrollTop = scroll;
   }
 
   ondelete(doc) {

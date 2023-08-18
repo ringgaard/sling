@@ -23,6 +23,7 @@ function html_prop(prop) {
 
 function html_value(value, prop) {
   if (prop == n_is) prop = undefined;
+  value = store.resolve(value);
   let [text, encoded] = value_text(value, prop);
   if (encoded) {
     let ref = value && value.id;
@@ -54,21 +55,24 @@ class AnnotationBox extends Component {
 
     if (ref) {
       this.dispatch("navigate", {ref, event: e}, true);
-    } else if (target.className == "annotate") {
+    } else if (target.id == "annotate") {
       this.dispatch("annotate", {mention, event: e}, true);
+    } else if (target.id == "reconcile") {
+      this.dispatch("reconcile", {mention, event: e}, true);
     }
     if (target.tagName != "A") this.remove();
   }
 
   render() {
     let mention = this.state;
-    let annotation = mention.annotation;
+    let annotation = store.resolve(mention.annotation);
     let phrase = mention.text(true);
 
     let h = new Array();
     h.push(`<div class="title">
       <span class="phrase">${Component.escape(phrase)}</span>
-      <md-icon icon="add" class="annotate"></md-icon>
+      <md-icon icon="add_circle" class="action" id="annotate"></md-icon>
+      <md-icon icon="join_right" class="action" id="reconcile"></md-icon>
     </div>`);
 
     if (typeof(annotation) === 'string') {
@@ -92,7 +96,7 @@ class AnnotationBox extends Component {
               v = `<span class="docref">${label}</span>`;
             } else {
              v = html_value(value, name);
-           }
+            }
             h.push(`<div class="prop">${p}: ${v}</div>`);
           }
         }
@@ -164,15 +168,16 @@ class AnnotationBox extends Component {
       $ .value {
         color: #0000dd;
       }
-      $ .annotate {
+      $ .action {
         padding: 4px;
         font-size: 20px;
         font-weight: normal;
         cursor: pointer;
         user-select: inherit;
       }
-      $ .annotate:hover {
+      $ .action:hover {
         text-decoration: none;
+        background-color: #eeeeee;
       }
     `;
   }
@@ -184,6 +189,7 @@ export class DocumentViewer extends Component {
   onrendered() {
     this.attach(this.onmouse, "mouseover");
     this.attach(this.onleave, "mouseleave");
+    this.attach(this.onclick, "click");
   }
 
   async onmouse(e) {
@@ -226,11 +232,36 @@ export class DocumentViewer extends Component {
     this.clear_popup();
     this.popup = new AnnotationBox(mention);
     span.append(this.popup);
+
+    // Adjust annotation box position.
+    const boxwidth = 200;
+    let overflow = span.offsetLeft + boxwidth - this.offsetWidth;
+    if (overflow > 0) {
+      let adjust = Math.min(overflow, this.offsetWidth);
+      this.popup.style.left = `${-adjust}px`;
+    }
   }
 
   onleave(e) {
     // Close popups when leaving document viewer.
     this.clear_popup();
+  }
+
+  onclick(e) {
+    let target = e.target;
+    let mid = target.getAttribute("mention");
+    if (!mid) return;
+    let doc = this.state;
+    let mention = doc.mentions[parseInt(mid)];
+    let annotation = store.resolve(mention.annotation)
+
+    if (e.ctrlKey) {
+      this.dispatch("annotate", {mention, event: e}, true);
+    } else if (annotation && annotation.id) {
+      this.dispatch("navigate", {ref: annotation.id, event: e}, true);
+    } else {
+      this.dispatch("reconcile", {mention, event: e}, true);
+    }
   }
 
   clear_popup() {
@@ -240,7 +271,7 @@ export class DocumentViewer extends Component {
     }
   }
 
-  visible() { return this.state; }
+  visible() { return this.state && this.state.source; }
 
   render() {
     let doc = this.state;
