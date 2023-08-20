@@ -273,6 +273,13 @@ class CaseEditor extends MdApp {
     let mention = e.detail.mention;
     let query = mention.text(true);
 
+    let comma = query.indexOf(", ");
+    if (comma != -1) {
+      let swaped = query.slice(comma + 2) + " " + query.slice(0, comma);
+      console.log("swapded", swaped);
+      query = [query, swaped];
+    }
+
     let backends = [this.search.bind(this), kbsearch];
     let options = {
       full: true,

@@ -230,23 +230,27 @@ def get_photo_id(fingerprint):
 # Fetch posting from Reddit.
 session = requests.Session()
 def refetch_posting(store, posting):
-  permalink = posting[n_permalink]
-  if type(permalink) is bytes: return posting
-  while True:
-    r = session.get("https://reddit.com" + permalink + ".json",
-                    headers = {"User-agent": "SLING Bot 1.0"})
-    if r.status_code != 429: break
-    reset = int(r.headers.get("x-ratelimit-reset", 60))
-    print("refetch rate limit", reset, "secs")
-    time.sleep(reset)
+  try:
+    permalink = posting[n_permalink]
+    if type(permalink) is bytes: return posting
+    while True:
+      r = session.get("https://reddit.com" + permalink + ".json",
+                      headers = {"User-agent": "SLING Bot 1.0"})
+      if r.status_code != 429: break
+      reset = int(r.headers.get("x-ratelimit-reset", 60))
+      print("refetch rate limit", reset, "secs")
+      time.sleep(reset)
 
-  if r.status_code != 200:
-    print("refetch", r.status_code)
-    return None
-  reply = store.parse(r.content, json=True)
-  children = reply[0]["data"]["children"]
-  if len(children) == 0: return None
-  return children[0]["data"]
+    if r.status_code != 200:
+      print("refetch", r.status_code)
+      return None
+    reply = store.parse(r.content, json=True)
+    children = reply[0]["data"]["children"]
+    if len(children) == 0: return None
+    return children[0]["data"]
+  except Exception:
+    print("failed to refresh")
+    return posting
 
 # Check for selfies.
 def selfie(title):
