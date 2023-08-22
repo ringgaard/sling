@@ -1,8 +1,12 @@
 // Copyright 2024 Ringgaard Research ApS
 // Licensed under the Apache License, Version 2
 
+import {Frame} from "/common/lib/frame.js";
+import {frame} from "/common/lib/global.js";
 import {Component} from "/common/lib/component.js";
 import {DocumentViewer} from "/common/lib/docviewer.js";
+
+const n_name = frame("name");
 
 function same(d1, d2) {
   if (!d1 || !d2) return false;
@@ -19,11 +23,20 @@ class SideBar extends Component {
     this.attach(this.onresizedown, "pointerdown", "#sidebar-left");
     this.attach(this.onresizeup, "pointerup", "#sidebar-left");
     this.attach(this.onresizemove, "pointermove", "#sidebar-left");
-    this.attach(this.onclose, "click", "#close");
-  }
 
-  onclose(e) {
-    this.update(null);
+    if (this.state) {
+      let context = this.state.context;
+      let source = this.state.source;
+      let tocname = context.topic.get(n_name);
+      let docname;
+      if (source instanceof Frame) {
+        docname = source.get(n_name);
+      }
+      this.find("#tocname").update(tocname);
+      this.find("#docname").update(docname);
+      this.attach(this.onmenu, "select", "md-menu");
+      this.attach(this.onnavigate, "click", "#titlebox");
+    }
   }
 
   onresizedown(e) {
@@ -42,6 +55,24 @@ class SideBar extends Component {
     if (!this.capture) return;
     let offset = this.x - e.clientX;
     this.style.width = `${this.width + offset}px`;
+  }
+
+  async onmenu(e) {
+    let command = e.target.id;
+    let document = this.state;
+
+    if (command == "close") {
+      this.update(null);
+    } else {
+      let editor = this.match("#editor");
+      let card = await editor.navigate_to(this.state.context.topic);
+      card.dispatch("docmenu", {command, document}, true);
+    }
+  }
+
+  async onnavigate(e) {
+    let editor = this.match("#editor");
+    await editor.navigate_to(this.state.context.topic);
   }
 
   onupdated() {
@@ -63,10 +94,21 @@ class SideBar extends Component {
 
   render() {
     return `
-      <div id="sidebar-left">
-        <md-icon id="close" icon="keyboard_arrow_right"></md-icon>
+      <div id="sidebar-left"></div>
+      <div id="main">
+        <div id="banner">
+          <div id="titlebox">
+            <md-text id="tocname"></md-text><br>
+            <md-text id="docname"></md-text>
+          </div>
+          <md-menu id="menu">
+            <md-menu-item id="edit">Edit</md-menu-item>
+            <md-menu-item id="analyze">Analyze</md-menu-item>
+            <md-menu-item id="close">Close</md-menu-item>
+          </md-menu>
+        </div>
+        <document-viewer></document-viewer>
       </div>
-      <document-viewer></document-viewer>
     `;
   }
 
@@ -77,27 +119,47 @@ class SideBar extends Component {
         flex-direction: row;
         position: relative;
         width: 30vw;
-        max-width: 10vw;
+        min-width: 10vw;
         max-width: 70vw;
         border-left: 1px #a0a0a0 solid;
+      }
+      $ #main {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      $ #banner {
+        display: flex;
+        flex-direction: row;
+      }
+      $ #titlebox {
+        flex: 1 1 auto;
+        overflow: hidden;
+        white-space: nowrap;
+        color: #808080;
+        padding: 4px 0px;
+        cursor: pointer;
+      }
+      $ #tocname {
+        overflow: hidden;
+        font-size: 12px;
+      }
+      $ #docname {
+        overflow: hidden;
+        font-size: 16px;
+        font-weight: bold;
+      }
+      $ #menu {
+        flex: none;
       }
       $ document-viewer {
         width: 100%;
         overflow: auto;
+        padding: 0;
       }
       $ #sidebar-left {
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-end;
         cursor: col-resize;
-        width: 16px;
-        color: white;
-      }
-      $ #sidebar-left:hover {
-        color: #a0a0a0;
-      }
-      $ #close {
-        cursor: e-resize;
+        min-width: 16px;
       }
     `;
   }

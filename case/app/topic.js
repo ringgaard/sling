@@ -175,7 +175,7 @@ class TopicList extends Component {
           card.scrollIntoView({block: "center", behavior: "smooth"});
           card.focus();
           window.getSelection().collapse(card, 0);
-          resolve();
+          resolve(card);
         }, 100, card, resolve);
       });
     }

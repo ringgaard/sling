@@ -1851,7 +1851,7 @@ class CaseEditor extends MdApp {
     }
 
     // Scroll to topic in folder.
-    await this.find("topic-list").navigate_to(topic);
+    return await this.find("topic-list").navigate_to(topic);
   }
 
   prerender() {

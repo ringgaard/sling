@@ -129,7 +129,7 @@ class AnnotationBox extends Component {
         box-shadow: 0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22);
 
         padding: 8px;
-        min-width: 300px;
+        min-width: 200px;
         cursor: default;
       }
       $ .title {
