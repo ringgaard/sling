@@ -129,7 +129,7 @@ class AnnotationBox extends Component {
         box-shadow: 0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22);
 
         padding: 8px;
-        min-width: 200px;
+        min-width: 250px;
         cursor: default;
       }
       $ .title {
@@ -186,7 +186,7 @@ class AnnotationBox extends Component {
 Component.register(AnnotationBox);
 
 export class DocumentViewer extends Component {
-  onrendered() {
+  onconnected() {
     this.attach(this.onmouse, "mouseover");
     this.attach(this.onleave, "mouseleave");
     this.attach(this.onclick, "click");
@@ -234,11 +234,11 @@ export class DocumentViewer extends Component {
     span.append(this.popup);
 
     // Adjust annotation box position.
-    const boxwidth = 200;
+    const boxwidth = 270;
     let overflow = span.offsetLeft + boxwidth - this.offsetWidth;
     if (overflow > 0) {
-      let adjust = Math.min(overflow, this.offsetWidth);
-      this.popup.style.left = `${-adjust}px`;
+      let adjust = Math.min(overflow, span.offsetLeft - 16);
+      if (adjust > 0) this.popup.style.left = `${-adjust}px`;
     }
   }
 
@@ -262,6 +262,7 @@ export class DocumentViewer extends Component {
     } else {
       this.dispatch("reconcile", {mention, event: e}, true);
     }
+    e.stopPropagation();
   }
 
   clear_popup() {

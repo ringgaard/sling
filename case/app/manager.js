@@ -640,14 +640,14 @@ class SettingsDialog extends material.MdDialog {
   static stylesheet() {
     return `
       $  {
-        max-height: 75vh;
+        max-height: 80vh;
         min-width: 500px;
-        overflow: auto;
       }
       $ #content {
         display: flex;
         flex-direction: column;
         row-gap: 16px;
+        overflow: auto;
       }
     `;
   }
