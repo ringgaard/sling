@@ -277,7 +277,7 @@ class CaseEditor extends MdApp {
       for (let m of mention.document.search(query, options.submatch)) {
         let match = store.resolve(m.annotation);
         if (match && match.id) {
-          let name = match.get(n_name);
+          let name = match.get(n_name) || m.text(true) || "???";
           results.push({
             ref: match.id,
             name: name,
@@ -315,6 +315,12 @@ class CaseEditor extends MdApp {
       let source = mention.document.source;
       if (source instanceof Frame) {
         source.set(mention.text(), item);
+      }
+
+      let context = mention.document.context;
+      if (context && context.topic) {
+        this.topic_updated(context.topic);
+        this.mark_dirty();
       }
     }
   }

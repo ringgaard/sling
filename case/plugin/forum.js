@@ -19,13 +19,6 @@ const images_services = [
 
 {
   pattern: /https?:\/\/\w+\.imagevenue\.com\//,
-  fetch: async (url, context) => {
-    let r = await fetch(context.proxy(url));
-    let html = await r.text();
-    let doc = new DOMParser().parseFromString(html, "text/html");
-    let img = doc.querySelector(".card-body img");
-    return img && img.src ? img.src : null;
-  },
   convert: (thumb) => {
     let base = thumb.slice(thumb.lastIndexOf("/") + 1);
     let hires = base.replace("_t", "_o");
@@ -35,21 +28,28 @@ const images_services = [
                 path + "/" + hires;
     return photo;
   },
+  fetch: async (url, context) => {
+    let r = await fetch(context.proxy(url));
+    let html = await r.text();
+    let doc = new DOMParser().parseFromString(html, "text/html");
+    let img = doc.querySelector(".card-body img");
+    return img && img.src ? img.src : null;
+  },
   nsfw: true,
 },
 
 {
   pattern: /https:\/\/pixhost\.to\//,
+  convert: (thumb) => {
+    let m = thumb.match(/^https\:\/\/t(\d+)\.pixhost\.to\/thumbs\/(.*)/);
+    if (m) return `https://img${m[1]}.pixhost.to/images/${m[2]}`;
+  },
   fetch: async (url, context) => {
     let r = await fetch(context.proxy(url));
     let html = await r.text();
     let doc = new DOMParser().parseFromString(html, "text/html");
     let img = doc.getElementById("image");
     return img && img.src ? img.src : null;
-  },
-  convert: (thumb) => {
-    let m = thumb.match(/^https\:\/\/t(\d+)\.pixhost\.to\/thumbs\/(.*)/);
-    if (m) return `https://img${m[1]}.pixhost.to/images/${m[2]}`;
   },
   nsfw: true,
 },
@@ -68,6 +68,9 @@ const images_services = [
 
 {
   pattern: /https?:\/\/imgbox\.com\//,
+  convert: (thumb) => {
+    return thumb.replace("thumbs", "images").replace("_t", "_o");
+  },
   fetch: async (url, context) => {
     let r = await fetch(context.proxy(url + "?full=1"));
     let html = await r.text();
@@ -75,14 +78,24 @@ const images_services = [
     let meta = doc.querySelector('meta[property="og:image"]');
     return meta && meta.content ? meta.content : null;
   },
-  convert: (thumb) => {
-    return thumb.replace("thumbs", "images").replace("_t", "_o");
-  },
   nsfw: true,
 },
 
 {
   pattern: /https?:\/\/www\.imagebam\.com\/(image|view)\//,
+  convert: (thumb) => {
+    let m = thumb.match(
+      /https?\:\/\/thumbs(\d+)\.imagebam\.com\/\w+\/\w+\/\w+\/(.*)/);
+    if (m) {
+      let hostno = m[1];
+      let base = m[2];
+      let hires = base.replace("_t", "_o");
+      let d = MD5(hires);
+      let path = `${d[0]}${d[1]}/${d[2]}${d[3]}/${d[4]}${d[5]}`
+      let photo = `https://images${hostno}.imagebam.com/${path}/${hires}`;
+      return photo;
+    }
+  },
   fetch: async (url, context) => {
     let r = await fetch(context.proxy(url + "?full=1"), {
       headers: {"XCookie": "nsfw_inter=1"},
@@ -91,17 +104,6 @@ const images_services = [
     let doc = new DOMParser().parseFromString(html, "text/html");
     let img = doc.querySelector("img.main-image");
     return img && img.src ? img.src : null;
-  },
-  convert: (thumb) => {
-    let m = thumb.match(
-      /https\:\/\/thumbs(\d+)\.imagebam\.com\/\w+\/\w+\/\w+\/(.*)/);
-    let hostno = m[1];
-    let base = m[2];
-    let hires = base.replace("_t", "_o");
-    let d = MD5(hires);
-    let path = `${d[0]}${d[1]}/${d[2]}${d[3]}/${d[4]}${d[5]}`
-    let photo = `https://images${hostno}.imagebam.com/${path}/${hires}`;
-    return photo;
   },
   nsfw: true,
 },

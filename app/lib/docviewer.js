@@ -13,6 +13,7 @@ import "./material.js";
 const n_is = store.is;
 const n_isa = store.isa;
 const n_phrases = frame("phrases");
+const n_description = frame("description");
 
 stylesheet("@import url(/common/font/anubis.css)");
 
@@ -103,6 +104,10 @@ class AnnotationBox extends Component {
       } else {
         let v = html_value(store.resolve(annotation));
         h.push(`<div class="link">${v}</div>`);
+        let decription = annotation.get(n_description);
+        if (decription) {
+          h.push(`<div class="descr">${Component.escape(decription)}</div>`);
+        }
       }
     }
     return h.join("");
@@ -161,6 +166,9 @@ class AnnotationBox extends Component {
       $ .link {
         color: #0000dd;
         cursor: pointer;
+      }
+      $ .descr {
+        font-size: 12px;
       }
       $ link:hover {
         text-decoration: underline;
