@@ -334,7 +334,7 @@ export class DocumentViewer extends Component {
       }
       $ span {
         position: relative;
-        color: #0b0080;
+        color: #0000dd;
         cursor: pointer;
       }
       $ span:hover {

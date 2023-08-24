@@ -273,16 +273,26 @@ class CaseEditor extends MdApp {
     let mention = e.detail.mention;
     let query = mention.text(true);
 
-    let comma = query.indexOf(", ");
-    if (comma != -1) {
-      let swaped = query.slice(comma + 2) + " " + query.slice(0, comma);
-      console.log("swapded", swaped);
-      query = [query, swaped];
+    function docsearch(query, results, options) {
+      for (let m of mention.document.search(query, options.submatch)) {
+        let match = store.resolve(m.annotation);
+        if (match && match.id) {
+          let name = match.get(n_name);
+          results.push({
+            ref: match.id,
+            name: name,
+            title: name + " 🗎",
+            description: match.get(n_description),
+            topic: match,
+          });
+        }
+      }
     }
 
-    let backends = [this.search.bind(this), kbsearch];
+    let backends = [this.search.bind(this), docsearch, kbsearch];
     let options = {
       full: true,
+      swap: true,
       submatch: true,
       local: this.get_index(),
     };

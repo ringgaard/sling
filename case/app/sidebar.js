@@ -104,6 +104,8 @@ class SideBar extends Component {
           <md-menu id="menu">
             <md-menu-item id="edit">Edit</md-menu-item>
             <md-menu-item id="analyze">Analyze</md-menu-item>
+            <md-menu-item id="phrasematch">Match phrases</md-menu-item>
+            <md-menu-item id="topicmatch">Match topics</md-menu-item>
             <md-menu-item id="close">Close</md-menu-item>
           </md-menu>
         </div>
@@ -131,13 +133,13 @@ class SideBar extends Component {
       $ #banner {
         display: flex;
         flex-direction: row;
+        padding: 4px 4px 4px 0px;
       }
       $ #titlebox {
         flex: 1 1 auto;
         overflow: hidden;
         white-space: nowrap;
         color: #808080;
-        padding: 4px 0px;
         cursor: pointer;
       }
       $ #tocname {

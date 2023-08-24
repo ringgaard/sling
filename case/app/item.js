@@ -585,18 +585,12 @@ class DocumentHeader extends Component {
       <div>${Component.escape(name)}</div>
       <md-spacer></md-spacer>
       <md-menu>
-        <md-menu-item id="pin">
-          <md-icon icon="push_pin"></md-icon>Pin
-        </md-menu-item>
-        <md-menu-item id="edit">
-          <md-icon icon="edit"></md-icon>Edit
-        </md-menu-item>
-        <md-menu-item id="analyze">
-          <md-icon icon="summarize"></md-icon>Analyze
-        </md-menu-item>
-        <md-menu-item id="delete">
-          <md-icon icon="delete"></md-icon>Delete
-        </md-menu-item>
+        <md-menu-item id="pin">Pin</md-menu-item>
+        <md-menu-item id="edit">Edit</md-menu-item>
+        <md-menu-item id="analyze">Analyze</md-menu-item>
+        <md-menu-item id="phrasematch">Match phrases</md-menu-item>
+        <md-menu-item id="topicmatch">Match topics</md-menu-item>
+        <md-menu-item id="delete">Delete</md-menu-item>
       </md-menu>
     `;
   }

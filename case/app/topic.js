@@ -40,7 +40,7 @@ var xrefs;
 
 // Singular/plural.
 function plural(n, kind) {
-  if (n == 1) return kind
+  if (n == 1) return `one ${kind}`;
   return `${n} ${kind}s`;
 }
 
@@ -621,6 +621,66 @@ class TopicCard extends Component {
         }
       } else {
         inform("No document analyzer configured");
+      }
+    } else if  (command == "phrasematch") {
+      let phrases = new Map();
+      let index = 0;
+      for (let lex of context.topic.all(n_lex)) {
+        if (index++ == context.index) break;
+        if (lex instanceof Frame) {
+          for (let [k, v] of lex) {
+            if (typeof(k) === 'string' && (v instanceof Frame)) {
+              phrases.set(k, v);
+            }
+          }
+        }
+      }
+
+      let updates = 0;
+      for (let m of doc.mentions) {
+        if (m.annotation && m.annotation.length > 0) continue;
+        let phrase = m.text();
+        let match = phrases.get(phrase);
+        if (match) {
+          console.log("add phrase",  phrase, match.id)
+          if (m.annotation) {
+            m.annotation.set(n_is, match);
+          } else {
+            m.annotation = match;
+          }
+          source.set(phrase, match);
+          updates++;
+        }
+      }
+
+      if (updates > 0) {
+        inform(`${plural(updates, "phrase mapping")} added`);
+        this.mark_dirty();
+        sidebar.onrefresh(doc);
+      }
+    } else if  (command == "topicmatch") {
+      let index = editor.get_index();
+      let updates = 0;
+      for (let m of doc.mentions) {
+        if (m.annotation && m.annotation.length > 0) continue;
+        let phrase = m.text();
+        let match = index.find(phrase);
+        if (match) {
+          console.log("add topic", phrase, match.id);
+          if (m.annotation) {
+            m.annotation.set(n_is, match);
+          } else {
+            m.annotation = match;
+          }
+          source.set(phrase, match);
+          updates++;
+        }
+      }
+
+      if (updates > 0) {
+        inform(`${plural(updates, "topic mapping")} added`);
+        this.mark_dirty();
+        sidebar.onrefresh(doc);
       }
     } else if  (command == "delete") {
       let n = this.state.slot(n_lex, context.index);

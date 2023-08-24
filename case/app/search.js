@@ -20,12 +20,26 @@ export function normalized(str) {
 }
 
 export async function search(queries, backends, options = {}) {
+  if (options.swap) {
+    if (!Array.isArray(queries)) queries = [queries];
+    let n = queries.length;
+    for (let i = 0; i < n; ++i) {
+      let query = queries[i];
+      let comma = query.indexOf(", ");
+      if (comma != -1) {
+        let swapped = query.slice(comma + 2) + " " + query.slice(0, comma);
+        queries.push(swapped);
+      }
+    }
+  }
+
   let items = new Array();
   if (Array.isArray(queries)) {
-    for (let query of queries) {
-      if (query.length == 0) continue;
-      for (let backend of backends) {
-        await backend(query, items, options);
+    for (let backend of backends) {
+      for (let query of queries) {
+        if (query.length > 0) {
+          await backend(query, items, options);
+        }
       }
     }
   } else {
@@ -194,6 +208,23 @@ export class SearchIndex {
     }
 
     return it(this.names, this.ids, this.topics);
+  }
+
+  find(name) {
+    name = normalized(name);
+    let lo = 0;
+    let hi = this.names.length - 1;
+    while (lo <= hi) {
+      let mid = (lo + hi) >> 1;
+      let entry = this.names[mid];
+      if (entry.name < name) {
+        lo = mid + 1;
+      } else if (entry.name > name) {
+        hi = mid - 1;
+      } else {
+        return entry.topic;
+      }
+    }
   }
 }
 
