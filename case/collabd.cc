@@ -56,6 +56,7 @@ enum CollabOpcode {
   COLLAB_LOGIN   = 5,    // log-in to collaboration to send and receive updates
   COLLAB_NEWID   = 6,    // new topic id
   COLLAB_UPDATE  = 7,    // update collaboration case
+  COLLAB_FLUSH   = 8,    // flush changes to disk
 
   COLLAB_ERROR   = 127,  // error message
 };
@@ -497,7 +498,10 @@ class CollabCase {
 
   // Flush changes to disk.
   bool Flush(string *timestamp) {
-    if (!dirty_) return false;
+    if (!dirty_) {
+      if (timestamp) *timestamp = casefile_.GetString(n_modified);
+      return false;
+    }
 
     // Update modification timestamp in case.
     time_t now = time(nullptr);
@@ -794,6 +798,7 @@ class CollabClient : public WebSocket {
       case COLLAB_LOGIN: Login(&reader); break;
       case COLLAB_NEWID: NewId(&reader); break;
       case COLLAB_UPDATE: Update(&reader); break;
+      case COLLAB_FLUSH: Flush(&reader); break;
       default:
         LOG(ERROR) << "Invalid collab op: " << op;
     }
@@ -976,6 +981,34 @@ class CollabClient : public WebSocket {
 
     // Broadcast update to all other participants.
     service_->Notify(collab_, this, reader->packet());
+  }
+
+  // Flush collaboration to disk.
+  void Flush(CollabReader *reader) {
+    // Make sure client is logged into case.
+    if (collab_ == nullptr) {
+      Error("user not logged in");
+      return;
+    }
+
+    // Flush collaboration.
+    string modtime;
+    bool saved = collab_->Flush(&modtime);
+
+    // Return latest modification time.
+    CollabWriter writer;
+    writer.WriteInt(COLLAB_FLUSH);
+    writer.WriteString(modtime);
+    writer.Send(this);
+
+    // Broadcast save.
+    if (saved) {
+      CollabWriter writer;
+      writer.WriteInt(COLLAB_UPDATE);
+      writer.WriteInt(CCU_SAVE);
+      writer.WriteString(modtime);
+      service_->Notify(collab_, this, writer.packet());
+    }
   }
 
   // Return error message to client.

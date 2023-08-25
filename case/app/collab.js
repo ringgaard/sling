@@ -14,6 +14,7 @@ const COLLAB_JOIN    = 4;
 const COLLAB_LOGIN   = 5;
 const COLLAB_NEWID   = 6;
 const COLLAB_UPDATE  = 7;
+const COLLAB_FLUSH   = 8;
 const COLLAB_ERROR   = 127;
 
 const CCU_TOPIC   = 1;
@@ -121,31 +122,55 @@ export class Collaboration {
       case COLLAB_CREATE: {
         let credentials = decoder.read_varstring();
         this.onfail = null;
-        this.oncreated && this.oncreated(credentials);
+        if (this.oncreated) {
+          this.oncreated(credentials);
+          this.oncreated = null;
+        }
         break;
       }
       case COLLAB_LOGIN: {
         let casefile = decoder.readall();
         this.onfail = null;
-        this.onlogin && this.onlogin(casefile);
+        if (this.onlogin) {
+          this.onlogin(casefile);
+          this.onlogin = null;
+        }
         break;
       }
       case COLLAB_INVITE: {
         let key = decoder.read_varstring();
         this.onfail = null;
-        this.oninvite && this.oninvite(key);
+        if (this.oninvite) {
+          this.oninvite(key);
+          this.oninvite = null;
+        }
         break;
       }
       case COLLAB_JOIN: {
         let credentials = decoder.read_varstring();
         this.onfail = null;
-        this.onjoin && this.onjoin(credentials);
+        if (this.onjoin) {
+          this.onjoin(credentials);
+          this.onjoin = null;
+        }
         break;
       }
       case COLLAB_NEWID: {
         let next = decoder.read_varint32();
         this.onfail = null;
-        this.onnewid && this.onnewid(next);
+        if (this.onnewid) {
+          this.onnewid(next);
+          this.onnewid = null;
+        }
+        break;
+      }
+      case COLLAB_FLUSH: {
+        let modtime = decoder.read_varstring();
+        this.onfail = null;
+        if (this.onflush) {
+          this.onflush(modtime);
+          this.onflush = null;
+        }
         break;
       }
       case COLLAB_ERROR: {
@@ -243,6 +268,19 @@ export class Collaboration {
 
       let encoder = new Encoder(store, false);
       encoder.write_varint(COLLAB_NEWID);
+      let packet = encoder.output();
+      this.send(packet);
+    });
+  }
+
+  // Flush changes to disk on server.
+  async flush() {
+    return new Promise((resolve, reject) => {
+      this.onflush = modtime => resolve(modtime);
+      this.onfail = e => reject(e);
+
+      let encoder = new Encoder(store, false);
+      encoder.write_varint(COLLAB_FLUSH);
       let packet = encoder.output();
       this.send(packet);
     });

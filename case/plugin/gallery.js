@@ -28,6 +28,11 @@ export default class GalleryPlugin {
     let num_added = 0;
     let gallery = url.slice(8).split(" ");
     for (let url of gallery) {
+      url = url.trim();
+      if (url.length < 8) {
+        console.log("skip invalid image", url);
+        continue;
+      }
       if (photos.has(photourl(url))) {
         console.log("skip exising image", url);
         continue;

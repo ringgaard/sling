@@ -500,6 +500,7 @@ class CaseEditor extends MdApp {
 
       // Update modification and sharing time.
       let ts = new Date().toJSON();
+      if (this.collab) ts = await this.collab.flush();
       casefile.set(n_modified, ts);
       if (result.share) {
         casefile.set(n_shared, ts);
@@ -510,7 +511,7 @@ class CaseEditor extends MdApp {
       // Save case before sharing.
       this.purge_scraps();
       this.mark_clean();
-      this.match("#app").save_case(casefile);
+      await this.match("#app").save_case(casefile);
 
       // Encode case file.
       var data;

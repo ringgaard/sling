@@ -707,7 +707,7 @@ def add_media(request):
   add_celeb(name, id)
 
   sys.stdout.flush()
-  return {"images": n, "dups": dups}
+  return {"images": n - dups, "dups": dups}
 
 @app.route("/redreport/photos", method="POST")
 def photos(request):
