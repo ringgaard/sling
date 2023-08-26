@@ -60,6 +60,13 @@ class AnnotationBox extends Component {
       this.dispatch("annotate", {mention, event: e}, true);
     } else if (target.id == "reconcile") {
       this.dispatch("reconcile", {mention, event: e}, true);
+    } else if (target.id == "copy") {
+      let text = mention.text(true);
+      if (e.ctrlKey && (mention.annotation instanceof Frame)) {
+        let item = mention.annotation.resolve();
+        if (item.id) text = item.id;
+      }
+      navigator.clipboard.writeText(text);
     }
     if (target.tagName != "A") this.remove();
   }
@@ -74,6 +81,7 @@ class AnnotationBox extends Component {
       <span class="phrase">${Component.escape(phrase)}</span>
       <md-icon icon="add_circle" class="action" id="annotate"></md-icon>
       <md-icon icon="join_right" class="action" id="reconcile"></md-icon>
+      <md-icon icon="content_copy" class="action" id="copy"></md-icon>
     </div>`);
 
     if (typeof(annotation) === 'string') {

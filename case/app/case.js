@@ -304,7 +304,7 @@ class CaseEditor extends MdApp {
       title: "Reconcile with...",
       items: results});
     let ref = await dialog.show();
-    if (ref) {
+    if (ref || ref === null) {
       let item = frame(ref);
       if (mention.annotation) {
         mention.annotation.set(n_is, item);

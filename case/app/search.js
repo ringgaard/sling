@@ -300,8 +300,10 @@ Component.register(OmniBox);
 
 export class SearchResultsDialog extends MdDialog {
   async onconnected() {
+    super.onconnected();
     this.attach(this.onkeydown, "keydown");
     this.attach(this.onselect, "select", "#items");
+    this.attach(this.onclear, "click", "#clear");
     this.find("#items").update({items: this.state.items});
   }
 
@@ -319,20 +321,32 @@ export class SearchResultsDialog extends MdDialog {
     this.close(ref);
   }
 
+  onclear(e) {
+    this.close(null);
+  }
+
   submit() {
-    let list = this.find("#items");
-    if (list.active) {
-      let ref = list.active.state.ref;
-      this.close(ref);
+    let item = this.find("#itemid").value;
+    if (item) {
+      this.close(item);
+    } else {
+      let list = this.find("#items");
+      if (list.active) {
+        let ref = list.active.state.ref;
+        this.close(ref);
+      }
     }
   }
 
   render() {
     return `
       <md-dialog-top>${this.state.title}</md-dialog-top>
+      <md-text-field id="itemid" label="Item ID"></md-text-field>
       <md-search-list id="items"></md-search-list>
       <md-dialog-bottom>
+        <button id="clear">Clear</button>
         <button id="cancel">Cancel</button>
+        <button id="submit">OK</button>
       </md-dialog-bottom>
     `;
   }
@@ -342,6 +356,7 @@ export class SearchResultsDialog extends MdDialog {
       $ {
         width: 500px;
         max-height: 80vh;
+        row-gap: 16px;
       }
       $ md-search-list {
         position: relative;
