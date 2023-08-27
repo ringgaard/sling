@@ -41,6 +41,7 @@ var xrefs;
 // Singular/plural.
 function plural(n, kind) {
   if (n == 1) return `one ${kind}`;
+  if (n == 0) return `no ${kind}`;
   return `${n} ${kind}s`;
 }
 

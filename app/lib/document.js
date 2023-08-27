@@ -37,6 +37,7 @@ export class Document {
 
     this.mentions = new Array();
     this.themes = new Array();
+    this.mapping = new Map();
 
     // Build phrase mapping.
     let phrasemap;
@@ -76,6 +77,7 @@ export class Document {
               let index = this.mentions.length;
               let mention = new Mention(this, index, begin, end, obj);
               this.mentions.push(mention);
+              this.mapping.set(obj, mention);
               if (phrasemap && (obj instanceof Frame)) {
                 let phrase = text.slice(begin, end);
                 let mapping = phrasemap.get(phrase);

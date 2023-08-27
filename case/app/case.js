@@ -297,16 +297,17 @@ class CaseEditor extends MdApp {
       local: this.get_index(),
     };
 
+    this.style.cursor = "wait";
     let results = await search(query, backends, options);
-    if (results.length == 0) return;
+    this.style.cursor = "";
 
     let dialog = new SearchResultsDialog({
       title: "Reconcile with...",
       items: results});
     let ref = await dialog.show();
     if (ref || ref === null) {
-      let item = frame(ref);
-      if (mention.annotation) {
+      let item = ref && frame(ref);
+      if (mention.annotation && ref) {
         mention.annotation.set(n_is, item);
       } else {
         mention.annotation = item;
