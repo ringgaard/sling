@@ -43,6 +43,10 @@
     P25: P40            ; mother -> child
     P26: P26            ; spouse -> spouse
     P3373: P3373        ; sibling -> sibling
+
+    PFRND: PFRND        ; friend -> friend
+    PLOV: PLOV          ; lover -> lover
+
     P1027: Q101072499   ; conferred by -> award conferred
     P170: Q78522641     ; creator -> creator of
     P199: Q67205181     ; business division -> business division of

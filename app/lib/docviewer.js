@@ -43,6 +43,10 @@ function html_value(value, prop) {
   }
 }
 
+function isredirect(frame) {
+  return frame.length == 1 && frame.name(0) == n_is;
+}
+
 class AnnotationBox extends Component {
   onconnected() {
     this.attach(this.onpointerdown, "pointerdown");
@@ -73,7 +77,7 @@ class AnnotationBox extends Component {
 
   render() {
     let mention = this.state;
-    let annotation = store.resolve(mention.annotation);
+    let annotation = mention.annotation;
     let phrase = mention.text(true);
 
     let h = new Array();
@@ -89,7 +93,7 @@ class AnnotationBox extends Component {
       let anchor = Component.escape(url);
       h.push(`<div class="url"><a href="${url}">${anchor}</a></div>`);
     } else if (annotation instanceof Frame) {
-      if (annotation.isanonymous()) {
+      if (annotation.isanonymous() && !isredirect(annotation)) {
         let dt = annotation.get(n_isa);
         if (dt) {
           let [text, encoded] = value_text(store.resolve(annotation), null, dt);
@@ -97,15 +101,17 @@ class AnnotationBox extends Component {
           h.push(`<div class="value">${v}</div>`);
         } else {
           for (let [name, value] of annotation) {
-            let m = mention.document.mapping.get(value);
+            value = store.resolve(value);
             let p = html_prop(name);
             let v;
-            if (m) {
-              let label = Component.escape(m.text(true));
-              v = `<span class="docref">${label}</span>`;
-            } else {
-             v = html_value(value, name);
+            if ((value instanceof Frame) && value.isanonymous()) {
+              let m = mention.document.mention_of(value);
+              if (m) {
+                let label = Component.escape(m.text(true));
+                v = `<span class="docref">${label}</span>`;
+              }
             }
+            if (!v) v = html_value(value, name);
             h.push(`<div class="prop">${p}: ${v}</div>`);
           }
         }
@@ -188,6 +194,7 @@ class AnnotationBox extends Component {
         padding: 4px;
         font-size: 20px;
         font-weight: normal;
+        color: #808080;
         cursor: pointer;
         user-select: inherit;
       }

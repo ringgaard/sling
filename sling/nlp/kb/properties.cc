@@ -213,6 +213,12 @@ const char *property_order[] = {
   "P1038",      // relative
   "P1290",      // godparent
 
+  "PLOV",       // lover
+  "PFRND",      // friend
+  "PACQ",       // acquaintance
+  "P3342",      // significant person
+
+
   // Career.
   "P69",        // educated at
   "P101",       // field of work

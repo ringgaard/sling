@@ -37,7 +37,6 @@ export class Document {
 
     this.mentions = new Array();
     this.themes = new Array();
-    this.mapping = new Map();
 
     // Build phrase mapping.
     let phrasemap;
@@ -77,11 +76,16 @@ export class Document {
               let index = this.mentions.length;
               let mention = new Mention(this, index, begin, end, obj);
               this.mentions.push(mention);
-              this.mapping.set(obj, mention);
               if (phrasemap && (obj instanceof Frame)) {
                 let phrase = text.slice(begin, end);
                 let mapping = phrasemap.get(phrase);
-                if (mapping) obj.add(this.store.is, mapping);
+                if (mapping) {
+                  if (obj.isanonymous()) {
+                    obj.set(this.store.is, mapping);
+                  } else {
+                    mention.annotation = mapping;
+                  }
+                }
               }
               if (r.token == 93 || r.end()) break;
             }
@@ -143,6 +147,12 @@ export class Document {
 
   plain() {
     return detag(this.text);
+  }
+
+  mention_of(annotation) {
+    for (let m of this.mentions) {
+      if (annotation === m.annotation) return m;
+    }
   }
 
   search(query, partial) {

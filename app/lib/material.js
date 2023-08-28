@@ -2061,6 +2061,96 @@ export class MdSearchResult extends MdSearchItem {
 Component.register(MdSearchResult);
 
 //-----------------------------------------------------------------------------
+// Find box
+//-----------------------------------------------------------------------------
+
+export class MdFindBox extends Component {
+  visible() { return !(this.state === undefined || this.state === null); }
+
+  render() {
+    return `
+      <input id="search"
+        value="${Component.escape(this.state)}"
+        autocomplete="off">
+      <md-icon id="down" icon="keyboard_arrow_down"></md-icon>
+      <md-icon id="up" icon="keyboard_arrow_up" i></md-icon>
+      <md-icon id="close" icon="close"></md-icon>
+    `
+  }
+
+  onconnected() {
+    this.attach(this.onkeydown, "keydown");
+  }
+
+  onrendered() {
+    this.attach(this.onclose, "click", "#close");
+    this.attach(this.onnext, "click", "#down");
+    this.attach(this.onprev, "click", "#up");
+    this.find("#search").focus();
+  }
+
+  onkeydown(e) {
+    if (e.code === "Escape") {
+      e.preventDefault();
+      this.onclose(e);
+    } else if (e.code === "Enter") {
+      e.preventDefault();
+      this.search(false);
+      this.update();
+    }
+    e.stopPropagation();
+  }
+
+  onnext(e) {
+    this.search(false);
+  }
+
+  onprev(e) {
+    this.search(true);
+  }
+
+  search(backwards) {
+    let text = this.find("input").value;
+    this.dispatch("find", {text, backwards}, true);
+  }
+
+  onclose(e) {
+    this.update();
+    this.dispatch("find", undefined, true);
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        display: flex;
+        box-shadow: rgb(0 0 0 / 15%) 0px 2px 4px 0px,
+                    rgb(0 0 0 / 25%) 0px 2px 4px 0px;
+        border-radius: 4px;
+        padding: 8px;
+      }
+      $ input {
+        font-size: 14px;
+        font-family: inherit;
+        outline: none;
+        border: none;
+      }
+      $ md-icon {
+        padding: 4px;
+        color: #808080;
+        cursor: pointer;
+      }
+      $ md-icon:hover {
+        text-decoration: none;
+        background-color: #eeeeee;
+      }
+
+    `;
+  }
+}
+
+Component.register(MdFindBox);
+
+//-----------------------------------------------------------------------------
 // Data table
 //-----------------------------------------------------------------------------
 

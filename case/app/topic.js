@@ -1285,15 +1285,62 @@ Component.register(RawEditDialog);
 
 class DocumentEditDialog extends MdDialog {
   onconnected() {
-    this.attach(this.onkeydown, "keydown", "textarea");
+    this.attach(this.onkeydown, "keydown");
+    this.attach(this.onfind, "find");
   }
 
   onkeydown(e) {
     if ((e.ctrlKey || e.metaKey) && e.code === "KeyS") {
       this.submit();
       e.preventDefault()
+    } else if ((e.ctrlKey || e.metaKey) && e.code === "KeyF") {
+      let findbox = this.find("md-find-box");
+      let textarea = this.find("textarea");
+      let start = textarea.selectionStart;
+      let end = textarea.selectionEnd;
+      let selected = textarea.value.substring(start, end);
+      if (!selected) selected = this.lastsearch || "";
+      findbox.update(selected);
+      e.preventDefault();
+    } else if ((e.ctrlKey || e.metaKey) && e.code === "KeyG") {
+      this.search(this.lastsearch, e.shiftKey);
+      e.preventDefault()
     }
     e.stopPropagation()
+  }
+
+  onfind(e) {
+    if (e.detail) {
+      let text = e.detail.text;
+      let backwards = e.detail.backwards;
+      this.search(text, backwards);
+      this.lastsearch = text;
+    } else {
+      this.find("textarea").focus();
+    }
+  }
+
+  search(text, backwards) {
+    console.log("search", text, backwards);
+    let textarea = this.find("textarea");
+    let content = textarea.value;
+    textarea.focus();
+
+    let pos = -1;
+    if (backwards) {
+      pos = content.substring(0, textarea.selectionStart).lastIndexOf(text);
+    } else {
+      pos = content.indexOf(text, textarea.selectionEnd);
+    }
+    if (pos == -1) return;
+
+    let height = textarea.clientHeight;
+    textarea.value = content.substring(0, pos);
+    let y = textarea.scrollHeight;
+
+    textarea.value = content;
+    textarea.scrollTop = y > height ? y - height / 2 : 0;
+    textarea.setSelectionRange(pos, pos + text.length);
   }
 
   submit() {
@@ -1305,6 +1352,17 @@ class DocumentEditDialog extends MdDialog {
       content = this.state;
     }
     this.close(content);
+  }
+
+  cancel() {
+    let findbox = this.find("md-find-box");
+    if (findbox.state == undefined) {
+      // Close dialog.
+      this.close(false);
+    } else {
+      // Close find box.
+      findbox.update();
+    }
   }
 
   render() {
@@ -1319,8 +1377,11 @@ class DocumentEditDialog extends MdDialog {
           ${title ? '' : 'class="hidden"'}
         >
         </md-text-field>
-        <textarea
-          spellcheck="false">${Component.escape(content)}</textarea>
+        <div class="editbox">
+          <textarea
+            spellcheck="false">${Component.escape(content)}</textarea>
+          <md-find-box></md-find-box>
+        </div>
       <md-dialog-bottom>
         <button id="cancel">Cancel</button>
         <button id="submit">Update</button>
@@ -1330,6 +1391,15 @@ class DocumentEditDialog extends MdDialog {
 
   static stylesheet() {
     return `
+      $ .editbox {
+        position: relative;
+      }
+      $ md-find-box {
+        position: absolute;
+        top: 0;
+        right: 0;
+        background: white;
+      }
       $ textarea {
         width: calc(100vw * 0.8);
         height: calc(100vh * 0.7);
