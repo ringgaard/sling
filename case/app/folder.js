@@ -118,6 +118,7 @@ class CaseFolder extends Component {
       }
       $ div {
         padding-left: 6px;
+        user-select: none;
       }
       $ div.current {
         font-weight: bold;

@@ -2,11 +2,14 @@
 // Licensed under the Apache License, Version 2
 
 import {Frame} from "/common/lib/frame.js";
-import {frame} from "/common/lib/global.js";
+import {store, frame} from "/common/lib/global.js";
 import {Component} from "/common/lib/component.js";
+import {Document} from "/common/lib/document.js";
+import {inform} from "/common/lib/material.js";
 import {DocumentViewer} from "/common/lib/docviewer.js";
 
 const n_name = frame("name");
+const n_lex = frame("lex");
 
 function same(d1, d2) {
   if (!d1 || !d2) return false;
@@ -63,6 +66,26 @@ class SideBar extends Component {
 
     if (command == "close") {
       this.update(null);
+    } else if (command == "next") {
+      let context = this.state.context;
+      let topic = context.topic;
+      let index = context.index + 1;
+      let source = context.topic.value(context.topic.slot(n_lex, index));
+      if (source) {
+        this.update(new Document(store, source, {topic, index}));
+      } else {
+        inform("already at end");
+      }
+    } else if (command == "prev") {
+      let context = this.state.context;
+      let topic = context.topic;
+      let index = context.index - 1;
+      let source = context.topic.value(context.topic.slot(n_lex, index));
+      if (source) {
+        this.update(new Document(store, source, {topic, index}));
+      } else {
+        inform("already at beginning");
+      }
     } else {
       let editor = this.match("#editor");
       let card = await editor.navigate_to(this.state.context.topic);
@@ -103,6 +126,8 @@ class SideBar extends Component {
           </div>
           <md-menu id="menu">
             <md-menu-item id="edit">Edit</md-menu-item>
+            <md-menu-item id="next">Next</md-menu-item>
+            <md-menu-item id="prev">Previous</md-menu-item>
             <md-menu-item id="analyze">Analyze</md-menu-item>
             <md-menu-item id="phrasematch">Match phrases</md-menu-item>
             <md-menu-item id="topicmatch">Match topics</md-menu-item>
@@ -129,6 +154,7 @@ class SideBar extends Component {
         display: flex;
         flex-direction: column;
         overflow: hidden;
+        width: 100%;
       }
       $ #banner {
         display: flex;

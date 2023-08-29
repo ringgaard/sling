@@ -643,7 +643,6 @@ class TopicCard extends Component {
         let phrase = m.text();
         let match = phrases.get(phrase);
         if (match) {
-          console.log("add phrase",  phrase, match.id)
           if (m.annotation) {
             m.annotation.set(n_is, match);
           } else {
@@ -667,7 +666,6 @@ class TopicCard extends Component {
         let phrase = m.text();
         let match = index.find(phrase);
         if (match) {
-          console.log("add topic", phrase, match.id);
           if (m.annotation) {
             m.annotation.set(n_is, match);
           } else {
@@ -936,10 +934,7 @@ class TopicCard extends Component {
     for (let m of topic.all(n_media)) {
       let url = store.resolve(m);
       if (url.startsWith('!')) url = url.slice(1);
-      if (seen.has(url)) {
-        console.log("dup url", url);
-        continue;
-      }
+      if (seen.has(url)) continue;
       media.push(m);
       images.push(url);
       seen.add(url);
@@ -1321,7 +1316,6 @@ class DocumentEditDialog extends MdDialog {
   }
 
   search(text, backwards) {
-    console.log("search", text, backwards);
     let textarea = this.find("textarea");
     let content = textarea.value;
     textarea.focus();
@@ -1352,17 +1346,6 @@ class DocumentEditDialog extends MdDialog {
       content = this.state;
     }
     this.close(content);
-  }
-
-  cancel() {
-    let findbox = this.find("md-find-box");
-    if (findbox.state == undefined) {
-      // Close dialog.
-      this.close(false);
-    } else {
-      // Close find box.
-      findbox.update();
-    }
   }
 
   render() {

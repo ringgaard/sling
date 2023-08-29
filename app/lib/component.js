@@ -31,12 +31,12 @@ export class Component extends HTMLElement {
 
   // Initialize component.
   initialize() {
-    if (this.initialized) return undefined;
+    if (this.initialized) return;
     this.initialized = true;
     return this.oninit && this.oninit();
   }
 
-  // Connect web component to DOM.
+  // Web component connected to DOM.
   async connectedCallback() {
     // Get element attributes.
     for (const attr of this.attributes) {
@@ -61,6 +61,11 @@ export class Component extends HTMLElement {
       if (this.onrendered) await this.onrendered();
     }
     if (this.onconnected) await this.onconnected();
+  }
+
+  // Web component disconnected from DOM.
+  async disconnectedCallback() {
+    if (this.ondisconnected) await this.ondisconnected();
   }
 
   // Update component state.

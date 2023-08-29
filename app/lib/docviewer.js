@@ -47,6 +47,11 @@ function isredirect(frame) {
   return frame.length == 1 && frame.name(0) == n_is;
 }
 
+function selecting() {
+  var selection = window.getSelection();
+  return selection && selection.type === 'Range';
+}
+
 class AnnotationBox extends Component {
   onconnected() {
     this.attach(this.onpointerdown, "pointerdown");
@@ -78,21 +83,21 @@ class AnnotationBox extends Component {
   render() {
     let mention = this.state;
     let annotation = mention.annotation;
-    let phrase = mention.text(true);
 
     let h = new Array();
-    h.push(`<div class="title">
-      <span class="phrase">${Component.escape(phrase)}</span>
-      <md-icon icon="add_circle" class="action" id="annotate"></md-icon>
-      <md-icon icon="join_right" class="action" id="reconcile"></md-icon>
-      <md-icon icon="content_copy" class="action" id="copy"></md-icon>
-    </div>`);
+    h.push(`
+      <div>
+        <md-icon icon="add_circle" class="action" id="annotate"></md-icon>
+        <md-icon icon="join_right" class="action" id="reconcile"></md-icon>
+        <md-icon icon="content_copy" class="action" id="copy"></md-icon>
+      </div>
+    `);
 
     if (typeof(annotation) === 'string') {
       let url = annotation;
       let anchor = Component.escape(url);
       h.push(`<div class="url"><a href="${url}">${anchor}</a></div>`);
-    } else if (annotation instanceof Frame) {
+    } else if ((annotation instanceof Frame) && annotation.length > 0) {
       if (annotation.isanonymous() && !isredirect(annotation)) {
         let dt = annotation.get(n_isa);
         if (dt) {
@@ -116,11 +121,14 @@ class AnnotationBox extends Component {
           }
         }
       } else {
-        let v = html_value(store.resolve(annotation));
-        h.push(`<div class="link">${v}</div>`);
-        let decription = annotation.get(n_description);
-        if (decription) {
-          h.push(`<div class="descr">${Component.escape(decription)}</div>`);
+        let item = store.resolve(annotation);
+        if (item.length > 0) {
+          let v = html_value(item);
+          h.push(`<div class="link">${v}</div>`);
+          let decription = item.get(n_description);
+          if (decription) {
+            h.push(`<div class="descr">${Component.escape(decription)}</div>`);
+          }
         }
       }
     }
@@ -136,6 +144,7 @@ class AnnotationBox extends Component {
         z-index: 1;
         display: flex;
         flex-direction: column;
+        min-width: 250px;
 
         font-family: Roboto,Helvetica,sans-serif;
         font-size: 16px;
@@ -143,25 +152,16 @@ class AnnotationBox extends Component {
         line-height: 1;
 
         color: black;
-        background: #f8f8f8;
+        background: white;
         border: 1px solid #a0a0a0;
         box-shadow: 0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22);
 
         padding: 8px;
-        min-width: 250px;
         cursor: default;
       }
       $ .title {
         display: flex;
         align-items: center;
-      }
-      $ .phrase {
-        font-style: italic;
-        padding: 4px 4px 4px 0px;
-      }
-      $ .phrase:hover {
-        text-decoration: none;
-        cursor: default;
       }
       $ .url {
         padding-top: 4px;
@@ -211,14 +211,17 @@ Component.register(AnnotationBox);
 export class DocumentViewer extends Component {
   onconnected() {
     this.attach(this.onmouse, "mouseover");
-    this.attach(this.onleave, "mouseleave");
+    this.attach(this.clear_popup, "mouseleave");
+    this.attach(this.clear_popup, "selectstart");
     this.attach(this.onclick, "click");
   }
 
   async onmouse(e) {
     // Ignore if selecting text or ctrl or shift is down.
-    var selection = window.getSelection();
-    if (selection && selection.type === 'Range') return;
+    if (selecting()) {
+      this.clear_popup();
+      return;
+    }
     if (e.ctrlKey || e.shiftKey) return;
 
     // Find first enclosing span.
@@ -265,12 +268,12 @@ export class DocumentViewer extends Component {
     }
   }
 
-  onleave(e) {
-    // Close popups when leaving document viewer.
-    this.clear_popup();
-  }
-
   onclick(e) {
+    if (selecting()) {
+      this.clear_popup();
+      return;
+    }
+
     let target = e.target;
     let mid = target.getAttribute("mention");
     if (!mid) return;

@@ -1648,6 +1648,8 @@ export class MdToolbox extends Component {
   constructor(state) {
     super(state);
     this.hover = false;
+    this.enters = this.onenter.bind(this);
+    this.leaves = this.onleave.bind(this);
   }
 
   visible() {
@@ -1658,11 +1660,20 @@ export class MdToolbox extends Component {
     return show;
   }
 
+  oninit() {
+    this.attach(this.onclick, "click");
+  }
+
   onconnected() {
-    this.bind(null, "click", e => this.onclick(e));
     let parent = this.parentElement;
-    parent.addEventListener("mouseenter", e => this.onenter(e));
-    parent.addEventListener("mouseleave", e => this.onleave(e));
+    parent.addEventListener("mouseenter", this.enters);
+    parent.addEventListener("mouseleave", this.leaves);
+  }
+
+  ondisconnected() {
+    let parent = this.parentElement;
+    parent.removeEventListener("mouseenter", this.enters);
+    parent.removeEventListener("mouseleave", this.leaves);
   }
 
   onenter(e) {
@@ -1711,7 +1722,7 @@ var current_snack = null;
 export class MdSnackbar extends Component {
   onconnected() {
     this.bind("#close", "click", e => this.close());
-    setTimeout(snack => snack.timeout(), 5000, this);
+    setTimeout(snack => snack.timeout(), 4000, this);
   }
 
   timeout() {
