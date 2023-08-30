@@ -72,22 +72,28 @@ export class Document {
             let begin = stack.pop();
             let end = text.length;
             for (;;) {
-              let obj = r.parse();
-              let index = this.mentions.length;
-              let mention = new Mention(this, index, begin, end, obj);
-              this.mentions.push(mention);
-              if (phrasemap && (obj instanceof Frame)) {
-                let phrase = text.slice(begin, end);
-                let mapping = phrasemap.get(phrase);
-                if (mapping) {
-                  if (obj.isanonymous()) {
-                    obj.set(this.store.is, mapping);
-                  } else {
-                    mention.annotation = mapping;
+              let obj;
+              try {
+                obj = r.parse();
+                let index = this.mentions.length;
+                let mention = new Mention(this, index, begin, end, obj);
+                this.mentions.push(mention);
+                if (phrasemap && (obj instanceof Frame)) {
+                  let phrase = text.slice(begin, end);
+                  let mapping = phrasemap.get(phrase);
+                  if (mapping) {
+                    if (obj.isanonymous()) {
+                      obj.set(this.store.is, mapping);
+                    } else {
+                      mention.annotation = mapping;
+                    }
                   }
                 }
+                if (r.token == 93 || r.end()) break;
+              } catch (error) {
+                console.log(`parse error: ${error} (${r.context()})`);
+                break;
               }
-              if (r.token == 93 || r.end()) break;
             }
           }
           break;
@@ -115,8 +121,12 @@ export class Document {
         case 123: { // '{'
           r.read();
           r.next();
-          let theme = r.parse_frame();
-          this.themes.push(theme);
+          try {
+            let theme = r.parse_frame();
+            this.themes.push(theme);
+          } catch (error) {
+            console.log(`parse error: ${error} (${r.context()})`);
+          }
           break;
         }
 

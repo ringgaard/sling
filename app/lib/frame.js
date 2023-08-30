@@ -1080,6 +1080,13 @@ export class Reader {
     return this.ch == -1;
   }
 
+  // Return context around current position.
+  context(size = 20) {
+    let start = Math.max(this.pos - size, 0);
+    let end = Math.min(this.pos + size, this.size);
+    return this.input.slice(start, end);
+  }
+
   // Read next token from input.
   next() {
     // Keep reading until we either read a token or reach the end of the input.

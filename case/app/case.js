@@ -759,6 +759,7 @@ class CaseEditor extends MdApp {
   }
 
   close() {
+    sidebar.update();
     if (this.collab) {
       this.collab.close();
       this.collab = undefined;

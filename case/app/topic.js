@@ -1299,7 +1299,9 @@ class DocumentEditDialog extends MdDialog {
       e.preventDefault();
     } else if ((e.ctrlKey || e.metaKey) && e.code === "KeyG") {
       this.search(this.lastsearch, e.shiftKey);
-      e.preventDefault()
+      e.preventDefault();
+    } else if ((e.ctrlKey || e.metaKey) && e.code === "KeyB") {
+      this.bracket();
     }
     e.stopPropagation()
   }
@@ -1313,6 +1315,20 @@ class DocumentEditDialog extends MdDialog {
     } else {
       this.find("textarea").focus();
     }
+  }
+
+  bracket() {
+    let textarea = this.find("textarea");
+    let text = textarea.value;
+    let start = textarea.selectionStart;
+    let end = textarea.selectionEnd;
+    if (start == end) return;
+    text = text.slice(0, start) + "[" +
+           text.slice(start, end) + "]" +
+           text.slice(end);
+    textarea.value = text;
+    textarea.selectionStart = start + 1;
+    textarea.selectionEnd = end + 1;
   }
 
   search(text, backwards) {
