@@ -125,7 +125,7 @@ class CaseEditor extends MdApp {
     if (settings.userscripts) {
       this.attach(this.onscript, "click", "#script");
     }
-    this.attach(this.onexport, "click", "#export");
+    this.attach(this.onwikiexport, "click", "#wikiexport");
     this.attach(this.onaddlink, "click", "#addlink");
     this.attach(this.onsave, "click", "#save");
     this.attach(this.oninvite, "click", "#invite");
@@ -134,11 +134,12 @@ class CaseEditor extends MdApp {
     this.attach(this.onnewfolder, "click", "#newfolder");
 
     this.attach(this.onsave, "click", "md-menu #save");
+    this.attach(this.onfilesave, "click", "md-menu #filesave");
     this.attach(this.onshare, "click", "md-menu #share");
     this.attach(this.oncollaborate, "click", "md-menu #collaborate");
     this.attach(this.onimgcache, "click", "md-menu #imgcache");
     this.attach(this.onimport, "click", "md-menu #import");
-    this.attach(this.onexport, "click", "md-menu #export");
+    this.attach(this.onwikiexport, "click", "md-menu #wikiexport");
     this.attach(this.onupload, "click", "md-menu #upload");
     this.attach(this.oncopyall, "click", "md-menu #copyall");
     this.attach(this.onstats, "click", "md-menu #stats");
@@ -689,7 +690,7 @@ class CaseEditor extends MdApp {
     this.update_title();
 
     // Enable/disable action buttons.
-    for (let e of ["#save", "#share", "#merge", "#newfolder", "#export"]) {
+    for (let e of ["#save", "#share", "#merge", "#newfolder", "#wikiexport"]) {
       this.find(e).update(!this.readonly);
     }
     if (this.collab) {
@@ -1494,7 +1495,7 @@ class CaseEditor extends MdApp {
     }
   }
 
-  async onexport(e) {
+  async onwikiexport(e) {
     if (this.readonly) return;
 
     // Initiate OAuth authorization if we don't have an access token.
@@ -1620,6 +1621,27 @@ class CaseEditor extends MdApp {
       await this.refresh_topics();
     } catch (error) {
       inform("Error importing data: " + error);
+    }
+  }
+
+  async onfilesave(e) {
+    try {
+      // Get filename for exporting case.
+      let fh = await window.showSaveFilePicker({
+        suggestedName: `${this.name()}.sling`});
+
+      // Serialize case.
+      let printer = new Printer(store);
+      printer.indent = "  ";
+      for (let topic of this.topics) printer.print(topic);
+      printer.print(this.casefile);
+
+      // Save case to file.
+      let fw = await fh.createWritable();
+      await fw.write(printer.output);
+      await fw.close();
+    } catch (error) {
+      inform("Error saving case to file: " + error);
     }
   }
 
@@ -1887,7 +1909,7 @@ class CaseEditor extends MdApp {
           tooltip="Merge topics\n(Ctrl+M)">
         </md-icon-button>
         <md-icon-button
-          id="export"
+          id="wikiexport"
           class="tool"
           icon="wikidata"
           tooltip="Export to Wikidata">
@@ -1931,11 +1953,12 @@ class CaseEditor extends MdApp {
         </md-icon-button>
         <md-menu id="menu">
           <md-menu-item id="save">Save</md-menu-item>
+          <md-menu-item id="filesave">Save to file</md-menu-item>
           <md-menu-item id="share">Share</md-menu-item>
           <md-menu-item id="collaborate">Collaborate</md-menu-item>
           <md-menu-item id="import">Import from file</md-menu-item>
           <md-menu-item id="upload">Upload files</md-menu-item>
-          <md-menu-item id="export">Publish in Wikidata</md-menu-item>
+          <md-menu-item id="wikiexport">Publish in Wikidata</md-menu-item>
           <md-menu-item id="imgcache">Cache images</md-menu-item>
           <md-menu-item id="copyall">Copy all</md-menu-item>
           <md-menu-item id="stats">Statistics</md-menu-item>

@@ -358,6 +358,9 @@ export class DocumentViewer extends Component {
         line-height: 1.5;
         padding: 4px 8px;
       }
+      $ p {
+        margin-right: 8px;
+      }
       $ span {
         position: relative;
         color: #0000dd;

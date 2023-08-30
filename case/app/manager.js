@@ -36,12 +36,14 @@ function date2str(date, full=true) {
 
 class CaseManager extends material.MdApp {
   oninit() {
-    this.bind("#settings", "click", e => this.onsettings(e));
-    this.bind("#help", "click", e => this.onhelp(e));
-    this.bind("md-menu #backup", "click", e => this.onbackup(e));
-    this.bind("md-menu #restore", "click", e => this.onrestore(e));
-    this.bind("md-menu #settings", "click", e => this.onsettings(e));
-    this.bind("md-menu #help", "click", e => this.onhelp(e));
+
+    this.attach(this.onsettings, "click", "#settings");
+    this.attach(this.onhelp, "click", "#help");
+    this.attach(this.onbackup, "click", "md-menu #backup");
+    this.attach(this.onrestore, "click", "md-menu #restore");
+    this.attach(this.onimport, "click", "md-menu #import");
+    this.attach(this.onsettings, "click", "md-menu #settings");
+    this.attach(this.onhelp, "click", "md-menu #help");
     this.find("md-search input").focus();
   }
 
@@ -99,6 +101,29 @@ class CaseManager extends material.MdApp {
     }
   }
 
+  async onimport(e) {
+    try {
+      // Get file to import.
+      let [fh] = await window.showOpenFilePicker({
+        types: [{
+          description: 'SLING case file',
+          accept: {'text/sling': ['.sling']}
+        }],
+        multiple: false,
+      });
+
+      // Read case from file.
+      let file = await fh.getFile();
+      let casefile = store.parse(await file.text());
+
+      // Switch to case editor with new case.
+      await app.show_case(casefile);
+      app.editor.mark_dirty();
+    } catch (error) {
+      material.inform("Error importing case: " + error);
+    }
+  }
+
   async onsettings(e) {
     let dialog = new SettingsDialog();
     let ok = await dialog.show();
@@ -130,6 +155,7 @@ class CaseManager extends material.MdApp {
         <md-menu id="menu">
           <md-menu-item id="backup">Backup</md-menu-item>
           <md-menu-item id="restore">Restore</md-menu-item>
+          <md-menu-item id="import">Import</md-menu-item>
           <md-menu-item id="settings">Settings</md-menu-item>
           <md-menu-item id="help">Help</md-menu-item>
         </md-menu>
