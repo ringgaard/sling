@@ -154,7 +154,7 @@ def case_reponse(value, request, response):
 @app.route("/case/fetch")
 def fetch_case(request):
   # Get case id.
-  caseid = int(request.params()["id"][0])
+  caseid = int(request.param("id"))
 
   # Fetch case file from database.
   rec, ts  = casedb.get(str(caseid))
@@ -219,7 +219,7 @@ proxy_pool = urllib3.PoolManager()
 @app.route("/case/proxy")
 def service_request(request):
   # Get URL.
-  url = request.params()["url"][0]
+  url = request.param("url")
 
   # Check that request is not for local network.
   if sling.net.private(url): return 403
@@ -284,6 +284,13 @@ def wikibase_request(request):
 @app.route("/case/extract", methods=["GET", "POST"])
 def wikibase_request(request):
   return extract.handle(request)
+
+@app.route("/case/ownswork", method="POST")
+def owns_work(request):
+  work = request.param("work")
+  client = request["X-Forwarded-For"]
+  if client is None: client = "internal"
+  log.info("%s OWNS WORK %s" % (client, work))
 
 # Initialize services.
 services.init()

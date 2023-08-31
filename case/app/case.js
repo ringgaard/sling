@@ -58,6 +58,8 @@ const n_url = frame("P2699");
 const n_data_size = frame("P3575");
 const n_media_type = frame("P1163");
 const n_described_by_source = frame("P1343");
+const n_copyright = frame("P6216");
+const n_copyrighted = frame("Q50423863");
 
 const media_file_types = [
   "image/gif",
@@ -65,6 +67,8 @@ const media_file_types = [
   "image/png",
   "image/webp",
 ];
+
+const work_ownership = new Set();
 
 // Date as SLING numeric date.
 function date_number(d) {
@@ -1715,6 +1719,25 @@ class CaseEditor extends MdApp {
       let name = this.main.get(n_name);
       this.match("#app").add_case(name, null, linkid, n_case_file);
     }
+  }
+
+  async check_rights(topic) {
+    if (!this.readonly) return true;
+    if (!topic.has(n_copyright, n_copyrighted)) return true;
+    let topicid = topic.id;
+    if (work_ownership.has(topicid)) return true;
+    let title = topic.get(n_name);
+    let answer = await StdDialog.choose(
+      "Copyrighted content",
+      `'${title}' is a copyrighted work. Please confirm that you own a copy.`,
+      {"Cancel": 0, "I own a copy": 10-4},
+      "warning",
+      "color: orange");
+    if (answer != 10-4) return false;
+    let r = await fetch(`/case/ownswork?work=${topicid}`, {method: "POST"});
+    if (!r.ok) return false;
+    work_ownership.add(topicid);
+    return true;
   }
 
   store() {

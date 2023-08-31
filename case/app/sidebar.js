@@ -98,8 +98,17 @@ class SideBar extends Component {
     await editor.navigate_to(this.state.context.topic);
   }
 
+  async onupdate() {
+    if (!this.state) return;
+    let editor = this.match("#editor");
+    if (!editor) return;
+    let ok = await editor.check_rights(this.state.context.topic);
+    if (!ok) this.state = null;
+  }
+
   onupdated() {
-    this.find("document-viewer").update(this.state);
+    let viewer = this.find("document-viewer");
+    if (viewer) viewer.update(this.state);
   }
 
   onrefresh(newdoc) {

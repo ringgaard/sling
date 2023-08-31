@@ -555,11 +555,16 @@ class DocumentHeader extends Component {
     this.attach(this.onmenu, "select", "md-menu");
   }
 
-  onclick(e) {
+  async onclick(e) {
     if (this.expanded) {
       this.state.viewer.update(null);
       this.expanded = false;
     } else {
+      let editor = this.match("#editor");
+      if (editor) {
+        let ok = await editor.check_rights(this.state.context.topic);
+        if (!ok) return;
+      }
       this.state.viewer.update(this.document());
       this.expanded = true;
     }
