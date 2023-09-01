@@ -126,6 +126,10 @@ class AnnotationBox extends Component {
           let v = html_value(item);
           h.push(`<div class="link">${v}</div>`);
           let decription = item.get(n_description);
+          if (!decription) {
+            let link = item.link();
+            if (link) decription = link.get(n_description);
+          }
           if (decription) {
             h.push(`<div class="descr">${Component.escape(decription)}</div>`);
           }
@@ -144,7 +148,6 @@ class AnnotationBox extends Component {
         z-index: 1;
         display: flex;
         flex-direction: column;
-        min-width: 250px;
 
         font-family: Roboto,Helvetica,sans-serif;
         font-size: 16px;
@@ -257,15 +260,27 @@ export class DocumentViewer extends Component {
     // Open new annotation box popup.
     this.clear_popup();
     this.popup = new AnnotationBox(mention);
-    span.append(this.popup);
+    this.append(this.popup);
 
-    // Adjust annotation box position.
-    const boxwidth = 270;
-    let overflow = span.offsetLeft + boxwidth - this.offsetWidth;
-    if (overflow > 0) {
-      let adjust = Math.min(overflow, span.offsetLeft - 16);
-      if (adjust > 0) this.popup.style.left = `${-adjust}px`;
+    // Get paragraph line height.
+    if (!this.lineheight) {
+      this.lineheight = this.find(".linemeasure").offsetHeight;
     }
+    // Adjust annotation box position.
+    const boxwidth = Math.max(span.offsetWidth, 150);
+    let top = span.offsetTop + span.offsetHeight;
+    let left = span.offsetLeft;
+    if (span.offsetHeight > this.lineheight) {
+      left = 0;
+    } else {
+      let overflow = left + boxwidth - this.offsetWidth;
+      if (overflow > 0) {
+        left -= overflow;
+        if (left < 0) left = 0;
+      }
+    }
+    this.popup.style.top = `${top}px`;
+    this.popup.style.left = `${left}px`;
   }
 
   onclick(e) {
@@ -347,6 +362,9 @@ export class DocumentViewer extends Component {
     h.push(text.slice(from));
     while (ei++ < n) h.push("</span>");
 
+    // Output ghost paragraph for line height measurement.
+    h.push('<p><span class="linemeasure">M</span></p>');
+
     // TODO: output themes
     return h.join("");
   }
@@ -357,12 +375,15 @@ export class DocumentViewer extends Component {
         font: 1rem anubis, serif;
         line-height: 1.5;
         padding: 4px 8px;
+        position: relative;
+      }
+      $ .linemeasure {
+        visibility: hidden;
       }
       $ p {
         margin-right: 8px;
       }
       $ span {
-        position: relative;
         color: #0000dd;
         cursor: pointer;
       }

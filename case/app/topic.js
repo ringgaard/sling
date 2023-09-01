@@ -1280,7 +1280,7 @@ Component.register(RawEditDialog);
 
 class DocumentEditDialog extends MdDialog {
   onconnected() {
-    this.attach(this.onkeydown, "keydown");
+    this.attach(this.onkeydown, "keydown", "textarea");
     this.attach(this.onfind, "find");
   }
 

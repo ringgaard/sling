@@ -32,6 +32,14 @@ export async function search(queries, backends, options = {}) {
       }
     }
   }
+  if (options.plural) {
+    if (!Array.isArray(queries)) queries = [queries];
+    let n = queries.length;
+    for (let i = 0; i < n; ++i) {
+      let query = queries[i];
+      if (query.endsWith("s")) queries.push(query.slice(0, -1));
+    }
+  }
 
   let items = new Array();
   if (Array.isArray(queries)) {

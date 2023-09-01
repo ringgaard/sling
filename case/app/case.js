@@ -298,6 +298,7 @@ class CaseEditor extends MdApp {
     let options = {
       full: true,
       swap: true,
+      plural: true,
       submatch: true,
       local: this.get_index(),
     };

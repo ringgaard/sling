@@ -1234,6 +1234,8 @@ void KnowledgeService::HandleGetStubs(HTTPRequest *request,
     }
     Handle name = item.GetHandle(n_name_);
     if (!name.IsNil()) b.Add(n_name_, name);
+    Handle description = item.GetHandle(n_description_);
+    if (!description.IsNil()) b.Add(n_description_, description);
     Frame stub = b.Create();
     stubs.set(i, stub.handle());
     encoder.Encode(stub);

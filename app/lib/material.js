@@ -2078,17 +2078,6 @@ Component.register(MdSearchResult);
 export class MdFindBox extends Component {
   visible() { return !(this.state === undefined || this.state === null); }
 
-  render() {
-    return `
-      <input id="search"
-        value="${Component.escape(this.state)}"
-        autocomplete="off">
-      <md-icon id="down" icon="keyboard_arrow_down"></md-icon>
-      <md-icon id="up" icon="keyboard_arrow_up" i></md-icon>
-      <md-icon id="close" icon="close"></md-icon>
-    `
-  }
-
   onconnected() {
     this.attach(this.onkeydown, "keydown");
   }
@@ -2097,7 +2086,9 @@ export class MdFindBox extends Component {
     this.attach(this.onclose, "click", "#close");
     this.attach(this.onnext, "click", "#down");
     this.attach(this.onprev, "click", "#up");
-    this.find("#search").focus();
+    let input = this.find("#search");
+    input.select();
+    input.focus();
   }
 
   onkeydown(e) {
@@ -2128,6 +2119,17 @@ export class MdFindBox extends Component {
   onclose(e) {
     this.update();
     this.dispatch("find", undefined, true);
+  }
+
+  render() {
+    return `
+      <input id="search"
+        value="${Component.escape(this.state)}"
+        autocomplete="off">
+      <md-icon id="down" icon="keyboard_arrow_down"></md-icon>
+      <md-icon id="up" icon="keyboard_arrow_up" i></md-icon>
+      <md-icon id="close" icon="close"></md-icon>
+    `
   }
 
   static stylesheet() {
