@@ -25,6 +25,10 @@ let xrefs = [
     property: frame("P2002"),
   },
   {
+    pattern: /^https?:\/\/(?:mobile\.)?x\.com\/([A-Za-z0-9_]+)(\?.*)?$/i,
+    property: frame("P2002"),
+  },
+  {
     pattern: /^https?:\/\/(?:www\.)?instagram\.com\/([A-Za-z0-9_\.)]+)\/?(\?.*)?$/i,
     property: frame("P2003"),
   },

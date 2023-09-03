@@ -53,6 +53,7 @@ n_isbn10 = commons["P957"]
 n_lex = commons["lex"]
 n_name = commons["name"]
 n_is = commons["is"]
+n_media = commons["media"]
 
 n_dc_title = commons["dc:title"]
 n_dc_creator = commons["dc:creator"]
@@ -63,6 +64,7 @@ n_dc_language = commons["dc:language"]
 n_dc_identifier = commons["dc:identifier"]
 n_opf_schema = commons["opf:scheme"]
 n_opf_role = commons["opf:role"]
+n_media_type = commons["media-type"]
 
 n_ncx = commons["ncx"]
 n_navmap = commons["navMap"]
@@ -88,6 +90,8 @@ languages = {
   "da": commons["Q9035"],
   "dan": commons["Q9035"],
 }
+
+figure_types = ["image/jpeg", "image/gif", "image/png"]
 
 LINE_BREAK = chr(2029)
 
@@ -202,6 +206,7 @@ class EPUBBook:
     self.store = sling.Store(commons)
     self.frame = self.store.frame([])
     self.title = None
+    self.figure = None
 
   def __del__(self):
     self.zip.close()
@@ -269,7 +274,11 @@ class EPUBBook:
     manifest = package[n_manifest]
     refs = {}
     for item in manifest(n_item):
-      refs[item[n_id]] = base + item[n_href]
+      filename = base + item[n_href]
+      refs[item[n_id]] = filename
+      ct = item[n_media_type]
+      if ct in figure_types and self.figure:
+        self.add(n_media, self.figure(filename, self.read(filename)))
 
     # Read table of content.
     spine = package[n_spine]
@@ -372,6 +381,7 @@ class EPUBBook:
 def extract(content, params):
    file = io.BytesIO(content)
    book = EPUBBook(file)
+   book.figure = params["figure"]
    return book.extract()
 
 if __name__ == "__main__":

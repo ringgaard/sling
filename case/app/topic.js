@@ -941,11 +941,20 @@ class TopicCard extends Component {
     }
     if (images.length == 0) return;
 
+    let existing = [];
+    for (let redir of topic.links()) {
+      for (let m of redir.all(n_media)) {
+        let url = store.resolve(m);
+        if (url.startsWith('!')) url = url.slice(1);
+        existing.push(url);
+      }
+    }
+
     // Find duplicates.
     this.style.cursor = "wait";
     let r = await fetch("/case/service/dups", {
       method: "POST",
-      body: JSON.stringify({itemid: topic.get(n_id), images}),
+      body: JSON.stringify({itemid: topic.get(n_id), images, existing}),
     });
     this.style.cursor = "";
     let response = await r.json();
@@ -1084,7 +1093,10 @@ class TopicCard extends Component {
     let extraction = await store.parse(r);
 
     // Add extraction to topic.
-    for (let [k, v] of extraction) topic.put(k, v);
+    for (let [k, v] of extraction) {
+      if (k == n_media) v = new URL(v, location.href).href;
+      topic.put(k, v);
+    }
     this.mark_dirty();
     this.refresh();
   }
@@ -1423,21 +1435,33 @@ class TopicPhoto extends Component {
   render() {
     let photo = this.state;
     let url = imageurl(photo.url);
-    let label = `Remove ${photo.width} x ${photo.height}`
-    if (photo.bigger) label += " bigger";
-    if (photo.smaller) label += " smaller";
-    return `
-      <a href="${url}" target="_blank">
-        <img src="${url}" referrerpolicy="no-referrer">
-      </a>
-      <div>
-        <md-checkbox
-          id="remove"
-          label="${label}"
-          checked=${!!photo.remove}>
-        </md-checkbox>
-      </div>
-    `
+    if (photo.existing) {
+      let label = `Existing ${photo.width} x ${photo.height}`
+      if (photo.bigger) label += " bigger";
+      if (photo.smaller) label += " smaller";
+      return `
+        <a href="${url}" target="_blank">
+          <img src="${url}" referrerpolicy="no-referrer">
+        </a>
+        <div>${label}</div>
+      `;
+    } else {
+      let label = `Remove ${photo.width} x ${photo.height}`
+      if (photo.bigger) label += " bigger";
+      if (photo.smaller) label += " smaller";
+      return `
+        <a href="${url}" target="_blank">
+          <img src="${url}" referrerpolicy="no-referrer">
+        </a>
+        <div>
+          <md-checkbox
+            id="remove"
+            label="${label}"
+            checked=${!!photo.remove}>
+          </md-checkbox>
+        </div>
+      `;
+    }
   }
 
   url() {
@@ -1445,7 +1469,8 @@ class TopicPhoto extends Component {
   }
 
   remove() {
-    return this.find("#remove").checked;
+    let checkbox = this.find("#remove");
+    return checkbox && checkbox.checked;
   }
 
   static stylesheet() {
@@ -1457,7 +1482,7 @@ class TopicPhoto extends Component {
         height: 250px;
       }
       $ div {
-        display: inline;
+        font-size: 16px;
       }
       $ md-checkbox input {
         user-select: none;

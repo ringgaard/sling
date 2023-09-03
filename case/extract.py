@@ -15,15 +15,31 @@
 """Text extraction from documents"""
 
 import re
+import time
 
 import sling.extract.epub
+import sling.net
 
 extractors = {
   "application/epub+zip": sling.extract.epub.extract,
   ".epub": sling.extract.epub.extract,
 }
 
-def handle(request):
+filetypes = {
+  ".jpeg":"image/jpeg",
+  ".jpg": "image/jpeg",
+  ".gif": "image/gif",
+  ".png": "image/png",
+}
+
+figures = {}
+
+def add_figure(filename, content):
+  ts = str(int(time.time()))
+  figures[ts + "/" + filename] = content
+  return "/case/figure/" + ts + "/" + filename
+
+def handle_extract(request):
   extractor = None
   mime = request["Content-Type"]
   filename = None
@@ -46,5 +62,17 @@ def handle(request):
     "mime": mime,
     "filename": filename,
     "extension": extension,
+    "figure": add_figure,
   })
+
+def handle_figure(request):
+  m = re.fullmatch("\/(\d+)\/(.*)(\.\w+)", request.path)
+  if m is None: return 404
+  ts = int(m[1])
+  filename = m[1] + "/" + m[2] + m[3]
+  ct = filetypes.get(m[3])
+
+  content = figures.get(filename)
+  if content is None: return 404
+  return sling.net.MemoryFile(content, ts, ct)
 

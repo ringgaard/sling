@@ -207,7 +207,7 @@ class CachedFile:
    self.mtime = 0
 
 @response(CachedFile)
-def static_page(value, request, response):
+def cached_file(value, request, response):
   mtime = os.path.getmtime(value.filename)
   if mtime > value.mtime: value.content = None
   if value.content is None:
@@ -215,6 +215,18 @@ def static_page(value, request, response):
       value.content = f.read()
     value.mtime = mtime
 
+  response["Last-Modified"] = http_time(value.mtime)
+  response.body = value.content
+  response.ct = value.ct
+
+class MemoryFile:
+ def __init__(self, content, mtime=None, ct=None):
+   self.content = content
+   self.ct = ct
+   self.mtime = mtime
+
+@response(MemoryFile)
+def memory_file(value, request, response):
   response["Last-Modified"] = http_time(value.mtime)
   response.body = value.content
   response.ct = value.ct

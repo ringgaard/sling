@@ -263,7 +263,7 @@ def media_request(request):
 
 @app.route("/thumb")
 def thumb_request(request):
-  # Dummy media service that redirects the media server or the original url.
+  # Dummy media service that redirects to the media server or the original url.
   redir = request.path[1:]
   if flags.arg.thumb_service:
     redir = flags.arg.thumb_service + "/" + redir
@@ -282,8 +282,12 @@ def wikibase_request(request):
   return wikibase.handle(request)
 
 @app.route("/case/extract", methods=["GET", "POST"])
-def wikibase_request(request):
-  return extract.handle(request)
+def extract_request(request):
+  return extract.handle_extract(request)
+
+@app.route("/case/figure")
+def figure_request(request):
+  return extract.handle_figure(request)
 
 @app.route("/case/ownswork", method="POST")
 def owns_work(request):

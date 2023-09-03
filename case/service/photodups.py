@@ -23,14 +23,22 @@ class DupsService:
     r = json.loads(request.body)
     itemid = r.get("itemid")
     images = r["images"]
+    existing = r["existing"]
 
     # Try to preload image fingerprints from cache.
     photolib.load_fingerprints(images)
+    photolib.load_fingerprints(existing)
+
+    # Compute image hash for existing photos.
+    photos = {}
+    for url in existing:
+      photo = photolib.get_photo(itemid, url)
+      if photo is None: continue
+      photos[photo.fingerprint] = photo
 
     # Compute image hash for each photo to detect duplicates.
     dups = []
     missing = []
-    photos = {}
     for url in images:
       # Skip videos.
       if photolib.is_video(url): continue
@@ -54,6 +62,7 @@ class DupsService:
             "url": dup.url,
             "width": dup.width,
             "height": dup.height,
+            "existing": dup.url in existing,
           }
         })
 

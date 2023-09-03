@@ -20,13 +20,18 @@ const images_services = [
 {
   pattern: /https?:\/\/\w+\.imagevenue\.com\//,
   convert: (thumb) => {
-    let base = thumb.slice(thumb.lastIndexOf("/") + 1);
-    let hires = base.replace("_t", "_o");
-    let d = MD5(hires);
-    let path = `${d[0]}${d[1]}/${d[2]}${d[3]}/${d[4]}${d[5]}`
-    let photo = "https://cdn-images.imagevenue.com/" +
-                path + "/" + hires;
-    return photo;
+    let m = thumb.match(/^https?\:\/\/(img\d+)\.imagevenue\.com\/(loc\d+)\/th_(.+)/);
+    if (m) {
+      return `https://cdno-data.imagevenue.com/html.${m[1]}/upload2328/${m[2]}/${m[3]}`
+    }
+
+    m = thumb.match(/^https?\:\/\/cdn-thumbs\.imagevenue\.com\/\w+\/\w+\/\w+\/(\w+)_t\.jpg/);
+    if (m) {
+      let hires = `${m[1]}_o.jpg`
+      let d = MD5(hires);
+      let path = `${d[0]}${d[1]}/${d[2]}${d[3]}/${d[4]}${d[5]}`
+      return "https://cdn-images.imagevenue.com/" + path + "/" + hires;
+    }
   },
   fetch: async (url, context) => {
     let r = await fetch(context.proxy(url));
@@ -83,19 +88,6 @@ const images_services = [
 
 {
   pattern: /https?:\/\/www\.imagebam\.com\/(image|view)\//,
-  convert: (thumb) => {
-    let m = thumb.match(
-      /https?\:\/\/thumbs(\d+)\.imagebam\.com\/\w+\/\w+\/\w+\/(.*)/);
-    if (m) {
-      let hostno = m[1];
-      let base = m[2];
-      let hires = base.replace("_t", "_o");
-      let d = MD5(hires);
-      let path = `${d[0]}${d[1]}/${d[2]}${d[3]}/${d[4]}${d[5]}`
-      let photo = `https://images${hostno}.imagebam.com/${path}/${hires}`;
-      return photo;
-    }
-  },
   fetch: async (url, context) => {
     let r = await fetch(context.proxy(url + "?full=1"), {
       headers: {"XCookie": "nsfw_inter=1"},
