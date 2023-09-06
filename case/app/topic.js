@@ -591,6 +591,7 @@ class TopicCard extends Component {
       }
     } else if  (command == "analyze") {
       if (settings.analyzer) {
+        this.style.cursor = "wait";
         try {
           let r = await fetch(settings.analyzer, {
             method: "POST",
@@ -620,6 +621,7 @@ class TopicCard extends Component {
         } catch (error) {
           inform("Error analyzing document: " + error);
         }
+        this.style.cursor = "";
       } else {
         inform("No document analyzer configured");
       }

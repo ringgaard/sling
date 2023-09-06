@@ -72,8 +72,10 @@ static int LevenshteinDistance(const int *s, int m, const int *t, int n) {
 class AliasExtractor : public task::FrameProcessor {
  public:
   void Startup(task::Task *task) override {
-    string lang = task->Get("language", "en");
-    language_ = commons_->Lookup("/lang/" + lang);
+    string languages = task->Get("languages", "en");
+    for (Text lang : Text(languages).split(',')) {
+      languages_.add(commons_->Lookup("/lang/" + lang.str()));
+    }
     skip_aux_ = task->Get("skip_aux", false);
     wikitypes_.Init(commons_);
 
@@ -114,7 +116,7 @@ class AliasExtractor : public task::FrameProcessor {
 
       if (!store->IsString(value)) continue;
       Handle lang = store->GetString(value)->qualifier();
-      bool foreign = !lang.IsNil() && lang != language_;
+      bool foreign = !lang.IsNil() && !languages_.has(lang);
 
       if (property == n_name_) {
         if (!foreign) {
@@ -205,8 +207,8 @@ class AliasExtractor : public task::FrameProcessor {
   // Wiki page types.
   WikimediaTypes wikitypes_;
 
-  // Language for aliases.
-  Handle language_;
+  // Language(s) for aliases.
+  HandleSet languages_;
 
   // Skip auxiliary items.
   bool skip_aux_ = false;

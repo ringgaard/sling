@@ -134,6 +134,7 @@ const tagsdir = {
   "Brown-eyed": stmt(n_eye_color, "Q17122705"),
   "Brown Eyed": stmt(n_eye_color, "Q17122705"),
   "Hazel Eyes": stmt(n_eye_color, "Q17122740"),
+  "Hazel-eyed": stmt(n_eye_color, "Q17122740"),
   "Eyes Hazel": stmt(n_eye_color, "Q17122740"),
   "Blue/green Eyes": stmt(n_eye_color, "Q3375649"),
   "Blue/grey Eyes": stmt(n_eye_color, "Q42845936"),

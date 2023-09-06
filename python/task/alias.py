@@ -55,10 +55,12 @@ class AliasWorkflow:
 
     if aliases == None:
       # Get language-dependent aliases from Wikidata and Wikpedia.
+      languages = ",".join(flags.arg.languages)
       wikidata_aliases = self.wf.map(self.data.items(),
                                      "alias-extractor",
                                      params={
                                        "language": language,
+                                       "languages": languages,
                                        "skip_aux": True,
                                      },
                                      format="message/alias",
@@ -67,8 +69,11 @@ class AliasWorkflow:
       if flags.arg.wikidata_only:
         wikipedia_aliases = None
       else:
-        wikipedia_aliases = self.wf.read(self.data.wikipedia_aliases(language),
-                                         name="wikipedia-alias-reader")
+        wikipedia_aliases = []
+        for lang in flags.arg.languages:
+          wikipedia_aliases.append(
+            self.wf.read(self.data.wikipedia_aliases(lang),
+                         name=lang + "-wikipedia-alias-reader"))
 
       aliases = self.wf.collect(wikipedia_aliases, wikidata_aliases)
 
@@ -129,23 +134,20 @@ class AliasWorkflow:
     return repo
 
 def extract_aliases():
-  for language in flags.arg.languages:
-    log.info("Extract " + language + " aliases")
-    wf = AliasWorkflow(language + "-alias-extraction")
-    wf.extract_aliases(language=language)
-    run(wf.wf)
+  log.info("Extract " + flags.arg.language + " aliases")
+  wf = AliasWorkflow(flags.arg.language + "-alias-extraction")
+  wf.extract_aliases(language=flags.arg.language)
+  run(wf.wf)
 
 def build_nametab():
-  for language in flags.arg.languages:
-    log.info("Build " + language + " name table")
-    wf = AliasWorkflow(language + "-name-table")
-    wf.build_name_table(language=language)
-    run(wf.wf)
+  log.info("Build " + flags.arg.language + " name table")
+  wf = AliasWorkflow(flags.arg.language + "-name-table")
+  wf.build_name_table(language=flags.arg.language)
+  run(wf.wf)
 
 def build_phrasetab():
-  for language in flags.arg.languages:
-    log.info("Build " + language + " phrase table")
-    wf = AliasWorkflow(language + "-phrase-table")
-    wf.build_phrase_table(language=language)
-    run(wf.wf)
+  log.info("Build " + flags.arg.language + " phrase table")
+  wf = AliasWorkflow(flags.arg.language + "-phrase-table")
+  wf.build_phrase_table(language=flags.arg.language)
+  run(wf.wf)
 
