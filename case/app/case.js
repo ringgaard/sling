@@ -286,7 +286,7 @@ class CaseEditor extends MdApp {
           results.push({
             ref: match.id,
             name: name,
-            title: name + " 🗎",
+            title: name + " 📖",
             description: match.get(n_description),
             topic: match,
           });

@@ -237,7 +237,7 @@ class PDFBook:
       index = 1
       for line in f.read().split("\n"):
         line = line.strip()
-        if len(line) == 0: continue
+        if len(line) == 0 or line[0] == ';': continue
         if line[0] == '!':
           colon = line.index(':')
           key = line[1:colon].strip()
@@ -259,52 +259,80 @@ class PDFBook:
       page.extract(p)
 
   def analyze_boilerplate(self):
+    head_lines = int(self.meta.get("headlines", "0"))
     foot_lines = int(self.meta.get("footlines", "1"))
+    header_positions = []
+    top_positions = []
+    bottom_positions = []
     footer_positions = []
-    body_positions = []
     for p in book.pages:
-      if len(p.lines) < foot_lines + 1: continue
-      last = p.lines[-foot_lines]
-      penultimate = p.lines[-foot_lines - 1]
-      footer_positions.append(last.y0)
-      body_positions.append(penultimate.y1)
+      if len(p.lines) < head_lines + foot_lines + 1: continue
+      if head_lines > 0:
+        head_last = p.lines[head_lines - 1]
+        body_first = p.lines[head_lines]
+        header_positions.append(head_last.y1)
+        top_positions.append(body_first.y0)
+      if foot_lines > 0:
+        body_last = p.lines[-foot_lines - 1]
+        foot_first = p.lines[-foot_lines]
+        bottom_positions.append(body_last.y1)
+        footer_positions.append(foot_first.y0)
 
-    body_end = mean(body_positions)
-    foot_start = mean(footer_positions)
-    foot_sep = (foot_start + body_end) / 2
-    print("footer: %d [%d-%d]" %
-      (int(foot_sep), int(body_end), int(foot_start)))
-    if "footer" not in self.meta: self.meta["footer"] = str(foot_sep)
+    if head_lines > 0:
+      head_end = mean(header_positions)
+      body_start = mean(top_positions)
+      head_sep = (head_end + body_start) / 2
+      print("header: %d [%d-%d]" %
+        (int(head_sep), int(head_end), int(body_start)))
+      if "header" not in self.meta: self.meta["header"] = str(head_sep)
+
+    if foot_lines > 0:
+      body_end = mean(bottom_positions)
+      foot_start = mean(footer_positions)
+      foot_sep = (foot_start + body_end) / 2
+      print("footer: %d [%d-%d]" %
+         (int(foot_sep), int(body_end), int(foot_start)))
+      if "footer" not in self.meta: self.meta["footer"] = str(foot_sep)
 
   def remove_boilerplate(self):
     titles = set()
     if "title" in self.meta: titles.add(self.meta["title"].lower())
     for chapter in self.spine: titles.add(chapter.title.lower())
+    header = float(self.meta.get("header", "0"))
     footer = float(self.meta.get("footer", "0"))
+    pageno = int(self.meta.get("firstpage", "1"))
     pageskip = int(self.meta.get("pageskip", 10))
-
-    pageno = 1
     for p in book.pages:
-      if footer:
-        cut = None
-        lineno = 0
-        for l in p.lines:
-          if l.y0 > footer:
-            if cut is None: cut = lineno
-            num = None
-            m = re.search(r"(\d+)", l.text)
-            if m:
-              num = int(m[1])
-              if num != pageno:
-                if num < pageno or num > pageno + pageskip:
-                  print("ignore page no", num, ", expected", pageno)
-                else:
-                  print("expected page", pageno, ", got", num)
-                  pageno = num
-            elif l.text.lower() not in titles:
-              print("page", pageno, "footer", l.text)
-          lineno += 1
-        if cut: p.lines = p.lines[:cut]
+      first = None
+      last = None
+      lineno = 0
+      pnumber = None
+      for l in p.lines:
+        in_header = header > 0 and l.y0 < header
+        in_footer = footer > 0 and l.y1 > footer
+
+        if in_header or in_footer:
+          for m in re.findall(r"\d+", l.text):
+            num = int(m)
+            if pnumber is None or abs(num - pageno) < abs(pnumber - pageno):
+              pnumber = num
+          if flags.arg.debug: print(pageno, l.y0, l.text)
+
+        if in_header: first = lineno + 1
+        if in_footer and last is None : last = lineno
+        lineno += 1
+
+      if first is None: first = 0
+      if first is None: last = len(p.lines)
+      p.lines = p.lines[first:last]
+
+      if pnumber is not None:
+        if pnumber <  pageno or pnumber > pageno + pageskip:
+          print("ignore page no", pnumber, ", expected", pageno)
+        elif pnumber != pageno:
+          print("expected page", pageno, ", got", pnumber)
+          pageno = num
+
       p.pageno = pageno
       pageno += 1
 
