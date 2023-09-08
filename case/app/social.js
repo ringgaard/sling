@@ -331,7 +331,7 @@ let xrefs = [
     extract: m => decodeURIComponent(m[1]) + ":" + decodeURIComponent(m[2])
   },
   {
-    pattern: /^https?:\/\/mypmates\.club\/(.+)/,
+    pattern: /^https?:\/\/mypmates\.club\/((?!model).+)/,
     property: frame("PMYP"),
   },
 ];

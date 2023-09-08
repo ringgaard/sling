@@ -73,7 +73,7 @@ const images_services = [
 
 {
   pattern: /https?:\/\/imgbox\.com\//,
-  convert: (thumb) => {
+  convertx: (thumb) => {
     return thumb.replace("thumbs", "images").replace("_t", "_o");
   },
   fetch: async (url, context) => {

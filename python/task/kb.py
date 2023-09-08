@@ -79,7 +79,7 @@ class KnowledgeBaseWorkflow:
     return self.wf.resource("twitter-media.sling",
                             dir=corpora.workdir("media"),
                             format="text/frame",
-                            serial=420)
+                            serial=9030)
 
   def photos(self):
     """Resource for photo database."""
@@ -156,7 +156,6 @@ class KnowledgeBaseWorkflow:
   #  330 wikilinks
   #  400 wikipedia media
   #  410 imdb
-  #  420 twitter
   #  500 elf
   #  510 nace
   #  520 dknace
@@ -166,6 +165,7 @@ class KnowledgeBaseWorkflow:
   #  610 factgrid items
   # 1000 case topics
   # 9020 photos
+  # 9030 twitter
 
   def extended_item_sources(self):
     return self.wf.bundle(
