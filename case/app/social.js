@@ -221,6 +221,10 @@ let xrefs = [
     property: frame("P3351"),
   },
   {
+    pattern: /^https?:\/\/www\.adultfilmdatabase\.com\/actor\/[A-Za-z-]+-(\d+)/,
+    property: frame("P3351"),
+  },
+  {
     pattern: /^https?:\/\/www\.egafd\.com\/actresses\/details.php\/id\/(\w+)/,
     property: frame("P8767"),
   },

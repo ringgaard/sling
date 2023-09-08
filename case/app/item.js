@@ -26,6 +26,7 @@ const n_internal = frame("internal");
 const n_casefile = frame("casefile");
 const n_main = frame("main");
 const n_lex = frame("lex");
+const n_bookmarked = frame("bookmarked");
 
 const n_item_type = frame("/w/item");
 const n_lexeme_type = frame("/w/lexeme");
@@ -583,14 +584,19 @@ class DocumentHeader extends Component {
     let context = this.state.context;
     let name = source instanceof Frame && source.get(n_name);
     if (!name) name = `Document ${context.index + 1}`;
+    let bookmarked = source instanceof Frame && source.get(n_bookmarked);
 
     return `
       <md-icon icon="expand_${this.expanded ? "less" : "more"}"></md-icon>
       <md-icon icon="description"></md-icon>
       <div>${Component.escape(name)}</div>
       <md-spacer></md-spacer>
+      ${bookmarked ? '<md-icon icon="bookmark"></md-icon>' : ''}
       <md-menu>
         <md-menu-item id="pin">Pin</md-menu-item>
+        <md-menu-item id="bookmark">
+          ${bookmarked ? "Remove" : "Add"} Bookmark
+        </md-menu-item>
         <md-menu-item id="edit">Edit</md-menu-item>
         <md-menu-item id="analyze">Analyze</md-menu-item>
         <md-menu-item id="phrasematch">Match phrases</md-menu-item>

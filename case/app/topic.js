@@ -24,6 +24,7 @@ const n_id = store.id;
 const n_is = store.is;
 const n_name = frame("name");
 const n_alias = frame("alias");
+const n_bookmarked = frame("bookmarked");
 const n_case_file = frame("Q108673968");
 const n_instance_of = frame("P31");
 const n_different_from = frame("P1889");
@@ -682,6 +683,16 @@ class TopicCard extends Component {
         inform(`${plural(updates, "topic mapping")} added`);
         this.mark_dirty();
         sidebar.onrefresh(doc);
+      }
+    } else if  (command == "bookmark") {
+      if (source instanceof Frame) {
+        if (source.get(n_bookmarked)) {
+          source.remove(n_bookmarked);
+        } else {
+          source.set(n_bookmarked, true);
+        }
+        this.mark_dirty();
+        this.refresh();
       }
     } else if  (command == "delete") {
       let n = this.state.slot(n_lex, context.index);
