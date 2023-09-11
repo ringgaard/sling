@@ -23,7 +23,10 @@ const n_formatter_url = frame("P1630");
 const n_matcher = frame("P8460");
 
 const n_properties = frame("properties");
+const n_languages = frame("languages");
 const n_rank = frame("rank");
+const n_code = frame("code");
+const n_item = frame("item");
 const n_fanin = frame("/w/item/fanin");
 
 const max_fanin = Number.POSITIVE_INFINITY;
@@ -57,6 +60,7 @@ const property_shortcuts = {
 
 var kbschema;
 var kbprops;
+var languages = new Map();
 
 class Properties {
   constructor(schema) {
@@ -233,7 +237,21 @@ export async function get_property_index() {
 
   // Build property index.
   kbprops = new Properties(schema);
+
   return kbprops;
+}
+
+export async function langcode(lang) {
+  if (!lang) return;
+  if (languages.size == 0) {
+    let schema = await get_schema();
+    for (let language of schema.get(n_languages)) {
+      let item = language.get(n_item);
+      let code = language.get(n_code);
+      if (item && code) languages.set(item, code);
+    }
+  }
+  return languages.get(lang);
 }
 
 export function qualified(v) {

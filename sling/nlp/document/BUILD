@@ -67,6 +67,7 @@ cc_library(
   deps = [
     ":token-properties",
     "//sling/base",
+    "//sling/base:registry",
     "//sling/string:ctype",
     "//sling/string:text",
     "//sling/util:unicode",

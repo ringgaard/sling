@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "sling/base/macros.h"
+#include "sling/base/registry.h"
 #include "sling/base/types.h"
 #include "sling/nlp/document/token-properties.h"
 #include "sling/string/text.h"
@@ -185,12 +186,15 @@ class TokenizerText {
 };
 
 // Tokenization processor.
-class TokenProcessor {
+class TokenProcessor : public Component<TokenProcessor> {
  public:
   virtual ~TokenProcessor() = default;
   virtual void Init(CharacterFlags *char_flags) = 0;
   virtual void Process(TokenizerText *t) = 0;
 };
+
+#define REGISTER_TOKENIZER(type, component) \
+    REGISTER_COMPONENT_TYPE(sling::nlp::TokenProcessor, type, component)
 
 // Tokenizer for breaking text into tokens and sentences.
 class Tokenizer {
@@ -210,15 +214,21 @@ class Tokenizer {
   Tokenizer();
   ~Tokenizer();
 
+  // Adds tokenization processor to tokenizer. The tokenizer takes ownership
+  // of the tokenization processor.
+  void Add(TokenProcessor *processor);
+
+  // Initializes tokenizer with type.
+  void Init(const string &type);
+
+  // Initializes default tokenizer type.
+  void Init();
+
   // Initializes PTB tokenizer.
   void InitPTB();
 
   // Initializes LDC tokenizer.
   void InitLDC();
-
-  // Adds tokenization processor to tokenizer. The tokenizer takes ownership
-  // of the tokenization processor.
-  void Add(TokenProcessor *processor);
 
   // Tokenizes text into sentences with tokens.
   void Tokenize(Text text, const Callback &callback) const;

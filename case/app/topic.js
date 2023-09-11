@@ -15,7 +15,7 @@ import {imageurl} from "/common/lib/gallery.js";
 import {LabelCollector, value_parser} from "/common/lib/datatype.js";
 import {Document} from "/common/lib/document.js";
 
-import {get_schema, inverse_property} from "./schema.js";
+import {get_schema, inverse_property, langcode} from "./schema.js";
 import {search, kbsearch, SearchResultsDialog} from "./search.js";
 import "./item.js"
 import "./fact.js"
@@ -35,6 +35,7 @@ const n_not_safe_for_work = frame("Q2716583");
 const n_full_work = frame("P953");
 const n_url = frame("P2699");
 const n_mime_type = frame("P1163");
+const n_language = frame("P407");
 
 // Cross-reference configuration.
 var xrefs;
@@ -576,6 +577,11 @@ class TopicCard extends Component {
     let doc = e.detail.document;
     let source = doc.source;
     let context = doc.context;
+
+    let lang;
+    if (source instanceof Frame) lang = await langcode(source.get(n_language));
+    if (!lang) lang = await langcode(context.topic.get(n_language));
+
     let sidebar = document.getElementById("sidebar");
     if (command == "edit") {
       let dialog = new DocumentEditDialog(source);
@@ -593,32 +599,34 @@ class TopicCard extends Component {
     } else if  (command == "analyze") {
       if (settings.analyzer) {
         this.style.cursor = "wait";
+        let headers = {"Content-Type": "text/lex"};
+        if (lang) headers["Content-Language"] = lang;
         try {
           let r = await fetch(settings.analyzer, {
             method: "POST",
-            headers: {"Content-Type": "text/lex"},
+            headers: headers,
             body: store.resolve(source),
           });
-          if (!r.ok) {
-            inform(`Error ${r.status} in analyzer ${settings.analyzer}`);
-            return;
-          }
-          let result = await r.text();
-          if (source instanceof Frame) {
-            source.set(n_is, result);
+          if (r.ok) {
+            let result = await r.text();
+            if (source instanceof Frame) {
+              source.set(n_is, result);
 
-            let newdoc = new Document(store, source, context);
-            sidebar.onrefresh(newdoc);
+              let newdoc = new Document(store, source, context);
+              sidebar.onrefresh(newdoc);
+            } else {
+              let n = this.state.slot(n_lex, context.index);
+              context.topic.set_value(n, result);
+
+              let newdoc = new Document(store, result, context);
+              sidebar.onrefresh(newdoc);
+            }
+
+            this.mark_dirty();
+            this.refresh();
           } else {
-            let n = this.state.slot(n_lex, context.index);
-            context.topic.set_value(n, result);
-
-            let newdoc = new Document(store, result, context);
-            sidebar.onrefresh(newdoc);
+            inform(`Error ${r.status} in analyzer ${settings.analyzer}`);
           }
-
-          this.mark_dirty();
-          this.refresh();
         } catch (error) {
           inform("Error analyzing document: " + error);
         }

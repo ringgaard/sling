@@ -24,7 +24,7 @@ namespace nlp {
 
 DocumentTokenizer::DocumentTokenizer() {
   // Initialize tokenizer.
-  tokenizer_.InitLDC();
+  tokenizer_.Init();
 }
 
 void DocumentTokenizer::Tokenize(Document *document, Text text) const {

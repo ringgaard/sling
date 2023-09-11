@@ -33,11 +33,16 @@ let xrefs = [
     property: frame("P2003"),
   },
   {
-    pattern: /^https?:\/\/www\.facebook\.com\/pg\/([^\?\/]+)/i,
+    pattern: /^https?:\/\/(?:(:?www|m)\.)facebook\.com\/pg\/([^\?\/]+)/i,
     property: frame("P2013"),
   },
   {
-    pattern: /^https?:\/\/www\.facebook\.com\/people\/([^\?\/]+)/i,
+    pattern: /^https?:\/\/(?:(?:www|m)\.)facebook\.com\/people\/([^\?\/]+)\/(\w+)/,
+    property: frame("P2013"),
+    extract: m => decodeURIComponent(m[1]) + "-" + decodeURIComponent(m[2])
+  },
+  {
+    pattern: /^https?:\/\/www\.facebook\.com\/profile\.php\?id=(\d+)/,
     property: frame("P2013"),
   },
   {

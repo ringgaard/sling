@@ -26,7 +26,7 @@ namespace sling {
 namespace nlp {
 
 PhraseTokenizer::PhraseTokenizer() {
-  tokenizer_.InitLDC();
+  tokenizer_.Init();
 }
 
 void PhraseTokenizer::Tokenize(Text text, std::vector<string> *tokens) const {

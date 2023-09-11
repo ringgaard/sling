@@ -826,6 +826,18 @@ class CaseEditor extends MdApp {
     }
   }
 
+  selection() {
+    let list = this.find("topic-list");
+    if (!list) return;
+    return list.selection();
+  }
+
+  selected() {
+    let selection = this.selection();
+    if (!selection || selection.length != 1) return;
+    return selection[0];
+  }
+
   redirect(source, target) {
     let topics = this.topics;
     if (this.scraps.length > 0) topics = topics.concat(this.scraps);
@@ -1199,8 +1211,7 @@ class CaseEditor extends MdApp {
     // Get selected topics.
     if (this.readonly) return;
     if (this.folder == this.scraps) return this.oncopy(e);
-    let list = this.find("topic-list");
-    let selected = list.selection();
+    let selected = this.selection();
     if (selected.length == 0) return;
     console.log(`cut ${selected.length} topics to clipboard`);
 
@@ -1221,8 +1232,7 @@ class CaseEditor extends MdApp {
     }
 
     // Get selected topics.
-    let list = this.find("topic-list");
-    let selected = list.selection();
+    let selected = this.selection();
     if (selected.length == 0) return;
     e.stopPropagation();
 
@@ -1361,8 +1371,7 @@ class CaseEditor extends MdApp {
   async onmerge(e) {
     // Get selected topics.
     if (this.readonly) return;
-    let list = this.find("topic-list");
-    let selected = list.selection();
+    let selected = this.selection();
     if (selected.length == 1) {
       let focus = selected[0];
       for (let redirect of focus.links()) {
@@ -1515,8 +1524,7 @@ class CaseEditor extends MdApp {
     }
 
     // Get list of topic to export, either selection or all topics.
-    let list = this.find("topic-list");
-    let topics = list.selection();
+    let topics = this.selection();
     if (topics.length > 0) {
       // Do not allow exporting case topics.
       for (let topic of topics) {

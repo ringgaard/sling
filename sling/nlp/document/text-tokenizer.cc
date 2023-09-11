@@ -18,11 +18,16 @@
 #include <vector>
 #include <unordered_map>
 
+#include "sling/base/flags.h"
 #include "sling/base/logging.h"
 #include "sling/base/types.h"
 #include "sling/string/ctype.h"
 #include "sling/util/unicode.h"
 #include "sling/web/entity-ref.h"
+
+DEFINE_string(tokenizer, "ldc", "default text tokenizer type");
+
+REGISTER_COMPONENT_REGISTRY("tokenizer", sling::nlp::TokenProcessor);
 
 namespace sling {
 namespace nlp {
@@ -356,6 +361,18 @@ void Tokenizer::ClearCharacterFlags(char32 ch, TokenFlags flags) {
   char_flags_.clear(ch, flags);
 }
 
+void Tokenizer::Add(TokenProcessor *processor) {
+  processor->Init(&char_flags_);
+  processors_.push_back(processor);
+}
+
+void Tokenizer::Init(const string &type) {
+  Add(TokenProcessor::Create(type));
+}
+
+void Tokenizer::Init() {
+  Init(FLAGS_tokenizer);
+}
 
 void Tokenizer::InitPTB() {
   Add(new PTBTokenization());
@@ -363,11 +380,6 @@ void Tokenizer::InitPTB() {
 
 void Tokenizer::InitLDC() {
   Add(new LDCTokenization());
-}
-
-void Tokenizer::Add(TokenProcessor *processor) {
-  processor->Init(&char_flags_);
-  processors_.push_back(processor);
 }
 
 void Tokenizer::Tokenize(Text text, const Callback &callback) const {
@@ -1225,6 +1237,10 @@ void LDCTokenization::Init(CharacterFlags *char_flags) {
   // Special LDC tokens.
   AddTokenType("(...)", 0);
 }
+
+REGISTER_TOKENIZER("standard", StandardTokenization);
+REGISTER_TOKENIZER("ptb", PTBTokenization);
+REGISTER_TOKENIZER("ldc", LDCTokenization);
 
 }  // namespace nlp
 }  // namespace sling

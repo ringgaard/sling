@@ -75,6 +75,7 @@
   :language :/lang/wikilang
   name: "Afrikaans"
   code: "af"
+  item: Q14196
 
   /lang/wikilang/wiki_category: "Kategorie"
   /lang/wikilang/wiki_image: "Sjabloon"
@@ -86,6 +87,7 @@
   :language :/lang/wikilang
   name: "Bulgarian"
   code: "bg"
+  item: Q7918
 
   /lang/wikilang/wiki_category: "Категория"
   /lang/wikilang/wiki_image: "Файл"
@@ -97,6 +99,7 @@
   :language :/lang/wikilang
   name: "Catalan"
   code: "ca"
+  item: Q7026
 
   /lang/wikilang/wiki_category: "Categoria"
   /lang/wikilang/wiki_image: "Fitxer"
@@ -108,6 +111,7 @@
   :language :/lang/wikilang
   name: "Czech"
   code: "cs"
+  item: Q9056
 
   /lang/wikilang/wiki_category: "Kategorie"
   /lang/wikilang/wiki_image: "Soubor"
@@ -119,6 +123,7 @@
   :language :/lang/wikilang
   name: "Danish"
   code: "da"
+  item: Q9035
 
   /lang/wikilang/wiki_category: "Kategori"
   /lang/wikilang/wiki_image: "Fil"
@@ -130,6 +135,7 @@
   :language :/lang/wikilang
   name: "German"
   code: "de"
+  item: Q188
 
   /lang/wikilang/wiki_category: "Kategorie"
   /lang/wikilang/wiki_image: "Datei"
@@ -141,6 +147,7 @@
   :language :/lang/wikilang
   name: "Greek"
   code: "el"
+  item: Q9129
 
   /lang/wikilang/wiki_category: "Κατηγορία"
   /lang/wikilang/wiki_image: "File"
@@ -152,6 +159,7 @@
   :language :/lang/wikilang
   name: "English"
   code: "en"
+  item: Q1860
 
   /lang/wikilang/wiki_category: "Category"
   /lang/wikilang/wiki_image: "File"
@@ -163,6 +171,7 @@
   :language :/lang/wikilang
   name: "Spanish"
   code: "es"
+  item: Q1321
 
   /lang/wikilang/wiki_category: "Categoría"
   /lang/wikilang/wiki_image: "Archivo"
@@ -174,6 +183,7 @@
   :language :/lang/wikilang
   name: "Esperanto"
   code: "eo"
+  item: Q143
 
   /lang/wikilang/wiki_category: "Kategorio"
   /lang/wikilang/wiki_image: "Dosiero"
@@ -185,6 +195,7 @@
   :language :/lang/wikilang
   name: "Basque"
   code: "eu"
+  item: Q8752
 
   /lang/wikilang/wiki_category: "Kategoria"
   /lang/wikilang/wiki_image: "Fitxategi"
@@ -196,6 +207,7 @@
   :language :/lang/wikilang
   name: "Finnish"
   code: "fi"
+  item: Q1412
 
   /lang/wikilang/wiki_category: "Luokka"
   /lang/wikilang/wiki_image: "Tiedosto"
@@ -207,6 +219,7 @@
   :language :/lang/wikilang
   name: "French"
   code: "fr"
+  item: Q150
 
   /lang/wikilang/wiki_category: "Catégorie"
   /lang/wikilang/wiki_image: "Fichier"
@@ -218,6 +231,7 @@
   :language :/lang/wikilang
   name: "Hebrew"
   code: "he"
+  item: Q9288
 
   /lang/wikilang/wikipedia: Q199913
 }
@@ -226,6 +240,7 @@
   :language :/lang/wikilang
   name: "Hungarian"
   code: "hu"
+  item: Q9067
 
   /lang/wikilang/wiki_category: "Kategória"
   /lang/wikilang/wiki_image: "Fájl"
@@ -237,6 +252,7 @@
   :language :/lang/wikilang
   name: "Indonesian"
   code: "id"
+  item: Q9240
 
   /lang/wikilang/wiki_category: "Kategori"
   /lang/wikilang/wiki_image: "Berkas"
@@ -248,6 +264,7 @@
   :language :/lang/wikilang
   name: "Italian"
   code: "it"
+  item: Q652
 
   /lang/wikilang/wiki_category: "Categoria"
   /lang/wikilang/wiki_image: "Immagine"
@@ -259,6 +276,7 @@
   :language :/lang/wikilang
   name: "Japanese"
   code: "ja"
+  item: Q5287
 
   /lang/wikilang/wikipedia: Q177837
 }
@@ -267,6 +285,7 @@
   :language :/lang/wikilang
   name: "Korean"
   code: "ko"
+  item: Q9176
 
   /lang/wikilang/wikipedia: Q17985
 }
@@ -275,6 +294,7 @@
   :language :/lang/wikilang
   name: "Latin"
   code: "la"
+  item: Q397
 
   /lang/wikilang/wiki_category: "Categoria"
   /lang/wikilang/wiki_image: "Fasciculus"
@@ -286,6 +306,7 @@
   :language :/lang/wikilang
   name: "Lithuanian"
   code: "lt"
+  item: Q9083
 
   /lang/wikilang/wiki_category: "Kategorija"
   /lang/wikilang/wiki_image: "Vaizdas"
@@ -297,6 +318,7 @@
   :language :/lang/wikilang
   name: "Malay"
   code: "ms"
+  item: Q15065
 
   /lang/wikilang/wiki_category: "Kategori"
   /lang/wikilang/wiki_image: "Fail"
@@ -308,6 +330,7 @@
   :language :/lang/wikilang
   name: "Dutch"
   code: "nl"
+  item: Q7411
 
   /lang/wikilang/wiki_category: "Categorie"
   /lang/wikilang/wiki_image: "Bestand"
@@ -319,6 +342,7 @@
   :language :/lang/wikilang
   name: "Norwegian"
   code: "no"
+  item: Q9043
 
   /lang/wikilang/wiki_category: "Kategori"
   /lang/wikilang/wiki_image: "Fil"
@@ -330,6 +354,7 @@
   :language :/lang/wikilang
   name: "Polish"
   code: "pl"
+  item: Q809
 
   /lang/wikilang/wiki_category: "Kategoria"
   /lang/wikilang/wiki_image: "Plik"
@@ -341,6 +366,7 @@
   :language :/lang/wikilang
   name: "Portuguese"
   code: "pt"
+  item: Q5146
 
   /lang/wikilang/wiki_category: "Categoria"
   /lang/wikilang/wiki_image: "Ficheiro"
@@ -352,6 +378,7 @@
   :language :/lang/wikilang
   name: "Romanian"
   code: "ro"
+  item: Q7913
 
   /lang/wikilang/wiki_category: "Categorie"
   /lang/wikilang/wiki_image: "Fișier"
@@ -363,6 +390,7 @@
   :language :/lang/wikilang
   name: "Russian"
   code: "ru"
+  item: Q7737
 
   /lang/wikilang/wiki_category: "Категория"
   /lang/wikilang/wiki_image: "Файл"
@@ -374,6 +402,7 @@
   :language :/lang/wikilang
   name: "Serbo-Croatian"
   code: "sh"
+  item: Q9301
 
   /lang/wikilang/wiki_category: "Kategorija"
   /lang/wikilang/wiki_image: "Datoteka"
@@ -385,6 +414,7 @@
   :language :/lang/wikilang
   name: "Slovak"
   code: "sk"
+  item: Q9058
 
   /lang/wikilang/wiki_category: "Kategória"
   /lang/wikilang/wiki_image: "Súbor"
@@ -396,6 +426,7 @@
   :language :/lang/wikilang
   name: "Serbian"
   code: "sr"
+  item: Q9299
 
   /lang/wikilang/wiki_category: "Категорија"
   /lang/wikilang/wiki_image: "Датотека"
@@ -407,6 +438,7 @@
   :language :/lang/wikilang
   name: "Swedish"
   code: "sv"
+  item: Q9027
 
   /lang/wikilang/wiki_category: "Kategori"
   /lang/wikilang/wiki_image: "Fil"
@@ -418,6 +450,7 @@
   :language :/lang/wikilang
   name: "Ukrainian"
   code: "uk"
+  item: Q8798
 
   /lang/wikilang/wiki_category: "Категорія"
   /lang/wikilang/wiki_image: "Файл"
@@ -429,6 +462,7 @@
   :language :/lang/wikilang
   name: "Chinese"
   code: "zh"
+  item: Q7850
   /lang/wikilang/wikipedia: Q30239
 }
 
