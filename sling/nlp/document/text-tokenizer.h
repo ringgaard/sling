@@ -95,9 +95,22 @@ class CharacterFlags {
   // Returns the flags for a character value.
   TokenFlags get(char32 ch) const;
 
+  // Set open/close quotes.
+  void set_quotes(const string &open, const string &close) {
+     open_quote_ = open;
+     close_quote_ = close;
+  }
+
+  const string &open_quote() const { return open_quote_; }
+  const string &close_quote() const { return close_quote_; }
+
  private:
   std::vector<TokenFlags> low_flags_;
   std::unordered_map<char32, TokenFlags> high_flags_;
+
+  // Standard open (initial) and close (final) quote marks.
+  string open_quote_ = "“";
+  string close_quote_ = "”";
 };
 
 // Unicode representation of text with extra information about each Unicode
@@ -247,11 +260,11 @@ class Tokenizer {
   DISALLOW_COPY_AND_ASSIGN(Tokenizer);
 };
 
-// Standard tokenization.
-class StandardTokenization : public TokenProcessor {
+// Basic tokenization.
+class BasicTokenization : public TokenProcessor {
  public:
-  StandardTokenization();
-  ~StandardTokenization() override;
+  BasicTokenization();
+  ~BasicTokenization() override;
 
   // Initialize common tokenizer.
   void Init(CharacterFlags *char_flags) override;
@@ -285,8 +298,15 @@ class StandardTokenization : public TokenProcessor {
   bool discard_urls_ = true;
 };
 
+// Syntactic tokenization with clitics splitting for treebanks.
+class SyntacticTokenization : public BasicTokenization {
+ public:
+  // Initialize PTB tokenization.
+  void Init(CharacterFlags *char_flags) override;
+};
+
 // Classic PTB (Penn Treebank) tokenization, which does not split on hyphens.
-class PTBTokenization : public StandardTokenization {
+class PTBTokenization : public SyntacticTokenization {
  public:
   // Initialize PTB tokenization.
   void Init(CharacterFlags *char_flags) override;
@@ -294,7 +314,7 @@ class PTBTokenization : public StandardTokenization {
 
 // LDC (Linguistic Data Consortium) tokenization, which splits on hyphens,
 // except for special prefixes and suffixes.
-class LDCTokenization : public StandardTokenization {
+class LDCTokenization : public SyntacticTokenization {
  public:
   // Initialize LDC tokenization.
   void Init(CharacterFlags *char_flags) override;

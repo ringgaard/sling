@@ -26,7 +26,6 @@ from transformers import AutoTokenizer
 flags.define("--port", default=8123, type=int, metavar="PORT")
 flags.define("--clear", default=False, action="store_true")
 flags.define("--cluster", default=False, action="store_true")
-flags.define("--model", default="dslim/bert-base-NER", metavar="MODEL")
 flags.define("--debug", default=False, action="store_true")
 flags.parse()
 
@@ -44,9 +43,6 @@ schema = sling.DocumentSchema(commons)
 
 commons.freeze()
 
-model = AutoModelForTokenClassification.from_pretrained(flags.arg.model)
-tokenizer = AutoTokenizer.from_pretrained(flags.arg.model)
-
 BEGIN = 0
 INSIDE = 1
 OUTSIDE = 2
@@ -63,20 +59,12 @@ bio_tags = [
   (INSIDE, n_organization, "I-ORG"),
 ]
 
-word_mapping = {
-  "``": '"',
-  "''": '"',
-}
-
 def valid(prev, next):
   if prev[0] == OUTSIDE:
     return next[0] != INSIDE
   if next[0] == INSIDE:
     return prev[1] == next[1] and prev[0] == BEGIN or prev[0] == INSIDE
   return True
-
-def clear_annotations(doc):
-  doc.remove_annotations()
 
 def add_mention(doc, markables, begin, end, label):
   if begin == end: return
@@ -96,83 +84,103 @@ def add_mention(doc, markables, begin, end, label):
       mention.evoke(doc.store.frame({n_is: referent}))
     markables[phrase] = mention
 
-def annotate_names(doc):
-  markables = {} if flags.arg.cluster else None
-  for start, end in doc.sentences():
+class BertModel:
+  def __init__(self, name):
+    self.name = name
+    self.model = None
+    self.tokenizer = None
 
-    # Build subword tokens and token mapping.
-    tokens = ["[CLS]"]
-    tokenmap = [start]
-    for t in range(start, end):
-      word = doc.tokens[t].word
-      word = word_mapping.get(word, word)
-      subwords = tokenizer.tokenize(word)
-      tokenmap.extend([t] * len(subwords))
-      tokens.extend(subwords)
-    tokens.append("[SEP]")
-    tokenmap.append(end)
+  def load(self):
+    if self.model is None:
+      print("loading", self.name)
+      self.model = AutoModelForTokenClassification.from_pretrained(self.name)
+      self.tokenizer = AutoTokenizer.from_pretrained(self.name)
 
-    # Run model to get predictions.
-    text = doc.phrase(start, end).replace("``", '"').replace("''", '"')
-    inputs = tokenizer.encode(text, return_tensors="pt")
-    outputs = model(inputs)[0]
+  def analyze(self, doc):
+    markables = {} if flags.arg.cluster else None
+    for start, end in doc.sentences():
 
-    if inputs.shape[1] != len(tokenmap):
-      print("Tokenization alignment error (%d vs %d) %s" %
-            (inputs.shape[1], len(tokenmap), text))
-      continue
+      # Build subword tokens and token mapping.
+      tokens = ["[CLS]"]
+      tokenmap = [start]
+      for t in range(start, end):
+        word = doc.tokens[t].word
+        subwords = self.tokenizer.tokenize(word)
+        tokenmap.extend([t] * len(subwords))
+        tokens.extend(subwords)
+      tokens.append("[SEP]")
+      tokenmap.append(end)
 
-    # Decode valid BIO tag sequence from predictions.
-    rankings = torch.topk(outputs, len(bio_tags), dim=2).indices[0]
-    predictions = []
-    prev = bio_tags[0]
-    for ranking in rankings:
-      for label in ranking:
-        next = bio_tags[label]
-        if valid(prev, next):
-          predictions.append(next)
-          prev = next
-          break
+      # Run model to get predictions.
+      text = doc.phrase(start, end)
+      inputs = self.tokenizer.encode(text, return_tensors="pt")
+      outputs = self.model(inputs)[0]
 
-    if flags.arg.debug:
-      print(text)
-      s = []
+      if inputs.shape[1] != len(tokenmap):
+        print("Tokenization alignment error (%d vs %d) %s" %
+              (inputs.shape[1], len(tokenmap), text))
+        continue
+
+      # Decode valid BIO tag sequence from predictions.
+      rankings = torch.topk(outputs, len(bio_tags), dim=2).indices[0]
+      predictions = []
+      prev = bio_tags[0]
+      for ranking in rankings:
+        for label in ranking:
+          next = bio_tags[label]
+          if valid(prev, next):
+            predictions.append(next)
+            prev = next
+            break
+
+      if flags.arg.debug:
+        print(text)
+        s = []
+        for t in range(len(predictions)):
+          action, label, tag = predictions[t]
+          if action == OUTSIDE:
+            s.append(tokens[t])
+          else:
+            s.append(tokens[t] + "/" + tag)
+        print("NER:", " ".join(s))
+
+      begin = None
+      tag = None
       for t in range(len(predictions)):
-        action, label, tag = predictions[t]
-        if action == OUTSIDE:
-          s.append(tokens[t])
-        else:
-          s.append(tokens[t] + "/" + tag)
-      print("NER:", " ".join(s))
+        action, label, _ = predictions[t]
+        if action == BEGIN:
+          if begin is not None:
+            add_mention(doc, markables, tokenmap[begin], tokenmap[t], tag)
+          begin = t
+          tag = label
+        elif action == OUTSIDE:
+          if begin is not None:
+            b = tokenmap[begin]
+            e = tokenmap[t]
+            if tokens[t].startswith("##"): e += 1
+            add_mention(doc, markables, b, e, tag)
+          begin = None
 
-    begin = None
-    tag = None
-    for t in range(len(predictions)):
-      action, label, _ = predictions[t]
-      if action == BEGIN:
-        if begin is not None:
-          add_mention(doc, markables, tokenmap[begin], tokenmap[t], tag)
-        begin = t
-        tag = label
-      elif action == OUTSIDE:
-        if begin is not None:
-          b = tokenmap[begin]
-          e = tokenmap[t]
-          if tokens[t].startswith("##"): e += 1
-          add_mention(doc, markables, b, e, tag)
-        begin = None
+      if begin is not None:
+        add_mention(doc, markables, tokenmap[begin], end, tag)
 
-    if begin is not None:
-      add_mention(doc, markables, tokenmap[begin], end, tag)
+models = {
+  "en": BertModel("dslim/bert-base-NER"),
+  "da": BertModel("alexandrainst/da-ner-base"),
+}
 
 @app.route("/analyze", method="POST")
 def media_request(request):
   store = sling.Store(commons)
   doc = sling.lex(request.body.decode(), store, schema)
   language = request["Content-Language"]
+  if language is None: language = "en"
+  model = models.get(language)
+  if model is None: return 406
+  model.load()
 
-  if flags.arg.clear: clear_annotations(doc);
-  annotate_names(doc)
+  if flags.arg.clear: doc.remove_annotations()
+  model.analyze(doc)
 
   return doc.tolex()
 

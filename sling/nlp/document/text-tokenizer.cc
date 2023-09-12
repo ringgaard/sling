@@ -428,9 +428,14 @@ void Tokenizer::Tokenize(Text text, const Callback &callback) const {
 
       // Track quotes and brackets.
       if (t.is(i, TOKEN_QUOTE)) {
-        // Convert "double" quotes to ``Penn Treebank'' quotes.
-        token.text = in_quote ? "''" : "``";
-        in_quote = !in_quote;
+        // Convert straight quotes to open/close quotes.
+        if (in_quote) {
+          token.text = char_flags_.close_quote();
+          in_quote = false;
+        } else {
+          token.text = char_flags_.open_quote();
+          in_quote = true;
+        }
       } else if (t.is(i, TOKEN_OPEN)) {
         bracket_level++;
       } else if (t.is(i, TOKEN_CLOSE)) {
@@ -574,45 +579,6 @@ static const struct { const char *tag; uint64 flags; } kStyleTags[] = {
 
 #undef TS
 
-static const char *kTokenSuffixes[] = {
-  "'s", nullptr,
-  "'m", nullptr,
-  "'d", nullptr,
-  "'ll", nullptr,
-  "'re", nullptr,
-  "'ve", nullptr,
-  "n't", nullptr,
-  "’s", "'s",
-  "’m", "'m",
-  "’d", "'d",
-  "’ll", "'ll",
-  "’re", "'re",
-  "’ve", "'ve",
-  "n’t", "n't",
-  nullptr
-};
-
-static const char *kHyphenatedPrefixExceptions[] = {
-  "e-", "a-", "u-", "x-", "anti-", "agro-", "be-", "bi-", "bio-", "co-",
-  "counter-", "cross-", "cyber-", "de-", "eco-", "ex-", "extra-", "inter-",
-  "intra-", "macro-", "mega-", "micro-", "mid-", "mini-", "multi-", "neo-",
-  "non-", "over-", "pan-", "para-", "peri-", "post-", "pre-", "pro-",
-  "pseudo-", "quasi-", "re-", "semi-", "sub-", "super-", "tri-", "ultra-",
-  "un-", "uni-", "vice-",
-  nullptr
-};
-
-static const char *kHyphenatedSuffixExceptions[] = {
-  "-esque", "-fest", "-fold", "-gate", "-itis", "-less", "-most", "-rama",
-  "-wise",
-  nullptr
-};
-
-static const char *kHyphenationExceptions[] = {
-  "mm-hm", "mm-mm", "o-kay", "uh-huh", "uh-oh",
-  nullptr
-};
-
 static const char *kAbbreviations[] = {
   "a.", "abb.", "abg.", "abs.", "abt.", "ac.", "acad.", "acc.", "adm.",
   "admin.", "adopt.", "adr.", "ads.", "adv.", "af.", "ag.", "ala.", "alm.",
@@ -714,17 +680,17 @@ static const char *kAbbreviations[] = {
   nullptr
 };
 
-StandardTokenization::StandardTokenization() {
+BasicTokenization::BasicTokenization() {
   token_types_ = new TrieNode();
   suffix_types_ = new TrieNode();
 }
 
-StandardTokenization::~StandardTokenization() {
+BasicTokenization::~BasicTokenization() {
   delete token_types_;
   delete suffix_types_;
 }
 
-TrieNode *StandardTokenization::AddTokenType(const char *token,
+TrieNode *BasicTokenization::AddTokenType(const char *token,
                                              TokenFlags flags,
                                              const char *value) {
   TrieNode *node = token_types_;
@@ -743,7 +709,7 @@ TrieNode *StandardTokenization::AddTokenType(const char *token,
   return node;
 }
 
-TrieNode *StandardTokenization::AddSuffixType(const char *token,
+TrieNode *BasicTokenization::AddSuffixType(const char *token,
                                               const char *value) {
   std::vector<char32> ustr;
   const char *p = token;
@@ -765,7 +731,7 @@ TrieNode *StandardTokenization::AddSuffixType(const char *token,
   return node;
 }
 
-void StandardTokenization::Init(CharacterFlags *char_flags) {
+void BasicTokenization::Init(CharacterFlags *char_flags) {
   // Setup character classifications.
   for (int c = 0; c < kMaxAscii; ++c) {
     TokenFlags flags = 0;
@@ -797,11 +763,12 @@ void StandardTokenization::Init(CharacterFlags *char_flags) {
   // Space tokens.
   AddTokenType(" ", TOKEN_DISCARD);
   AddTokenType("\xc2\xa0", TOKEN_DISCARD, " ");  // non-breaking space
-  AddTokenType("\t", TOKEN_EOS | TOKEN_PARA | TOKEN_DISCARD);
+  AddTokenType("\t", TOKEN_EOS | TOKEN_DISCARD);
   AddTokenType("\r", TOKEN_LINE | TOKEN_DISCARD);
   AddTokenType("\n", TOKEN_LINE | TOKEN_DISCARD);
   AddTokenType("\n\n", TOKEN_EOS | TOKEN_PARA | TOKEN_DISCARD);
   AddTokenType("\n\r\n", TOKEN_EOS | TOKEN_PARA | TOKEN_DISCARD);
+  AddTokenType(".  ", TOKEN_EOS, ".");
 
   // Synthetic tags for section and chapter breaks.
   AddTokenType("<section>", TOKEN_EOS | TOKEN_PARA | TOKEN_DISCARD | 1);
@@ -822,16 +789,16 @@ void StandardTokenization::Init(CharacterFlags *char_flags) {
   AddTokenType(":", 0);
   AddTokenType("|", TOKEN_EOS | TOKEN_DISCARD);
   AddTokenType("·", TOKEN_EOS | TOKEN_PARA | TOKEN_DISCARD);  // middle dot
-  AddTokenType("...", TOKEN_CONDEOS);
-  AddTokenType("…", TOKEN_CONDEOS, "...");
+  AddTokenType("…", TOKEN_CONDEOS);
+  AddTokenType("...", TOKEN_CONDEOS, "…");
   AddTokenType("&", 0, "&");
-  AddTokenType(". . .", TOKEN_CONDEOS, "...");
-  AddTokenType("--", 0);
-  AddTokenType("---", 0, "--");
-  AddTokenType("‒", 0, "--");  // U+2012 figure dash
-  AddTokenType("–", 0, "--");  // U+2013 en dash
-  AddTokenType("—", 0, "--");  // U+2014 em dash
-  AddTokenType("−", 0, "--");  // U+2212 minus sign
+  AddTokenType(". . .", TOKEN_CONDEOS, "…");
+  AddTokenType("--", 0, "—");
+  AddTokenType("---", 0, "—");
+  AddTokenType("—", 0);  // U+2014 em dash
+  AddTokenType("–", 0, "—");  // U+2013 en dash
+  AddTokenType("‒", 0, "—");  // U+2012 figure dash
+  AddTokenType("−", 0, "—");  // U+2212 minus sign
   AddTokenType("\"", TOKEN_QUOTE);
   AddTokenType("＂", TOKEN_QUOTE);
   AddTokenType("，", 0, ",");
@@ -852,25 +819,20 @@ void StandardTokenization::Init(CharacterFlags *char_flags) {
   AddTokenType("{", TOKEN_OPEN);
   AddTokenType("}", TOKEN_CLOSE);
 
-  AddTokenType("``", TOKEN_OPEN);
-  AddTokenType("''", TOKEN_CLOSE);
+  // Quote tokens.
+  AddTokenType("“", TOKEN_OPEN);
+  AddTokenType("”", TOKEN_CLOSE);
 
-  AddTokenType("„", TOKEN_OPEN, "``");
-  AddTokenType("”", TOKEN_CLOSE, "''");
-  AddTokenType("“", TOKEN_CLOSE, "''");
+  AddTokenType("„", TOKEN_OPEN, "“");
+  AddTokenType("‘", TOKEN_OPEN, "“");
+  AddTokenType("‚", TOKEN_OPEN, "“");
+  AddTokenType("’", TOKEN_CLOSE, "”");
 
-  AddTokenType("‘", TOKEN_OPEN, "``");
-  AddTokenType("‚", TOKEN_OPEN, "``");
-  AddTokenType("’", TOKEN_CLOSE, "''");
+  AddTokenType("«", TOKEN_OPEN, "“");
+  AddTokenType("»", TOKEN_CLOSE, "”");
 
-  AddTokenType("“", TOKEN_OPEN, "``");
-  AddTokenType("”", TOKEN_CLOSE, "''");
-
-  AddTokenType("»", TOKEN_OPEN, "``");
-  AddTokenType("«", TOKEN_CLOSE, "''");
-
-  AddTokenType("›", TOKEN_OPEN, "``");
-  AddTokenType("‹", TOKEN_CLOSE, "''");
+  AddTokenType("‹", TOKEN_OPEN, "“");
+  AddTokenType("›", TOKEN_CLOSE, "”");
 
   // URL tokens.
   TokenFlags url_flags = TOKEN_URL;
@@ -890,26 +852,9 @@ void StandardTokenization::Init(CharacterFlags *char_flags) {
   AddTokenType(":-O", TOKEN_CONDEOS);
   AddTokenType(":-|", TOKEN_CONDEOS);
 
-  // Words that should be split into two tokens.
-  AddTokenType("cannot", TOKEN_WORD | TOKEN_SPLIT | 3);
-  AddTokenType("d'ye", TOKEN_WORD | TOKEN_SPLIT | 2);
-  AddTokenType("gimme", TOKEN_WORD | TOKEN_SPLIT | 3);
-  AddTokenType("gonna", TOKEN_WORD | TOKEN_SPLIT | 3);
-  AddTokenType("gotta", TOKEN_WORD | TOKEN_SPLIT | 3);
-  AddTokenType("lemme", TOKEN_WORD | TOKEN_SPLIT | 3);
-  AddTokenType("more'n", TOKEN_WORD | TOKEN_SPLIT | 4);
-  AddTokenType("'tis", TOKEN_WORD | TOKEN_SPLIT | 2);
-  AddTokenType("'twas", TOKEN_WORD | TOKEN_SPLIT | 2);
-  AddTokenType("wanna", TOKEN_WORD | TOKEN_SPLIT | 3);
-
-  // Clitics splitting.
-  AddTokenType("d'", 0);
-  AddTokenType("l'", 0);
-  AddTokenType("all'", 0);
-  AddTokenType("dell'", 0);
-  AddTokenType("dall'", 0);
-  AddTokenType("nell'", 0);
-  AddTokenType("sull'", 0);
+  // Possesives.
+  AddTokenType("'s", TOKEN_WORD);
+  AddSuffixType("'s", nullptr);
 
   // Breaking tag tokens.
   const char **tag = kBreakingTags;
@@ -945,19 +890,9 @@ void StandardTokenization::Init(CharacterFlags *char_flags) {
     AddTokenType(*abbrev, TOKEN_WORD);
     abbrev++;
   }
-
-  // Suffixes that should be separate tokens. These are also added as special
-  // token types to allow matching these as standalone tokens.
-  const char **suffixes = kTokenSuffixes;
-  while (*suffixes) {
-    const char *suffix = *suffixes++;
-    const char *replacement = *suffixes++;
-    AddSuffixType(suffix, replacement);
-    AddTokenType(suffix, TOKEN_WORD, replacement);
-  }
 }
 
-void StandardTokenization::Process(TokenizerText *t) {
+void BasicTokenization::Process(TokenizerText *t) {
   int i = 0;
   while (i < t->length()) {
     // Check for "continental-style" ordinal numerals, e.g. '10.' for 10th. The
@@ -1197,15 +1132,108 @@ void StandardTokenization::Process(TokenizerText *t) {
   }
 }
 
+static const char *kTokenSuffixes[] = {
+  "'s", nullptr,
+  "'m", nullptr,
+  "'d", nullptr,
+  "'ll", nullptr,
+  "'re", nullptr,
+  "'ve", nullptr,
+  "n't", nullptr,
+  "’s", "'s",
+  "’m", "'m",
+  "’d", "'d",
+  "’ll", "'ll",
+  "’re", "'re",
+  "’ve", "'ve",
+  "n’t", "n't",
+  nullptr
+};
+
+void SyntacticTokenization::Init(CharacterFlags *char_flags) {
+  BasicTokenization::Init(char_flags);
+
+  // Words that should be split into two tokens.
+  AddTokenType("cannot", TOKEN_WORD | TOKEN_SPLIT | 3);
+  AddTokenType("d'ye", TOKEN_WORD | TOKEN_SPLIT | 2);
+  AddTokenType("gimme", TOKEN_WORD | TOKEN_SPLIT | 3);
+  AddTokenType("gonna", TOKEN_WORD | TOKEN_SPLIT | 3);
+  AddTokenType("gotta", TOKEN_WORD | TOKEN_SPLIT | 3);
+  AddTokenType("lemme", TOKEN_WORD | TOKEN_SPLIT | 3);
+  AddTokenType("more'n", TOKEN_WORD | TOKEN_SPLIT | 4);
+  AddTokenType("'tis", TOKEN_WORD | TOKEN_SPLIT | 2);
+  AddTokenType("'twas", TOKEN_WORD | TOKEN_SPLIT | 2);
+  AddTokenType("wanna", TOKEN_WORD | TOKEN_SPLIT | 3);
+
+  // Clitics splitting.
+  AddTokenType("d'", 0);
+  AddTokenType("l'", 0);
+  AddTokenType("all'", 0);
+  AddTokenType("dell'", 0);
+  AddTokenType("dall'", 0);
+  AddTokenType("nell'", 0);
+  AddTokenType("sull'", 0);
+
+  // Penn quotes.
+  char_flags->set_quotes("``", "''");
+  AddTokenType("``", TOKEN_OPEN, "``");
+  AddTokenType("''", TOKEN_CLOSE, "''");
+
+  AddTokenType("“", TOKEN_OPEN, "``");
+  AddTokenType("”", TOKEN_CLOSE, "''");
+
+  AddTokenType("„", TOKEN_OPEN, "``");
+  AddTokenType("‘", TOKEN_OPEN, "``");
+  AddTokenType("‚", TOKEN_OPEN, "``");
+  AddTokenType("’", TOKEN_CLOSE, "''");
+
+  AddTokenType("«", TOKEN_OPEN, "``");
+  AddTokenType("»", TOKEN_CLOSE, "''");
+
+  AddTokenType("‹", TOKEN_OPEN, "``");
+  AddTokenType("›", TOKEN_CLOSE, "''");
+
+  // Suffixes that should be separate tokens. These are also added as special
+  // token types to allow matching these as standalone tokens.
+  const char **suffixes = kTokenSuffixes;
+  while (*suffixes) {
+    const char *suffix = *suffixes++;
+    const char *replacement = *suffixes++;
+    AddSuffixType(suffix, replacement);
+    AddTokenType(suffix, TOKEN_WORD, replacement);
+  }
+}
+
 void PTBTokenization::Init(CharacterFlags *char_flags) {
-  StandardTokenization::Init(char_flags);
+  SyntacticTokenization::Init(char_flags);
 
   // Allow hyphens in numbers and words.
   char_flags->add('-', NUMBER_START | NUMBER_PUNCT | WORD_PUNCT);
 }
 
+static const char *kHyphenatedPrefixExceptions[] = {
+  "e-", "a-", "u-", "x-", "anti-", "agro-", "be-", "bi-", "bio-", "co-",
+  "counter-", "cross-", "cyber-", "de-", "eco-", "ex-", "extra-", "inter-",
+  "intra-", "macro-", "mega-", "micro-", "mid-", "mini-", "multi-", "neo-",
+  "non-", "over-", "pan-", "para-", "peri-", "post-", "pre-", "pro-",
+  "pseudo-", "quasi-", "re-", "semi-", "sub-", "super-", "tri-", "ultra-",
+  "un-", "uni-", "vice-",
+  nullptr
+};
+
+static const char *kHyphenatedSuffixExceptions[] = {
+  "-esque", "-fest", "-fold", "-gate", "-itis", "-less", "-most", "-rama",
+  "-wise",
+  nullptr
+};
+
+static const char *kHyphenationExceptions[] = {
+  "mm-hm", "mm-mm", "o-kay", "uh-huh", "uh-oh",
+  nullptr
+};
+
 void LDCTokenization::Init(CharacterFlags *char_flags) {
-  StandardTokenization::Init(char_flags);
+  SyntacticTokenization::Init(char_flags);
 
   // Allow dash to start a negative number (i.e. dash as a sign).
   char_flags->add('-', NUMBER_START);
@@ -1238,7 +1266,8 @@ void LDCTokenization::Init(CharacterFlags *char_flags) {
   AddTokenType("(...)", 0);
 }
 
-REGISTER_TOKENIZER("standard", StandardTokenization);
+REGISTER_TOKENIZER("basic", BasicTokenization);
+REGISTER_TOKENIZER("syntax", SyntacticTokenization);
 REGISTER_TOKENIZER("ptb", PTBTokenization);
 REGISTER_TOKENIZER("ldc", LDCTokenization);
 
