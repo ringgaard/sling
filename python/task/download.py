@@ -15,8 +15,8 @@
 """Workflows for downloading wiki dumps and datasets"""
 
 import os
-from urllib.request import urlopen
 import time
+import urllib3
 
 import sling
 import sling.task.corpora as corpora
@@ -33,6 +33,9 @@ flags.define("--dataset",
              help="list of datasets to fetch",
              default="",
              metavar="LIST")
+
+# Connection pool manager.
+http =  urllib3.PoolManager()
 
 # Number of concurrent downloads.
 download_concurrency = 0
@@ -76,18 +79,26 @@ class UrlDownload:
 
       # Download from url to file.
       if ratelimit > 0: log.info("Start download of " + output.name)
-      conn = urlopen(url)
-      last_modified = time.mktime(time.strptime(conn.headers['last-modified'],
+      r = http.request('GET', url, preload_content=False)
+      last_modified = time.mktime(time.strptime(r.headers['last-modified'],
                                                 "%a, %d %b %Y %H:%M:%S GMT"))
-      total_bytes = "bytes_downloaded"
-      bytes = name + "_bytes_downloaded"
+      content_length = int(r.headers['content-length'])
+
+      total_bytes_counter = "bytes_downloaded"
+      bytes_counter = name + "_bytes_downloaded"
+      bytes = 0
       with open(output.name, 'wb') as f:
-        while True:
-          chunk = conn.read(chunksize)
-          if not chunk: break
+        while bytes < content_length:
+          chunk = r.read(chunksize)
+          if chunk is None:
+            raise IOError("Download truncated %d bytes read, %d expected" %
+                          (bytes, content_length))
           f.write(chunk)
-          task.increment(total_bytes, len(chunk))
-          task.increment(bytes, len(chunk))
+          size = len(chunk)
+          bytes += size
+          task.increment(total_bytes_counter, size)
+          task.increment(bytes_counter, size)
+      r.release_conn()
       os.utime(output.name, (last_modified, last_modified))
       if ratelimit > 0: download_concurrency -= 1
 

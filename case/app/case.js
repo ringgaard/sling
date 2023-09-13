@@ -2065,7 +2065,8 @@ class CaseEditor extends MdApp {
         fill: #808080;
       }
       $ md-drawer {
-        min-width: 150px;
+        width: 150px;
+        min-width: 100px;
         padding: 3px 0px 3px 3px;
         overflow-x: clip;
         overflow-y: auto;

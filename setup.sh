@@ -76,6 +76,8 @@ fi
 #   praw (reddit)
 #   urllib3 (proxy)
 #   pillow (photo dedup)
+#   torch (bert analyzer)
+#   transformers (bert analyzer)
 
 # Done.
 echo
