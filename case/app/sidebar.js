@@ -23,9 +23,11 @@ class SideBar extends Component {
   visible() { return this.state; }
 
   onrendered() {
+    this.tabIndex = 0;
     this.attach(this.onresizedown, "pointerdown", "#sidebar-left");
     this.attach(this.onresizeup, "pointerup", "#sidebar-left");
     this.attach(this.onresizemove, "pointermove", "#sidebar-left");
+    this.attach(this.onkeydown, "keydown");
 
     if (this.state) {
       let context = this.state.context;
@@ -39,6 +41,13 @@ class SideBar extends Component {
       this.find("#docname").update(docname);
       this.attach(this.onmenu, "select", "md-menu");
       this.attach(this.onnavigate, "click", "#titlebox");
+    }
+  }
+
+  async onkeydown(e) {
+    if (e.ctrlKey && e.code == "KeyE") {
+      e.preventDefault();
+      this.onedit();
     }
   }
 
@@ -60,6 +69,36 @@ class SideBar extends Component {
     this.style.width = `${this.width + offset}px`;
   }
 
+  async onedit() {
+    let editor = this.match("#editor");
+    let card = await editor.navigate_to(this.state.context.topic);
+    card.dispatch("docmenu", {command: "edit", document: this.state}, true);
+  }
+
+  onnext() {
+    let context = this.state.context;
+    let topic = context.topic;
+    let index = context.index + 1;
+    let source = context.topic.value(context.topic.slot(n_lex, index));
+    if (source) {
+      this.update(new Document(store, source, {topic, index}));
+    } else {
+      inform("already at end");
+    }
+  }
+
+  onprev() {
+    let context = this.state.context;
+    let topic = context.topic;
+    let index = context.index - 1;
+    let source = context.topic.value(context.topic.slot(n_lex, index));
+    if (source) {
+      this.update(new Document(store, source, {topic, index}));
+    } else {
+      inform("already at beginning");
+    }
+  }
+
   async onmenu(e) {
     let command = e.target.id;
     let document = this.state;
@@ -67,25 +106,9 @@ class SideBar extends Component {
     if (command == "close") {
       this.update(null);
     } else if (command == "next") {
-      let context = this.state.context;
-      let topic = context.topic;
-      let index = context.index + 1;
-      let source = context.topic.value(context.topic.slot(n_lex, index));
-      if (source) {
-        this.update(new Document(store, source, {topic, index}));
-      } else {
-        inform("already at end");
-      }
+      this.onnext();
     } else if (command == "prev") {
-      let context = this.state.context;
-      let topic = context.topic;
-      let index = context.index - 1;
-      let source = context.topic.value(context.topic.slot(n_lex, index));
-      if (source) {
-        this.update(new Document(store, source, {topic, index}));
-      } else {
-        inform("already at beginning");
-      }
+      this.onprev();
     } else {
       let editor = this.match("#editor");
       let card = await editor.navigate_to(this.state.context.topic);

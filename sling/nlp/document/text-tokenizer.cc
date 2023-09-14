@@ -851,12 +851,12 @@ void BasicTokenization::Init(CharacterFlags *char_flags) {
   AddTokenType(":-O", TOKEN_CONDEOS);
   AddTokenType(":-|", TOKEN_CONDEOS);
 
-  // Possesives.
+  // Possessives.
   AddTokenType("’", WORD_PUNCT, "'");
   AddTokenType("'s", TOKEN_WORD);
-  AddTokenType("’s", TOKEN_WORD, "'s");
+  AddTokenType("’s", TOKEN_WORD);
   AddSuffixType("'s", nullptr);
-  AddSuffixType("’s", "'s");
+  AddSuffixType("’s", nullptr);
 
   // Breaking tag tokens.
   const char **tag = kBreakingTags;
