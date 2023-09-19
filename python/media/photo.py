@@ -748,6 +748,9 @@ class Profile:
     if url.startswith("http://reddit.com"): url = "https" + url[4:]
     if url.startswith("http://imgur.com"): url = "https" + url[4:]
 
+    m = re.match("https://reddit\.com/media\?url=(.+)", url)
+    if m != None: url = urllib.parse.unquote(m.group(1))
+
     m = re.match("(https://imgur\.com/.+)[\?#].*", url)
     if m == None: m = re.match("(https?://reddit\.com/.+)[\?#].*", url)
     if m == None: m = re.match("(https?://i\.redd\.it/.+)[\?#].*", url)

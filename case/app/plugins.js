@@ -234,6 +234,7 @@ var plugins = [
     /^https?:\/\/i\.redd\.it\//,
     /^https?:\/\/i\.redditmedia\.com\//,
     /^https?:\/\/preview\.redd\.it\//,
+    /^https?:\/\/www\.reddit\.com\/media/,
     /^https?:\/\/asset\.dr\.dk\//,
     /^https?:\/\/imgchest\.com\/p\//,
     /^https?:\/\/www\.imgchest\.com\/p\//,

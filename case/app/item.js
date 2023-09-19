@@ -583,6 +583,7 @@ class DocumentHeader extends Component {
     let source = this.state.source;
     let context = this.state.context;
     let name = source instanceof Frame && source.get(n_name);
+    if (!name && context) name = context.topic.get(n_name);
     if (!name) name = `Document ${context.index + 1}`;
     let bookmarked = source instanceof Frame && source.get(n_bookmarked);
 

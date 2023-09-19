@@ -16,6 +16,7 @@
 
 import requests
 import json
+import time
 
 import sling
 import sling.flags as flags
@@ -82,6 +83,11 @@ for item in kb:
   r = session.get("https://sg.media-imdb.com/suggests/n/%s.json" % imdbid)
   if r.status_code == 503:
     print("UNAVAILABLE", item.id, imdbid, item.name)
+    continue
+  elif r.status_code == 429:
+    reset = int(r.headers.get("x-ratelimit-reset", 60))
+    print("IMDB rate limit", reset, "secs")
+    time.sleep(reset)
     continue
   elif r.status_code == 400 or r.status_code == 404:
     print("NOTFOUND", item.id, imdbid, item.name)
