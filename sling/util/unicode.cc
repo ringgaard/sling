@@ -52,6 +52,7 @@ Normalization ParseNormalization(const string &spec) {
       case 'n': flags |= NORMALIZE_NAME; break;
       case 'P': flags |= NORMALIZE_PHRASE; break;
       case 'D': flags |= NORMALIZE_DOUBLES; break;
+      case 'q': flags |= NORMALIZE_QUOTES; break;
       default:
         LOG(FATAL) << "Unknown normalization specifier: " << spec;
     }
@@ -69,6 +70,7 @@ string NormalizationString(Normalization normalization) {
   if (normalization & NORMALIZE_NAME) str.push_back('n');
   if (normalization & NORMALIZE_PHRASE) str.push_back('P');
   if (normalization & NORMALIZE_DOUBLES) str.push_back('D');
+  if (normalization & NORMALIZE_QUOTES) str.push_back('q');
   return str;
 }
 
@@ -166,6 +168,9 @@ int Unicode::Normalize(int c, int flags) {
   }
   if (flags & NORMALIZE_WHITESPACE) {
     if (IsWhitespace(c)) c = 0;
+  }
+  if (flags & NORMALIZE_QUOTES) {
+    if (c == 0x2019 || c == 0x02BC) c = 0x27;
   }
   return c;
 }

@@ -77,10 +77,14 @@ def ts2str(ts):
 
 # Duration to string.
 def dur2str(duration):
-  hours = int(duration / 3600)
+  days = int(duration / 86400)
+  hours = int((duration % 86400) / 3600)
   mins = int((duration % 3600) / 60)
   secs = int(duration % 60)
-  return "%dh %02dm %02ds" % (hours, mins, secs)
+  if days > 0:
+    return "%dd %dh %02dm %02ds" % (days, hours, mins, secs)
+  else:
+    return "%dh %02dm %02ds" % (hours, mins, secs)
 
 class Trigger:
   def __init__(self, config):

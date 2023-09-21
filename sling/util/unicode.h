@@ -121,28 +121,31 @@ enum UnicodeCategoryMask {
 
 // String normalization flags.
 enum Normalization {
-  NORMALIZE_NONE        = 0x00,  // no normalization
-  NORMALIZE_CASE        = 0x01,  // lowercase
-  NORMALIZE_LETTERS     = 0x02,  // remove diacritics
-  NORMALIZE_DIGITS      = 0x04,  // replace all digits with 9
-  NORMALIZE_PUNCTUATION = 0x08,  // remove punctuation
-  NORMALIZE_WHITESPACE  = 0x10,  // remove whitespace
-  NORMALIZE_NAME        = 0x20,  // remove name punctuation (periods and dashes)
-  NORMALIZE_PHRASE      = 0x40,  // replace normalized characters with spaces
-  NORMALIZE_DOUBLES     = 0x80,  // replace double letters
+  NORMALIZE_NONE        = 0x000,  // no normalization
+  NORMALIZE_CASE        = 0x001,  // lowercase
+  NORMALIZE_LETTERS     = 0x002,  // remove diacritics
+  NORMALIZE_DIGITS      = 0x004,  // replace all digits with 9
+  NORMALIZE_PUNCTUATION = 0x008,  // remove punctuation
+  NORMALIZE_WHITESPACE  = 0x010,  // remove whitespace
+  NORMALIZE_NAME        = 0x020,  // remove name punctuation (periods & dashes)
+  NORMALIZE_PHRASE      = 0x040,  // replace normalized characters with spaces
+  NORMALIZE_DOUBLES     = 0x080,  // replace double letters
+  NORMALIZE_QUOTES      = 0x100,  // replace quotes
 
   // Default normalization.
-  NORMALIZE_DEFAULT = NORMALIZE_CASE | NORMALIZE_LETTERS | NORMALIZE_NAME
+  NORMALIZE_DEFAULT = NORMALIZE_CASE | NORMALIZE_LETTERS |
+                      NORMALIZE_NAME | NORMALIZE_QUOTES,
 };
 
 // Parse a list of normalization specifiers to a normalization bit mask.
 // The following specifiers are supported:
 //   c: NORMALIZE_CASE
-//   l: NORMALIZE_LETTERS
 //   d: NORMALIZE_DIGITS
-//   p: NORMALIZE_PUNCTUATION
-//   w: NORMALIZE_WHITESPACE
+//   l: NORMALIZE_LETTERS
 //   n: NORMALIZE_NAME
+//   p: NORMALIZE_PUNCTUATION
+//   q: NORMALIZE_QUOTES
+//   w: NORMALIZE_WHITESPACE
 //   P: NORMALIZE_PHRASE
 //   D: NORMALIZE_DOUBLES
 Normalization ParseNormalization(const string &spec);

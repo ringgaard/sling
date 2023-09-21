@@ -52,7 +52,7 @@ class SubwordTokenizer {
   // an OOV is added to the subwords vector.
   int Tokenize(Text word, std::vector<int> *subwords) const;
 
-  // Return word witn subword markers (##).
+  // Return word with subword markers (##).
   string TokenizedWord(Text word) const;
 
   // Return subword for index.

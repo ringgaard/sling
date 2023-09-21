@@ -2001,7 +2001,6 @@ class CaseEditor extends MdApp {
       <div id="container">
         <md-drawer id="folders">
           <div id="drawer-rows">
-            <div id="drawer-cols">
               <div id="folders-top">
                 Folders
                 <md-spacer></md-spacer>
@@ -2015,7 +2014,6 @@ class CaseEditor extends MdApp {
               <folder-list></folder-list>
             </div>
             <div id="drawer-resizer"></div>
-          </div>
         </md-drawer>
         <md-content>
           <topic-list></topic-list>
@@ -2065,21 +2063,19 @@ class CaseEditor extends MdApp {
         fill: #808080;
       }
       $ md-drawer {
+        display: flex;
+        flex-direction: row;
         width: 150px;
         min-width: 100px;
         padding: 3px 0px 3px 3px;
-        overflow-x: clip;
-        overflow-y: auto;
       }
       $ #drawer-rows {
         display: flex;
-        flex-direction: row;
-        height: 100%;
-      }
-      $ #drawer-cols {
-        display: flex;
         flex-direction: column;
+        height: 100%;
         width: 100%;
+        overflow-x: clip;
+        overflow-y: auto;
       }
       $ #drawer-resizer {
         cursor: col-resize;
