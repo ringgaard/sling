@@ -25,9 +25,9 @@ const images_services = [
       return `https://cdno-data.imagevenue.com/html.${m[1]}/upload2328/${m[2]}/${m[3]}`
     }
 
-    m = thumb.match(/^https?\:\/\/cdn-thumbs\.imagevenue\.com\/\w+\/\w+\/\w+\/(\w+)_t\.jpg/);
+    m = thumb.match(/^https?\:\/\/cdn-thumbs\.imagevenue\.com\/\w+\/\w+\/\w+\/(\w+)_t\.(.+)/);
     if (m) {
-      let hires = `${m[1]}_o.jpg`
+      let hires = `${m[1]}_o.${m[2]}`
       let d = MD5(hires);
       let path = `${d[0]}${d[1]}/${d[2]}${d[3]}/${d[4]}${d[5]}`
       return "https://cdn-images.imagevenue.com/" + path + "/" + hires;

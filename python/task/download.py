@@ -79,7 +79,7 @@ class UrlDownload:
 
       # Download from url to file.
       if ratelimit > 0: log.info("Start download of " + output.name)
-      r = http.request('GET', url, preload_content=False)
+      r = http.request('GET', url, preload_content=False, timeout=60)
       last_modified = time.mktime(time.strptime(r.headers['last-modified'],
                                                 "%a, %d %b %Y %H:%M:%S GMT"))
       content_length = int(r.headers['content-length'])
@@ -89,7 +89,14 @@ class UrlDownload:
       bytes = 0
       with open(output.name, 'wb') as f:
         while bytes < content_length:
-          chunk = r.read(chunksize)
+          try:
+            chunk = r.read(chunksize)
+          except urllib3.exceptions.ReadTimeoutError:
+            log.info(name, "timeout", bytes, "of", content_length)
+            r = http.request('GET', url, preload_content=False, timeout=60,
+                             headers={"Range": "bytes=%s-" % bytes})
+            continue
+
           if chunk is None:
             raise IOError("Download truncated %d bytes read, %d expected" %
                           (bytes, content_length))
