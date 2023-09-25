@@ -105,7 +105,7 @@ void LexicalFeatures::InitializeLexicon(Vocabulary::Iterator *words,
 
   // Build word list.
   std::vector<std::pair<string, int>> word_list;
-  word_list.emplace_back("<UNKNOWN>", unknown);
+  word_list.emplace_back("[UNK]", unknown);
   for (const auto &it : dictionary) {
     word_list.emplace_back(it.first, it.second);
   }

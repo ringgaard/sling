@@ -82,6 +82,21 @@ class Vocabulary {
     int current_ = 0;
   };
 
+  // Vocabulary iterator for text vector.
+  class TextVectorIterator : public Iterator {
+   public:
+    TextVectorIterator(const std::vector<Text> &words) : words_(words) {}
+
+    // Iterator interface.
+    int Size() override;
+    void Reset() override;
+    bool Next(Text *word, int *count) override;
+
+   private:
+    const std::vector<Text> &words_;
+    int current_ = 0;
+  };
+
   // Vocabulary iterator for word map.
   template<class T> class MapIterator : public Iterator {
    public:
@@ -92,8 +107,7 @@ class Vocabulary {
     void Reset() override { current_ = words_.begin(); }
     bool Next(Text *word, int *count) override {
       if (current_ == words_.end()) return false;
-      const string &str = current_->first;
-      word->set(str.data(), str.size());
+      *word = current_->first;
       if (count != nullptr) *count = current_->second;
       ++current_;
       return true;
@@ -104,13 +118,19 @@ class Vocabulary {
     typename T::const_iterator current_;
   };
 
-  typedef MapIterator<std::unordered_map<string, int>> HashMapIterator;
-  typedef MapIterator<std::vector<std::pair<string, int>>> VectorMapIterator;
+  typedef std::unordered_map<string, int> HashMap;
+  typedef std::vector<std::pair<string, int>> VectorMap;
+  typedef std::vector<std::pair<Text, int>> TextVectorMap;
+  typedef MapIterator<HashMap> HashMapIterator;
+  typedef MapIterator<VectorMap> VectorMapIterator;
+  typedef MapIterator<TextVectorMap> TextVectorMapIterator;
 
   ~Vocabulary();
 
-  // Initialize dictionary from list of words.
-  void Init(Iterator *words);
+  // Initialize dictionary from list of words. If the mapped flag is set,
+  // vocabulary item values are taken from the iterator values instead of
+  // assigning sequential indices.
+  void Init(Iterator *words, bool mapped = false);
 
   // Look up word in dictionary. Returns -1 if word is not found.
   int64 Lookup(Text word) const;

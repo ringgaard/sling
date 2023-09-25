@@ -95,22 +95,20 @@ class SubwordRNNEncoder : public ParserEncoder {
       LOG(INFO) << "Building subword vocabulary";
       Vocabulary::HashMapIterator it(vocab);
       WordPieceBuilder wordpieces(max_subwords_);
-      std::vector<string> leading;
-      std::vector<string> trailing;
+      std::vector<string> subwords;
       wordpieces.Build(&it, [&](const WordPieceBuilder::Symbol *sym) {
-        if (sym->code != -1) {
-          if (sym->trailing) {
-            trailing.push_back(sym->text());
-          } else {
-            leading.push_back(sym->text());
-          }
+        if (sym->code == -1) {
+          subwords.push_back("[UNK]");
+        } else if (sym->trailing) {
+          subwords.push_back("##" + sym->text());
+        } else {
+          subwords.push_back(sym->text());
         }
       });
 
       // Initialize subword tokenizer.
-      Vocabulary::VectorIterator l(leading);
-      Vocabulary::VectorIterator t(leading);
-      subtokenizer_.Init(&l, &t);
+      Vocabulary::VectorIterator swit(subwords);
+      subtokenizer_.Init(&swit);
     }
 
     // Build subword embeddings.
@@ -146,31 +144,22 @@ class SubwordRNNEncoder : public ParserEncoder {
     spec->Add("bidir", rnn_bidir_);
     spec->Add("highways", rnn_highways_);
 
-    // Save subword lexicons, i.e. leading and trailing subwords.
-    Flow::Blob *leading = flow->AddBlob("leading", "dict");
-    string ldata;
-    subtokenizer_.WriteLeading(&ldata);
-    leading->data = flow->AllocateMemory(ldata);
-    leading->size = ldata.size();
-
-    Flow::Blob *trailing = flow->AddBlob("trailing", "dict");
-    string tdata;
-    subtokenizer_.WriteTrailing(&tdata);
-    trailing->data = flow->AllocateMemory(tdata);
-    trailing->size = tdata.size();
+    // Save subword lexicon.
+    Flow::Blob *subwords = flow->AddBlob("subwords", "dict");
+    string data;
+    subtokenizer_.Write(&data);
+    subwords->data = flow->AllocateMemory(data);
+    subwords->size = data.size();
   }
 
   // Load encoder from flow.
   void Load(Flow *flow, const Frame &spec) override {
     // Load subword lexicons from flow.
     normalization_ = ParseNormalization(spec.GetString("normalization"));
-    Flow::Blob *leading = flow->DataBlock("leading");
-    CHECK(leading != nullptr);
-    Vocabulary::BufferIterator l(leading->data, leading->size);
-    Flow::Blob *trailing = flow->DataBlock("trailing");
-    CHECK(trailing != nullptr);
-    Vocabulary::BufferIterator t(trailing->data, trailing->size);
-    subtokenizer_.Init(&l, &t);
+    Flow::Blob *subwords = flow->DataBlock("subwords");
+    CHECK(subwords != nullptr);
+    Vocabulary::BufferIterator it(subwords->data, subwords->size);
+    subtokenizer_.Init(&it);
 
     // Set up RNN stack.
     rnn_type_ = spec.GetInt("rnn");

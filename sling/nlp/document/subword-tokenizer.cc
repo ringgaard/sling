@@ -19,78 +19,35 @@
 namespace sling {
 namespace nlp {
 
-const int SubwordTokenizer::OOV;
-
-void SubwordTokenizer::Init(Vocabulary::Iterator *leading,
-                            Vocabulary::Iterator *trailing) {
-  Text subword;
-  int64 index;
-
-  // Get leading subwords.
-  leading_subwords_.resize(leading->Size());
-  leading->Reset();
-  index = 0;
-  while (leading->Next(&subword, nullptr)) {
-    leading_subwords_[index++] = subword.str();
-  }
-
-  // Get trailing subwords.
-  trailing_subwords_.resize(trailing->Size());
-  trailing->Reset();
-  index = 0;
-  while (trailing->Next(&subword, nullptr)) {
-    trailing_subwords_[index++] = subword.str();
-  }
-
-  // Initialize leading and trailing lexicons.
-  leading_.Init(leading);
-  trailing_.Init(trailing);
-}
-
 void SubwordTokenizer::Init(Vocabulary::Iterator *vocabulary) {
   // Get leading and trailing subwords from vocabulary.
+  Vocabulary::TextVectorMap leading;
+  Vocabulary::TextVectorMap trailing;
   Text word;
   vocabulary->Reset();
+  int index = 0;
   while (vocabulary->Next(&word, nullptr)) {
-    CHECK_GE(word.size(), 2);
-    Text subword(word, 1);
-    if (word[0] == '_') {
-      leading_subwords_.push_back(subword.str());
-    } else if (word[0] == '#') {
-      trailing_subwords_.push_back(subword.str());
+    subwords_.push_back(word.str());
+    word = subwords_.back();
+    if (word.size() >= 2 && word[0] == '#' && word[1] == '#') {
+      trailing.emplace_back(word.substr(2), index++);
+    } else {
+      leading.emplace_back(word, index++);
     }
   }
 
   // Initialize leading and trailing lexicons.
-  Vocabulary::VectorIterator l(leading_subwords_);
-  leading_.Init(&l);
-  Vocabulary::VectorIterator t(trailing_subwords_);
-  trailing_.Init(&t);
+  Vocabulary::TextVectorMapIterator l(leading);
+  leading_.Init(&l, true);
+  Vocabulary::TextVectorMapIterator t(trailing);
+  trailing_.Init(&t, true);
+  oov_ = leading_.Lookup("[UNK]");
 }
 
-void SubwordTokenizer::WriteLeading(string *buffer, char terminator) const {
-  for (const string &subword : leading_subwords_) {
+void SubwordTokenizer::Write(string *buffer, char terminator) const {
+  for (const string &subword : subwords_) {
     buffer->append(subword);
     buffer->push_back(terminator);
-  }
-}
-
-void SubwordTokenizer::WriteTrailing(string *buffer, char terminator) const {
-  for (const string &subword : trailing_subwords_) {
-    buffer->append(subword);
-    buffer->push_back(terminator);
-  }
-}
-
-int SubwordTokenizer::Lookup(Text subword, bool leading) const {
-  if (leading) {
-    int index = leading_.Lookup(subword);
-    if (index == -1) return OOV;
-    return index + 1;
-  } else {
-    int index = trailing_.Lookup(subword);
-    if (index == -1) return OOV;
-    return index + leading_.size() + 1;
   }
 }
 
@@ -98,7 +55,7 @@ int SubwordTokenizer::Tokenize(Text word, std::vector<int> *subwords) const {
   // Fast path is checking if the whole word is a leading token.
   int index = leading_.Lookup(word);
   if (index != -1) {
-    subwords->push_back(index + 1);
+    subwords->push_back(index);
     return 1;
   }
 
@@ -111,7 +68,7 @@ int SubwordTokenizer::Tokenize(Text word, std::vector<int> *subwords) const {
     const char *q = end;
     while (q > p) {
       int index = Lookup(Text(p, q - p), num_subwords == 0);
-      if (index != OOV) {
+      if (index != oov_) {
         subwords->push_back(index);
         break;
       }
@@ -123,7 +80,7 @@ int SubwordTokenizer::Tokenize(Text word, std::vector<int> *subwords) const {
       num_subwords++;
     } else {
       // Out of vocabulary.
-      if (num_subwords == 0) subwords->push_back(OOV);
+      if (num_subwords == 0) subwords->push_back(oov_);
       return -1;
     }
   }
@@ -135,24 +92,10 @@ string SubwordTokenizer::TokenizedWord(Text word) const {
   std::vector<int> subwords;
   Tokenize(word, &subwords);
   string str;
-  bool first = true;
   for (int index : subwords) {
-    if (!first) str.append("##");
-    first = false;
-    str.append(Subword(index));
+    str.append(subwords_[index]);
   }
   return str;
-}
-
-const string &SubwordTokenizer::Subword(int index) const {
-  static string unknown("<UNK>");
-  if (index == 0) {
-    return unknown;
-  } else if (index < leading_subwords_.size() + 1) {
-    return leading_subwords_[index - 1];
-  } else {
-    return trailing_subwords_[index - leading_subwords_.size() - 1];
-  }
 }
 
 }  // namespace nlp

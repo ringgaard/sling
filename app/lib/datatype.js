@@ -711,7 +711,7 @@ export function geo_parser(value, results) {
   if (m) {
     let lat = parseFloat(m[1]);
     let lng = parseFloat(m[2]);
-    if (lat >= -90 && lat <= 90 && lng >= -90 && lng <= 90) {
+    if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
       let v = store.frame();
       v.add(n_isa, n_geo);
       v.add(n_lat, lat);

@@ -24,7 +24,7 @@ void WordPieceBuilder::Symbol::AppendToString(string *str) const {
     left->AppendToString(str);
     right->AppendToString(str);
   } else if (code == -1) {
-    str->append("<UNKNOWN>");
+    str->append("[UNK]");
   } else {
     UTF8::Encode(code, str);
   }

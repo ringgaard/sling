@@ -48,7 +48,7 @@ class WordVocabularySampler {
     string word;
     int64 count;
     while (input.Read(&index, &word, &count)) {
-      if (word == "<UNKNOWN>") oov_ = index;
+      if (word == "[UNK]") oov_ = index;
       dictionary_[word] = index;
       entry_.emplace_back(word, count);
       permutation_.emplace_back(index, count);

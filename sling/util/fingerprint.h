@@ -29,9 +29,6 @@ uint64 Fingerprint(const char *bytes, size_t len);
 // Compute 32-bit fingerprint by folding 64-bit fingerprint.
 uint32 Fingerprint32(const char *bytes, size_t len);
 
-// Compute case-insensitive fingerprint.
-uint64 UncasedFingerprint(const char *bytes, size_t len);
-
 }  // namespace sling
 
 #endif  // SLING_UTIL_FINGERPRINT_H_

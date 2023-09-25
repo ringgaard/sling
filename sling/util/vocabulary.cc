@@ -50,6 +50,22 @@ void Vocabulary::VectorIterator::Reset() {
   current_ = 0;
 }
 
+bool Vocabulary::TextVectorIterator::Next(Text *word, int *count) {
+  if (current_ == words_.size()) return false;
+  Text str = words_[current_++];
+  word->set(str.data(), str.size());
+  if (count != nullptr) *count = 1;
+  return true;
+}
+
+int Vocabulary::TextVectorIterator::Size() {
+  return words_.size();
+}
+
+void Vocabulary::TextVectorIterator::Reset() {
+  current_ = 0;
+}
+
 bool Vocabulary::VectorIterator::Next(Text *word, int *count) {
   if (current_ == words_.size()) return false;
   const string &str = words_[current_++];
@@ -63,7 +79,7 @@ Vocabulary::~Vocabulary() {
   delete [] items_;
 }
 
-void Vocabulary::Init(Iterator *words) {
+void Vocabulary::Init(Iterator *words, bool mapped) {
   // Get number of items in the lexicon.
   size_ = words->Size();
   num_buckets_ = size_;
@@ -77,11 +93,12 @@ void Vocabulary::Init(Iterator *words) {
   // Build item for each word in the lexicon.
   words->Reset();
   Text word;
+  int value;
   int64 index = 0;
-  while (words->Next(&word, nullptr)) {
+  while (words->Next(&word, &value)) {
     // Initialize item for word.
     items_[index].hash = Fingerprint(word.data(), word.size());
-    items_[index].value = index;
+    items_[index].value = mapped ? value : index;
     index++;
   }
 

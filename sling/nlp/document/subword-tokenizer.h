@@ -25,27 +25,12 @@ namespace nlp {
 // tokens.
 class SubwordTokenizer {
  public:
-  // The out-of-vocabulary (OOV) token index.
-  static const int OOV = 0;
-
-  // Initialize tokenizer lexicon from leading and trailing subword
-  // vocabularies.
-  void Init(Vocabulary::Iterator *leading, Vocabulary::Iterator *trailing);
-
-  // Initialize tokenizer lexicon from vocabulary where leading subwords are
-  // begin with _ and trailing subwords begin with #.
+  // Initialize tokenizer lexicon from vocabulary where trailing subwords begin
+  // with ##.
   void Init(Vocabulary::Iterator *vocabulary);
 
-  // Write leading/trailing subwords to buffer.
-  void WriteLeading(string *buffer, char terminator = 0) const;
-  void WriteTrailing(string *buffer, char terminator = 0) const;
-
-  // Lexicon size including the OOV entry.
-  int size() const { return leading_.size() + trailing_.size() + 1; }
-
-  // Look up trailing/leading subword in lexicon and return index or OOV if
-  // the subword is not in the vocabulary.
-  int Lookup(Text subword, bool leading) const;
+  // Write subwords to buffer.
+  void Write(string *buffer, char terminator = 0) const;
 
   // Break word into subword tokens. Returns the number of subwords or -1 if the
   // word could not be broken into subwords using the vocabulary. In this case
@@ -55,17 +40,27 @@ class SubwordTokenizer {
   // Return word with subword markers (##).
   string TokenizedWord(Text word) const;
 
-  // Return subword for index.
-  const string &Subword(int index) const;
+  // Lexicon size.
+  int size() const { return subwords_.size(); }
 
  private:
+  // Look up trailing/leading subword in lexicon and return index or OOV if
+  // the subword is not in the vocabulary.
+  int Lookup(Text subword, bool leading) const {
+    int index = leading ? leading_.Lookup(subword) : trailing_.Lookup(subword);
+    if (index == -1) return oov_;
+    return index;
+  }
+
   // Leading and trailing subword token lexicons.
   Vocabulary leading_;
   Vocabulary trailing_;
 
-  // Subwords for leading and trailing subwords.
-  std::vector<string> leading_subwords_;
-  std::vector<string> trailing_subwords_;
+  // Subwords. Trailing subwords starts with ##.
+  std::vector<string> subwords_;
+
+  // The out-of-vocabulary (OOV) token index.
+  int oov_ = 0;
 };
 
 }  // namespace nlp

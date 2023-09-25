@@ -101,7 +101,7 @@ class WordVocabularyReducer : public SumReducer {
     task->Fetch("max_subwords", &max_subwords_);
 
     // Add OOV item to vocabulary as the first entry.
-    vocabulary_.emplace_back("<UNKNOWN>", 0);
+    vocabulary_.emplace_back("[UNK]", 0);
 
     // Statistics.
     num_words_ = task->GetCounter("words");
@@ -164,10 +164,10 @@ class WordVocabularyReducer : public SumReducer {
         string text;
         uint64 freq;
         if (sym->code == -1) {
-          text = "<UNKNOWN>";
+          text = "[UNK]";
           freq = vocabulary_[0].count;
         } else {
-          text.push_back(sym->trailing ? '#' : '_');
+          if (sym->trailing) text.append("##");
           sym->AppendToString(&text);
           freq = sym->freq;
         }

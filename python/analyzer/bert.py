@@ -22,6 +22,7 @@ import sling.net
 import torch
 from transformers import AutoModelForTokenClassification
 from transformers import AutoTokenizer
+from transformers import AutoConfig
 
 flags.define("--port", default=8123, type=int, metavar="PORT")
 flags.define("--clear", default=False, action="store_true")
@@ -49,14 +50,14 @@ OUTSIDE = 2
 
 bio_tags = [
   (OUTSIDE, None, "O"),
-  (BEGIN, n_misc, "B-MISC"),
-  (INSIDE, n_misc, "I-MISC"),
   (BEGIN, n_person, "B-PER"),
   (INSIDE, n_person, "I-PER"),
   (BEGIN, n_location, "B-LOC"),
   (INSIDE, n_location, "I-LOC"),
   (BEGIN, n_organization, "B-ORG"),
   (INSIDE, n_organization, "I-ORG"),
+  (BEGIN, n_misc, "B-MISC"),
+  (INSIDE, n_misc, "I-MISC"),
 ]
 
 def valid(prev, next):
@@ -89,37 +90,41 @@ class BertModel:
     self.name = name
     self.model = None
     self.tokenizer = None
+    self.cls = None
+    self.sep = None
+    self.labelmap = [-1] * len(bio_tags)
 
   def load(self):
-    if self.model is None:
-      print("loading", self.name)
-      self.model = AutoModelForTokenClassification.from_pretrained(self.name)
-      self.tokenizer = AutoTokenizer.from_pretrained(self.name)
+    if self.model is not None: return
+    print("loading", self.name)
+    self.model = AutoModelForTokenClassification.from_pretrained(self.name)
+    self.tokenizer = AutoTokenizer.from_pretrained(self.name)
+    self.config = AutoConfig.from_pretrained(self.name)
+    self.cls = self.tokenizer.convert_tokens_to_ids("[CLS]")
+    self.sep = self.tokenizer.convert_tokens_to_ids("[SEP]")
+    for i in range(len(self.labelmap)):
+      labelid = self.config.label2id[bio_tags[i][2]]
+      self.labelmap[labelid] = i
 
   def analyze(self, doc):
     markables = {} if flags.arg.cluster else None
     for start, end in doc.sentences():
-
       # Build subword tokens and token mapping.
-      tokens = ["[CLS]"]
+      tokens = [self.cls]
       tokenmap = [start]
       for t in range(start, end):
         word = doc.tokens[t].word
-        subwords = self.tokenizer.tokenize(word)
-        tokenmap.extend([t] * len(subwords))
+        subwords = self.tokenizer.encode([word],
+                                         is_split_into_words=True,
+                                         add_special_tokens=False)
         tokens.extend(subwords)
-      tokens.append("[SEP]")
+        for _ in range(len(subwords)): tokenmap.append(t)
+      tokens.append(self.sep)
       tokenmap.append(end)
 
       # Run model to get predictions.
-      text = doc.phrase(start, end)
-      inputs = self.tokenizer.encode(text, return_tensors="pt")
+      inputs = torch.tensor(tokens).unsqueeze(0)
       outputs = self.model(inputs)[0]
-
-      if inputs.shape[1] != len(tokenmap):
-        print("Tokenization alignment error (%d vs %d) %s" %
-              (inputs.shape[1], len(tokenmap), text))
-        continue
 
       # Decode valid BIO tag sequence from predictions.
       rankings = torch.topk(outputs, len(bio_tags), dim=2).indices[0]
@@ -127,21 +132,22 @@ class BertModel:
       prev = bio_tags[0]
       for ranking in rankings:
         for label in ranking:
-          next = bio_tags[label]
+          next = bio_tags[self.labelmap[label]]
           if valid(prev, next):
             predictions.append(next)
             prev = next
             break
 
       if flags.arg.debug:
-        print(text)
+        token_names = self.tokenizer.convert_ids_to_tokens(tokens)
+        print(doc.phrase(start, end))
         s = []
         for t in range(len(predictions)):
           action, label, tag = predictions[t]
           if action == OUTSIDE:
-            s.append(tokens[t])
+            s.append(token_names[t])
           else:
-            s.append(tokens[t] + "/" + tag)
+            s.append(token_names[t] + "/" + tag)
         print("NER:", " ".join(s))
 
       begin = None
@@ -157,7 +163,7 @@ class BertModel:
           if begin is not None:
             b = tokenmap[begin]
             e = tokenmap[t]
-            if tokens[t].startswith("##"): e += 1
+            if t > 0 and e == tokenmap[t - 1]: e += 1
             add_mention(doc, markables, b, e, tag)
           begin = None
 
