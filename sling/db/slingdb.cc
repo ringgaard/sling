@@ -52,7 +52,10 @@ int main(int argc, char *argv[]) {
     File::Match(FLAGS_dbdir + "/*", &dbdirs);
     for (const string &db : dbdirs) {
       string name = db.substr(FLAGS_dbdir.size() + 1);
-      CHECK(dbservice->MountDatabase(name, db, FLAGS_recover));
+      Status st = dbservice->MountDatabase(name, db, FLAGS_recover);
+      if (!st.ok()) {
+        LOG(ERROR) << "Error mounting database " << name << " " << st;
+      }
     }
   }
 

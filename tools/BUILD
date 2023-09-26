@@ -76,6 +76,17 @@ cc_binary(
 )
 
 cc_binary(
+  name = "recfix",
+  srcs = ["recfix.cc"],
+  deps = [
+    "//sling/base",
+    "//sling/file",
+    "//sling/file:posix",
+    "//sling/file:recordio",
+  ],
+)
+
+cc_binary(
   name = "templgen",
   srcs = ["templgen.cc"],
   deps = [
