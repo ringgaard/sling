@@ -676,8 +676,10 @@ void DBService::Statusz(HTTPRequest *request, HTTPResponse *response) {
     dbstats->Add("PUT", mount->db.counter(Database::PUT));
     dbstats->Add("DELETE", mount->db.counter(Database::DELETE));
     dbstats->Add("NEXT", mount->db.counter(Database::NEXT));
-    dbstats->Add("READ", mount->db.counter(Database::READ));
-    dbstats->Add("WRITE", mount->db.counter(Database::WRITE));
+    dbstats->Add("RECREAD", mount->db.counter(Database::RECREAD));
+    dbstats->Add("RECWRITE", mount->db.counter(Database::RECWRITE));
+    dbstats->Add("BYTEREAD", mount->db.counter(Database::BYTEREAD));
+    dbstats->Add("BYTEWRITE", mount->db.counter(Database::BYTEWRITE));
     dbstats->Add("HIT", mount->db.counter(Database::HIT));
     dbstats->Add("MISS", mount->db.counter(Database::MISS));
   }

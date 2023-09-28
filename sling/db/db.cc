@@ -62,12 +62,14 @@ Status Database::Open(const string &dbdir, bool recover) {
     readers_.push_back(reader);
     last = datafile;
   }
+  bool last_partition_empty = false;
   for (const string &partition : config_.partitions) {
     if (!File::Exists(partition)) {
       return Status(E_NO_DATA_FILES, "Data partition missing: ", partition);
     }
     datafiles.clear();
     File::Match(partition + "/data-*", &datafiles);
+    last_partition_empty = datafiles.empty();
     for (const string &datafile : datafiles) {
       RecordReader *reader = new RecordReader(datafile, config_.record);
       size_ += reader->size();
@@ -82,6 +84,12 @@ Status Database::Open(const string &dbdir, bool recover) {
     config_.record.append = true;
     writer_ = new RecordWriter(last, config_.record);
     size_ -= writer_->Tell();
+  }
+
+  // Add new shard to last partition if it is empty.
+  if (last_partition_empty && !config_.read_only) {
+    Status st = AddDataShard();
+    if (!st.ok()) return st;
   }
 
   // Open database index.
@@ -317,7 +325,8 @@ uint64 Database::Put(const Record &record, DBMode mode, DBResult *result) {
   st = writer_->Write(record, &pos);
   if (!st) return -1;
   uint64 newid = RecordID(CurrentShard(), pos);
-  add(WRITE, record.value.size());
+  inc(RECWRITE);
+  add(BYTEWRITE, record.value.size());
 
   // Update index.
   if (recid == DatabaseIndex::NVAL) {
@@ -414,7 +423,8 @@ bool Database::Next(Record *record, uint64 *iterator,
     if (with_value) {
       Status st = reader->Read(record);
       if (!st) return false;
-      add(READ, record->value.size());
+      inc(RECREAD);
+      add(BYTEREAD, record->value.size());
     } else {
       Status st = reader->ReadKey(record);
       if (!st) return false;
@@ -490,7 +500,8 @@ Status Database::ReadRecord(uint64 recid, Record *record, bool with_value) {
   if (!st) return st;
   if (with_value) {
     st = reader->Read(record);
-    add(READ, record->value.size());
+    inc(RECREAD);
+    add(BYTEREAD, record->value.size());
   } else {
     st = reader->ReadKey(record);
   }
@@ -616,15 +627,12 @@ Status Database::Recover(uint64 capacity) {
   Record record;
   for (int shard = start_shard; shard < readers_.size(); ++shard) {
     LOG(INFO) << "Recover shard " << shard << " of db " << dbdir_;
-    RecordReader *reader = readers_[shard];
+    RecordReader reader(DataFile(shard), config_.record);
     if (shard == start_shard && start_pos != 0) {
-      st = reader->Seek(start_pos);
-      if (!st.ok()) return st;
-    } else {
-      st = reader->Rewind();
+      st = reader.Seek(start_pos);
       if (!st.ok()) return st;
     }
-    while (!reader->Done()) {
+    while (!reader.Done()) {
       // Expand index if needed.
       if (idx.full()) {
         // Create new index.
@@ -642,7 +650,7 @@ Status Database::Recover(uint64 capacity) {
       }
 
       // Read next record key.
-      st = reader->ReadKey(&record);
+      st = reader.ReadKey(&record);
       if (!st.ok()) return st;
       uint64 fp = Fingerprint(record.key.data(), record.key.size());
       uint64 recid = RecordID(shard, record.position);
@@ -654,25 +662,18 @@ Status Database::Recover(uint64 capacity) {
         // Try to locate exising record for key in index.
         uint64 val = DatabaseIndex::NVAL;
         uint64 pos = DatabaseIndex::NPOS;
-        string key = record.key.str();
         for (;;) {
           // Get next match in index.
           val = idx.Get(fp, &pos);
           if (val == DatabaseIndex::NVAL) break;
 
-          // Save current position in reader.
-          uint64 current = reader->Tell();
-
-          // Read record key from data file.
-          st = ReadRecord(val, &record, false);
-          if (!st.ok()) return st;
-
-          // Restore current position in reader.
-          st = reader->Seek(current);
+          // Read existing record key from data file.
+          Record existing;
+          st = ReadRecord(val, &existing, false);
           if (!st.ok()) return st;
 
           // Check if key matches.
-          if (record.key == Slice(key)) break;
+          if (record.key == existing.key) break;
         }
 
         // If an existing record with the same key is found, update the index

@@ -157,8 +157,10 @@ class DbStatisticsCard extends MdCard {
           put: dec(db.PUT, 0),
           del: dec(db.DELETE, 0),
           next: dec(db.NEXT, 0),
-          read: dec(db.READ, 0),
-          write: dec(db.WRITE, 0),
+          recread: dec(db.RECREAD, 0),
+          recwrite: dec(db.RECWRITE, 0),
+          byteread: dec(db.BYTEREAD, 0),
+          bytewrite: dec(db.BYTEWRITE, 0),
           hit: dec(db.HIT, 0),
           miss: dec(db.MISS, 0),
         });

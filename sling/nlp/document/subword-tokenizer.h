@@ -40,18 +40,19 @@ class SubwordTokenizer {
   // Return word with subword markers (##).
   string TokenizedWord(Text word) const;
 
+  // Look up trailing/leading subword in lexicon and return index or -1 if
+  // the subword is not in the vocabulary.
+  int Lookup(Text subword, bool leading) const {
+    return leading ? leading_.Lookup(subword) : trailing_.Lookup(subword);
+  }
+
   // Lexicon size.
   int size() const { return subwords_.size(); }
 
- private:
-  // Look up trailing/leading subword in lexicon and return index or OOV if
-  // the subword is not in the vocabulary.
-  int Lookup(Text subword, bool leading) const {
-    int index = leading ? leading_.Lookup(subword) : trailing_.Lookup(subword);
-    if (index == -1) return oov_;
-    return index;
-  }
+  // Return subword from id.
+  const string &subword(int index) const { return subwords_[index]; }
 
+ private:
   // Leading and trailing subword token lexicons.
   Vocabulary leading_;
   Vocabulary trailing_;

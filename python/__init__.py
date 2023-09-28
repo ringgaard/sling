@@ -26,6 +26,7 @@ PlausibilityModel = api.PlausibilityModel
 Wikipedia = api.Wikipedia
 WebArchive = api.WebArchive
 WebsiteAnalysis = api.WebsiteAnalysis
+Subtokenizer = api.Subtokenizer
 
 MILLENNIUM = api.MILLENNIUM
 CENTURY = api.CENTURY

@@ -63,14 +63,16 @@ class Database {
 
   // Database performance metrics.
   enum Metric {
-    GET,      // number of GET operations
-    PUT,      // number of PUT operations
-    DELETE,   // number of DELETE operations
-    NEXT,     // number of NEXT operations
-    READ,     // number of bytes read
-    WRITE,    // number of bytes written
-    HIT,      // number of hash table hits
-    MISS,     // number of hash table misses
+    GET,       // number of GET operations
+    PUT,       // number of PUT operations
+    DELETE,    // number of DELETE operations
+    NEXT,      // number of NEXT operations
+    RECREAD,   // number of records read
+    RECWRITE,  // number of record written
+    BYTEREAD,  // number of bytes read
+    BYTEWRITE, // number of bytes written
+    HIT,       // number of hash table hits
+    MISS,      // number of hash table misses
   };
 
   const static int NUM_DBMETRICS = MISS + 1;
@@ -227,8 +229,6 @@ class Database {
 
   // Recover index from data files.
   Status Recover(uint64 capacity);
-
-  // Increment value for performance counters.
 
   // Database directory.
   string dbdir_;

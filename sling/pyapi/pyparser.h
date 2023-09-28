@@ -19,6 +19,7 @@
 #include "sling/nlp/document/annotator.h"
 #include "sling/nlp/document/document.h"
 #include "sling/nlp/document/document-tokenizer.h"
+#include "sling/nlp/document/subword-tokenizer.h"
 #include "sling/nlp/parser/parser.h"
 #include "sling/pyapi/pybase.h"
 #include "sling/pyapi/pystore.h"
@@ -41,6 +42,29 @@ struct PyTokenizer : public PyBase {
 
   // Document tokenizer.
   nlp::DocumentTokenizer *tokenizer;
+
+  // Registration.
+  static PyTypeObject type;
+  static PyMethodTable methods;
+  static void Define(PyObject *module);
+};
+
+// Python wrapper for subword tokenizer.
+struct PySubtokenizer : public PyBase {
+  // Initialize tokenizer wrapper.
+  int Init(PyObject *args, PyObject *kwds);
+
+  // Deallocate tokenizer wrapper.
+  void Dealloc();
+
+  // Look up subword token id or word.
+  PyObject *Lookup(PyObject *args, PyObject *kw);
+
+  // Split token word into subwords.
+  PyObject *Split(PyObject *word);
+
+  // Subword tokenizer.
+  nlp::SubwordTokenizer *tokenizer;
 
   // Registration.
   static PyTypeObject type;

@@ -16,6 +16,7 @@
 
 #include "sling/nlp/document/document.h"
 #include "sling/nlp/document/document-tokenizer.h"
+#include "sling/nlp/document/subword-tokenizer.h"
 #include "sling/nlp/document/lex.h"
 #include "sling/nlp/parser/frame-evaluation.h"
 #include "sling/nlp/parser/parser.h"
@@ -27,6 +28,8 @@ namespace sling {
 // Python type declarations.
 PyTypeObject PyTokenizer::type;
 PyMethodTable PyTokenizer::methods;
+PyTypeObject PySubtokenizer::type;
+PyMethodTable PySubtokenizer::methods;
 PyTypeObject PyParser::type;
 PyMethodTable PyParser::methods;
 PyTypeObject PyAnalyzer::type;
@@ -101,6 +104,69 @@ PyObject *PyTokenizer::Lex(PyObject *args) {
   return frame->AsObject();
 }
 
+void PySubtokenizer::Define(PyObject *module) {
+  InitType(&type, "sling.api.Subtokenizer", sizeof(PySubtokenizer), true);
+
+  type.tp_init = method_cast<initproc>(&PySubtokenizer::Init);
+  type.tp_dealloc = method_cast<destructor>(&PySubtokenizer::Dealloc);
+  type.tp_call = method_cast<ternaryfunc>(&PySubtokenizer::Lookup);
+
+  methods.AddO("split", &PySubtokenizer::Split);
+  type.tp_methods = methods.table();
+
+  RegisterType(&type, module, "Subtokenizer");
+}
+
+int PySubtokenizer::Init(PyObject *args, PyObject *kwds) {
+  // Initialize tokenizer.
+  char *vocabulary;
+  if (!PyArg_ParseTuple(args, "s", &vocabulary)) return -1;
+
+  tokenizer = new nlp::SubwordTokenizer();
+  Vocabulary::BufferIterator it(vocabulary, strlen(vocabulary), '\n');
+  tokenizer->Init(&it);
+
+  return 0;
+}
+
+void PySubtokenizer::Dealloc() {
+  delete tokenizer;
+  Free();
+}
+
+PyObject *PySubtokenizer::Lookup(PyObject *args, PyObject *kw) {
+  PyObject *arg;
+  if (!PyArg_ParseTuple(args, "O", &arg)) return nullptr;
+  if (PyLong_Check(arg)) {
+    // Return subword for subword index.
+    int index = PyLong_AsLong(arg);
+    if (index < 0 || index >= tokenizer->size()) {
+      PyErr_SetString(PyExc_IndexError, "Invalid token id");
+      return nullptr;
+    }
+    return AllocateString(tokenizer->subword(index));
+  } else {
+    Text word = GetText(arg);
+    bool leading = true;
+    if (word.size() >= 2 && word[0] == '#' && word[1] == '#') {
+      word = word.substr(2);
+      leading = false;
+    }
+    return PyLong_FromLong(tokenizer->Lookup(word, leading));
+  }
+}
+
+PyObject *PySubtokenizer::Split(PyObject *word) {
+  Text text = GetText(word);
+  if (text.empty()) return nullptr;
+  std::vector<int> subwords;
+  tokenizer->Tokenize(text, &subwords);
+  PyObject *list = PyList_New(subwords.size());
+  for (int i = 0; i < subwords.size(); ++i) {
+    PyList_SET_ITEM(list, i, PyLong_FromLong(subwords[i]));
+  }
+  return list;
+}
 
 void PyParser::Define(PyObject *module) {
   InitType(&type, "sling.api.Parser", sizeof(PyParser), true);

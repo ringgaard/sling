@@ -17,7 +17,6 @@
 import sling
 import sling.flags as flags
 import sling.log as log
-import sling.net
 
 import torch
 from transformers import AutoModelForTokenClassification
@@ -28,9 +27,6 @@ flags.define("--port", default=8123, type=int, metavar="PORT")
 flags.define("--clear", default=False, action="store_true")
 flags.define("--cluster", default=False, action="store_true")
 flags.define("--debug", default=False, action="store_true")
-flags.parse()
-
-app = sling.net.HTTPServer(flags.arg.port, cors=True)
 
 commons = sling.Store()
 n_is = commons["is"]
@@ -100,11 +96,20 @@ class BertModel:
     self.model = AutoModelForTokenClassification.from_pretrained(self.name)
     self.tokenizer = AutoTokenizer.from_pretrained(self.name)
     self.config = AutoConfig.from_pretrained(self.name)
-    self.cls = self.tokenizer.convert_tokens_to_ids("[CLS]")
-    self.sep = self.tokenizer.convert_tokens_to_ids("[SEP]")
+
+    self.subtokenizer = sling.Subtokenizer(self.vocab())
+    self.cls = self.subtokenizer("[CLS]")
+    self.sep = self.subtokenizer("[SEP]")
+
     for i in range(len(self.labelmap)):
       labelid = self.config.label2id[bio_tags[i][2]]
       self.labelmap[labelid] = i
+
+  def vocab(self):
+    vocabulary = [None] * self.config.vocab_size
+    for subword, index in self.tokenizer.vocab.items():
+      vocabulary[index] = subword
+    return "\n".join(vocabulary) + "\n"
 
   def analyze(self, doc):
     markables = {} if flags.arg.cluster else None
@@ -114,9 +119,7 @@ class BertModel:
       tokenmap = [start]
       for t in range(start, end):
         word = doc.tokens[t].word
-        subwords = self.tokenizer.encode([word],
-                                         is_split_into_words=True,
-                                         add_special_tokens=False)
+        subwords = self.subtokenizer.split(word)
         tokens.extend(subwords)
         for _ in range(len(subwords)): tokenmap.append(t)
       tokens.append(self.sep)
@@ -139,15 +142,14 @@ class BertModel:
             break
 
       if flags.arg.debug:
-        token_names = self.tokenizer.convert_ids_to_tokens(tokens)
         print(doc.phrase(start, end))
         s = []
         for t in range(len(predictions)):
           action, label, tag = predictions[t]
           if action == OUTSIDE:
-            s.append(token_names[t])
+            s.append(self.subtokenizer(tokens[t]))
           else:
-            s.append(token_names[t] + "/" + tag)
+            s.append(self.subtokenizer(tokens[t]) + "/" + tag)
         print("NER:", " ".join(s))
 
       begin = None
@@ -175,22 +177,28 @@ models = {
   "da": BertModel("alexandrainst/da-ner-base"),
 }
 
-@app.route("/analyze", method="POST")
-def media_request(request):
-  store = sling.Store(commons)
-  doc = sling.lex(request.body.decode(), store, schema)
-  language = request["Content-Language"]
-  if language is None: language = "en"
-  model = models.get(language)
-  if model is None: return 406
-  model.load()
+if __name__ == "__main__":
+  import sling.net
 
-  if flags.arg.clear: doc.remove_annotations()
-  model.analyze(doc)
+  flags.parse()
+  app = sling.net.HTTPServer(flags.arg.port, cors=True)
 
-  return doc.tolex()
+  @app.route("/analyze", method="POST")
+  def media_request(request):
+    store = sling.Store(commons)
+    doc = sling.lex(request.body.decode(), store, schema)
+    language = request["Content-Language"]
+    if language is None: language = "en"
+    model = models.get(language)
+    if model is None: return 406
+    model.load()
 
-log.info("running")
-app.run()
-log.info("stopped")
+    if flags.arg.clear: doc.remove_annotations()
+    model.analyze(doc)
+
+    return doc.tolex()
+
+  log.info("running")
+  app.run()
+  log.info("stopped")
 

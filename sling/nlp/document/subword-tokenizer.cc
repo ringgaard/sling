@@ -21,25 +21,25 @@ namespace nlp {
 
 void SubwordTokenizer::Init(Vocabulary::Iterator *vocabulary) {
   // Get leading and trailing subwords from vocabulary.
-  Vocabulary::TextVectorMap leading;
-  Vocabulary::TextVectorMap trailing;
+  Vocabulary::VectorMap leading;
+  Vocabulary::VectorMap trailing;
   Text word;
   vocabulary->Reset();
   int index = 0;
   while (vocabulary->Next(&word, nullptr)) {
-    subwords_.push_back(word.str());
-    word = subwords_.back();
-    if (word.size() >= 2 && word[0] == '#' && word[1] == '#') {
-      trailing.emplace_back(word.substr(2), index++);
+    string subword = word.str();
+    subwords_.push_back(subword);
+    if (subword.size() >= 2 && subword[0] == '#' && subword[1] == '#') {
+      trailing.emplace_back(subword.substr(2), index++);
     } else {
-      leading.emplace_back(word, index++);
+      leading.emplace_back(subword, index++);
     }
   }
 
   // Initialize leading and trailing lexicons.
-  Vocabulary::TextVectorMapIterator l(leading);
+  Vocabulary::VectorMapIterator l(leading);
   leading_.Init(&l, true);
-  Vocabulary::TextVectorMapIterator t(trailing);
+  Vocabulary::VectorMapIterator t(trailing);
   trailing_.Init(&t, true);
   oov_ = leading_.Lookup("[UNK]");
 }
@@ -68,7 +68,7 @@ int SubwordTokenizer::Tokenize(Text word, std::vector<int> *subwords) const {
     const char *q = end;
     while (q > p) {
       int index = Lookup(Text(p, q - p), num_subwords == 0);
-      if (index != oov_) {
+      if (index != -1) {
         subwords->push_back(index);
         break;
       }

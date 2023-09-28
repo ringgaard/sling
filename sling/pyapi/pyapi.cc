@@ -74,6 +74,7 @@ static PyObject *RegisterPythonModule() {
   PyItems::Define(module);
 
   PyTokenizer::Define(module);
+  PySubtokenizer::Define(module);
   PyParser::Define(module);
   PyAnalyzer::Define(module);
 
