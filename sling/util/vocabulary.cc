@@ -97,8 +97,10 @@ void Vocabulary::Init(Iterator *words, bool mapped) {
   int64 index = 0;
   while (words->Next(&word, &value)) {
     // Initialize item for word.
-    items_[index].hash = Fingerprint(word.data(), word.size());
-    items_[index].value = mapped ? value : index;
+    if (!word.empty()) {
+      items_[index].hash = Fingerprint(word.data(), word.size());
+      items_[index].value = mapped ? value : index;
+    }
     index++;
   }
 

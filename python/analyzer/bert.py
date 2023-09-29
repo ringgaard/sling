@@ -86,6 +86,7 @@ class BertModel:
     self.name = name
     self.model = None
     self.tokenizer = None
+    self.uncased = False
     self.cls = None
     self.sep = None
     self.labelmap = [-1] * len(bio_tags)
@@ -96,6 +97,7 @@ class BertModel:
     self.model = AutoModelForTokenClassification.from_pretrained(self.name)
     self.tokenizer = AutoTokenizer.from_pretrained(self.name)
     self.config = AutoConfig.from_pretrained(self.name)
+    self.uncased = self.tokenizer.do_lower_case
 
     self.subtokenizer = sling.Subtokenizer(self.vocab())
     self.cls = self.subtokenizer("[CLS]")
@@ -106,9 +108,9 @@ class BertModel:
       self.labelmap[labelid] = i
 
   def vocab(self):
-    vocabulary = [None] * self.config.vocab_size
+    vocabulary = [""] * self.config.vocab_size
     for subword, index in self.tokenizer.vocab.items():
-      vocabulary[index] = subword
+        vocabulary[index] = subword
     return "\n".join(vocabulary) + "\n"
 
   def analyze(self, doc):
@@ -119,6 +121,7 @@ class BertModel:
       tokenmap = [start]
       for t in range(start, end):
         word = doc.tokens[t].word
+        if self.uncased: word = word.lower()
         subwords = self.subtokenizer.split(word)
         tokens.extend(subwords)
         for _ in range(len(subwords)): tokenmap.append(t)

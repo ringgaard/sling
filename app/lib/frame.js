@@ -556,29 +556,6 @@ export class Decoder {
     if (marker && this.input.length > 0 && this.input[0] == 0) this.pos = 1;
   }
 
-  // Read tag from input. The tag is encoded as a varint64 where the lower three
-  // bits are the opcode and the upper bits are the argument.
-  read_tag() {
-    // Low bits (0-27).
-    var lo = 0, shift = 0, b;
-    do {
-      b = this.input[this.pos++];
-      lo += (b & 0x7f) << shift;
-      shift += 7;
-    } while (b >= 0x80 && shift < 28);
-    if (b < 0x80) return [lo & 7, lo >>> 3];
-
-    // High bits (28-63).
-    var hi = 0;
-    shift = 0;
-    do {
-      b = this.input[this.pos++];
-      hi += (b & 0x7f) << shift;
-      shift += 7;
-    } while (b >= 0x80);
-    return [lo & 7, (lo >>> 3) | (hi << 25)];
-  }
-
   // Read 32-bit varint from input.
   read_varint32() {
     var result = 0, shift = 0, b;
@@ -589,6 +566,28 @@ export class Decoder {
     } while (b >= 0x80);
     if (shift > 32) throw "Invalid varint32";
     return result;
+  }
+
+  // Read 64-bit varint from input (only 53-bits can be represented accurately).
+  read_varint64() {
+    // Low bits (0-27).
+    var lo = 0, shift = 0, b;
+    do {
+      b = this.input[this.pos++];
+      lo += (b & 0x7f) << shift;
+      shift += 7;
+    } while (b >= 0x80 && shift < 28);
+    if (b < 0x80) return lo;
+
+    // High bits (28-63).
+    var hi = 0;
+    shift = 0;
+    do {
+      b = this.input[this.pos++];
+      hi += (b & 0x7f) << shift;
+      shift += 7;
+    } while (b >= 0x80);
+    return lo + hi * 268435456;
   }
 
   // Read UTF-8 encoded string from input.
@@ -618,7 +617,9 @@ export class Decoder {
   // Read one object from the input.
   read() {
     // Read next tag.
-    let [op, arg] = this.read_tag();
+    let tag = this.read_varint64();
+    let op = (tag & 7) | 0;
+    let arg = (tag / 8) | 0;
     let object;
     switch (op) {
       case 0:
@@ -652,7 +653,7 @@ export class Decoder {
 
       case 5:
         // INTEGER.
-        object = arg;
+        object = (arg << 2) >> 2;  // "sign-extend" 30-bit integer
         break;
 
       case 6:
@@ -822,11 +823,10 @@ export class Encoder {
   // Encode object.
   encode(obj) {
     if (typeof obj === 'number') {
-      // TODO: handle integer overflow.
       if (Number.isInteger(obj)) {
-        this.write_tag(5, obj);
+        this.write_tag(5, obj & 0x3FFFFFFF);
       } else {
-        this.write_tag(6, float_to_bits(obj) >> 2);
+        this.write_tag(6, float_to_bits(obj) >>> 2);
       }
     } else if (typeof obj === 'boolean') {
       this.write_tag(5, obj ? 1 : 0);
@@ -994,16 +994,13 @@ export class Encoder {
 
   // Write varint-encoded integer to output.
   write_varint(num) {
-    if (num > Number.MAX_SAFE_INTEGER) {
-      throw new RangeError("Could not encode varint");
-    }
     this.ensure(8);
-    while(num >= 0x80000000) {
-      this.buffer[this.pos++] = (num & 0xFF) | 0x80;
+    while (num >= 0x80000000) {
+      this.buffer[this.pos++] = (num & 0x7F) | 0x80;
       num /= 128;
     }
-    while(num & ~0x7F) {
-      this.buffer[this.pos++] = (num & 0xFF) | 0x80;
+    while (num & ~0x7F) {
+      this.buffer[this.pos++] = (num & 0x7F) | 0x80;
       num >>>= 7;
     }
     this.buffer[this.pos++] = num | 0;
@@ -1021,7 +1018,11 @@ export class Encoder {
 
   // Write varint-encoded tag and argument to output.
   write_tag(tag, arg) {
-    this.write_varint(tag | (arg << 3));
+    if (arg > 0x0FFFFFFF) {
+      this.write_varint(tag + (arg * 8));
+    } else {
+      this.write_varint(tag | (arg << 3));
+    }
   }
 }
 
