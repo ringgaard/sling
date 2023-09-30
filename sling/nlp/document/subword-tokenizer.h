@@ -52,6 +52,10 @@ class SubwordTokenizer {
   // Return subword from id.
   const string &subword(int index) const { return subwords_[index]; }
 
+  // Split subwords on punctuation (like in the BERT tokenizer).
+  bool split_on_puctuation() const { return split_on_puctuation_; }
+  void set_split_on_puctuation(bool b) { split_on_puctuation_ = b; }
+
  private:
   // Leading and trailing subword token lexicons.
   Vocabulary leading_;
@@ -62,6 +66,9 @@ class SubwordTokenizer {
 
   // The out-of-vocabulary (OOV) token index.
   int oov_ = 0;
+
+  // Split words on punctuation.
+  bool split_on_puctuation_ = false;
 };
 
 }  // namespace nlp

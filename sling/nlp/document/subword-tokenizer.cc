@@ -64,20 +64,37 @@ int SubwordTokenizer::Tokenize(Text word, std::vector<int> *subwords) const {
   const char *p = word.data();
   const char *end = p + word.size();
   int num_subwords = 0;
+  bool leading = true;
   while (p < end) {
-    const char *q = end;
-    while (q > p) {
-      int index = Lookup(Text(p, q - p), num_subwords == 0);
+    // Optionally treat punctuation as separate tokens.
+    if (split_on_puctuation_ && Unicode::IsPunctuation(UTF8::Decode(p))) {
+      int len = UTF8::CharLen(p);
+      int index = Lookup(Text(p, len), true);
       if (index != -1) {
         subwords->push_back(index);
+        leading = true;
+        num_subwords++;
+        p += len;
+        continue;
+      }
+    }
+
+    // Find longest matching prefix.
+    const char *q = end;
+    while (q > p) {
+      int index = Lookup(Text(p, q - p), leading);
+      if (index != -1) {
+        subwords->push_back(index);
+        leading = false;
+        num_subwords++;
         break;
       }
       q = UTF8::Previous(q, p);
     }
+
     if (q > p) {
       // Match remainder.
       p = q;
-      num_subwords++;
     } else {
       // Out of vocabulary.
       if (num_subwords == 0) subwords->push_back(oov_);

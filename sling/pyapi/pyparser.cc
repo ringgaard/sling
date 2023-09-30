@@ -123,6 +123,7 @@ int PySubtokenizer::Init(PyObject *args, PyObject *kwds) {
   if (!PyArg_ParseTuple(args, "s", &vocabulary)) return -1;
 
   tokenizer = new nlp::SubwordTokenizer();
+  tokenizer->set_split_on_puctuation(true);
   Vocabulary::BufferIterator it(vocabulary, strlen(vocabulary), '\n');
   tokenizer->Init(&it);
 
