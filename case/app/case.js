@@ -311,24 +311,38 @@ class CaseEditor extends MdApp {
       title: "Reconcile with...",
       items: results});
     let ref = await dialog.show();
-    if (ref || ref === null) {
-      let item = ref && frame(ref);
-      if (mention.annotation && ref) {
-        mention.annotation.set(n_is, item);
+    let dirty = false;
+    if (ref === null) {
+      if (mention.annotation) {
+        mention.annotation.remove(n_is);
       } else {
-        mention.annotation = item;
+        mention.annotation = null;
       }
 
       let source = mention.document.source;
       if (source instanceof Frame) {
-        source.set(mention.text(), item);
+        let text = mention.text();
+        source.purge((name, value) => name == text);
+      }
+      dirty = true;
+    } else if (ref) {
+      if (mention.annotation) {
+        mention.annotation.set(n_is, frame(ref));
+      } else {
+        mention.annotation = frame(ref);
       }
 
-      let context = mention.document.context;
-      if (context && context.topic) {
-        this.topic_updated(context.topic);
-        this.mark_dirty();
+      let source = mention.document.source;
+      if (source instanceof Frame) {
+        source.set(mention.text(), frame(ref));
       }
+      dirty = true;
+    }
+
+    let context = mention.document.context;
+    if (dirty && context && context.topic) {
+      this.topic_updated(context.topic);
+      this.mark_dirty();
     }
   }
 

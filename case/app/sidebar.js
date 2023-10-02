@@ -28,6 +28,7 @@ class SideBar extends Component {
     this.attach(this.onresizeup, "pointerup", "#sidebar-left");
     this.attach(this.onresizemove, "pointermove", "#sidebar-left");
     this.attach(this.onkeydown, "keydown");
+    this.attach(this.onhighlight, "highlight");
 
     if (this.state) {
       let context = this.state.context;
@@ -119,6 +120,18 @@ class SideBar extends Component {
   async onnavigate(e) {
     let editor = this.match("#editor");
     await editor.navigate_to(this.state.context.topic);
+  }
+
+  async onhighlight(e) {
+    let mention = e.detail.mention;
+    let match = store.resolve(mention.annotation);
+    let context = mention.document.context;
+    if (match == context.match) {
+      context.match = null;
+    } else {
+      context.match = match;
+    }
+    this.onrefresh(mention.document);
   }
 
   async onupdate() {

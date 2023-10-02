@@ -80,6 +80,7 @@ n_body = commons["body"]
 n_title = commons["title"]
 n_class = commons["class"]
 n_role = commons["role"]
+n_epubtype = commons["epub:type"]
 
 languages = {
   None: None,
@@ -93,19 +94,19 @@ languages = {
 
 figure_types = ["image/jpeg", "image/gif", "image/png"]
 
-LINE_BREAK = chr(2029)
+PARA_BREAK = chr(2029)
 
 KEEP    = 1
 SKIP    = 2
 NOTAG   = 3
 BREAK   = 4
-NEWLINE = 5
+PARA    = 5
 
 tags = {
   commons["body"]: NOTAG,
   commons["section"]: KEEP,
   commons["p"]: {
-    None: NEWLINE,
+    None: PARA,
   },
   commons["h1"]: KEEP,
   commons["h2"]: KEEP,
@@ -120,12 +121,16 @@ tags = {
   commons["small"]: KEEP,
   commons["sup"]: KEEP,
   commons["sub"]: KEEP,
-  commons["div"]: KEEP,
+  commons["div"]: {
+    None: KEEP,
+    "page_top_padding": NOTAG,
+  },
   commons["ol"]: KEEP,
   commons["ul"]: KEEP,
   commons["li"]: KEEP,
   commons["span"]: {
     None: KEEP,
+    "pagebreak": SKIP,
     "doc-pagebreak": SKIP,
   },
   commons["hr"]: {
@@ -138,7 +143,6 @@ tags = {
   commons["table"]: KEEP,
   commons["tr"]: KEEP,
   commons["td"]: KEEP,
-
 
   commons["style"]: SKIP,
   commons["figure"]: SKIP,
@@ -159,6 +163,7 @@ tags = {
   commons["epub:type"]: SKIP,
   commons["aria-label"]: SKIP,
   commons["aria-labelledby"]: SKIP,
+  commons["aria-hidden"]: SKIP,
   commons["role"]: SKIP,
   commons["href"]: SKIP,
   commons["hidden"]: SKIP,
@@ -306,10 +311,6 @@ class EPUBBook:
       #print("item", item.data(pretty=True, utf8=True))
       title, text = self.extract_section(item)
       if label: title = label
-
-      #print("title", title)
-      #print(text)
-
       self.add(n_lex, self.store.frame([(n_name, title), (n_is, text)]))
 
     return self.frame
@@ -333,7 +334,7 @@ class EPUBBook:
           title = detag(self.extract_text(tag, heading))
 
     # Extract text from body.
-    text = self.extract_text(n_body, body).replace(LINE_BREAK, "\n")
+    text = self.extract_text(n_body, body).replace(PARA_BREAK, "\n\n")
 
     return title, text
 
@@ -349,6 +350,7 @@ class EPUBBook:
       if type(content) is sling.Frame:
         cls = content[n_class]
         if cls is None: cls = content[n_role]
+        if cls is None: cls = content[n_epubtype]
       if cls in action:
         action = action[cls]
       else:
@@ -374,7 +376,7 @@ class EPUBBook:
     prefix = ""
     if action == NOTAG: return text
     if len(text) == 0: return ""
-    if action == NEWLINE: prefix = LINE_BREAK
+    if action == PARA: prefix = PARA_BREAK
 
     return "%s<%s>%s</%s>" % (prefix, tag.id, text, tag.id)
 

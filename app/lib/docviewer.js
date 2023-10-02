@@ -69,6 +69,8 @@ class AnnotationBox extends Component {
       this.dispatch("annotate", {mention, event: e}, true);
     } else if (target.id == "reconcile") {
       this.dispatch("reconcile", {mention, event: e}, true);
+    } else if (target.id == "highlight") {
+      this.dispatch("highlight", {mention, event: e}, true);
     } else if (target.id == "copy") {
       let text = mention.text(true);
       if (e.ctrlKey && (mention.annotation instanceof Frame)) {
@@ -90,6 +92,7 @@ class AnnotationBox extends Component {
         <md-icon icon="add_circle" class="action" id="annotate"></md-icon>
         <md-icon icon="join_right" class="action" id="reconcile"></md-icon>
         <md-icon icon="content_copy" class="action" id="copy"></md-icon>
+        <md-icon icon="find_in_page" class="action" id="highlight"></md-icon>
       </div>
     `);
 
@@ -267,7 +270,7 @@ export class DocumentViewer extends Component {
       this.lineheight = this.find(".linemeasure").offsetHeight;
     }
     // Adjust annotation box position.
-    const boxwidth = Math.max(span.offsetWidth, 150);
+    const boxwidth = Math.max(span.offsetWidth, 160);
     let top = span.offsetTop + span.offsetHeight;
     let left = span.offsetLeft;
     if (span.offsetHeight > this.lineheight) {
@@ -334,6 +337,7 @@ export class DocumentViewer extends Component {
     let si = 0;
     let ei = 0;
     let level = 0;
+    let match = doc.context && doc.context.match;
     for (let pos = 0; pos < text.length; ++pos) {
       // Output span ends.
       while (ei < n && ends[ei].end < pos) ei++;
@@ -355,7 +359,12 @@ export class DocumentViewer extends Component {
           from = pos;
         }
         level++;
-        h.push(`<span class="l${level}" mention=${starts[si].index}>`);
+        let mention = starts[si];
+        if (match && store.resolve(mention.annotation) == match) {
+          h.push(`<span class="l${level} highlight" mention=${mention.index}>`);
+        } else {
+          h.push(`<span class="l${level}" mention=${mention.index}>`);
+        }
         si++;
       }
     }
@@ -386,6 +395,9 @@ export class DocumentViewer extends Component {
       $ span {
         color: #0000dd;
         cursor: pointer;
+      }
+      $ span.highlight {
+        background-color: #fce94f;
       }
       $ span:hover {
         text-decoration: underline;
