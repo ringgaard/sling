@@ -382,6 +382,7 @@ class TopicToolbox extends MdToolbox {
           </md-icon-button>
           <md-menu id="topic-menu">
             <md-menu-item id="extract">Extract text</md-menu-item>
+            <md-menu-item id="mentions">Find mentions</md-menu-item>
           </md-menu>
    `;
  }
@@ -428,6 +429,8 @@ class TopicCard extends Component {
       let action = e.detail.id;
       if (action == "extract") {
         this.onextract(e);
+      } else if (action == "mentions") {
+        this.onmentions(e);
       }
     });
 
@@ -1120,6 +1123,17 @@ class TopicCard extends Component {
     }
     this.mark_dirty();
     this.refresh();
+  }
+
+  onmentions(e) {
+    let topic = this.state;
+    let drawer = document.querySelector("drawer-panel");
+    drawer.update({
+      entries: [{
+        name: topic.get(n_name) || topic.id,
+        topic: topic,
+      }]
+    });
   }
 
   ondown(e) {

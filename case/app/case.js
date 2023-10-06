@@ -10,13 +10,13 @@ import {LabelCollector, ItemCollector} from "/common/lib/datatype.js";
 
 import * as plugins from "./plugins.js";
 import * as importers from "./importers.js";
-import {NewFolderDialog} from "./folder.js";
 import {Drive} from "./drive.js";
 import {wikidata_initiate, wikidata_export} from "./wikibase.js";
 import {generate_key, encrypt} from "./crypto.js";
 import {Collaboration} from "./collab.js";
 import {SearchIndex, search, kbsearch, SearchResultsDialog} from "./search.js";
 import {get_property_index} from "./schema.js";
+import "./drawer.js";
 import "./sidebar.js";
 import "./topic.js";
 
@@ -123,9 +123,6 @@ class CaseEditor extends MdApp {
 
     this.attach(this.ondrawer, "click", "#drawer");
     this.attach(this.onmerge, "click", "#merge");
-    this.attach(this.ondrawerdown, "pointerdown", "#drawer-resizer");
-    this.attach(this.ondrawerup, "pointerup", "#drawer-resizer");
-    this.attach(this.ondrawermove, "pointermove", "#drawer-resizer");
     if (settings.userscripts) {
       this.attach(this.onscript, "click", "#script");
     }
@@ -135,7 +132,6 @@ class CaseEditor extends MdApp {
     this.attach(this.oninvite, "click", "#invite");
     this.attach(this.onshare, "click", "#share");
     this.attach(this.close, "click", "#home");
-    this.attach(this.onnewfolder, "click", "#newfolder");
 
     this.attach(this.onsave, "click", "md-menu #save");
     this.attach(this.onfilesave, "click", "md-menu #filesave");
@@ -373,25 +369,6 @@ class CaseEditor extends MdApp {
     }
   }
 
-  ondrawerdown(e) {
-    let resizer = e.target;
-    resizer.setPointerCapture(e.pointerId);
-    this.drawer_x = e.clientX;
-    this.drawer_capture = true;
-  }
-
-  ondrawerup(e) {
-    this.drawer_capture = false;
-  }
-
-  ondrawermove(e) {
-    if (!this.drawer_capture) return;
-    let drawer = this.find("#folders");
-    let offset = e.clientX - this.drawer_x;
-    drawer.style.width = `${drawer.offsetWidth + offset}px`;
-    this.drawer_x = e.clientX;
-  }
-
   async search(query, results, options = {}) {
     // Search topcis in case file.
     let index = this.get_index();
@@ -471,17 +448,8 @@ class CaseEditor extends MdApp {
     }
   }
 
-  async onnewfolder(e) {
-    if (this.readonly) return;
-    let dialog = new NewFolderDialog();
-    let result = await dialog.show();
-    if (result) {
-      this.add_folder(result);
-    }
-  }
-
   ondrawer(e) {
-    this.find("md-drawer").toogle();
+    this.find("drawer-panel").toogle();
   }
 
   async onsave(e) {
@@ -709,7 +677,7 @@ class CaseEditor extends MdApp {
     this.update_title();
 
     // Enable/disable action buttons.
-    for (let e of ["#save", "#share", "#merge", "#newfolder", "#wikiexport"]) {
+    for (let e of ["#save", "#share", "#merge", "#wikiexport"]) {
       this.find(e).update(!this.readonly);
     }
     if (this.collab) {
@@ -730,7 +698,6 @@ class CaseEditor extends MdApp {
   async onupdated() {
     if (this.state) {
       this.find("#caseid").update(this.caseid().toString());
-      this.find("md-drawer").update(true);
       await this.update_folders();
       await this.update_topics();
       await this.navigate_to(this.main);
@@ -1897,7 +1864,7 @@ class CaseEditor extends MdApp {
   }
 
   async update_folders() {
-    await this.find("folder-list").update({
+    await this.find("drawer-panel").update({
       folders: this.folders,
       current: this.folder,
       scraps: this.scraps,
@@ -2013,22 +1980,7 @@ class CaseEditor extends MdApp {
       </md-toolbar>
 
       <div id="container">
-        <md-drawer id="folders">
-          <div id="drawer-rows">
-              <div id="folders-top">
-                Folders
-                <md-spacer></md-spacer>
-                <md-icon-button
-                  id="newfolder"
-                  icon="create_new_folder"
-                  tooltip="Create new folder"
-                  tooltip-align="right">
-                </md-icon-button>
-              </div>
-              <folder-list></folder-list>
-            </div>
-            <div id="drawer-resizer"></div>
-        </md-drawer>
+        <drawer-panel></drawer-panel>
         <md-content>
           <topic-list></topic-list>
         </md-content>
@@ -2063,47 +2015,12 @@ class CaseEditor extends MdApp {
       $ md-toolbar md-menu md-icon-button {
         margin-left: inherit;
       }
-      $ md-drawer md-icon {
-        color: #808080;
-      }
-      $ md-drawer md-icon-button {
-        color: #808080;
-      }
       $ topic-list md-icon {
         color: #808080;
       }
       $ topic-list md-icon-button {
         color: #808080;
         fill: #808080;
-      }
-      $ md-drawer {
-        display: flex;
-        flex-direction: row;
-        width: 150px;
-        min-width: 100px;
-        padding: 3px 0px 3px 3px;
-      }
-      $ #drawer-rows {
-        display: flex;
-        flex-direction: column;
-        height: 100%;
-        width: 100%;
-        overflow-x: clip;
-        overflow-y: auto;
-      }
-      $ #drawer-resizer {
-        cursor: col-resize;
-        width: 3px;
-      }
-      $ #folders-top {
-        display: flex;
-        align-items: center;
-        font-size: 16px;
-        font-weight: bold;
-        margin-left: 6px;
-        border-bottom: thin solid #808080;
-        margin-bottom: 6px;
-        min-height: 40px;
       }
     `;
   }
@@ -2215,7 +2132,7 @@ class SharingDialog extends MdDialog {
 Component.register(SharingDialog);
 
 var user_script;
-var AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
+const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
 
 class ScriptDialog extends MdDialog {
   onconnected() {

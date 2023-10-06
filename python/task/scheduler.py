@@ -200,6 +200,9 @@ class Job:
   def noop(self):
     return self.task.program is None
 
+  def pid(self):
+    return self.process.pid if self.process else None
+
   def command(self):
     if self.task.shell:
       cmd = self.task.program
@@ -533,7 +536,7 @@ def start_daemon(taskname, args):
   job.state = Job.DAEMON
   out.close()
   jobs.append(job)
-  log.info("started daemon", job.id, job.task.name, "pid", job.process.pid)
+  log.info("started daemon", job.id, job.task.name, "pid", job.pid())
   return job
 
 def stop_daemon(taskname):
@@ -544,7 +547,7 @@ def stop_daemon(taskname):
     return None
 
   # Stop daemon.
-  log.info("stop daemon", job.id, job.task.name, "pid", job.process.pid)
+  log.info("stop daemon", job.id, job.task.name, "pid", job.pid())
   job.process.terminate()
   job.process.wait()
   job.state = Job.COMPLETED
@@ -786,7 +789,7 @@ def jobs_request(request):
         "command": str(job),
         "started": ts2str(job.started),
         "time": dur2str(job.runtime()),
-        "pid": job.process.pid,
+        "pid": job.pid(),
       })
     elif job.state == Job.WAITING:
       waiting.append({
@@ -818,7 +821,7 @@ def jobs_request(request):
         "started": ts2str(job.started),
         "time": dur2str(job.runtime()),
         "status": status,
-        "pid": job.process.pid,
+        "pid": job.pid(),
       })
     elif job.state == Job.PENDING:
       pending.append({

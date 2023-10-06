@@ -292,6 +292,7 @@ var plugins = [
     /^https?:\/\/.+\/gallery.html$/,
     /^https?:\/\/thekameraclub\.co\.uk\//,
     /^https?:\/\/p..ncoven\.com\//,
+    /^https?:\/\/vipergirls\.to\/threads\//,
   ],
 },
 
