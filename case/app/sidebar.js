@@ -10,6 +10,7 @@ import {DocumentViewer} from "/common/lib/docviewer.js";
 
 const n_name = frame("name");
 const n_lex = frame("lex");
+const n_bookmarked = frame("bookmarked");
 
 function same(d1, d2) {
   if (!d1 || !d2) return false;
@@ -79,10 +80,23 @@ class SideBar extends Component {
   onnext() {
     let context = this.state.context;
     let topic = context.topic;
-    let index = context.index + 1;
-    let source = context.topic.value(context.topic.slot(n_lex, index));
-    if (source) {
-      this.update(new Document(store, source, {topic, index}));
+    let index = context.index;
+
+    let current = context.topic.value(context.topic.slot(n_lex, index));
+    index++;
+    let next = context.topic.value(context.topic.slot(n_lex, index));
+
+    if (next) {
+      if (current.get(n_bookmarked)) {
+        current.remove(n_bookmarked);
+        next.set(n_bookmarked, true);
+
+        let editor = this.match("#editor");
+        editor.mark_dirty();
+        editor.topic_updated(topic);
+        editor.update_topic(topic);
+      }
+      this.update(new Document(store, next, {topic, index}));
     } else {
       inform("already at end");
     }

@@ -72,7 +72,7 @@ flags.define("--patterns",
 
 flags.define("--aliases",
              help="phrase table for matching item names",
-             default="data/e/kb/en/phrase-table.repo",
+             default="data/e/kb/xx/phrase-table.repo",
              metavar="FILE")
 
 flags.define("--report",

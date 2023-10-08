@@ -36,7 +36,7 @@ import sling
 
 kb = sling.Store()
 kb.load("data/e/kb/kb.sling")
-aliases = sling.PhraseTable(kb, "data/e/kb/en/phrase-table.repo")
+aliases = sling.PhraseTable(kb, "data/e/kb/xx/phrase-table.repo")
 
 def resolve_name(name):
   for item in aliases.lookup(name): return item

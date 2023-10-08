@@ -96,17 +96,20 @@ figure_types = ["image/jpeg", "image/gif", "image/png"]
 
 PARA_BREAK = chr(2029)
 
-KEEP    = 1
-SKIP    = 2
-NOTAG   = 3
-BREAK   = 4
-PARA    = 5
+KEEP       = 1
+SKIP       = 2
+NOTAG      = 3
+BREAK      = 4
+PARA       = 5
+CAPITALIZE = 6
 
 tags = {
   commons["body"]: NOTAG,
   commons["section"]: KEEP,
   commons["p"]: {
     None: PARA,
+    "chno": "h2",
+    "chtxt": "h2",
   },
   commons["h1"]: KEEP,
   commons["h2"]: KEEP,
@@ -129,9 +132,11 @@ tags = {
   commons["ul"]: KEEP,
   commons["li"]: KEEP,
   commons["span"]: {
-    None: KEEP,
+    None: NOTAG,
     "pagebreak": SKIP,
     "doc-pagebreak": SKIP,
+    "smallcapssan": CAPITALIZE,
+    "italic": "em",
   },
   commons["hr"]: {
     None: KEEP,
@@ -143,6 +148,7 @@ tags = {
   commons["table"]: KEEP,
   commons["tr"]: KEEP,
   commons["td"]: KEEP,
+  commons["col"]: SKIP,
 
   commons["style"]: SKIP,
   commons["figure"]: SKIP,
@@ -166,6 +172,7 @@ tags = {
   commons["aria-hidden"]: SKIP,
   commons["role"]: SKIP,
   commons["href"]: SKIP,
+  commons["valign"]: SKIP,
   commons["hidden"]: SKIP,
   commons["xmlU0003Alang"]: SKIP,
 }
@@ -339,11 +346,11 @@ class EPUBBook:
     return title, text
 
   def extract_text(self,  tag, content):
-    #print(tag.id, content)
     text = ""
+    tagname = tag.id
     action = tags.get(tag)
     if action is None:
-      log.warning("Unknown tag:", tag.id)
+      log.warning("Unknown tag:", tagname)
       action = KEEP
     elif type(action) is dict:
       cls = None
@@ -358,8 +365,7 @@ class EPUBBook:
 
     if action == SKIP: return ""
     if action == BREAK: return "<br>"
-
-    #print("tag", tag.id, action)
+    if type(action) is str: tagname = action
 
     if content is None:
       text = ""
@@ -377,8 +383,9 @@ class EPUBBook:
     if action == NOTAG: return text
     if len(text) == 0: return ""
     if action == PARA: prefix = PARA_BREAK
+    if action == CAPITALIZE: return text.capitalize()
 
-    return "%s<%s>%s</%s>" % (prefix, tag.id, text, tag.id)
+    return "%s<%s>%s</%s>" % (prefix, tagname, text, tagname)
 
 def extract(content, params):
    file = io.BytesIO(content)

@@ -61,7 +61,7 @@ n_lat = kb["/w/lat"]
 n_lng = kb["/w/lng"]
 n_gleif = kb["Q90175664"]
 
-aliases = sling.PhraseTable(kb, "data/e/kb/en/phrase-table.repo")
+aliases = sling.PhraseTable(kb, "data/e/kb/xx/phrase-table.repo")
 factex = sling.FactExtractor(kb)
 
 city_types = factex.taxonomy([
