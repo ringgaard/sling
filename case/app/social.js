@@ -17,11 +17,11 @@ let xrefs = [
     property: frame("is"),
   },
   {
-    pattern: /^https?:\/\/(?:www\.)?twitter\.com\/([A-Za-z0-9_]+)(\?.*)?$/i,
+    pattern: /^https?:\/\/(?:www\.)?twitter\.com\/([A-Za-z0-9_]+)\/?(\?.*)?$/i,
     property: frame("P2002"),
   },
   {
-    pattern: /^https?:\/\/(?:mobile\.)?twitter\.com\/([A-Za-z0-9_]+)(\?.*)?$/i,
+    pattern: /^https?:\/\/(?:mobile\.)?twitter\.com\/([A-Za-z0-9_]+)\/?(\?.*)?$/i,
     property: frame("P2002"),
   },
   {
@@ -80,6 +80,10 @@ let xrefs = [
   {
     pattern: /^https?:\/\/www\.onlyfans\.com\/([^\/\?]+)/,
     property: frame("P8604"),
+  },
+  {
+    pattern: /^https?:\/\/fansly\.com\/([^\/\?]+)/i,
+    property: frame("P12039"),
   },
   {
     pattern: /^https?:\/\/discord\.gg\/([^\/\?]+)/,

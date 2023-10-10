@@ -174,6 +174,12 @@ class SideBar extends Component {
     if (same(this.state, doc)) this.update(null);
   }
 
+  async goto(doc) {
+    if (!same(this.state, doc)) await this.update(doc);
+    let viewer = this.find("document-viewer");
+    viewer.goto(doc.context.match);
+  }
+
   render() {
     return `
       <div id="sidebar-left"></div>

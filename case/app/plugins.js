@@ -293,6 +293,7 @@ var plugins = [
     /^https?:\/\/thekameraclub\.co\.uk\//,
     /^https?:\/\/p..ncoven\.com\//,
     /^https?:\/\/vipergirls\.to\/threads\//,
+    /^https?:\/\/www\.famousboard\.com\/threads\//,
   ],
 },
 
@@ -619,6 +620,12 @@ var topic_widgets = [
 {
   module: "chart.js",
   type: frame("Q28923"),
+},
+
+// Book widget.
+{
+  module: "book.js",
+  type: frame("Q571"),
 },
 
 ];

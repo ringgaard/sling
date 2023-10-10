@@ -165,6 +165,12 @@ export class Document {
     }
   }
 
+  first_mention(topic) {
+    for (let m of this.mentions) {
+      if (topic == this.store.resolve(m.annotation)) return m;
+    }
+  }
+
   search(query, partial) {
     let it = function* (mentions, query, partial) {
       for (let m of mentions) {

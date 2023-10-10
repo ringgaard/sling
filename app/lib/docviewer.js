@@ -79,7 +79,6 @@ class AnnotationBox extends Component {
       }
       navigator.clipboard.writeText(text);
     }
-    if (target.tagName != "A") this.remove();
   }
 
   render() {
@@ -317,6 +316,17 @@ export class DocumentViewer extends Component {
   }
 
   visible() { return this.state && this.state.source; }
+
+  goto(topic) {
+    // Find first mention.
+    let doc = this.state;
+    let m = doc.first_mention(topic);
+    if (!m) return;
+
+    // Scroll mention into view.
+    let span = this.querySelector(`span[mention="${m.index}"]`);
+    if (span) span.scrollIntoView({block: "center"});
+  }
 
   render() {
     let doc = this.state;

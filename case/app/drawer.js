@@ -2,7 +2,12 @@
 // Licensed under the Apache License, Version 2
 
 import {Component} from "/common/lib/component.js";
+import {Document} from "/common/lib/document.js";
+import {store, frame} from "/common/lib/global.js";
 import {NewFolderDialog} from "./folder.js";
+
+
+const n_lex = frame("lex");
 
 class DrawerPanel extends Component {
   onrendered() {
@@ -13,8 +18,7 @@ class DrawerPanel extends Component {
     this.attach(this.ondrawermove, "pointermove", "#resizer");
     if (this.state.folders) {
       this.attach(this.onnewfolder, "click", "#newfolder");
-    }
-    if (this.state.entries) {
+    } else {
       this.attach(this.onclose, "click", "#close");
     }
   }
@@ -23,6 +27,8 @@ class DrawerPanel extends Component {
     if (!this.state) return;
     if (this.state.folders) {
       this.find("folder-list").update(this.state);
+    } else {
+      this.find("index-entry").update(this.state);
     }
   }
 
@@ -65,21 +71,7 @@ class DrawerPanel extends Component {
   render() {
     if (!this.state) return;
     let h = new Array();
-    if (this.state.entries) {
-      h.push(`
-        <div id="index">
-          <div class="top">
-            Index
-            <md-spacer></md-spacer>
-            <md-icon-button
-              id="close"
-              icon="close"
-              tooltip="Close index"
-              tooltip-align="right">
-            </md-icon-button>
-          </div>
-        </div>`);
-    } else {
+    if (this.state.folders) {
       h.push(`
         <div id="folders">
           <div class="top">
@@ -93,6 +85,21 @@ class DrawerPanel extends Component {
             </md-icon-button>
           </div>
           <folder-list></folder-list>
+        </div>`);
+    } else {
+      h.push(`
+        <div id="index">
+          <div class="top">
+            Index
+            <md-spacer></md-spacer>
+            <md-icon-button
+              id="close"
+              icon="close"
+              tooltip="Close index"
+              tooltip-align="right">
+            </md-icon-button>
+          </div>
+          <index-entry></index-entry>
         </div>`);
     }
     h.push('<div id="resizer"></div>');
@@ -146,4 +153,108 @@ class DrawerPanel extends Component {
 }
 
 Component.register(DrawerPanel);
+
+class IndexEntry extends Component {
+  onrendered() {
+    if (this.state) {
+      this.attach(this.onnavigate, "click", ".name");
+      if (this.state.entries) {
+        this.attach(this.onexpand, "click", "md-icon");
+        let list = this.find("entry-list");
+        if (list) list.update(this.state.entries);
+      }
+    }
+  }
+
+  onexpand(e) {
+    this.state.open = !this.state.open;
+    this.update(this.state);
+  }
+
+  onnavigate(e) {
+    let entry = this.state;
+    if (entry.topic) {
+      this.dispatch("navigate", {ref: entry.topic.id, event: e}, true);
+    } else if (entry.context) {
+      let book = entry.context.book;
+      let index = entry.context.index;
+      let source = book.value(book.slot(n_lex, index));
+      let context = {topic: book, index: index, match: entry.item};
+      let doc = new Document(store, source, context);
+
+      let sidebar = document.getElementById("sidebar");
+      sidebar.goto(doc);
+    }
+  }
+
+  render() {
+    let entry = this.state;
+    if (!entry) return;
+
+    let h = new Array();
+    h.push('<div class="entry">');
+    if (!entry.entries) {
+      h.push('<md-icon></md-icon>');
+    } else if (entry.open) {
+      h.push('<md-icon icon="arrow_drop_down"></md-icon>');
+    } else {
+      h.push('<md-icon icon="arrow_right"></md-icon>');
+    }
+    h.push(`<span class="name">${Component.escape(entry.name)}</span>`);
+    h.push('</div>');
+    if (entry.open) {
+      h.push(`<entry-list></entry-list>`);
+    }
+    return h.join("");
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+      }
+      $ div.entry {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+      }
+      $ div.entry:hover {
+        background-color: #eeeeee;
+      }
+      $ md-icon {
+        width: 20px;
+      }
+      $ span.name {
+        overflow-x: clip;
+        white-space: nowrap;
+      }
+    `;
+  }
+}
+
+Component.register(IndexEntry);
+
+class EntryList extends Component {
+  render() {
+    let entries = this.state;
+    if (!entries) return;
+
+    let h = new Array();
+    for (let entry of this.state) {
+      h.push(new IndexEntry(entry));
+    }
+    return h;
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        display: flex;
+        flex-direction: column;
+        padding-left: 16px;
+      }
+    `;
+  }
+}
+
+Component.register(EntryList);
 

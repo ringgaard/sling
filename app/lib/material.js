@@ -507,8 +507,9 @@ export class MdMenu extends Component {
   }
 
   render() {
+    let icon = this.attrs["icon"] || "more_vert";
     let h = [];
-    h.push('<md-icon id="open" icon="more_vert"></md-icon-button>');
+    h.push(`<md-icon id="open" icon="${icon}"></md-icon-button>`);
     let content = document.createElement("div");
     content.className = "menu-content";
     for (let item of this.items) {
