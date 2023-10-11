@@ -111,11 +111,11 @@ class DrawerPanel extends Component {
       $ {
         display: flex;
         flex-direction: row;
+        justify-content: stretch;
         width: 150px;
         height: 100%;
         min-width: 100px;
         padding: 3px 0px 3px 3px;
-        overflow: auto;
         box-sizing: border-box;
         overflow-x: clip;
         overflow-y: auto;
@@ -128,7 +128,8 @@ class DrawerPanel extends Component {
       }
       $ #resizer {
         cursor: col-resize;
-        width: 3px;
+        flex: 0 0 3px;
+        z-index: 2;
       }
       $ .top {
         display: flex;
@@ -141,12 +142,12 @@ class DrawerPanel extends Component {
         min-height: 40px;
       }
       $ #folders {
+        flex: 1 1 auto;
         width: 100%;
-        height: 100%;
       }
       $ #index {
+        flex: 1 1 auto;
         width: 100%;
-        height: 100%;
       }
     `;
   }

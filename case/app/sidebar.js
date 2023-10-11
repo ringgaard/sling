@@ -17,6 +17,7 @@ function same(d1, d2) {
   if (d1 == d2) return true;
   if (d1.context.topic != d2.context.topic) return false;
   if (d1.context.index != d2.context.index) return false;
+  if (d1.context.match != d2.context.match) return false;
   return true;
 }
 
@@ -175,9 +176,8 @@ class SideBar extends Component {
   }
 
   async goto(doc) {
-    if (!same(this.state, doc)) await this.update(doc);
-    let viewer = this.find("document-viewer");
-    viewer.goto(doc.context.match);
+    await this.update(doc);
+    this.find("document-viewer").goto(doc.context.match);
   }
 
   render() {

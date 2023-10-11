@@ -91,7 +91,7 @@ class AnnotationBox extends Component {
         <md-icon icon="add_circle" class="action" id="annotate"></md-icon>
         <md-icon icon="join_right" class="action" id="reconcile"></md-icon>
         <md-icon icon="content_copy" class="action" id="copy"></md-icon>
-        <md-icon icon="find_in_page" class="action" id="highlight"></md-icon>
+        <md-icon icon="flag" class="action" id="highlight"></md-icon>
       </div>
     `);
 
@@ -408,6 +408,7 @@ export class DocumentViewer extends Component {
       }
       $ span.highlight {
         background-color: #fce94f;
+        padding: 5px 0 5px 0;
       }
       $ span:hover {
         text-decoration: underline;

@@ -1127,13 +1127,59 @@ class TopicCard extends Component {
 
   onmentions(e) {
     let topic = this.state;
-    let drawer = document.querySelector("drawer-panel");
-    drawer.update({
-      entries: [{
+
+    // Find all books with mentions of topic.
+    let books = [];
+    for (let t of this.match("#editor").topics) {
+      if (!t.has(n_lex)) continue;
+
+      // Find all chapters in book with mentions of topic.
+      let chapters = [];
+      let index = 0;
+      for (let source of t.all(n_lex)) {
+        if (typeof(source) === 'string') continue;
+
+        // Check if topic is mentioned in chapter.
+        let doc = new Document(store, source);
+        let found = false;
+        for (let m of doc.mentions) {
+          if (!doc.annotation) continue;
+          let item = store.resolve(m.annotation);
+          if (item == topic) {
+            found = true;
+            break;
+          }
+        }
+
+        // Add chapter if topic is mentioned.
+        if (found) chapters.push({
+          name: source.get(n_name),
+          item: topic,
+          context: {book: t, index},
+        });
+        index++;
+      }
+
+      // Add book if topic is mentioned.
+      if (chapters.length > 0) {
+        books.push({
+          name: t.get(n_name),
+          topic: t,
+          entries: chapters,
+        });
+      }
+    }
+
+    // Show index if any book mentions topic.
+    if (books.length > 0) {
+      let drawer = document.querySelector("drawer-panel");
+      drawer.update({
         name: topic.get(n_name) || topic.id,
         topic: topic,
-      }]
-    });
+        entries: books,
+        open: true,
+      });
+    }
   }
 
   ondown(e) {
