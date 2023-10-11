@@ -408,7 +408,7 @@ export class DocumentViewer extends Component {
       }
       $ span.highlight {
         background-color: #fce94f;
-        padding: 5px 0 5px 0;
+        padding: 4px 0 4px 0;
       }
       $ span:hover {
         text-decoration: underline;

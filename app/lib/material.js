@@ -146,6 +146,118 @@ export class MdSpacer extends Component {
 
 Component.register(MdSpacer);
 
+
+//-----------------------------------------------------------------------------
+// Resizer
+//-----------------------------------------------------------------------------
+
+const RESIZER_LEFT   = 0;
+const RESIZER_RIGHT  = 1;
+const RESIZER_TOP    = 2;
+const RESIZER_BOTTOM = 3;
+
+const resizer_direction = {
+  "left": RESIZER_LEFT,
+  "right": RESIZER_RIGHT,
+  "top": RESIZER_TOP,
+  "bottom": RESIZER_BOTTOM,
+};
+
+class MdResizer extends Component {
+  onrendered() {
+    this.attach(this.ondown, "pointerdown");
+    this.attach(this.onup, "pointerup");
+    this.attach(this.onmove, "pointermove");
+    this.direction = resizer_direction[this.className];
+  }
+
+  ondown(e) {
+    this.setPointerCapture(e.pointerId);
+    switch (this.direction) {
+      case RESIZER_LEFT:
+      case RESIZER_RIGHT:
+        this.start_pos = e.clientX;
+        this.start_size = this.container().offsetWidth;
+        break;
+
+      case RESIZER_TOP:
+      case RESIZER_BOTTOM:
+        this.start_pos = e.clientY;
+        this.start_size = this.container().offsetHeight;
+        break;
+    }
+    this.capture = true;
+  }
+
+  onup(e) {
+    this.capture = false;
+  }
+
+  onmove(e) {
+    if (!this.capture) return;
+    var offset;
+    switch (this.direction) {
+      case RESIZER_LEFT:
+        offset = this.start_pos - e.clientX;
+        this.container().style.width = `${this.start_size + offset}px`;
+        break;
+
+      case RESIZER_RIGHT:
+        offset = e.clientX - this.start_pos;
+        this.container().style.width = `${this.start_size + offset}px`;
+        break;
+
+      case RESIZER_TOP:
+        offset = this.start_pos - e.clientY;
+        this.container().style.height = `${this.start_size + offset}px`;
+        break;
+
+      case RESIZER_BOTTOM:
+        offset = e.clientY - this.start_pos;
+        this.container().style.height = `${this.start_size + offset}px`;
+        break;
+    }
+  }
+
+  container() {
+    return this.parentElement;
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        position: absolute;
+        width: 5px;
+        z-index: 2;
+      }
+      $.left {
+        left: 0;
+        height: 100%;
+      }
+      $.right {
+        right: 0;
+        height: 100%;
+      }
+      $.top {
+        top: 0;
+        width: 100%;
+      }
+      $.bottom {
+        bottom: 0;
+        width: 100%;
+      }
+      $.left:hover, $.right:hover {
+        cursor: col-resize;
+      }
+      $.top:hover, $.bottom:hover {
+        cursor: row-resize;
+      }
+    `;
+  }
+}
+
+Component.register(MdResizer);
+
 //-----------------------------------------------------------------------------
 // Modal
 //-----------------------------------------------------------------------------

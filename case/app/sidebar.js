@@ -25,10 +25,6 @@ class SideBar extends Component {
   visible() { return this.state; }
 
   onrendered() {
-    this.tabIndex = 0;
-    this.attach(this.onresizedown, "pointerdown", "#sidebar-left");
-    this.attach(this.onresizeup, "pointerup", "#sidebar-left");
-    this.attach(this.onresizemove, "pointermove", "#sidebar-left");
     this.attach(this.onkeydown, "keydown");
     this.attach(this.onhighlight, "highlight");
 
@@ -52,24 +48,6 @@ class SideBar extends Component {
       e.preventDefault();
       this.onedit();
     }
-  }
-
-  onresizedown(e) {
-    let resizer = e.target;
-    resizer.setPointerCapture(e.pointerId);
-    this.x = e.clientX;
-    this.width = this.offsetWidth;
-    this.capture = true;
-  }
-
-  onresizeup(e) {
-    this.capture = false;
-  }
-
-  onresizemove(e) {
-    if (!this.capture) return;
-    let offset = this.x - e.clientX;
-    this.style.width = `${this.width + offset}px`;
   }
 
   async onedit() {
@@ -182,7 +160,7 @@ class SideBar extends Component {
 
   render() {
     return `
-      <div id="sidebar-left"></div>
+      <md-resizer class="left"></md-resizer>
       <div id="main">
         <div id="banner">
           <div id="titlebox">
@@ -220,6 +198,7 @@ class SideBar extends Component {
         flex-direction: column;
         overflow: hidden;
         width: 100%;
+        padding-left: 10px;
       }
       $ #banner {
         display: flex;
@@ -250,10 +229,6 @@ class SideBar extends Component {
         height: 100%;
         overflow: auto;
         padding: 0;
-      }
-      $ #sidebar-left {
-        cursor: col-resize;
-        min-width: 16px;
       }
     `;
   }

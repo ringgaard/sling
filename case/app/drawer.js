@@ -13,9 +13,6 @@ class DrawerPanel extends Component {
   onrendered() {
     if (!this.state) return;
     this.editor = this.match("#editor");
-    this.attach(this.ondrawerdown, "pointerdown", "#resizer");
-    this.attach(this.ondrawerup, "pointerup", "#resizer");
-    this.attach(this.ondrawermove, "pointermove", "#resizer");
     if (this.state.folders) {
       this.attach(this.onnewfolder, "click", "#newfolder");
     } else {
@@ -39,24 +36,6 @@ class DrawerPanel extends Component {
 
   onclose(e) {
     this.editor.update_folders();
-  }
-
-  ondrawerdown(e) {
-    let resizer = e.target;
-    resizer.setPointerCapture(e.pointerId);
-    this.drawer_x = e.clientX;
-    this.drawer_capture = true;
-  }
-
-  ondrawerup(e) {
-    this.drawer_capture = false;
-  }
-
-  ondrawermove(e) {
-    if (!this.drawer_capture) return;
-    let offset = e.clientX - this.drawer_x;
-    this.style.width = `${this.offsetWidth + offset}px`;
-    this.drawer_x = e.clientX;
   }
 
   async onnewfolder(e) {
@@ -102,7 +81,7 @@ class DrawerPanel extends Component {
           <index-entry></index-entry>
         </div>`);
     }
-    h.push('<div id="resizer"></div>');
+    h.push('<md-resizer class="right"></md-resizer>');
     return h.join("");
   }
 
@@ -110,26 +89,15 @@ class DrawerPanel extends Component {
     return `
       $ {
         display: flex;
-        flex-direction: row;
-        justify-content: stretch;
+        position: relative;
         width: 150px;
-        height: 100%;
         min-width: 100px;
-        padding: 3px 0px 3px 3px;
-        box-sizing: border-box;
-        overflow-x: clip;
-        overflow-y: auto;
       }
       $ md-icon {
         color: #808080;
       }
       $ md-icon-button {
         color: #808080;
-      }
-      $ #resizer {
-        cursor: col-resize;
-        flex: 0 0 3px;
-        z-index: 2;
       }
       $ .top {
         display: flex;
@@ -142,12 +110,16 @@ class DrawerPanel extends Component {
         min-height: 40px;
       }
       $ #folders {
-        flex: 1 1 auto;
         width: 100%;
+        height: 100%;
+        overflow-x: clip;
+        overflow-y: auto;
       }
       $ #index {
-        flex: 1 1 auto;
         width: 100%;
+        height: 100%;
+        overflow-x: clip;
+        overflow-y: auto;
       }
     `;
   }
@@ -212,6 +184,7 @@ class IndexEntry extends Component {
   static stylesheet() {
     return `
       $ {
+        padding-right: 3px;
       }
       $ div.entry {
         display: flex;
@@ -222,10 +195,10 @@ class IndexEntry extends Component {
         background-color: #eeeeee;
       }
       $ md-icon {
-        width: 20px;
+        flex: 0 0 20px;
       }
       $ span.name {
-        overflow-x: clip;
+        flex: 1 1 auto;
         white-space: nowrap;
       }
     `;
@@ -251,7 +224,7 @@ class EntryList extends Component {
       $ {
         display: flex;
         flex-direction: column;
-        padding-left: 16px;
+        padding-left: 10px;
       }
     `;
   }
