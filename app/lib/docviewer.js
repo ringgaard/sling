@@ -272,7 +272,8 @@ export class DocumentViewer extends Component {
     const boxwidth = Math.max(span.offsetWidth, 160);
     let top = span.offsetTop + span.offsetHeight;
     let left = span.offsetLeft;
-    if (span.offsetHeight > this.lineheight) {
+    if (span.offsetHeight >= 2 * this.lineheight) {
+      // Mention wraps around to next line.
       left = 0;
     } else {
       let overflow = left + boxwidth - this.offsetWidth;

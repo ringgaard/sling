@@ -76,7 +76,7 @@ export default class BookWidget extends Component {
 
     let entries = new Array();
     for (let entry of entrymap.values()) {
-      entry.name = entry.topic.get(n_name).toString() || entry.topic.id;
+      entry.name = (entry.topic.get(n_name) || entry.topic.id).toString();
       entries.push(entry);
     }
 
@@ -94,19 +94,19 @@ export default class BookWidget extends Component {
     index.entries.sort(
       (a, b) => a.name.localeCompare(b.name, undefined, options)
     );
-    document.querySelector("drawer-panel").update(index);
+    document.querySelector("drawer-panel").set_index(index);
   }
 
   async onposition(e) {
     let index = await this.index(this.state);
     index.entries.sort((a, b) => a.position - b.position);
-    document.querySelector("drawer-panel").update(index);
+    document.querySelector("drawer-panel").set_index(index);
   }
 
   async onprominence(e) {
     let index = await this.index(this.state);
     index.entries.sort((a, b) => b.count - a.count);
-    document.querySelector("drawer-panel").update(index);
+    document.querySelector("drawer-panel").set_index(index);
   }
 
   render() {

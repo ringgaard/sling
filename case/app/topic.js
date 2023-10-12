@@ -1173,7 +1173,7 @@ class TopicCard extends Component {
     // Show index if any book mentions topic.
     if (books.length > 0) {
       let drawer = document.querySelector("drawer-panel");
-      drawer.update({
+      drawer.set_index({
         name: topic.get(n_name) || topic.id,
         topic: topic,
         entries: books,
