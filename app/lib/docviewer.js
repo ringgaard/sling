@@ -79,6 +79,7 @@ class AnnotationBox extends Component {
       }
       navigator.clipboard.writeText(text);
     }
+    this.remove();
   }
 
   render() {

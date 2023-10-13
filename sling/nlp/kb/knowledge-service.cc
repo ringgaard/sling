@@ -1036,7 +1036,7 @@ string KnowledgeService::UnitName(const Frame &unit) {
       best = s.value;
     } else {
       // Skip language specific names.
-      if (symbol.Has(n_language_) || symbol.Has(n_name_language_)) continue;
+      if (symbol.Has(n_language_)) continue;
 
       // Fall back to symbols with no script.
       if (script == Handle::nil() && fallback.IsNil()) {

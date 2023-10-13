@@ -278,8 +278,7 @@ class KnowledgeService {
   Name n_unit_symbol_{names_, "P558"};
   Name n_writing_system_{names_, "P282"};
   Name n_latin_script_{names_, "Q8229"};
-  Name n_language_{names_, "P2439"};
-  Name n_name_language_{names_, "P407"};
+  Name n_language_{names_, "P407"};
   Name n_date_of_birth_{names_, "P569"};
   Name n_date_of_death_{names_, "P570"};
 

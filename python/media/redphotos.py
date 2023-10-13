@@ -529,6 +529,21 @@ for key, value in postings:
 
   print(sr, key, itemid, title, "NSFW" if nsfw else "", url)
 
+
+# Output statistics.
+report["statistics"] = {
+ "photos": num_photos,
+ "dups": num_dups,
+ "profiles": num_profiles,
+ "known": num_known,
+ "unknown": num_unknown,
+ "reposts": num_reposts,
+ "removed": num_removed,
+ "selfies": num_selfies,
+ "errors": num_errors,
+ "coverage": coverage,
+}
+
 # Output JSON report.
 if flags.arg.report:
   reportfn = datetime.datetime.now().strftime(flags.arg.report)
@@ -541,20 +556,6 @@ if not flags.arg.dryrun:
   photo.store.coalesce()
   for id in profiles:
     profiles[id].write()
-
-num_total = num_known + num_unknown
-coverage = int(num_known / num_total * 100) if num_known > 0 else 0
-print(num_photos, "photos,",
-      num_dups, "dups,",
-      num_profiles, "profiles,",
-      num_known, "known,",
-      num_unknown, "unknown,",
-      num_reposts, "reposts,",
-      num_removed, "removed,",
-      num_selfies, "selfies,",
-      num_errors, "errors,",
-      coverage, "% coverage",
-)
 
 if not flags.arg.dryrun: chkpt.commit(redditdb.position())
 redditdb.close()

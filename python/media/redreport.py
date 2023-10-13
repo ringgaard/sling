@@ -626,6 +626,51 @@ class SubredditCard extends MdCard {
 
 Component.register(SubredditCard);
 
+class OverviewCard extends MdCard {
+  render() {
+    let s = this.state;
+    console.log(s);
+
+    let total = s.known + s.unknown;
+    let coverage = total > 0 ? (s.known / total * 100) | 0 : 0;
+
+    let total_photos = s.photos + s.dups;
+    let repeats = total_photos > 0 ? (s.dups / total_photos * 100) | 0 : 0;
+
+    return `
+      <h1>Overview</h1>
+      ${total_photos} photos,
+      ${s.photos} new, ${s.dups} duplicates,
+      ${repeats}% repeats<br>
+
+      ${total} postings,
+      ${s.known} known,
+      ${s.unknown} unknown,
+      ${coverage}% coverage<br>
+
+      ${s.profiles} profiles,
+      ${s.reposts} reposts,
+      ${s.removed} removed,
+      ${s.selfies} selfies,
+      ${s.errors} errors
+    `;
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        font-family: verdana, arial, helvetica;
+        font-size: 16px;
+      }
+      $ h1 {
+        font-size: 24px;
+      }
+    `;
+  }
+}
+
+Component.register(OverviewCard);
+
 class SubredditList extends Component {
   render() {
     if (!this.state) return;
@@ -633,6 +678,8 @@ class SubredditList extends Component {
     let srnames = Object.keys(subreddits)
     srnames.sort();
     let cards = [];
+    let statistics = this.state["statistics"];
+    if (statistics) cards.push(new OverviewCard(statistics));
     for (let name of srnames) {
       let report = subreddits[name]
       //if (general && !report.general) continue;
@@ -645,6 +692,7 @@ class SubredditList extends Component {
       let card = new SubredditCard(report);
       cards.push(card);
     }
+
     return cards;
   }
 }

@@ -571,7 +571,7 @@ class Profile:
   def add_reddit_gallery(self, galleryid, caption, nsfw_override=None):
     print("Redit posting", galleryid)
     while True:
-      r = requests.get("https://api.reddit.com/api/info/?id=t3_" + galleryid,
+      r = requests.get("https://www.reddit.com/comments/%s.json" % galleryid,
                        headers = {"User-agent": "SLING Bot 1.0"})
       if r.status_code != 429: break
       reset = int(r.headers.get("x-ratelimit-reset", 60))
@@ -579,7 +579,7 @@ class Profile:
       time.sleep(reset)
 
     r.raise_for_status()
-    children = r.json()["data"]["children"]
+    children = r.json()[0]["data"]["children"]
     if len(children) == 0:
       print("Skipping empty post", galleryid);
       return 0

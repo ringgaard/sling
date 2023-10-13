@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+import datetime
 import os
 import os.path
 import queue
@@ -237,6 +239,8 @@ class Job:
         cmd.append(self.id)
     else:
       cmd = None
+
+    if cmd: cmd = datetime.datetime.now().strftime(cmd)
 
     return cmd
 
