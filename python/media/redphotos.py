@@ -529,7 +529,6 @@ for key, value in postings:
 
   print(sr, key, itemid, title, "NSFW" if nsfw else "", url)
 
-
 # Output statistics.
 report["statistics"] = {
  "photos": num_photos,
@@ -541,7 +540,6 @@ report["statistics"] = {
  "removed": num_removed,
  "selfies": num_selfies,
  "errors": num_errors,
- "coverage": coverage,
 }
 
 # Output JSON report.
