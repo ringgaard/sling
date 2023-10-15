@@ -147,6 +147,7 @@ conjunctions = [
 
 # Initialize commons store.
 commons = sling.Store()
+n_id = commons["_id"]
 n_subreddit = commons["subreddit"]
 n_title = commons["title"]
 n_url = commons["url"]
@@ -231,11 +232,10 @@ def get_photo_id(fingerprint):
 session = requests.Session()
 def refetch_posting(store, posting):
   try:
-    permalink = posting[n_permalink]
-    if type(permalink) is bytes: return posting
+    sid = posting[n_id]
     while True:
-      r = session.get("https://reddit.com" + permalink + ".json",
-                      headers = {"User-agent": "SLING Bot 1.0"})
+      r = requests.get("https://www.reddit.com/comments/%s.json" % sid,
+                       headers = {"User-agent": "SLING Bot 1.0"})
       if r.status_code != 429: break
       reset = int(r.headers.get("x-ratelimit-reset", 60))
       print("refetch rate limit", reset, "secs")
@@ -529,11 +529,20 @@ for key, value in postings:
 
   print(sr, key, itemid, title, "NSFW" if nsfw else "", url)
 
+# Write updated profiles.
+num_unchanged = 0
+if not flags.arg.dryrun:
+  photo.store.coalesce()
+  for id in profiles:
+    changed = profiles[id].write()
+    if not changed: num_unchanged += 1
+
 # Output statistics.
 report["statistics"] = {
  "photos": num_photos,
  "dups": num_dups,
  "profiles": num_profiles,
+ "unchanged": num_unchanged,
  "known": num_known,
  "unknown": num_unknown,
  "reposts": num_reposts,
@@ -548,12 +557,6 @@ if flags.arg.report:
   fout = open(reportfn, "w")
   json.dump(report, fout)
   fout.close()
-
-# Write updated profiles.
-if not flags.arg.dryrun:
-  photo.store.coalesce()
-  for id in profiles:
-    profiles[id].write()
 
 if not flags.arg.dryrun: chkpt.commit(redditdb.position())
 redditdb.close()

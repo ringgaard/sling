@@ -578,6 +578,7 @@ class TopicCard extends Component {
     if (this.readonly) return;
     let command = e.detail.command;
     let doc = e.detail.document;
+    let mention = e.detail.mention;
     let source = doc.source;
     let context = doc.context;
 
@@ -588,6 +589,10 @@ class TopicCard extends Component {
     let sidebar = document.getElementById("sidebar");
     if (command == "edit") {
       let dialog = new DocumentEditDialog(source);
+      if (mention) {
+        dialog.sel_begin = mention.sbegin;
+        dialog.sel_end = mention.send;
+      }
       let result = await dialog.show();
       if (result) {
         let n = this.state.slot(n_lex, context.index);
@@ -1373,8 +1378,13 @@ Component.register(RawEditDialog);
 
 class DocumentEditDialog extends MdDialog {
   onconnected() {
+    this.textarea = this.find("textarea");
     this.attach(this.onkeydown, "keydown", "textarea");
     this.attach(this.onfind, "find");
+
+    if (this.sel_begin && this.sel_end) {
+      this.select(this.sel_begin, this.sel_end);
+    }
   }
 
   onkeydown(e) {
@@ -1383,10 +1393,9 @@ class DocumentEditDialog extends MdDialog {
       e.preventDefault()
     } else if ((e.ctrlKey || e.metaKey) && e.code === "KeyF") {
       let findbox = this.find("md-find-box");
-      let textarea = this.find("textarea");
-      let start = textarea.selectionStart;
-      let end = textarea.selectionEnd;
-      let selected = textarea.value.substring(start, end);
+      let start = this.textarea.selectionStart;
+      let end = this.textarea.selectionEnd;
+      let selected = this.textarea.value.substring(start, end);
       if (!selected) selected = this.lastsearch || "";
       findbox.update(selected);
       e.preventDefault();
@@ -1406,48 +1415,52 @@ class DocumentEditDialog extends MdDialog {
       this.search(text, backwards);
       this.lastsearch = text;
     } else {
-      this.find("textarea").focus();
+      this.textarea.focus();
     }
   }
 
   bracket() {
-    let textarea = this.find("textarea");
-    let text = textarea.value;
-    let start = textarea.selectionStart;
-    let end = textarea.selectionEnd;
+    let text = this.textarea.value;
+    let start = this.textarea.selectionStart;
+    let end = this.textarea.selectionEnd;
     if (start == end) return;
     text = text.slice(0, start) + "[" +
            text.slice(start, end) + "]" +
            text.slice(end);
-    textarea.value = text;
-    textarea.selectionStart = start + 1;
-    textarea.selectionEnd = end + 1;
+    this.textarea.value = text;
+    this.textarea.selectionStart = start + 1;
+    this.textarea.selectionEnd = end + 1;
   }
 
   search(text, backwards) {
-    let textarea = this.find("textarea");
-    let content = textarea.value;
-    textarea.focus();
+    let content = this.textarea.value;
+    this.textarea.focus();
 
     let pos = -1;
     if (backwards) {
-      pos = content.substring(0, textarea.selectionStart).lastIndexOf(text);
+      let start = this.textarea.selectionStart;
+      pos = content.substring(0, start).lastIndexOf(text);
     } else {
-      pos = content.indexOf(text, textarea.selectionEnd);
+      let end = this.textarea.selectionEnd;
+      pos = content.indexOf(text, end);
     }
     if (pos == -1) return;
+    this.select(pos, pos + text.length);
+  }
 
-    let height = textarea.clientHeight;
-    textarea.value = content.substring(0, pos);
-    let y = textarea.scrollHeight;
+  select(begin, end) {
+    let content = this.textarea.value;
+    let height = this.textarea.clientHeight;
+    this.textarea.value = content.substring(0, begin);
+    let y = this.textarea.scrollHeight;
 
-    textarea.value = content;
-    textarea.scrollTop = y > height ? y - height / 2 : 0;
-    textarea.setSelectionRange(pos, pos + text.length);
+    this.textarea.value = content;
+    this.textarea.scrollTop = y > height ? y - height / 2 : 0;
+    this.textarea.setSelectionRange(begin, end);
   }
 
   submit() {
-    let content = this.find("textarea").value;
+    let content = this.textarea.value;
     if (this.state instanceof Frame) {
       let title = this.find("#title").value;
       this.state.set(n_name, title);

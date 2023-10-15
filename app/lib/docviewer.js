@@ -71,6 +71,8 @@ class AnnotationBox extends Component {
       this.dispatch("reconcile", {mention, event: e}, true);
     } else if (target.id == "highlight") {
       this.dispatch("highlight", {mention, event: e}, true);
+    } else if (target.id == "edit") {
+      this.dispatch("edit", mention, true);
     } else if (target.id == "copy") {
       let text = mention.text(true);
       if (e.ctrlKey && (mention.annotation instanceof Frame)) {
@@ -92,6 +94,7 @@ class AnnotationBox extends Component {
         <md-icon icon="add_circle" class="action" id="annotate"></md-icon>
         <md-icon icon="join_right" class="action" id="reconcile"></md-icon>
         <md-icon icon="content_copy" class="action" id="copy"></md-icon>
+        <md-icon icon="edit" class="action" id="edit"></md-icon>
         <md-icon icon="flag" class="action" id="highlight"></md-icon>
       </div>
     `);
@@ -197,7 +200,7 @@ class AnnotationBox extends Component {
         color: #0000dd;
       }
       $ .action {
-        padding: 4px;
+        padding: 2px;
         font-size: 20px;
         font-weight: normal;
         color: #808080;
@@ -270,7 +273,7 @@ export class DocumentViewer extends Component {
       this.lineheight = this.find(".linemeasure").offsetHeight;
     }
     // Adjust annotation box position.
-    const boxwidth = Math.max(span.offsetWidth, 160);
+    const boxwidth = Math.max(span.offsetWidth, 180);
     let top = span.offsetTop + span.offsetHeight;
     let left = span.offsetLeft;
     if (span.offsetHeight >= 2 * this.lineheight) {

@@ -253,7 +253,11 @@ class PDFBook:
           self.chapters[pageno] = chapter
 
   def extract(self, pdf):
+    ignore = [int(p) for p in self.meta.get("ignore", "0").split(",")]
+    pnum = 0;
     for p in pdf:
+      pnum += 1
+      if pnum in ignore: continue
       page = PDFPage(self)
       self.pages.append(page)
       page.extract(p)
@@ -265,6 +269,7 @@ class PDFBook:
     top_positions = []
     bottom_positions = []
     footer_positions = []
+
     for p in book.pages:
       if len(p.lines) < head_lines + foot_lines + 1: continue
       if head_lines > 0:

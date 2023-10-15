@@ -25,7 +25,6 @@ class SideBar extends Component {
   visible() { return this.state; }
 
   onrendered() {
-    this.attach(this.onkeydown, "keydown");
     this.attach(this.onhighlight, "highlight");
 
     if (this.state) {
@@ -40,20 +39,15 @@ class SideBar extends Component {
       this.find("#docname").update(docname);
       this.attach(this.onmenu, "select", "md-menu");
       this.attach(this.onnavigate, "click", "#titlebox");
+      this.attach(this.onedit, "edit");
     }
   }
 
-  async onkeydown(e) {
-    if (e.ctrlKey && e.code == "KeyE") {
-      e.preventDefault();
-      this.onedit();
-    }
-  }
-
-  async onedit() {
+  async onedit(e) {
     let editor = this.match("#editor");
     let card = await editor.navigate_to(this.state.context.topic);
-    card.dispatch("docmenu", {command: "edit", document: this.state}, true);
+    card.dispatch("docmenu",
+      {command: "edit", document: this.state, mention: e.detail}, true);
   }
 
   onnext() {

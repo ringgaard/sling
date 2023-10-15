@@ -20,6 +20,8 @@ export class Mention {
     this.begin = begin;
     this.end = end;
     this.annotation = annotation;
+    this.sbegin = null;
+    this.send = null;
   }
 
   text(plain) {
@@ -53,11 +55,13 @@ export class Document {
     let lex = this.store.resolve(this.source)
     let text = "";
     let stack = new Array();
+    let source_stack = new Array();
     let r = new Reader(this.store, lex, true);
     while (!r.end()) {
       switch (r.ch) {
         case 91: { // '['
           stack.push(text.length);
+          source_stack.push(r.pos - 1);
           r.read();
           break;
         }
@@ -71,6 +75,7 @@ export class Document {
             r.next();
             let begin = stack.pop();
             let end = text.length;
+            let sbegin = source_stack.pop();
             for (;;) {
               let obj;
               try {
@@ -78,6 +83,8 @@ export class Document {
                 let index = this.mentions.length;
                 let mention = new Mention(this, index, begin, end, obj);
                 this.mentions.push(mention);
+                mention.sbegin = sbegin;
+                mention.send = r.pos - 1;
                 if (phrasemap && (obj instanceof Frame)) {
                   let phrase = text.slice(begin, end);
                   let mapping = phrasemap.get(phrase);
@@ -108,6 +115,8 @@ export class Document {
             let index = this.mentions.length;
             let mention = new Mention(this, index, begin, end);
             this.mentions.push(mention);
+            mention.sbegin = source_stack.pop();
+            mention.send = r.pos;
             if (phrasemap) {
               let phrase = text.slice(begin, end);
               let mapping = phrasemap.get(phrase);

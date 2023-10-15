@@ -638,7 +638,7 @@ class OverviewCard extends MdCard {
     let repeats = total_photos > 0 ? (s.dups / total_photos * 100) | 0 : 0;
 
     return `
-      <h1>Overview</h1>
+      <h1>Summary</h1>
       ${total_photos} photos,
       ${s.photos} new, ${s.dups} duplicates,
       ${repeats}% repeats<br>
@@ -649,6 +649,9 @@ class OverviewCard extends MdCard {
       ${coverage}% coverage<br>
 
       ${s.profiles} profiles,
+      ${s.profiles - s.unchanged} changed,
+      ${s.unchanged} unchanged<br>
+
       ${s.reposts} reposts,
       ${s.removed} removed,
       ${s.selfies} selfies,

@@ -15,9 +15,12 @@
 """Scan Reddit for new postings."""
 
 import json
+import math
+import queue
 import requests
 import sys
 import time
+import threading
 import traceback
 
 import sling
@@ -41,6 +44,7 @@ flags.define("--interval",
 flags.parse()
 
 redditdb = sling.Database(flags.arg.redditdb)
+session = requests.Session()
 
 # Get list of subreddits to monitor.
 subreddits = []
@@ -54,15 +58,72 @@ for filename in flags.arg.subreddits.split(","):
       subreddits.append(sr);
 log.info("Monitor", len(subreddits), "subreddits")
 
+def fetch_posting(sid):
+  try:
+    while True:
+      r = session.get("https://www.reddit.com/comments/%s.json" % sid[3:],
+                      headers = {"User-agent": "SLING Bot 1.0"})
+      if r.status_code != 429: break
+      reset = int(r.headers.get("x-ratelimit-reset", 60))
+      log.info("refetch rate limit", reset, "secs")
+      time.sleep(reset)
+
+    if r.status_code != 200:
+      log.error("fetch error", r.status_code)
+      return None
+    reply = r.json()
+    children = reply[0]["data"]["children"]
+    if len(children) == 0: return None
+    return children[0]["data"]
+  except Exception as e:
+    log.error("failed to fetch", e)
+    return None
+
+def check_posting(ts, sid):
+  # Wait until midpoint between now and midnight.
+  now = time.time()
+  midnight = math.ceil(ts / 86400) * 86400
+  midpoint = (ts + midnight) / 2
+  if midpoint > now: time.sleep(midpoint - now)
+
+  # Check if posting has been removed.
+  posting = fetch_posting(sid)
+  if posting is None or \
+     posting["removed_by_category"] or \
+     posting["title"] == "[deleted by user]":
+    log.info("REMOVED", sid)
+    del redditdb[sid]
+
+queue = queue.PriorityQueue()
+
+def removal_checker():
+  while True:
+    # Get oldest posting from queue.
+    task = queue.get()
+    try:
+      ts = task[0]
+      sid = task[1]
+      check_posting(ts, sid)
+    except:
+      traceback.print_exc(file=sys.stdout)
+    queue.task_done()
+
+threading.Thread(target=removal_checker, daemon=True).start()
+
 def fetch_new_postings():
   # Get new postings from subreddits.
-  session = requests.Session()
+  submissions = []
   for sr in subreddits:
     # Fetch new postings for subreddit.
     r = session.get("https://www.reddit.com/r/" + sr + "/new.json",
                     headers = {"User-agent": "SLING Bot 1.0"})
     if r.status_code == 404:
       log.error("unknown subreddit:", sr)
+      continue
+    elif r.status_code == 429:
+      reset = int(r.headers.get("x-ratelimit-reset", 60))
+      log.info("scan rate limit", reset, "secs")
+      time.sleep(reset)
       continue
     elif r.status_code != 200:
       log.error("http error", r.status_code, "fetching postings:", sr)
@@ -75,8 +136,13 @@ def fetch_new_postings():
       if sid in redditdb: break
 
       title = posting["title"]
+      created = posting["created_utc"]
       log.info("###", sr, sid, title)
       redditdb[sid] = json.dumps(posting)
+      submissions.append((created, sid))
+
+  submissions.sort()
+  for s in submissions: queue.put(s)
 
 while True:
   try:
@@ -86,7 +152,7 @@ while True:
     time.sleep(flags.arg.interval)
 
   except KeyboardInterrupt as error:
-    print("Stopped")
+    log.info("Stopped")
     sys.exit()
 
   except:
