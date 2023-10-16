@@ -1388,24 +1388,24 @@ class DocumentEditDialog extends MdDialog {
   }
 
   onkeydown(e) {
+    e.stopPropagation()
     if ((e.ctrlKey || e.metaKey) && e.code === "KeyS") {
+      e.preventDefault();
       this.submit();
-      e.preventDefault()
     } else if ((e.ctrlKey || e.metaKey) && e.code === "KeyF") {
+      e.preventDefault();
       let findbox = this.find("md-find-box");
       let start = this.textarea.selectionStart;
       let end = this.textarea.selectionEnd;
       let selected = this.textarea.value.substring(start, end);
       if (!selected) selected = this.lastsearch || "";
       findbox.update(selected);
-      e.preventDefault();
     } else if ((e.ctrlKey || e.metaKey) && e.code === "KeyG") {
-      this.search(this.lastsearch, e.shiftKey);
       e.preventDefault();
+      this.search(this.lastsearch, e.shiftKey);
     } else if ((e.ctrlKey || e.metaKey) && e.code === "KeyB") {
       this.bracket();
     }
-    e.stopPropagation()
   }
 
   onfind(e) {

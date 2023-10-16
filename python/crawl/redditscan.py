@@ -79,10 +79,13 @@ def fetch_posting(sid):
     log.error("failed to fetch", e)
     return None
 
+isdst = time.daylight and time.localtime().tm_isdst > 0
+tzofs = time.altzone if isdst else time.timezone
+
 def check_posting(ts, sid):
   # Wait until midpoint between now and midnight.
   now = time.time()
-  midnight = math.ceil(ts / 86400) * 86400
+  midnight = math.ceil((ts - tzofs) / 86400) * 86400 + tzofs
   midpoint = (ts + midnight) / 2
   if midpoint > now: time.sleep(midpoint - now)
 

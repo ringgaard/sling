@@ -24,23 +24,25 @@ function same(d1, d2) {
 class SideBar extends Component {
   visible() { return this.state; }
 
-  onrendered() {
+  oninit() {
+    this.attach(this.onedit, "edit");
     this.attach(this.onhighlight, "highlight");
+  }
 
-    if (this.state) {
-      let context = this.state.context;
-      let source = this.state.source;
-      let tocname = context.topic.get(n_name);
-      let docname;
-      if (source instanceof Frame) {
-        docname = source.get(n_name);
-      }
-      this.find("#tocname").update(tocname);
-      this.find("#docname").update(docname);
-      this.attach(this.onmenu, "select", "md-menu");
-      this.attach(this.onnavigate, "click", "#titlebox");
-      this.attach(this.onedit, "edit");
+  onrendered() {
+    if (!this.state) return;
+
+    let context = this.state.context;
+    let source = this.state.source;
+    let tocname = context.topic.get(n_name);
+    let docname;
+    if (source instanceof Frame) {
+      docname = source.get(n_name);
     }
+    this.find("#tocname").update(tocname);
+    this.find("#docname").update(docname);
+    this.attach(this.onmenu, "select", "md-menu");
+    this.attach(this.onnavigate, "click", "#titlebox");
   }
 
   async onedit(e) {

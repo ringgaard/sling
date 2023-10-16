@@ -95,7 +95,7 @@ class AnnotationBox extends Component {
         <md-icon icon="join_right" class="action" id="reconcile"></md-icon>
         <md-icon icon="content_copy" class="action" id="copy"></md-icon>
         <md-icon icon="edit" class="action" id="edit"></md-icon>
-        <md-icon icon="flag" class="action" id="highlight"></md-icon>
+        <md-icon icon="square" class="action hilite" id="highlight"></md-icon>
       </div>
     `);
 
@@ -210,6 +210,9 @@ class AnnotationBox extends Component {
       $ .action:hover {
         text-decoration: none;
         background-color: #eeeeee;
+      }
+      $ .hilite {
+        color: #f5e353;
       }
     `;
   }
