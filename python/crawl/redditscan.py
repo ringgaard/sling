@@ -16,11 +16,9 @@
 
 import json
 import math
-import queue
 import requests
 import sys
 import time
-import threading
 import traceback
 
 import sling
@@ -45,6 +43,20 @@ flags.parse()
 
 redditdb = sling.Database(flags.arg.redditdb)
 session = requests.Session()
+
+isdst = time.daylight and time.localtime().tm_isdst > 0
+tzofs = time.altzone if isdst else time.timezone
+midnight = math.ceil((time.time() - tzofs) / 86400) * 86400 + tzofs
+
+queue = []
+
+class Submission:
+  def __init__(self, ts, posting):
+    self.ts = ts
+    self.posting = posting
+
+  def __lt__(self, other):
+    self.ts < other.ts
 
 # Get list of subreddits to monitor.
 subreddits = []
@@ -79,40 +91,6 @@ def fetch_posting(sid):
     log.error("failed to fetch", e)
     return None
 
-isdst = time.daylight and time.localtime().tm_isdst > 0
-tzofs = time.altzone if isdst else time.timezone
-
-def check_posting(ts, sid):
-  # Wait until midpoint between now and midnight.
-  now = time.time()
-  midnight = math.ceil((ts - tzofs) / 86400) * 86400 + tzofs
-  midpoint = (ts + midnight) / 2
-  if midpoint > now: time.sleep(midpoint - now)
-
-  # Check if posting has been removed.
-  posting = fetch_posting(sid)
-  if posting is None or \
-     posting["removed_by_category"] or \
-     posting["title"] == "[deleted by user]":
-    log.info("REMOVED", sid)
-    del redditdb[sid]
-
-queue = queue.PriorityQueue()
-
-def removal_checker():
-  while True:
-    # Get oldest posting from queue.
-    task = queue.get()
-    try:
-      ts = task[0]
-      sid = task[1]
-      check_posting(ts, sid)
-    except:
-      traceback.print_exc(file=sys.stdout)
-    queue.task_done()
-
-threading.Thread(target=removal_checker, daemon=True).start()
-
 def fetch_new_postings():
   # Get new postings from subreddits.
   submissions = []
@@ -142,17 +120,40 @@ def fetch_new_postings():
       created = posting["created_utc"]
       log.info("###", sr, sid, title)
       redditdb[sid] = json.dumps(posting)
-      submissions.append((created, sid))
 
-  submissions.sort()
-  for s in submissions: queue.put(s)
+      midpoint = (created + midnight) / 2
+      queue.append(Submission(midpoint, posting))
 
+last_check = 0
 while True:
   try:
-    log.info("Scanning for new postings")
-    fetch_new_postings()
-    log.info("Scanning done")
-    time.sleep(flags.arg.interval)
+    now = time.time()
+    if now - last_check >= flags.arg.interval:
+      log.info("Scanning for new postings")
+      fetch_new_postings()
+      log.info("Scanning done")
+      last_check = now
+
+    for i in range(len(queue)):
+      submission = queue[i]
+      if submission is None: continue
+      if submission.ts < now:
+        posting = submission.posting
+        sr = posting["subreddit"]
+        sid = posting["name"]
+        title = posting["title"]
+        log.info("CHECK %s %s %s" % (sr, sid, title))
+
+        # Check if posting has been removed.
+        posting = fetch_posting(sid)
+        if posting is None or \
+          posting["removed_by_category"] or \
+          posting["title"] == "[deleted by user]":
+          log.info("REMOVED %s %s %s" % (sr, sid, title))
+          del redditdb[sid]
+        queue[i] = None
+
+    time.sleep(60)
 
   except KeyboardInterrupt as error:
     log.info("Stopped")
