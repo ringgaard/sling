@@ -39,6 +39,12 @@ flags.define("--interval",
              type=int,
              metavar="SECS")
 
+flags.define("--delay",
+             help="delay before checking for removal",
+             default=0.5,
+             type=float,
+             metavar="NUM")
+
 flags.parse()
 
 redditdb = sling.Database(flags.arg.redditdb)
@@ -49,6 +55,7 @@ tzofs = time.altzone if isdst else time.timezone
 midnight = math.ceil((time.time() - tzofs) / 86400) * 86400 + tzofs
 
 queue = []
+qsize = 0
 
 class Submission:
   def __init__(self, ts, posting):
@@ -92,6 +99,8 @@ def fetch_posting(sid):
     return None
 
 def fetch_new_postings():
+  global qsize
+
   # Get new postings from subreddits.
   submissions = []
   for sr in subreddits:
@@ -118,11 +127,12 @@ def fetch_new_postings():
 
       title = posting["title"]
       created = posting["created_utc"]
-      log.info("###", sr, sid, title)
       redditdb[sid] = json.dumps(posting)
 
-      midpoint = (created + midnight) / 2
-      queue.append(Submission(midpoint, posting))
+      ts = created + (midnight - created) * flags.arg.delay;
+      queue.append(Submission(ts, posting))
+      qsize += 1
+      log.info("### [%d] %s %s %s" % (qsize, sr, sid, title))
 
 last_check = 0
 while True:
@@ -142,16 +152,17 @@ while True:
         sr = posting["subreddit"]
         sid = posting["name"]
         title = posting["title"]
-        log.info("CHECK %s %s %s" % (sr, sid, title))
+        log.info("CHECK [%d] %s %s %s" % (qsize, sr, sid, title))
 
         # Check if posting has been removed.
         posting = fetch_posting(sid)
         if posting is None or \
           posting["removed_by_category"] or \
           posting["title"] == "[deleted by user]":
-          log.info("REMOVED %s %s %s" % (sr, sid, title))
+          log.info("REMOVED [%d] %s %s %s" % (qsize, sr, sid, title))
           del redditdb[sid]
         queue[i] = None
+        qsize -= 1
 
     time.sleep(60)
 

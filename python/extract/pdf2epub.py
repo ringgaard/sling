@@ -56,6 +56,14 @@ escapes = [
   ("]", "&#93;"),
 ]
 
+LEVEL_START       = 0
+LEVEL_PARA        = 1
+LEVEL_SUBHEADING  = 2
+LEVEL_HEADING     = 3
+
+level_start = ["", "<p>", "\n<h2>", "\n<h1>"]
+level_end = ["", "</p>\n", "</h2>\n\n", "</h1>\n"]
+
 def escape(s):
   for text, rep in escapes:
     s = s.replace(text, rep)
@@ -69,35 +77,34 @@ def mean(values):
   return sum(center) / len(center)
 
 class PDFLine:
-  def __init__(self, page, block):
+  def __init__(self, page, line):
     self.page = page
-    self.block = block
-    self.text = ""
-    self.x0 = None
-    self.y0 = None
-    self.x1 = None
-    self.y1 = None
     self.hyphen = False
     self.indent = False
     self.short = False
     self.para = False
 
-  def add(self, word, x0, y0, x1, y1):
-    # Update bounding box.
-    if self.x0 is None or x0 < self.x0: self.x0 = x0
-    if self.y0 is None or y0 < self.y0: self.y0 = y0
-    if self.x1 is None or x1 > self.x1: self.x1 = x1
-    if self.y1 is None or y1 > self.y1: self.y1 = y1
+    # Bounding box.
+    bbox = line["bbox"]
+    self.x0 = bbox[0]
+    self.y0 = bbox[1]
+    self.x1 = bbox[2]
+    self.y1 = bbox[3]
+
+    # Text.
+    self.text = ""
+    sizes = []
+    for span in line["spans"]:
+      #print(span["text"], int(span["size"]), span["font"], span["flags"])
+      self.text += span["text"]
+      sizes.append(span["size"])
+    self.size = mean(sizes)
 
     # Soft-break hyphen.
-    last = ord(word[-1])
+    last = ord(self.text[-1])
     if last == 173:
       self.hyphen = True
-      word = word[:-1]
-
-    # Add word to line.
-    if len(self.text) > 0: self.text += " "
-    self.text += word
+      self.text = self.text[:-1]
 
   def first(self):
     if len(self.text) == 0: return ""
@@ -115,6 +122,14 @@ class PDFLine:
   def period(self):
     return self.last() == "."
 
+  def find_page_number(self, expected):
+    best = None
+    for m in re.findall(r"\d+", self.text):
+      num = int(m)
+      if best is None or abs(num - expected) < abs(best - expected):
+        best = num
+    return best
+
 class PDFPage:
   def __init__(self, book):
     self.book = book
@@ -123,19 +138,15 @@ class PDFPage:
     self.lines = []
 
   def extract(self, page):
-    words = page.get_textpage().extractWORDS()
-    current_blockno = None
-    current_lineno = None
-    line = None
-    for w in words:
-      blockno = w[5]
-      lineno = w[6]
-      if blockno != current_blockno or current_lineno != lineno:
-        line = PDFLine(self, blockno)
+    p = page.get_textpage().extractDICT()
+    for b in p["blocks"]:
+      if b["type"] == 1: continue
+      for l in b["lines"]:
+        # Skip text that is not vertical.
+        dir = l["dir"]
+        if dir[0] != 1.0 or dir[1] != 0.0: continue
+        line = PDFLine(self, l)
         self.lines.append(line)
-        current_blockno = blockno
-        current_lineno = lineno
-      line.add(w[4], w[0], w[1], w[2], w[3])
 
   def linestart(self):
     if len(self.lines) == 0: return 0.0;
@@ -179,8 +190,6 @@ class PDFPage:
         if prev.short: points += 1
         if prev.hyphen: points -= 1
         if l.indent: points += 1
-        #if prev.period(): points += 1
-        #if prev.block != l.block and (prev.short or prev.period()): points += 1
         if l.y0 - prev.y0 > height: points += 1
         points += l.capital()
         if points > 1: l.para = True
@@ -194,7 +203,7 @@ class PDFChapter:
     self.filename = "chapter-%03d.html" % index
     self.ref = "item%03d" % index
 
-  def generate(self):
+  def generate(self, h1, h2):
     s = []
     s.append('<?xml version="1.0" encoding="UTF-8"?>\n')
     s.append('<html xmlns="http://www.w3.org/1999/xhtml">\n')
@@ -204,14 +213,27 @@ class PDFChapter:
     s.append('</head>\n')
     s.append('<body>\n')
 
-    s.append('<p>')
+    level = LEVEL_START
     for p in self.pages:
       for l in p.lines:
-        if l.para: s.append('</p>\n<p>')
+        next = level
+        if l.size > h1:
+          next = LEVEL_HEADING
+        elif l.size > h2:
+          next = LEVEL_SUBHEADING
+        elif l.para:
+          next = LEVEL_PARA
+
+        if next != level or l.para:
+          s.append(level_end[level])
+          s.append(level_start[next])
+          level = next
+
         s.append(escape(l.text))
         if not l.hyphen: s.append(' ')
 
-    s.append('</p>\n</body>\n')
+    s.append(level_end[level])
+    s.append('</body>\n')
     s.append('</html>\n')
     return "".join(s)
 
@@ -232,6 +254,7 @@ class PDFBook:
     self.meta = {}
 
   def read_toc(self, filename):
+    last_toc_pageno = 0
     with open(filename) as f:
       self.toc = []
       index = 1
@@ -248,6 +271,9 @@ class PDFBook:
           name = line[0:last_space].strip()
           pageno = int(line[last_space:].strip())
           chapter = PDFChapter(pageno, name, index)
+          if pageno < last_toc_pageno:
+            print("TOC ordering warning:", line)
+          last_toc_pageno = pageno
           index += 1
           self.spine.append(chapter)
           self.chapters[pageno] = chapter
@@ -300,43 +326,57 @@ class PDFBook:
       if "footer" not in self.meta: self.meta["footer"] = str(foot_sep)
 
   def remove_boilerplate(self):
-    titles = set()
-    if "title" in self.meta: titles.add(self.meta["title"].lower())
-    for chapter in self.spine: titles.add(chapter.title.lower())
     header = float(self.meta.get("header", "0"))
     footer = float(self.meta.get("footer", "0"))
+    simplebpr = self.meta.get("simplebpr", 0)
     pageno = int(self.meta.get("firstpage", "1"))
     pageskip = int(self.meta.get("pageskip", 10))
     for p in book.pages:
       first = None
       last = None
-      lineno = 0
       pnumber = None
-      for l in p.lines:
-        in_header = header > 0 and l.y0 < header
-        in_footer = footer > 0 and l.y1 > footer
 
-        if in_header or in_footer:
-          for m in re.findall(r"\d+", l.text):
-            num = int(m)
-            if pnumber is None or abs(num - pageno) < abs(pnumber - pageno):
-              pnumber = num
-          if flags.arg.debug: print(pageno, l.y0, l.text)
+      if simplebpr:
+        # Remove last line if it matches the expected page number.
+        if len(p.lines) > 0:
+          pnumber = p.lines[-1].find_page_number(pageno)
+          if pnumber == pageno:
+            last = len(p.lines) - 1
+          elif flags.arg.debug:
+            if pnumber is None:
+              print("missing pageno: %d '%s'" % (pageno, p.lines[-1].text))
+            else:
+              print("wrong pageno: %d '%s' %d" % (pageno, p.lines[-1].text, pnumber))
+      else:
+        # Remove header and footers and try to find page number.
+        lineno = 0
+        for l in p.lines:
+          in_header = header > 0 and l.y1 < header
+          in_footer = footer > 0 and l.y0 > footer
 
-        if in_header: first = lineno + 1
-        if in_footer and last is None : last = lineno
-        lineno += 1
+          best_pageno = l.find_page_number(pageno)
+          if in_header:
+            first = lineno + 1
+            pnumber = best_pageno
+          elif in_footer:
+            if last is None: last = lineno
+            pnumber = best_pageno
+          else:
+            if best_pageno and abs(best_pageno - pageno) <= 1:
+              print("page number in text: %d '%s' [%d-%d]" % (pageno, l.text, int(l.y0), int(l.y1)))
+
+          lineno += 1
 
       if first is None: first = 0
-      if first is None: last = len(p.lines)
+      if last is None: last = len(p.lines)
       p.lines = p.lines[first:last]
 
       if pnumber is not None:
-        if pnumber <  pageno or pnumber > pageno + pageskip:
+        if pnumber < pageno or pnumber > pageno + pageskip:
           print("ignore page no", pnumber, ", expected", pageno)
         elif pnumber != pageno:
           print("expected page", pageno, ", got", pnumber)
-          pageno = num
+          pageno = pnumber
 
       p.pageno = pageno
       pageno += 1
@@ -419,8 +459,10 @@ class PDFBook:
     zip.writestr("toc.ncx", "\n".join(toc))
 
     # Write chapters.
+    h1 = float(self.meta.get("h1", "32"))
+    h2 = float(self.meta.get("h2", "24"))
     for chapter in book.spine:
-      zip.writestr(chapter.filename, chapter.generate())
+      zip.writestr(chapter.filename, chapter.generate(h1, h2))
 
     zip.close()
 
@@ -442,6 +484,7 @@ if flags.arg.debug:
       if l.indent: attrs.append(">")
       if l.short: attrs.append("<")
       if l.hyphen: attrs.append("(-)")
+      if l.size: attrs.append(str(round(l.size)))
       if l.para: print()
       print(l.text, " ".join(attrs))
 

@@ -57,7 +57,6 @@ const n_retrieved = frame("P813");
 const n_url = frame("P2699");
 const n_data_size = frame("P3575");
 const n_media_type = frame("P1163");
-const n_described_by_source = frame("P1343");
 const n_copyright = frame("P6216");
 const n_copyrighted = frame("Q50423863");
 
@@ -216,12 +215,11 @@ class CaseEditor extends MdApp {
     let annotation = mention.annotation;
     let link = store.resolve(annotation);
     let source = mention.document.source;
-    let doctopic = mention.document.context.topic;
 
     // Create new topic unless there is already a topic for the item.
     let topic = link && this.get_index().ids.get(link.id);
     if (!topic) {
-      topic = await this.new_topic(null, doctopic);
+      topic = await this.new_topic(null);
       topic.put(n_name, mention.text(true));
       if (link && link.id) topic.put(n_is, link);
       if (annotation && !annotation.id) {
@@ -257,11 +255,6 @@ class CaseEditor extends MdApp {
     // Add phrase mapping.
     if (source instanceof Frame) {
       source.set(mention.text(), topic);
-    }
-
-    // Add source.
-    if (doctopic) {
-      topic.put(n_described_by_source, doctopic);
     }
 
     this.update_topic(topic);
