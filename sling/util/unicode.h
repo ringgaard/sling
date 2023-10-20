@@ -117,6 +117,19 @@ enum UnicodeCategoryMask {
 
   // Letters and digits.
   CATMASK_LETTER_DIGIT = CATMASK_LETTER | CATMASK_DECIMAL_DIGIT_NUMBER,
+
+  // Marks.
+  CATMASK_MARKS =
+    (1 << CHARCAT_NON_SPACING_MARK) |
+    (1 << CHARCAT_ENCLOSING_MARK) |
+    (1 << CHARCAT_COMBINING_SPACING_MARK),
+
+  // Symbols.
+  CATMASK_SYMBOLS =
+    (1 << CHARCAT_MATH_SYMBOL) |
+    (1 << CHARCAT_CURRENCY_SYMBOL) |
+    (1 << CHARCAT_MODIFIER_SYMBOL) |
+    (1 << CHARCAT_OTHER_SYMBOL),
 };
 
 // String normalization flags.
