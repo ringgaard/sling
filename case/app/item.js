@@ -540,42 +540,15 @@ class XrefPanel extends PropertyPanel {
 
 Component.register(XrefPanel);
 
-class DocumentHeader extends Component {
-  document() {
-    if (!this.doc) {
-      this.doc = new Document(store, this.state.source, this.state.context);
-    }
-    return this.doc;
-  }
-
+class DocumentItem extends Component {
   onconnected() {
     this.attach(this.onclick, "click");
   }
 
-  onrendered() {
-    this.attach(this.onmenu, "select", "md-menu");
-  }
-
   async onclick(e) {
-    if (this.expanded) {
-      this.state.viewer.update(null);
-      this.expanded = false;
-    } else {
-      let editor = this.match("#editor");
-      if (editor) {
-        let ok = await editor.check_rights(this.state.context.topic);
-        if (!ok) return;
-      }
-      this.state.viewer.update(this.document());
-      this.expanded = true;
-    }
-    this.update(this.state);
-  }
-
-  onmenu(e) {
-    let command = e.target.id;
-    let document = this.document();
-    this.dispatch("docmenu", {command, document}, true);
+    let sidebar = this.match("#editor").sidebar;
+    let doc = new Document(store, this.state.source, this.state.context);
+    sidebar.update(doc);
   }
 
   render() {
@@ -588,22 +561,10 @@ class DocumentHeader extends Component {
     let bookmarked = source instanceof Frame && source.get(n_bookmarked);
 
     return `
-      <md-icon icon="expand_${this.expanded ? "less" : "more"}"></md-icon>
       <md-icon icon="description"></md-icon>
       <div>${Component.escape(name)}</div>
       <md-spacer></md-spacer>
       ${bookmarked ? '<md-icon icon="bookmark"></md-icon>' : ''}
-      <md-menu>
-        <md-menu-item id="pin">Pin</md-menu-item>
-        <md-menu-item id="bookmark">
-          ${bookmarked ? "Remove" : "Add"} Bookmark
-        </md-menu-item>
-        <md-menu-item id="edit">Edit</md-menu-item>
-        <md-menu-item id="analyze">Analyze</md-menu-item>
-        <md-menu-item id="phrasematch">Match phrases</md-menu-item>
-        <md-menu-item id="topicmatch">Match topics</md-menu-item>
-        <md-menu-item id="delete">Delete</md-menu-item>
-      </md-menu>
     `;
   }
 
@@ -614,22 +575,16 @@ class DocumentHeader extends Component {
         align-items: center;
         cursor: pointer;
         font-size: 16px;
-        padding: 4px 0px 4px 8px;
+        padding: 8px;
       }
-      $ div {
-        padding-left: 8px;
-      }
-      $ md-menu {
-        visibility: hidden;
-      }
-      $:hover md-menu {
-        visibility: visible;
+      $:hover {
+        background-color: #eeeeee;
       }
     `;
   }
 }
 
-Component.register(DocumentHeader);
+Component.register(DocumentItem);
 
 class DocumentPanel extends Component {
   visible() {
@@ -640,16 +595,7 @@ class DocumentPanel extends Component {
     if (!this.state) return;
     let h = new Array();
     for (let d of this.state) {
-      let box = document.createElement("div");
-      box.className = "docbox";
-      let viewer = new DocumentViewer(null);
-      let header = new DocumentHeader({
-        source: d.source,
-        context: d.context,
-        viewer});
-      box.append(header);
-      box.append(viewer);
-      h.push(box);
+      h.push(new DocumentItem({source: d.source, context: d.context}));
     }
     return h;
   }
@@ -659,13 +605,8 @@ class DocumentPanel extends Component {
       $ {
         display: flex;
         flex-direction: column;
-      }
-      $ div.docbox {
-        display: flex;
-        flex-direction: column;
         border: 1px solid lightgray;
-        margin: 4px 0px;
-        padding-right: 8px;
+        margin: 8px;
       }
     `;
   }

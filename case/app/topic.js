@@ -15,7 +15,7 @@ import {imageurl} from "/common/lib/gallery.js";
 import {LabelCollector, value_parser} from "/common/lib/datatype.js";
 import {Document} from "/common/lib/document.js";
 
-import {get_schema, inverse_property, langcode} from "./schema.js";
+import {get_schema, inverse_property} from "./schema.js";
 import {search, kbsearch, SearchResultsDialog} from "./search.js";
 import "./item.js"
 import "./fact.js"
@@ -35,7 +35,6 @@ const n_not_safe_for_work = frame("Q2716583");
 const n_full_work = frame("P953");
 const n_url = frame("P2699");
 const n_mime_type = frame("P1163");
-const n_language = frame("P407");
 
 // Cross-reference configuration.
 var xrefs;
@@ -453,8 +452,6 @@ class TopicCard extends Component {
     this.bind(null, "delimage", e => this.ondelimage(e));
     this.bind(null, "picedit", e => this.refresh());
 
-    this.attach(this.ondocmenu, "docmenu");
-
     this.update_mode(false);
     this.update_title();
   }
@@ -571,153 +568,6 @@ class TopicCard extends Component {
         this.mark_dirty();
         break;
       }
-    }
-  }
-
-  async ondocmenu(e) {
-    if (this.readonly) return;
-    let command = e.detail.command;
-    let doc = e.detail.document;
-    let mention = e.detail.mention;
-    let source = doc.source;
-    let context = doc.context;
-
-    let lang;
-    if (source instanceof Frame) lang = await langcode(source.get(n_language));
-    if (!lang) lang = await langcode(context.topic.get(n_language));
-
-    let sidebar = document.getElementById("sidebar");
-    if (command == "edit") {
-      let dialog = new DocumentEditDialog(source);
-      if (mention) {
-        dialog.sel_begin = mention.sbegin;
-        dialog.sel_end = mention.send;
-      }
-      let result = await dialog.show();
-      if (result) {
-        let n = this.state.slot(n_lex, context.index);
-        context.topic.set_value(n, result);
-
-        this.mark_dirty();
-        this.refresh();
-
-        let newdoc = new Document(store, result, context);
-        sidebar.onrefresh(newdoc);
-      }
-    } else if  (command == "analyze") {
-      if (settings.analyzer) {
-        this.style.cursor = "wait";
-        let headers = {"Content-Type": "text/lex"};
-        if (lang) headers["Content-Language"] = lang;
-        try {
-          let r = await fetch(settings.analyzer, {
-            method: "POST",
-            headers: headers,
-            body: store.resolve(source),
-          });
-          if (r.ok) {
-            let result = await r.text();
-            if (source instanceof Frame) {
-              source.set(n_is, result);
-
-              let newdoc = new Document(store, source, context);
-              sidebar.onrefresh(newdoc);
-            } else {
-              let n = this.state.slot(n_lex, context.index);
-              context.topic.set_value(n, result);
-
-              let newdoc = new Document(store, result, context);
-              sidebar.onrefresh(newdoc);
-            }
-
-            this.mark_dirty();
-            this.refresh();
-          } else {
-            inform(`Error ${r.status} in analyzer ${settings.analyzer}`);
-          }
-        } catch (error) {
-          inform("Error analyzing document: " + error);
-        }
-        this.style.cursor = "";
-      } else {
-        inform("No document analyzer configured");
-      }
-    } else if  (command == "phrasematch") {
-      let phrases = new Map();
-      let index = 0;
-      for (let lex of context.topic.all(n_lex)) {
-        if (index++ == context.index) break;
-        if (lex instanceof Frame) {
-          for (let [k, v] of lex) {
-            if (typeof(k) === 'string' && (v instanceof Frame)) {
-              phrases.set(k, v);
-            }
-          }
-        }
-      }
-
-      let updates = 0;
-      for (let m of doc.mentions) {
-        if (m.annotation && m.annotation.length > 0) continue;
-        let phrase = m.text();
-        let match = phrases.get(phrase);
-        if (match) {
-          if (m.annotation) {
-            m.annotation.set(n_is, match);
-          } else {
-            m.annotation = match;
-          }
-          source.set(phrase, match);
-          updates++;
-        }
-      }
-
-      if (updates > 0) {
-        inform(`${plural(updates, "phrase mapping")} added`);
-        this.mark_dirty();
-        sidebar.onrefresh(doc);
-      }
-    } else if  (command == "topicmatch") {
-      let index = editor.get_index();
-      let updates = 0;
-      for (let m of doc.mentions) {
-        if (m.annotation && m.annotation.length > 0) continue;
-        let phrase = m.text();
-        let match = index.find(phrase);
-        if (match) {
-          if (m.annotation) {
-            m.annotation.set(n_is, match);
-          } else {
-            m.annotation = match;
-          }
-          source.set(phrase, match);
-          updates++;
-        }
-      }
-
-      if (updates > 0) {
-        inform(`${plural(updates, "topic mapping")} added`);
-        this.mark_dirty();
-        sidebar.onrefresh(doc);
-      }
-    } else if  (command == "bookmark") {
-      if (source instanceof Frame) {
-        if (source.get(n_bookmarked)) {
-          source.remove(n_bookmarked);
-        } else {
-          source.set(n_bookmarked, true);
-        }
-        this.mark_dirty();
-        this.refresh();
-      }
-    } else if  (command == "delete") {
-      let n = this.state.slot(n_lex, context.index);
-      this.state.remove(n);
-      this.mark_dirty();
-      this.refresh();
-      sidebar.ondelete(doc);
-    } else if  (command == "pin") {
-      sidebar.update(doc);
     }
   }
 
@@ -1375,155 +1225,6 @@ class RawEditDialog extends MdDialog {
 }
 
 Component.register(RawEditDialog);
-
-class DocumentEditDialog extends MdDialog {
-  onconnected() {
-    this.textarea = this.find("textarea");
-    this.attach(this.onkeydown, "keydown", "textarea");
-    this.attach(this.onfind, "find");
-
-    if (this.sel_begin && this.sel_end) {
-      this.select(this.sel_begin, this.sel_end);
-    }
-  }
-
-  onkeydown(e) {
-    e.stopPropagation()
-    if ((e.ctrlKey || e.metaKey) && e.code === "KeyS") {
-      e.preventDefault();
-      this.submit();
-    } else if ((e.ctrlKey || e.metaKey) && e.code === "KeyF") {
-      e.preventDefault();
-      let findbox = this.find("md-find-box");
-      let start = this.textarea.selectionStart;
-      let end = this.textarea.selectionEnd;
-      let selected = this.textarea.value.substring(start, end);
-      if (!selected) selected = this.lastsearch || "";
-      findbox.update(selected);
-    } else if ((e.ctrlKey || e.metaKey) && e.code === "KeyG") {
-      e.preventDefault();
-      this.search(this.lastsearch, e.shiftKey);
-    } else if ((e.ctrlKey || e.metaKey) && e.code === "KeyB") {
-      this.bracket();
-    }
-  }
-
-  onfind(e) {
-    if (e.detail) {
-      let text = e.detail.text;
-      let backwards = e.detail.backwards;
-      this.search(text, backwards);
-      this.lastsearch = text;
-    } else {
-      this.textarea.focus();
-    }
-  }
-
-  bracket() {
-    let text = this.textarea.value;
-    let start = this.textarea.selectionStart;
-    let end = this.textarea.selectionEnd;
-    if (start == end) return;
-    text = text.slice(0, start) + "[" +
-           text.slice(start, end) + "]" +
-           text.slice(end);
-    this.textarea.value = text;
-    this.textarea.selectionStart = start + 1;
-    this.textarea.selectionEnd = end + 1;
-  }
-
-  search(text, backwards) {
-    let content = this.textarea.value;
-    this.textarea.focus();
-
-    let pos = -1;
-    if (backwards) {
-      let start = this.textarea.selectionStart;
-      pos = content.substring(0, start).lastIndexOf(text);
-    } else {
-      let end = this.textarea.selectionEnd;
-      pos = content.indexOf(text, end);
-    }
-    if (pos == -1) return;
-    this.select(pos, pos + text.length);
-  }
-
-  select(begin, end) {
-    let content = this.textarea.value;
-    let height = this.textarea.clientHeight;
-    this.textarea.value = content.substring(0, begin);
-    let y = this.textarea.scrollHeight;
-
-    this.textarea.value = content;
-    this.textarea.scrollTop = y > height ? y - height / 2 : 0;
-    this.textarea.setSelectionRange(begin, end);
-  }
-
-  submit() {
-    let content = this.textarea.value;
-    if (this.state instanceof Frame) {
-      let title = this.find("#title").value;
-      this.state.set(n_name, title);
-      this.state.set(n_is, content);
-      content = this.state;
-    }
-    this.close(content);
-  }
-
-  render() {
-    let content = store.resolve(this.state);
-    let title = (this.state instanceof Frame) && this.state.get(n_name);
-    return `
-      <md-dialog-top>Edit document</md-dialog-top>
-        <md-text-field
-          id="title"
-          value="${Component.escape(title)}"
-          label="Title"
-          ${title ? '' : 'class="hidden"'}
-        >
-        </md-text-field>
-        <div class="editbox">
-          <textarea
-            spellcheck="false">${Component.escape(content)}</textarea>
-          <md-find-box></md-find-box>
-        </div>
-      <md-dialog-bottom>
-        <button id="cancel">Cancel</button>
-        <button id="submit">Update</button>
-      </md-dialog-bottom>
-    `;
-  }
-
-  static stylesheet() {
-    return `
-      $ .editbox {
-        position: relative;
-      }
-      $ md-find-box {
-        position: absolute;
-        top: 0;
-        right: 0;
-        background: white;
-      }
-      $ textarea {
-        width: calc(100vw * 0.8);
-        height: calc(100vh * 0.7);
-        background-color: #f5f5f5;
-        border: 0;
-        padding: 8px;
-        outline: none;
-      }
-      $ md-text-field {
-        padding-bottom: 8px;
-      }
-      $ .hidden {
-        display: none;
-      }
-    `;
-  }
-}
-
-Component.register(DocumentEditDialog);
 
 class TopicPhoto extends Component {
   render() {

@@ -54,12 +54,24 @@ escapes = [
   ("}", "&#125;"),
   ("[", "&#91;"),
   ("]", "&#93;"),
+  ("〈", "<"),
+  ("〉", ">"),
+  ("</b><b>", ""),
+  ("</b> <b>", " "),
+  ("</em><em>", ""),
+  ("</em> <em>", " "),
 ]
 
 LEVEL_START       = 0
 LEVEL_PARA        = 1
 LEVEL_SUBHEADING  = 2
 LEVEL_HEADING     = 3
+
+FONT_SUPERSCRIPT  = 1
+FONT_ITALIC       = 2
+FONT_SANS         = 4
+FONT_MONO         = 8
+FONT_BOLD         = 16
 
 level_start = ["", "<p>", "\n<h2>", "\n<h1>"]
 level_end = ["", "</p>\n", "</h2>\n\n", "</h1>\n"]
@@ -83,6 +95,7 @@ class PDFLine:
     self.indent = False
     self.short = False
     self.para = False
+    self.flags = 0
 
     # Bounding box.
     bbox = line["bbox"]
@@ -92,17 +105,42 @@ class PDFLine:
     self.y1 = bbox[3]
 
     # Text.
+    book = page.book
     self.text = ""
-    sizes = []
+    fontsizes = []
     for span in line["spans"]:
-      #print(span["text"], int(span["size"]), span["font"], span["flags"])
-      self.text += span["text"]
-      sizes.append(span["size"])
-    self.size = mean(sizes)
+      word = span["text"]
+      fontsize = span["size"]
+      flags = span["flags"]
+      #print(word, int(fontsize), span["font"], span["flags"])
+
+      # Skip reference numbers.
+      if fontsize < book.refsize and word.isnumeric():
+        refno = int(word)
+        if refno > book.nextref and refno < book.nextref + 5:
+          if refno == book.nextref + 2:
+            print("missing refno", book.nextref)
+          elif refno != book.nextref + 1:
+            print("missing refnos [%d-%d]" % (book.nextref, refno - 1))
+
+          #print("ref", word, fontsize, span["font"], span["flags"])
+          book.nextref = refno
+          continue
+
+      # Font variants.
+      if word != " ":
+        if flags & FONT_BOLD: word = "〈b〉%s〈/b〉" % word
+        if flags & FONT_ITALIC: word = "〈em〉%s〈/em〉" % word
+
+      # Add text to line
+      self.text += word
+      self.flags |= (flags ^ 4)
+      fontsizes.append(fontsize)
+
+    self.fontsize = mean(fontsizes)
 
     # Soft-break hyphen.
-    last = ord(self.text[-1])
-    if last == 173:
+    if len(self.text) > 0 and ord(self.text[-1]) == 173:
       self.hyphen = True
       self.text = self.text[:-1]
 
@@ -126,7 +164,7 @@ class PDFLine:
     best = None
     for m in re.findall(r"\d+", self.text):
       num = int(m)
-      if best is None or abs(num - expected) < abs(best - expected):
+      if best is None or abs(num - expected) <= abs(best - expected):
         best = num
     return best
 
@@ -138,9 +176,11 @@ class PDFPage:
     self.lines = []
 
   def extract(self, page):
-    p = page.get_textpage().extractDICT()
+    p = page.get_textpage().extractDICT(sort=True)
     for b in p["blocks"]:
-      if b["type"] == 1: continue
+      if b["type"] == 1:
+        if flags.arg.debug: print("skip image")
+        continue
       for l in b["lines"]:
         # Skip text that is not vertical.
         dir = l["dir"]
@@ -189,6 +229,7 @@ class PDFPage:
         points = 0
         if prev.short: points += 1
         if prev.hyphen: points -= 1
+        if prev.text.endswith("."): points += 1
         if l.indent: points += 1
         if l.y0 - prev.y0 > height: points += 1
         points += l.capital()
@@ -217,9 +258,9 @@ class PDFChapter:
     for p in self.pages:
       for l in p.lines:
         next = level
-        if l.size > h1:
+        if l.fontsize > h1:
           next = LEVEL_HEADING
-        elif l.size > h2:
+        elif l.fontsize > h2:
           next = LEVEL_SUBHEADING
         elif l.para:
           next = LEVEL_PARA
@@ -252,6 +293,8 @@ class PDFBook:
     self.spine = []
     self.chapters = {}
     self.meta = {}
+    self.nextref = 0
+    self.refsize = 0
 
   def read_toc(self, filename):
     last_toc_pageno = 0
@@ -265,7 +308,10 @@ class PDFBook:
           colon = line.index(':')
           key = line[1:colon].strip()
           value = line[colon + 1:].strip()
-          self.meta[key] = value
+          if key == "subst":
+            escapes.append(tuple(value.split("/")))
+          else:
+            self.meta[key] = value
         elif ' ' in line:
           last_space = line.rindex(' ')
           name = line[0:last_space].strip()
@@ -279,6 +325,7 @@ class PDFBook:
           self.chapters[pageno] = chapter
 
   def extract(self, pdf):
+    self.refsize = float(self.meta.get("refsize", "0"))
     ignore = [int(p) for p in self.meta.get("ignore", "0").split(",")]
     pnum = 0;
     for p in pdf:
@@ -328,7 +375,7 @@ class PDFBook:
   def remove_boilerplate(self):
     header = float(self.meta.get("header", "0"))
     footer = float(self.meta.get("footer", "0"))
-    simplebpr = self.meta.get("simplebpr", 0)
+    bpr = int(self.meta.get("bpr", 0))
     pageno = int(self.meta.get("firstpage", "1"))
     pageskip = int(self.meta.get("pageskip", 10))
     for p in book.pages:
@@ -336,18 +383,7 @@ class PDFBook:
       last = None
       pnumber = None
 
-      if simplebpr:
-        # Remove last line if it matches the expected page number.
-        if len(p.lines) > 0:
-          pnumber = p.lines[-1].find_page_number(pageno)
-          if pnumber == pageno:
-            last = len(p.lines) - 1
-          elif flags.arg.debug:
-            if pnumber is None:
-              print("missing pageno: %d '%s'" % (pageno, p.lines[-1].text))
-            else:
-              print("wrong pageno: %d '%s' %d" % (pageno, p.lines[-1].text, pnumber))
-      else:
+      if bpr == 0:
         # Remove header and footers and try to find page number.
         lineno = 0
         for l in p.lines:
@@ -366,6 +402,27 @@ class PDFBook:
               print("page number in text: %d '%s' [%d-%d]" % (pageno, l.text, int(l.y0), int(l.y1)))
 
           lineno += 1
+      elif bpr == 1:
+        # Remove last line if it matches the expected page number.
+        if len(p.lines) > 0:
+          pnumber = p.lines[-1].find_page_number(pageno)
+          if pnumber == pageno:
+            last = len(p.lines) - 1
+          elif flags.arg.debug:
+            if pnumber is None:
+              print("missing pageno: %d '%s'" % (pageno, p.lines[-1].text))
+            else:
+              print("wrong pageno: %d '%s' %d" % (pageno, p.lines[-1].text, pnumber))
+      elif bpr == 2:
+        # Assume consecutive page numbers, remove first/last line if they
+        # match the expected page number.
+        if len(p.lines) > 0:
+          if p.lines[0].find_page_number(pageno) == pageno:
+            first = 1
+          elif p.lines[-1].find_page_number(pageno) == pageno:
+            last = len(p.lines) - 1
+          elif flags.arg.debug:
+            print("no pageno found:", pageno)
 
       if first is None: first = 0
       if last is None: last = len(p.lines)
@@ -484,7 +541,8 @@ if flags.arg.debug:
       if l.indent: attrs.append(">")
       if l.short: attrs.append("<")
       if l.hyphen: attrs.append("(-)")
-      if l.size: attrs.append(str(round(l.size)))
+      if l.fontsize: attrs.append(str(round(l.fontsize)))
+      if l.flags: attrs.append("{%d}" % l.flags)
       if l.para: print()
       print(l.text, " ".join(attrs))
 

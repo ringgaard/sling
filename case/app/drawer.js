@@ -174,7 +174,6 @@ class CaseFolder extends Component {
 
   render() {
     let menu = `
-      <md-spacer></md-spacer>
       <md-menu>
         <md-menu-item id="rename">
           <md-icon icon="drive_file_rename_outline"></md-icon>Rename
@@ -206,6 +205,7 @@ class CaseFolder extends Component {
         display: flex;
         align-items: center;
         padding-left: 6px;
+        margin-right: 3px;
         white-space: nowrap;
         cursor: pointer;
         height: 30px;
@@ -231,6 +231,8 @@ class CaseFolder extends Component {
       $ div {
         padding-left: 6px;
         user-select: none;
+        overflow-x: hidden;
+        flex: 1;
       }
       $ div.current {
         font-weight: bold;
@@ -261,7 +263,6 @@ class ScrapsFolder extends CaseFolder {
     return `
       <md-icon icon="folder_delete"></md-icon>
       <div ${this.state.marked ? 'class="current"' : ''}>Scraps</div>
-      <md-spacer></md-spacer>
       <md-menu>
         <md-menu-item id="clear">
          <md-icon icon="delete_forever"></md-icon>Clear</md-menu-item>
