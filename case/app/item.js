@@ -231,6 +231,11 @@ class PropertyPanel extends Component {
     function render_url(val) {
       let url = val;
       if (typeof val === "string") {
+        if (val.startsWith("https://drive.ringgaard.com/")) {
+          val = val.slice(28);
+          let slash = val.lastIndexOf("/");
+          if (slash != -1) val = val.slice(slash + 1);
+        }
         if (val.startsWith("http://")) val = val.slice(7);
         if (val.startsWith("https://")) val = val.slice(8);
         if (val.startsWith("www.")) val = val.slice(4);
