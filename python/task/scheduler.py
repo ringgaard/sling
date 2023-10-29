@@ -240,8 +240,6 @@ class Job:
     else:
       cmd = None
 
-    if cmd: cmd = datetime.datetime.now().strftime(cmd)
-
     return cmd
 
   def run(self, out=None, err=None):
