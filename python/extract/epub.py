@@ -145,6 +145,7 @@ tags = {
   commons["a"]: KEEP,
   commons["title"]: KEEP,
   commons["blockquote"]: KEEP,
+  commons["aside"]: KEEP,
   commons["table"]: KEEP,
   commons["tr"]: KEEP,
   commons["td"]: KEEP,
@@ -313,7 +314,7 @@ class EPUBBook:
       ref = section[n_idref]
       itemfn = refs[ref]
       label = titles.get(itemfn)
-      #print("====", itemfn)
+      print("====", itemfn)
       item = self.store.parse(self.read(itemfn), xml=True, idsym=n_id)
       #print("item", item.data(pretty=True, utf8=True))
       title, text = self.extract_section(item)

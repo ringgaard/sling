@@ -356,6 +356,7 @@ export class DocumentViewer extends Component {
     let ei = 0;
     let level = 0;
     let match = doc.context && doc.context.match;
+    let altmatch = match && match.get(n_is);
     for (let pos = 0; pos < text.length; ++pos) {
       // Output span ends.
       while (ei < n && ends[ei].end < pos) ei++;
@@ -377,12 +378,15 @@ export class DocumentViewer extends Component {
           from = pos;
         }
         level++;
+        let cls = `l${level}`;
         let mention = starts[si];
-        if (match && store.resolve(mention.annotation) == match) {
-          h.push(`<span class="l${level} highlight" mention=${mention.index}>`);
-        } else {
-          h.push(`<span class="l${level}" mention=${mention.index}>`);
+        if (match && mention.annotation) {
+          let topic = store.resolve(mention.annotation);
+          if (topic == match || topic == altmatch) {
+            cls += " highlight";
+          }
         }
+        h.push(`<span class="${cls}" mention=${mention.index}>`);
         si++;
       }
     }

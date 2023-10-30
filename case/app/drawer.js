@@ -217,13 +217,13 @@ class CaseFolder extends Component {
         background-color: #eeeeee;
       }
       $ md-menu #open {
-        visibility: hidden;
+        display: none;
         height: 30px;
         width: 30px;
         border-radius: 15px;
       }
       $:hover md-menu #open {
-        visibility: visible;
+        display: flex;
       }
       $:hover {
         background-color: #eeeeee;

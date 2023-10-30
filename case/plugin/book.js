@@ -23,6 +23,7 @@ export default class BookWidget extends Component {
   }
 
   async index() {
+    let topicids = this.match("#editor").get_index().ids;
     let book = this.state;
     let entrymap = new Map();
     let index = 0;
@@ -36,6 +37,7 @@ export default class BookWidget extends Component {
         if (doc.annotation) {
           let item = store.resolve(m.annotation);
           if (item && item.id) {
+            item = topicids.get(item.id) || item;
             let entity = chaptermap.get(item);
             if (!entity) {
               chaptermap.set(item, {position, count: 1});

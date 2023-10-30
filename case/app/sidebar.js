@@ -107,7 +107,7 @@ class SideBar extends Component {
 
       this.mark_dirty(topic);
       let newdoc = new Document(store, result, context);
-      this.update(newdoc);
+      this.refresh(newdoc);
     }
   }
 
@@ -293,7 +293,7 @@ class SideBar extends Component {
     } else {
       context.match = match;
     }
-    this.onrefresh(mention.document);
+    this.refresh(mention.document);
   }
 
   async onupdate() {
@@ -307,7 +307,7 @@ class SideBar extends Component {
     if (viewer) viewer.update(this.state);
   }
 
-  onrefresh(newdoc) {
+  refresh(newdoc) {
     if (!same(this.state, newdoc)) return;
     let viewer = this.find("document-viewer");
     let scroll = viewer.scrollTop;
