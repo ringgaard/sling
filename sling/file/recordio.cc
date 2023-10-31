@@ -262,6 +262,25 @@ Status RecordReader::Ensure(uint64 size) {
   return Status::OK;
 }
 
+Status RecordReader::Valid(const Header &hdr) const {
+  uint64 size = hdr.record_size + hdr.key_size;
+  if (size + position_ > size_) {
+    return Status(1, "Invalid record");
+  }
+  int chunk_size = info_.chunk_size;
+  if (chunk_size) {
+    // Record key and value cannot be bigger than the chunk size.
+    if (size > chunk_size) {
+      return Status(1, "Invalid record size");
+    }
+    // Record cannot cross chunk boundary.
+    if (position_ / chunk_size != (position_ + size - 1) / chunk_size) {
+      return Status(1, "Invalid record alignment");
+    }
+  }
+  return Status::OK;
+}
+
 Status RecordReader::Read(Record *record) {
   for (;;) {
     // Fill input buffer if it is nearly empty.
@@ -274,6 +293,8 @@ Status RecordReader::Read(Record *record) {
     Header hdr;
     ssize_t hdrsize = ReadHeader(input_.begin(), &hdr);
     if (hdrsize < 0) return Status(1, "Corrupt record header");
+    Status s = Valid(hdr);
+    if (!s.ok()) return s;
 
     // Skip filler records.
     if (hdr.record_type == FILLER_RECORD) {
@@ -289,7 +310,7 @@ Status RecordReader::Read(Record *record) {
     }
 
     // Read record into input buffer.
-    Status s = Ensure(hdr.record_size);
+    s = Ensure(hdr.record_size);
     if (!s.ok()) return s;
 
     // Get record key.
@@ -333,6 +354,8 @@ Status RecordReader::ReadKey(Record *record) {
     Header hdr;
     ssize_t hdrsize = ReadHeader(input_.begin(), &hdr);
     if (hdrsize < 0) return Status(1, "Corrupt record header");
+    Status s = Valid(hdr);
+    if (!s.ok()) return s;
 
     // Skip filler records.
     if (hdr.record_type == FILLER_RECORD) {
@@ -669,6 +692,23 @@ Status RecordWriter::Flush() {
   return Status::OK;
 }
 
+Status RecordWriter::ZeroFill(uint64 bytes) {
+  uint64 left = bytes;
+  while (left > 0) {
+    // Fill output buffer with zeroes.
+    uint64 size = output_.remaining();
+    if (size > left) size = left;
+    memset(output_.Append(size), 0, size);
+
+    // Flush output buffer if we are not done.
+    left -= size;
+    if (size == 0) break;
+    Status s = Flush();
+    if (!s.ok()) return s;
+  }
+  return Status::OK;
+}
+
 Status RecordWriter::Write(const Record &record, uint64 *position) {
   // Compress record value if requested.
   Slice value;
@@ -715,14 +755,12 @@ Status RecordWriter::Write(const Record &record, uint64 *position) {
       size_t hdrsize = WriteHeader(filler, output_.end());
       output_.Append(hdrsize);
 
-      // Flush output buffer.
-      Status s = Flush();
+      // Zero-fill to align to next chunk boundary. It is important to fill
+      // the remaining chunk instead of just seeking ahead to prevent sparse
+      // files.
+      Status s = ZeroFill(filler.record_size - hdrsize);
       if (!s.ok()) return s;
-
-      // Skip to next chunk boundary.
       position_ += filler.record_size;
-      s = file_->Seek(position_);
-      if (!s.ok()) return s;
     }
   }
 

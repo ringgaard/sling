@@ -200,6 +200,9 @@ class RecordReader : public RecordFile {
   // Ensure that at least 'size' bytes are available in input buffer.
   Status Ensure(uint64 size);
 
+  // Sanity check for record.
+  Status Valid(const Header &hdr) const;
+
   // Input file.
   File *file_;
 
@@ -357,6 +360,9 @@ class RecordWriter : public RecordFile {
                          const RecordFileOptions &options);
 
  private:
+  // Zero-fill output buffer.
+  Status ZeroFill(uint64 bytes);
+
   // Write index to disk.
   Status WriteIndex();
 
