@@ -263,7 +263,7 @@ Status RecordReader::Ensure(uint64 size) {
 }
 
 Status RecordReader::Valid(const Header &hdr) const {
-  uint64 size = hdr.record_size + hdr.key_size;
+  uint64 size = hdr.record_size;
   if (hdr.record_type != INDEX_RECORD && size + position_ > size_) {
     return Status(1, "Invalid record");
   }
