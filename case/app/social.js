@@ -50,6 +50,10 @@ let xrefs = [
     property: frame("P2013"),
   },
   {
+    pattern: /^https?:\/\/www\.facebook\.com\/p\/([A-Za-z0-9_\.\-]+)\/?/,
+    property: frame("P2013"),
+  },
+  {
     pattern: /^https?:\/\/open\.spotify\.com\/artist\/([^\/\?]+)/,
     property: frame("P1902"),
   },

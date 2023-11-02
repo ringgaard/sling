@@ -145,6 +145,9 @@ struct RecordFileOptions {
 
   // Number of pages in index page cache.
   int index_cache_size = 256;
+
+  // Validate record headers on read.
+  bool validate = false;
 };
 
 // Reader for reading records from a record file.
@@ -200,8 +203,8 @@ class RecordReader : public RecordFile {
   // Ensure that at least 'size' bytes are available in input buffer.
   Status Ensure(uint64 size);
 
-  // Sanity check for record.
-  Status Valid(const Header &hdr) const;
+  // Validate record header.
+  Status Validate(const Header &hdr) const;
 
   // Input file.
   File *file_;
@@ -218,6 +221,9 @@ class RecordReader : public RecordFile {
   // In readahead mode the input buffer is filled to prefetch the next records.
   // The readahead flag is cleared when seeking to a new position in the file.
   bool readahead_ = true;
+
+  // Validate record headers before trying to read the record.
+  bool validate_ = false;
 
   // Record file meta information.
   FileHeader info_;

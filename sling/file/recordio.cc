@@ -174,6 +174,7 @@ RecordReader::RecordReader(File *file,
   CHECK_GE(options.buffer_size, MAX_HEADER_LEN);
   input_.Reset(options.buffer_size);
   position_ = 0;
+  validate_ = options.validate;
   CHECK(Fill(sizeof(FileHeader)));
 
   // Read record file header.
@@ -262,20 +263,22 @@ Status RecordReader::Ensure(uint64 size) {
   return Status::OK;
 }
 
-Status RecordReader::Valid(const Header &hdr) const {
-  uint64 size = hdr.record_size;
-  if (hdr.record_type != INDEX_RECORD && size + position_ > size_) {
-    return Status(1, "Invalid record");
-  }
-  int chunk_size = info_.chunk_size;
-  if (chunk_size) {
-    // Record key and value cannot be bigger than the chunk size.
-    if (size > chunk_size) {
-      return Status(1, "Invalid record size");
+Status RecordReader::Validate(const Header &hdr) const {
+  if (hdr.record_type == DATA_RECORD || hdr.record_type == VDATA_RECORD) {
+    uint64 size = hdr.record_size;
+    if (size + position_ > size_) {
+      return Status(1, "Invalid record");
     }
-    // Record cannot cross chunk boundary.
-    if (position_ / chunk_size != (position_ + size - 1) / chunk_size) {
-      return Status(1, "Invalid record alignment");
+    int chunk_size = info_.chunk_size;
+    if (chunk_size) {
+      // Record key and value cannot be bigger than the chunk size.
+      if (size > chunk_size) {
+        return Status(1, "Invalid record size");
+      }
+      // Record cannot cross chunk boundary.
+      if (position_ / chunk_size != (position_ + size - 1) / chunk_size) {
+        return Status(1, "Invalid record alignment");
+      }
     }
   }
   return Status::OK;
@@ -293,8 +296,10 @@ Status RecordReader::Read(Record *record) {
     Header hdr;
     ssize_t hdrsize = ReadHeader(input_.begin(), &hdr);
     if (hdrsize < 0) return Status(1, "Corrupt record header");
-    Status s = Valid(hdr);
-    if (!s.ok()) return s;
+    if (validate_) {
+      Status s = Validate(hdr);
+      if (!s.ok()) return s;
+    }
 
     // Skip filler records.
     if (hdr.record_type == FILLER_RECORD) {
@@ -310,7 +315,7 @@ Status RecordReader::Read(Record *record) {
     }
 
     // Read record into input buffer.
-    s = Ensure(hdr.record_size);
+    Status s = Ensure(hdr.record_size);
     if (!s.ok()) return s;
 
     // Get record key.
@@ -354,8 +359,10 @@ Status RecordReader::ReadKey(Record *record) {
     Header hdr;
     ssize_t hdrsize = ReadHeader(input_.begin(), &hdr);
     if (hdrsize < 0) return Status(1, "Corrupt record header");
-    Status s = Valid(hdr);
-    if (!s.ok()) return s;
+    if (validate_) {
+      Status s = Validate(hdr);
+      if (!s.ok()) return s;
+    }
 
     // Skip filler records.
     if (hdr.record_type == FILLER_RECORD) {

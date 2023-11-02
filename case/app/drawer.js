@@ -16,10 +16,17 @@ class DrawerPanel extends Component {
     if (this.index) this.attach(this.onclose, "click", "#close");
   }
 
+  onupdate() {
+    let content = this.find("#content");
+    this.scroll = content && content.scrollTop;
+  }
+
   onupdated() {
     if (!this.state) return;
     this.find("folder-list").update(this.state);
     if (this.index) this.find("index-entry").update(this.index);
+    let content = this.find("#content");
+    content.scrollTop = this.scroll;
   }
 
   toogle() {

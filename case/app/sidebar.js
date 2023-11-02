@@ -372,7 +372,7 @@ class SideBar extends Component {
         display: flex;
         flex-direction: row;
         position: relative;
-        width: 30vw;
+        width: 40vw;
         min-width: 10vw;
         max-width: 70vw;
         border-left: 1px #a0a0a0 solid;

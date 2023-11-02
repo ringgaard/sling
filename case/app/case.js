@@ -298,7 +298,7 @@ class CaseEditor extends MdApp {
     let ref = await dialog.show();
     let dirty = false;
     if (ref === null) {
-      if (mention.annotation) {
+      if (mention.annotation && mention.annotation.isanonymous()) {
         mention.annotation.remove(n_is);
       } else {
         mention.annotation = null;
@@ -311,7 +311,7 @@ class CaseEditor extends MdApp {
       }
       dirty = true;
     } else if (ref) {
-      if (mention.annotation) {
+      if (mention.annotation && mention.annotation.isanonymous()) {
         mention.annotation.set(n_is, frame(ref));
       } else {
         mention.annotation = frame(ref);
