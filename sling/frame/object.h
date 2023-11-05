@@ -180,7 +180,7 @@ template<typename T> class handle_map {
   bool empty() const { return size_ == 0; }
 
   // Reserve space in handle map. New limit must be power-of-two.
-  void reserve(int limit) {
+  void reserve(size_t limit) {
     mask_ = limit - 1;
     node *nodes = allocate(limit);
 
@@ -250,7 +250,7 @@ template<typename T> class handle_map {
 
   // Allocate and initialize node array. An extra sentinel node is allocated
   // at the end of the array.
-  static node *allocate(int size) {
+  static node *allocate(size_t size) {
     size_t bytes = (size + 1) * sizeof(node);
     void *data = malloc(bytes);
     memset(data, 0, bytes);
