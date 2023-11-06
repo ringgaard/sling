@@ -29,6 +29,13 @@ export class Mention {
     if (plain) text = detag(text);
     return text;
   }
+
+  resolved() {
+    if (!this.annotation) return null;
+    let topic = this.document.store.resolve(this.annotation);
+    if (topic.isanonymous()) return null;
+    return topic;
+  }
 }
 
 export class Document {

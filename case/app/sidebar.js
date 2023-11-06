@@ -8,10 +8,12 @@ import {Document} from "/common/lib/document.js";
 import {inform, MdDialog, StdDialog} from "/common/lib/material.js";
 import {DocumentViewer} from "/common/lib/docviewer.js";
 
+import {search, kbsearch, SearchResultsDialog} from "./search.js";
 import {langcode} from "./schema.js";
 
 const n_is = store.is;
 const n_name = frame("name");
+const n_description = frame("description");
 const n_lex = frame("lex");
 const n_bookmarked = frame("bookmarked");
 const n_language = frame("P407");
@@ -39,6 +41,7 @@ class SideBar extends Component {
   oninit() {
     this.attach(this.onedit, "edit");
     this.attach(this.onhighlight, "highlight");
+    this.attach(this.onreconcile, "reconcile");
   }
 
   onrendered() {
@@ -280,6 +283,65 @@ class SideBar extends Component {
     }
   }
 
+  async onreconcile(e) {
+    let mention = e.detail.mention;
+    let query = mention.text(true);
+
+    function docsearch(query, results, options) {
+      for (let m of mention.document.search(query, options.submatch)) {
+        let match = store.resolve(m.annotation);
+        if (match && match.id) {
+          let name = match.get(n_name) || m.text(true) || "???";
+          results.push({
+            ref: match.id,
+            name: name,
+            title: name + " 📖",
+            description: match.get(n_description),
+            topic: match,
+          });
+        }
+      }
+    }
+
+    // Search for matches.
+    let backends = [editor.search.bind(editor), docsearch, kbsearch];
+    let options = {
+      full: true,
+      swap: true,
+      plural: true,
+      submatch: true,
+      local: editor.get_index(),
+    };
+
+    this.style.cursor = "wait";
+    let results = await search(query, backends, options);
+    this.style.cursor = "";
+
+    // Open reconciliation dialog.
+    let dialog = new SearchResultsDialog({
+      title: "Reconcile with...",
+      items: results});
+    let ref = await dialog.show();
+    if (ref === false) return;
+
+    // Update phrase table.
+    let source = mention.document.source;
+    let context = mention.document.context;
+    if (source instanceof Frame) {
+      let text = mention.text();
+      if (ref === null) {
+        source.purge((name, value) => name == text);
+      } else {
+        source.set(text, frame(ref));
+      }
+    }
+
+    // Update document.
+    this.mark_dirty(context.topic);
+    let newdoc = new Document(store, source, context);
+    this.refresh(newdoc);
+  }
+
   async onnavigate(e) {
     await this.editor.navigate_to(this.state.context.topic);
   }
@@ -413,6 +475,9 @@ class SideBar extends Component {
         height: 100%;
         overflow: auto;
         padding: 0;
+      }
+      $ span.unknown {
+        text-decoration: underline wavy red;
       }
     `;
   }

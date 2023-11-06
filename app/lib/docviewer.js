@@ -380,11 +380,13 @@ export class DocumentViewer extends Component {
         level++;
         let cls = `l${level}`;
         let mention = starts[si];
-        if (match && mention.annotation) {
-          let topic = store.resolve(mention.annotation);
-          if (topic == match || topic == altmatch) {
+        let topic = mention.resolved();
+        if (topic) {
+          if (match && (topic == match || topic == altmatch)) {
             cls += " highlight";
           }
+        } else {
+          cls += " unknown";
         }
         h.push(`<span class="${cls}" mention=${mention.index}>`);
         si++;

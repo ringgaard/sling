@@ -145,7 +145,6 @@ class CaseEditor extends MdApp {
 
     this.attach(this.onnavigate, "navigate");
     this.attach(this.onannotate, "annotate");
-    this.attach(this.onreconcile, "reconcile");
 
     document.addEventListener("keydown", e => this.onkeydown(e));
     window.addEventListener("beforeunload", e => this.onbeforeunload(e));
@@ -257,78 +256,6 @@ class CaseEditor extends MdApp {
     this.topic_updated(topic);
     await this.update_topics();
     this.navigate_to(topic);
-  }
-
-  async onreconcile(e) {
-    let mention = e.detail.mention;
-    let query = mention.text(true);
-
-    function docsearch(query, results, options) {
-      for (let m of mention.document.search(query, options.submatch)) {
-        let match = store.resolve(m.annotation);
-        if (match && match.id) {
-          let name = match.get(n_name) || m.text(true) || "???";
-          results.push({
-            ref: match.id,
-            name: name,
-            title: name + " 📖",
-            description: match.get(n_description),
-            topic: match,
-          });
-        }
-      }
-    }
-
-    let backends = [this.search.bind(this), docsearch, kbsearch];
-    let options = {
-      full: true,
-      swap: true,
-      plural: true,
-      submatch: true,
-      local: this.get_index(),
-    };
-
-    this.style.cursor = "wait";
-    let results = await search(query, backends, options);
-    this.style.cursor = "";
-
-    let dialog = new SearchResultsDialog({
-      title: "Reconcile with...",
-      items: results});
-    let ref = await dialog.show();
-    let dirty = false;
-    if (ref === null) {
-      if (mention.annotation && mention.annotation.isanonymous()) {
-        mention.annotation.remove(n_is);
-      } else {
-        mention.annotation = null;
-      }
-
-      let source = mention.document.source;
-      if (source instanceof Frame) {
-        let text = mention.text();
-        source.purge((name, value) => name == text);
-      }
-      dirty = true;
-    } else if (ref) {
-      if (mention.annotation && mention.annotation.isanonymous()) {
-        mention.annotation.set(n_is, frame(ref));
-      } else {
-        mention.annotation = frame(ref);
-      }
-
-      let source = mention.document.source;
-      if (source instanceof Frame) {
-        source.set(mention.text(), frame(ref));
-      }
-      dirty = true;
-    }
-
-    let context = mention.document.context;
-    if (dirty && context && context.topic) {
-      this.topic_updated(context.topic);
-      this.mark_dirty();
-    }
   }
 
   editing() {
