@@ -582,7 +582,9 @@ class Profile:
       print("gallery rate limit", reset, "secs")
       time.sleep(reset)
 
+    if r.status_code == 403: return 0
     r.raise_for_status()
+
     children = r.json()[0]["data"]["children"]
     if len(children) == 0:
       print("Skipping empty post", galleryid);

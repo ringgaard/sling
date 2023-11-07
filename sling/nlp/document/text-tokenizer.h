@@ -69,9 +69,9 @@ enum TokenFlagValues : uint64 {
   TAG_END        = (1ULL << 30),  // tag end character.
   HASHTAG_START  = (1ULL << 31),  // character indicating start of hash-tag
 
-  // Tag style is stored in four bits.
+  // Tag style is stored in five bits.
   TOKEN_STYLE_SHIFT = 32,
-  TOKEN_STYLE_MASK = (15ULL << 32),
+  TOKEN_STYLE_MASK = (31ULL << 32),
 };
 
 typedef uint64 TokenFlags;

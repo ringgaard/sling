@@ -165,6 +165,7 @@ bool DocumentLexer::Lex(Document *document, Text lex) const {
 
 static void OutputStyle(int style, Output *output) {
   if (style & BEGIN_STYLE) {
+    if (style & TITLE_BEGIN) output->Write("<h1>");
     if (style & HEADING_BEGIN) output->Write("<h2>");
     if (style & BREAKOUT_BEGIN) output->Write("<aside>");
     if (style & QUOTE_BEGIN) output->Write("<blockquote>");
@@ -181,6 +182,7 @@ static void OutputStyle(int style, Output *output) {
     if (style & QUOTE_END) output->Write("</blockquote>");
     if (style & BREAKOUT_END) output->Write("</aside>");
     if (style & HEADING_END) output->Write("</h2>");
+    if (style & TITLE_END) output->Write("</h1>");
   }
 }
 

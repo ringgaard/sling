@@ -551,8 +551,8 @@ static const struct { const char *tag; uint64 flags; } kStyleTags[] = {
   {"<em>",  TS(STYLE_ITALIC_BEGIN) | TOKEN_NONBREAK},
   {"</em>", TS(STYLE_ITALIC_END) | TOKEN_NONBREAK},
 
-  {"<h1>",  TS(STYLE_HEADING_BEGIN)},
-  {"</h1>", TS(STYLE_HEADING_END)},
+  {"<h1>",  TS(STYLE_TITLE_BEGIN)},
+  {"</h1>", TS(STYLE_TITLE_END)},
   {"<h2>",  TS(STYLE_HEADING_BEGIN)},
   {"</h2>", TS(STYLE_HEADING_END)},
   {"<h3>",  TS(STYLE_HEADING_BEGIN)},
