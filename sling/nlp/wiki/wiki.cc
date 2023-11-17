@@ -206,9 +206,14 @@ void AuxFilter::Init(Store *store) {
     "Q13442814",  // scholarly article
     "Q17329259",  // encyclopedic article
     "Q732577",    // publication
+    "Q13433827",  // encyclopedia article
+    "Q19389637",  // biographical article
 
     "Q17633526",  // Wikinews article
     "Q17362920",  // Wikimedia duplicated page
+    "Q4167410",   // Wikimedia disambiguation page
+    "Q11266439",  // Wikimedia template
+    "Q13406463",  // Wikimedia list article
 
     "Q7187",      // gene
     "Q16521",     // taxon
@@ -218,6 +223,7 @@ void AuxFilter::Init(Store *store) {
 
     "Q523",       // star
     "Q318",       // galaxy
+
     nullptr,
   };
   for (const char **type = aux_item_types; *type; ++type) {
