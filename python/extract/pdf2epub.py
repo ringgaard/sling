@@ -44,6 +44,11 @@ flags.define("--debug",
              default=False,
              action="store_true")
 
+flags.define("--bprdebug",
+             help="output boiler plate debug information",
+             default=False,
+             action="store_true")
+
 flags.parse()
 
 escapes = [
@@ -96,6 +101,7 @@ class PDFLine:
     self.indent = False
     self.short = False
     self.para = False
+    self.vbreak = False
     self.flags = 0
 
     # Bounding box.
@@ -177,7 +183,7 @@ class PDFPage:
     self.lines = []
 
   def extract(self, page):
-    p = page.get_textpage().extractDICT(sort=True)
+    p = page.get_textpage().extractDICT(sort=False)
     for b in p["blocks"]:
       if b["type"] == 1:
         if flags.arg.debug: print("skip image")
@@ -201,6 +207,12 @@ class PDFPage:
     for l in self.lines: values.append(l.x1);
     return mean(values)
 
+  def linewidth(self):
+    if len(self.lines) == 0: return 0.0;
+    values = []
+    for l in self.lines: values.append(l.x1 - l.x0);
+    return mean(values)
+
   def lineheight(self):
     if len(self.lines) == 0: return 0.0;
     values = []
@@ -211,31 +223,61 @@ class PDFPage:
     return mean(values)
 
   def analyze(self, prev=None):
-    left = self.linestart() + flags.arg.indent
-    right = self.lineend() - flags.arg.indent
-    height = self.lineheight() + flags.arg.indent
-    for l in self.lines:
-      # Mark indented and short lines.
-      if l.x0 > left: l.indent = True
-      if l.x1 < right: l.short = True
+    parbreak = self.book.param("parbreak", 0)
+    if parbreak == 0:
+      left = self.linestart() + flags.arg.indent
+      right = self.lineend() - flags.arg.indent
+      height = self.lineheight() + flags.arg.indent
+      for l in self.lines:
+        # Mark indented and short lines.
+        if l.x0 > left: l.indent = True
+        if l.x1 < right: l.short = True
 
-      # Fix up soft hyphens.
-      if prev and prev.last() == "-":
-        if not prev.short and not l.indent and l.capital() < 0:
-          prev.hyphen = True
-          prev.text = prev.text[:-1]
+        # Fix up soft hyphens.
+        if prev and prev.last() == "-":
+          if not prev.short and not l.indent and l.capital() < 0:
+            prev.hyphen = True
+            prev.text = prev.text[:-1]
 
-      # Check for paragraph break.
-      if prev:
-        points = 0
-        if prev.short: points += 1
-        if prev.hyphen: points -= 1
-        if prev.text.endswith("."): points += 1
-        if l.indent: points += 1
-        if l.y0 - prev.y0 > height: points += 1
-        points += l.capital()
-        if points > 1: l.para = True
-      prev = l
+        # Check for paragraph break.
+        if prev:
+          points = 0
+          if prev.short: points += 1
+          if prev.hyphen: points -= 1
+          if prev.text.endswith("."): points += 1
+          if l.indent: points += 1
+          if l.y0 - prev.y0 > height: points += 1
+          points += l.capital()
+          if points > 1: l.para = True
+        prev = l
+    elif parbreak == 1:
+      # Multi-column
+      height = self.lineheight() + flags.arg.indent
+      width = self.linewidth() - flags.arg.indent
+      for l in self.lines:
+        # Mark short lines.
+        if l.x1 - l.x0 < width: l.short = True
+
+        # Fix up soft hyphens.
+        if prev and prev.last() == "-":
+          if not prev.short and l.capital() < 0:
+            prev.hyphen = True
+            prev.text = prev.text[:-1]
+
+        # Vertical breaks.
+        if l.text.startswith("〈b〉"): l.vbreak = True
+        if prev and l.y0 - prev.y0 > height: l.vbreak = True
+
+        # Check for paragraph break.
+        if prev:
+          points = 0
+          if prev.short: points += 1
+          if prev.hyphen: points -= 1
+          if prev.text.endswith("."): points += 1
+          if l.vbreak: points += 1
+          if points > 1: l.para = True
+        prev = l
+
 
 class PDFChapter:
   def __init__(self, pageno, title, index):
@@ -268,6 +310,7 @@ class PDFChapter:
 
         if next != level or l.para:
           s.append(level_end[level])
+          if l.vbreak: s.append("\n")
           s.append(level_start[next])
           level = next
 
@@ -325,9 +368,16 @@ class PDFBook:
           self.spine.append(chapter)
           self.chapters[pageno] = chapter
 
+  def param(self, name, defval=None):
+    val = self.meta.get(name)
+    if val is None: return defval
+    if type(defval) is int: return int(val)
+    if type(defval) is float: return float(val)
+    return val
+
   def extract(self, pdf):
-    self.refsize = float(self.meta.get("refsize", "0"))
-    ignore = [int(p) for p in self.meta.get("ignore", "0").split(",")]
+    self.refsize = self.param("refsize", 0)
+    ignore = [int(p) for p in self.param("ignore", "0").split(",")]
     pnum = 0;
     for p in pdf:
       pnum += 1
@@ -337,8 +387,8 @@ class PDFBook:
       page.extract(p)
 
   def analyze_boilerplate(self):
-    head_lines = int(self.meta.get("headlines", "0"))
-    foot_lines = int(self.meta.get("footlines", "1"))
+    head_lines = self.param("headlines", 0)
+    foot_lines = self.param("footlines", 1)
     header_positions = []
     top_positions = []
     bottom_positions = []
@@ -374,11 +424,11 @@ class PDFBook:
       if "footer" not in self.meta: self.meta["footer"] = str(foot_sep)
 
   def remove_boilerplate(self):
-    header = float(self.meta.get("header", "0"))
-    footer = float(self.meta.get("footer", "0"))
-    bpr = int(self.meta.get("bpr", 0))
-    pageno = int(self.meta.get("firstpage", "1"))
-    pageskip = int(self.meta.get("pageskip", 10))
+    header = self.param("header", 0.0)
+    footer = self.param("footer", 0.0)
+    bpr = self.param("bpr", 0)
+    pageno = self.param("firstpage", 1)
+    pageskip = self.param("pageskip", 10)
     for p in book.pages:
       first = None
       last = None
@@ -398,9 +448,10 @@ class PDFBook:
           elif in_footer:
             if last is None: last = lineno
             pnumber = best_pageno
-          else:
+          elif flags.arg.bprdebug:
             if best_pageno and abs(best_pageno - pageno) <= 1:
-              print("page number in text: %d '%s' [%d-%d]" % (pageno, l.text, int(l.y0), int(l.y1)))
+              print("page number in text: %d '%s' [%d-%d]" %
+                    (pageno, l.text, int(l.y0), int(l.y1)))
 
           lineno += 1
       elif bpr == 1:
@@ -411,9 +462,11 @@ class PDFBook:
             last = len(p.lines) - 1
           elif flags.arg.debug:
             if pnumber is None:
-              print("missing pageno: %d '%s'" % (pageno, p.lines[-1].text))
+              print("missing pageno: %d '%s'" %
+                    (pageno, p.lines[-1].text))
             else:
-              print("wrong pageno: %d '%s' %d" % (pageno, p.lines[-1].text, pnumber))
+              print("wrong pageno: %d '%s' %d" %
+                    (pageno, p.lines[-1].text, pnumber))
       elif bpr == 2:
         # Assume consecutive page numbers, remove first/last line if they
         # match the expected page number.
@@ -424,6 +477,11 @@ class PDFBook:
             last = len(p.lines) - 1
           elif flags.arg.debug:
             print("no pageno found:", pageno)
+
+
+      if flags.arg.bprdebug:
+        if first is not None: print("bpr header", p.lines[first - 1].text)
+        if last is not None: print("bpr footer", p.lines[last].text)
 
       if first is None: first = 0
       if last is None: last = len(p.lines)
@@ -517,8 +575,8 @@ class PDFBook:
     zip.writestr("toc.ncx", "\n".join(toc))
 
     # Write chapters.
-    h1 = float(self.meta.get("h1", "32"))
-    h2 = float(self.meta.get("h2", "24"))
+    h1 = self.param("h1", 32.0)
+    h2 = self.param("h2", 24.0)
     for chapter in book.spine:
       zip.writestr(chapter.filename, chapter.generate(h1, h2))
 

@@ -290,6 +290,7 @@ person_names = factex.taxonomy([
 occupations = factex.taxonomy([
   "Q12737077",  # occupation
   "Q192581",    # job
+  "Q4164871",   # position
 ])
 
 demonyms = {

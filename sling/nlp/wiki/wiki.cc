@@ -204,9 +204,9 @@ bool WikimediaTypes::IsBiographic(Handle type) const {
 void AuxFilter::Init(Store *store) {
   const char *aux_item_types[] = {
     "Q13442814",  // scholarly article
-    "Q17329259",  // encyclopedic article
     "Q732577",    // publication
     "Q13433827",  // encyclopedia article
+    "Q17329259",  // encyclopedic article
     "Q19389637",  // biographical article
 
     "Q17633526",  // Wikinews article
@@ -220,6 +220,7 @@ void AuxFilter::Init(Store *store) {
     "Q8054",      // protein
     "Q11173",     // chemical compound
     "Q30612",     // clinical trial
+    "Q113145171", // type of chemical entity
 
     "Q523",       // star
     "Q318",       // galaxy
