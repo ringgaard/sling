@@ -59,7 +59,7 @@ class Encoder {
     explicit Reference(int idx) : status(SPECIAL), index(idx) {}
 
     Status status: 2;  // reference status
-    int32 index: 30;   // reference number
+    uint32 index: 30;  // reference number
   };
 
   // Encodes object for handle.

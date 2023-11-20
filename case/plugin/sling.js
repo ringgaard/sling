@@ -16,7 +16,7 @@ export default class SLINGImporter {
       // Binary encoding.
       let decoder = new Decoder(store, data);
       while (!decoder.done()) {
-        let obj = reader.read();
+        let obj = decoder.read();
         if (obj instanceof Frame) {
           frames.push(obj);
         } else if (obj instanceof Array) {
