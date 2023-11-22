@@ -554,6 +554,13 @@ export function date_parser(value, results) {
     add_date_result(results, m[1], m[2], m[3]);
   }
 
+  // Parse DD/MM YYYY or DD/MM-YYYY.
+  m = value.match(/^(\d\d?)\/(\d\d?)\s+(\d\d\d\d)$/);
+  if (!m) m = value.match(/^(\d\d?)\/(\d\d?)-(\d\d\d\d)$/);
+  if (m) {
+    add_date_result(results, m[3], m[2], m[1]);
+  }
+
   // Parse YYYY-MM.
   m = value.match(/^(\d+)-(\d+)$/);
   if (m) {
@@ -574,7 +581,7 @@ export function date_parser(value, results) {
   }
 
   // Parse MMM YY.
-  m = value.match(/^(\w+) (\d\d)$/);
+  m = value.match(/^(\w+)\.? (\d\d)$/);
   if (m) {
     let month = monthnum(m[1]);
     if (month) add_date_result(results, "19" + m[2], month);
@@ -594,7 +601,7 @@ export function date_parser(value, results) {
   }
 
   // Parse DD. Month, YYYY.
-  m = value.match(/^(\d+)(\.|st|nd|rd|th)? (\w+)[ ,]+(\d+)$/);
+  m = value.match(/^(\d+)(\.|st|nd|rd|th)? (\w+)\.?[ ,]+(\d+)$/);
   if (m) {
     let month = monthnum(m[3]);
     if (month) add_date_result(results, m[4], month, m[1]);
