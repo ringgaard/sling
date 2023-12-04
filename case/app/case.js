@@ -1334,10 +1334,10 @@ class CaseEditor extends MdApp {
     // Update target topic.
     this.topic_updated(target);
     this.mark_dirty();
+    let list = this.find("topic-list");
     let card = list.card(target);
     if (card) {
-      card.update(target);
-      card.refresh(target);
+      await card.refresh(target);
       await this.update_topics();
       await this.navigate_to(target);
     }
@@ -1780,7 +1780,7 @@ class CaseEditor extends MdApp {
   async update_topic(topic) {
     let list = this.find("topic-list");
     let card = list.card(topic);
-    if (card) card.refresh();
+    if (card) await card.refresh();
   }
 
   async navigate_to(topic) {

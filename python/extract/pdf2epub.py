@@ -430,8 +430,6 @@ class PDFBook:
     pageno = self.param("firstpage", 1)
     pageskip = self.param("pageskip", 10)
     for p in book.pages:
-      first = None
-      last = None
       pnumber = None
 
       if bpr == 0:
@@ -443,11 +441,13 @@ class PDFBook:
 
           best_pageno = l.find_page_number(pageno)
           if in_header:
-            first = lineno + 1
+            p.lines[lineno] = None
             pnumber = best_pageno
+            if flags.arg.bprdebug: print("remove header:", l.text)
           elif in_footer:
-            if last is None: last = lineno
+            p.lines[lineno] = None
             pnumber = best_pageno
+            if flags.arg.bprdebug: print("remove footer:", l.text)
           elif flags.arg.bprdebug:
             if best_pageno and abs(best_pageno - pageno) <= 1:
               print("page number in text: %d '%s' [%d-%d]" %
@@ -459,7 +459,7 @@ class PDFBook:
         if len(p.lines) > 0:
           pnumber = p.lines[-1].find_page_number(pageno)
           if pnumber == pageno:
-            last = len(p.lines) - 1
+            p.lines[-1] = None
           elif flags.arg.debug:
             if pnumber is None:
               print("missing pageno: %d '%s'" %
@@ -472,20 +472,14 @@ class PDFBook:
         # match the expected page number.
         if len(p.lines) > 0:
           if p.lines[0].find_page_number(pageno) == pageno:
-            first = 1
+            p.lines[0] = None
           elif p.lines[-1].find_page_number(pageno) == pageno:
-            last = len(p.lines) - 1
+            p.lines[-1] = None
           elif flags.arg.debug:
             print("no pageno found:", pageno)
 
 
-      if flags.arg.bprdebug:
-        if first is not None: print("bpr header", p.lines[first - 1].text)
-        if last is not None: print("bpr footer", p.lines[last].text)
-
-      if first is None: first = 0
-      if last is None: last = len(p.lines)
-      p.lines = p.lines[first:last]
+      p.lines = [l for l in p.lines if l is not None]
 
       if pnumber is not None:
         if pnumber < pageno or pnumber > pageno + pageskip:
