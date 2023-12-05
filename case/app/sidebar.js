@@ -253,8 +253,9 @@ class SideBar extends Component {
     }
 
     if (updates > 0) {
-      inform(`${updates} phrase mappings added`);
+      this.update(new Document(store, source, context));
       this.mark_dirty(doc);
+      inform(`${updates} phrase mappings added`);
     }
   }
 
@@ -278,8 +279,9 @@ class SideBar extends Component {
     }
 
     if (updates > 0) {
-      inform(`${updates} topic mappings added`);
+      this.update(new Document(store, source, context));
       this.mark_dirty(doc);
+      inform(`${updates} topic mappings added`);
     }
   }
 
@@ -337,9 +339,9 @@ class SideBar extends Component {
     }
 
     // Update document.
-    this.mark_dirty(context.topic);
     let newdoc = new Document(store, source, context);
     this.refresh(newdoc);
+    this.mark_dirty(context.topic);
   }
 
   async onnavigate(e) {
