@@ -203,10 +203,11 @@ bool WikimediaTypes::IsBiographic(Handle type) const {
 
 void AuxFilter::Init(Store *store) {
   const char *aux_item_types[] = {
-    "Q13442814",  // scholarly article
+    "Q10622277",  // scholarly article
+    "Q13442814",  // scholarly article (old)
     "Q732577",    // publication
     "Q13433827",  // encyclopedia article
-    "Q17329259",  // encyclopedic article
+    "Q17329259",  // encyclopedic article (old)
     "Q19389637",  // biographical article
 
     "Q17633526",  // Wikinews article
