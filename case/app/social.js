@@ -359,6 +359,11 @@ let xrefs = [
     pattern: /^https?:\/\/myppets\.club\/((?!img).+)/,
     property: frame("PMYPP"),
   },
+  {
+    pattern: /^https?:\/\/denstoredanske\.lex\.dk\/(.+)/,
+    property: frame("P8313"),
+  },
+
 ];
 
 export function match_link(url) {

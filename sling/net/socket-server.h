@@ -31,6 +31,7 @@ namespace sling {
 
 // Forward declarations.
 class SocketConnection;
+class SocketStream;
 class SocketProtocol;
 class SocketSession;
 
@@ -61,8 +62,8 @@ struct SocketServerOptions {
   // Initial buffer size.
   int initial_bufsiz = 1 << 10;
 
-  // File data buffer size.
-  int file_bufsiz = 1 << 16;
+  // Stream buffer size.
+  int stream_bufsiz = 1 << 16;
 };
 
 // Socket server.
@@ -158,6 +159,29 @@ class SocketServer {
   bool stop_ = false;
 };
 
+// Socket stream for streaming response back to client.
+class SocketStream {
+ public:
+  virtual ~SocketStream() = default;
+
+  // Fill buffer with stream data. Return the number of bytes added to the
+  // buffer or -1 on error. Return 0 on end of stream.
+  virtual int Fill(IOBuffer *buffer) = 0;
+};
+
+// Socket stream for returning file content.
+class FileSocketStream : public SocketStream {
+ public:
+  // Create socket stream for file. Takes ownership of the file.
+  FileSocketStream(File *file);
+  ~FileSocketStream();
+
+  int Fill(IOBuffer *buffer) override;
+
+ private:
+  File *file_;
+};
+
 // Socket connection.
 class SocketConnection {
  public:
@@ -172,8 +196,11 @@ class SocketConnection {
   // the Process() method completes.
   void Upgrade(SocketSession *session);
 
+  // Set streaming response. This will take ownership of the stream.
+  void SendStream(SocketStream *stream) { stream_ = stream; }
+
   // Set file for streaming response. This will take ownership of the file.
-  void SendFile(File *file) { file_ = file; }
+  void SendFile(File *file) { stream_ = new FileSocketStream(file); }
 
   // Send data back to client.
   void Push(const void *hdr, size_t hdrlen, const void *data, size_t datalen);
@@ -244,8 +271,8 @@ class SocketConnection {
   IOBuffer response_header_;
   IOBuffer response_body_;
 
-  // File for streaming response.
-  File *file_ = nullptr;
+  // Streaming response.
+  SocketStream *stream_ = nullptr;
 
   // Close connection after response has been sent.
   bool close_ = false;

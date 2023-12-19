@@ -82,6 +82,18 @@ FONT_BOLD         = 16
 level_start = ["", "<p>", "\n<h2>", "\n<h1>"]
 level_end = ["", "</p>\n", "</h2>\n\n", "</h1>\n"]
 
+bb_para_start = [
+  "Student",
+  "Realeks",
+  "Uddannet",
+  "Afgangseks",
+  "Ansat",
+  "Elev",
+  "Dimitteret",
+  "Afgang",
+  "Adresse:"
+]
+
 def escape(s):
   for text, rep in escapes:
     s = s.replace(text, rep)
@@ -167,6 +179,11 @@ class PDFLine:
   def period(self):
     return self.last() == "."
 
+  def bbbreak(self):
+    for prefix in bb_para_start:
+      if self.text.startswith(prefix): return True
+    return False
+
   def find_page_number(self, expected):
     best = None
     for m in re.findall(r"\d+", self.text):
@@ -250,8 +267,8 @@ class PDFPage:
           points += l.capital()
           if points > 1: l.para = True
         prev = l
-    elif parbreak == 1:
-      # Multi-column
+    elif parbreak == 1 or parbreak == 2:
+      # Multi-column (1) and Blaa Bog (2)
       height = self.lineheight() + flags.arg.indent
       width = self.linewidth() - flags.arg.indent
       for l in self.lines:
@@ -275,6 +292,7 @@ class PDFPage:
           if prev.hyphen: points -= 1
           if prev.text.endswith("."): points += 1
           if l.vbreak: points += 1
+          if parbreak == 2 and l.bbbreak(): points += 1
           if points > 1: l.para = True
         prev = l
 

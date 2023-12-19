@@ -380,6 +380,27 @@ void SocketServer::OutputSocketZ(IOBuffer *out) const {
   json.Write(out);
 }
 
+FileSocketStream::FileSocketStream(File *file) : file_(file) {}
+
+FileSocketStream::~FileSocketStream() {
+  file_->Close();
+}
+
+int FileSocketStream::Fill(IOBuffer *buffer) {
+  // Read next chunk from file.
+  uint64 read = 0;
+  Status st = file_->Read(buffer->end(), buffer->remaining(), &read);
+
+  if (!st.ok()) {
+    // Error reading file.
+    LOG(ERROR) << "File read error: " << st;
+    return -1;
+  }
+
+  if (read > 0) buffer->Append(read);
+  return read;
+}
+
 SocketConnection::SocketConnection(SocketServer *server, int sock,
                                    SocketProtocol *protocol)
     : server_(server), sock_(sock) {
@@ -398,8 +419,8 @@ SocketConnection::~SocketConnection() {
   // Close client connection.
   close(sock_);
 
-  // Close response file.
-  if (file_ != nullptr) file_->Close();
+  // Close response stream.
+  if (stream_ != nullptr) delete stream_;
 }
 
 void SocketConnection::Lock() {
@@ -496,33 +517,25 @@ Status SocketConnection::Process() {
         if (done) return Status::OK;
       }
 
-      // Send file data.
-      while (file_ != nullptr) {
+      // Send response stream.
+      while (stream_ != nullptr) {
         if (response_body_.empty()) {
-          // Read next chunk from file.
-          uint64 read;
-          response_body_.Reset(server_->options().file_bufsiz);
-          Status st = file_->Read(response_body_.end(),
-                                  response_body_.remaining(),
-                                  &read);
-          response_body_.Append(read);
-
-          if (!st.ok()) {
-            // Error reading file.
-            LOG(ERROR) << "File read error: " << st;
-            file_->Close();
-            file_ = nullptr;
-            return st;
-          }
-
-          if (read == 0) {
-            // End of file.
-            file_->Close();
-            file_ = nullptr;
+          // Read next chunk from stream.
+          response_body_.Reset(server_->options().stream_bufsiz);
+          uint64 read = stream_->Fill(&response_body_);
+          if (read < 0) {
+            // Error reading stream.
+            delete stream_;
+            stream_ = nullptr;
+            return Status(EIO, "Stream error");
+          } else if (read == 0) {
+            // End of stream.
+            delete stream_;
+            stream_ = nullptr;
           }
         }
 
-        // Send next file chunk.
+        // Send next stream chunk.
         while (response_body_.available() > 0) {
           bool done;
           Status st = Send(&response_body_, &done);
