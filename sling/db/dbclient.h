@@ -125,7 +125,13 @@ class DBClient {
   Status Transact(Transaction tx);
 
   // Send request to server and receive reply.
-  Status Do(DBVerb verb, IOBuffer *buffer = nullptr);
+  Status Do(DBVerb verb, IOBuffer *response = nullptr);
+
+  // Send request to server.
+  Status Send(DBVerb verb, IOBuffer *request);
+
+  // Receive response from server.
+  Status Receive(IOBuffer *response);
 
   // Database name.
   string database_;

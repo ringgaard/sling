@@ -387,18 +387,27 @@ Status DBClient::Transact(Transaction tx) {
   return st;
 }
 
-Status DBClient::Do(DBVerb verb, IOBuffer *buffer) {
+Status DBClient::Do(DBVerb verb, IOBuffer *response) {
   // Send request.
-  DBHeader reqhdr;
-  reqhdr.verb = verb;
-  reqhdr.size = request_.available();
+  Status st = Send(verb, &request_);
+  if (!st.ok()) return st;
 
-  size_t reqsize = request_.available();
+  // Receive response.
+  if (response == nullptr) response = &response_;
+  return Receive(response);
+}
+
+Status DBClient::Send(DBVerb verb, IOBuffer *request) {
+  DBHeader hdr;
+  hdr.verb = verb;
+  hdr.size = request->available();
+
+  size_t reqsize = request->available();
   size_t bufsize = sizeof(DBHeader) + reqsize;
   iovec buf[2];
-  buf[0].iov_base = &reqhdr;
+  buf[0].iov_base = &hdr;
   buf[0].iov_len = sizeof(DBHeader);
-  buf[1].iov_base = request_.Consume(reqsize);
+  buf[1].iov_base = request->Consume(reqsize);
   buf[1].iov_len = reqsize;
 
   int rc = writev(sock_, buf, 2);
@@ -407,34 +416,36 @@ Status DBClient::Do(DBVerb verb, IOBuffer *buffer) {
   if (rc != bufsize) return Status(EMSGSIZE, "Send truncated");
   Perf::add_network_transmit(rc);
 
-  // Receive response.
-  if (buffer == nullptr) buffer = &response_;
-  buffer->Clear();
-  buffer->Ensure(sizeof(DBHeader));
+  return Status::OK;
+}
+
+Status DBClient::Receive(IOBuffer *response) {
+  response->Clear();
+  response->Ensure(sizeof(DBHeader));
   int size = -1;
-  while (size < 0 || buffer->available() < size) {
-    int rc = recv(sock_, buffer->end(), buffer->remaining(), 0);
+  while (size < 0 || response->available() < size) {
+    int rc = recv(sock_, response->end(), response->remaining(), 0);
     if (rc == 0) return Status(EPIPE, "Connection closed");
     if (rc < 0) return Error("recv");
-    buffer->Append(rc);
+    response->Append(rc);
     Perf::add_network_receive(rc);
-    if (size < 0 && buffer->available() >= sizeof(DBHeader)) {
-      auto *hdr = DBHeader::from(buffer->begin());
+    if (size < 0 && response->available() >= sizeof(DBHeader)) {
+      auto *hdr = DBHeader::from(response->begin());
       size = sizeof(DBHeader) + hdr->size;
-      buffer->Ensure(size);
+      response->Ensure(size);
     }
   }
-  if (buffer->available() > size) {
+  if (response->available() > size) {
     return Status(EMSGSIZE, "Response too long");
   }
 
   // Consume header.
-  DBHeader *rsphdr = buffer->consume<DBHeader>();
-  reply_ = rsphdr->verb;
+  DBHeader *hdr = response->consume<DBHeader>();
+  reply_ = hdr->verb;
 
   // Check for errors.
   if (reply_ == DBERROR) {
-    return Status(EINVAL, buffer->Consume(rsphdr->size), rsphdr->size);
+    return Status(EINVAL, response->Consume(hdr->size), hdr->size);
   }
 
   return Status::OK;
