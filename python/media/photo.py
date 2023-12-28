@@ -254,11 +254,14 @@ def fetch_image(url):
   # Fetch image from source if it is not in the media database.
   try:
     print("fetch", url)
-    r = pool.request("GET", url, timeout=60)
+    headers = {"User-agent": "SLING Bot 1.0"}
+    r = pool.request("GET", url, headers=headers, timeout=60)
     for h in r.retries.history:
       if h.redirect_location.endswith("/removed.png"): return None
       if h.redirect_location.endswith("/no_image.jpg"): return None
-    if r.status != 200: return None
+    if r.status != 200:
+      print("error", r.status, url)
+      return None
     return r.data
   except Exception as e:
     print("fail", e, url)
