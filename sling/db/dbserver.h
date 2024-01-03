@@ -216,6 +216,9 @@ class DBSession : public SocketSession {
   // Retrieve the next record(s) for a cursor.
   Continuation Next(int version);
 
+  // Stream back results  for a cursor.
+  Continuation Stream();
+
   // Return current epoch for database.
   Continuation Epoch();
 
@@ -228,11 +231,13 @@ class DBSession : public SocketSession {
   // Read key from request.
   bool ReadKey(Slice *key);
 
-  // Read record from request.
+  // Read record from request buffer.
   bool ReadRecord(Record *record);
 
-  // Write record to response.
-  void WriteRecord(const Record &record, bool with_value = true);
+  // Write record to response buffer.
+  static void WriteRecord(const Record &record,
+                          IOBuffer *rsp,
+                          bool novalue = false);
 
   DBService *dbs_;                // database server
   SocketConnection *conn_;        // client connection
@@ -244,6 +249,26 @@ class DBSession : public SocketSession {
   DBSession *prev_;
 
   friend class DBService;
+  friend class DBStream;
+};
+
+// Database stream for returning records.
+class DBStream : public SocketStream {
+ public:
+  DBStream(DBMount *mount, uint64 iterator, uint64 limit,
+           bool deletions, bool novalue);
+  ~DBStream() override;
+
+  int Fill(IOBuffer *buffer) override;
+
+ private:
+  DBMount *mount_;      // database for stream
+  uint64 iterator_;     // currect database cursor position
+  uint64 limit_;        // cursor limit
+  bool deletions_;      // whether to include deleted records in stream
+  bool novalue_;        // whether to skip record values in stream
+  IOBuffer recbuf_;     // Buffer for next record.
+  bool done_ = false;   // no more records
 };
 
 }  // namespace sling

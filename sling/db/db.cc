@@ -226,7 +226,7 @@ Status Database::Backup() {
   return st;
 }
 
-bool Database::Get(const Slice &key, Record *record, bool with_value) {
+bool Database::Get(const Slice &key, Record *record, bool novalue) {
   // Compute record key fingerprint.
   inc(GET);
   uint64 fp = Fingerprint(key.data(), key.size());
@@ -239,7 +239,7 @@ bool Database::Get(const Slice &key, Record *record, bool with_value) {
     if (recid == DatabaseIndex::NVAL) break;
 
     // Read record from data file.
-    Status st = ReadRecord(recid, record, with_value);
+    Status st = ReadRecord(recid, record, novalue);
     if (!st) return false;
 
     // Return record if key matches.
@@ -384,8 +384,7 @@ bool Database::Delete(const Slice &key) {
 }
 
 bool Database::Next(Record *record, uint64 *iterator,
-                    bool deletions,
-                    bool with_value) {
+                    bool deletions, bool novalue) {
   inc(NEXT);
   uint64 shard = Shard(*iterator);
   uint64 pos = Position(*iterator);
@@ -420,14 +419,14 @@ bool Database::Next(Record *record, uint64 *iterator,
     }
 
     // Read record.
-    if (with_value) {
+    if (novalue) {
+      Status st = reader->ReadKey(record);
+      if (!st) return false;
+    } else {
       Status st = reader->Read(record);
       if (!st) return false;
       inc(RECREAD);
       add(BYTEREAD, record->value.size());
-    } else {
-      Status st = reader->ReadKey(record);
-      if (!st) return false;
     }
     pos = reader->Tell();
 
@@ -485,7 +484,7 @@ string Database::DataFile(int shard) const {
   }
 }
 
-Status Database::ReadRecord(uint64 recid, Record *record, bool with_value) {
+Status Database::ReadRecord(uint64 recid, Record *record, bool novalue) {
   Status st;
   uint64 shard = Shard(recid);
   if (writer_ != nullptr && shard == CurrentShard()) {
@@ -498,12 +497,12 @@ Status Database::ReadRecord(uint64 recid, Record *record, bool with_value) {
 
   st = reader->Seek(Position(recid));
   if (!st) return st;
-  if (with_value) {
+  if (novalue) {
+    st = reader->ReadKey(record);
+  } else {
     st = reader->Read(record);
     inc(RECREAD);
     add(BYTEREAD, record->value.size());
-  } else {
-    st = reader->ReadKey(record);
   }
   if (!st) return st;
 

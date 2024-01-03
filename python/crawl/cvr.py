@@ -5,6 +5,7 @@ Fetch the Danish Company Registry (CVR) and store the records in a database.
 import sys
 import requests
 import json
+import time
 import sling
 import sling.flags as flags
 
@@ -99,10 +100,17 @@ while True:
   # Fetch next batch.
   scroll_id = response.get("_scroll_id")
   if scroll_id == None: break
-  r = requests.get(url + "/_search/scroll?scroll=1m",
-                   auth=credentials,
-                   json={"scroll": "1m", "scroll_id": scroll_id})
-  r.raise_for_status()
+  while True:
+    r = requests.get(url + "/_search/scroll?scroll=1m",
+                     auth=credentials,
+                     json={"scroll": "1m", "scroll_id": scroll_id})
+    if r.status_code == 429:
+      reset = int(r.headers.get("x-ratelimit-reset", 60))
+      log.info("scroll rate limit", reset, "secs")
+      time.sleep(reset)
+    else:
+      r.raise_for_status()
+      break
 
 print("Done,", num_records, "records,", num_updates, "updates.")
 

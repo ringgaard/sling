@@ -819,6 +819,7 @@ DBSession::Continuation DBSession::Process(SocketConnection *conn) {
     case DBEPOCH: cont = Epoch(); break;
     case DBHEAD: cont = Head(); break;
     case DBNEXT2: cont = Next(2); break;
+    case DBSTREAM: cont = Stream(); break;
     default: return Error("command verb not supported");
   }
 
@@ -862,6 +863,7 @@ DBSession::Continuation DBSession::Get() {
   if (mount_ == nullptr) return Error("no database");
   DBLock l(mount_);
   auto *req = conn_->request();
+  auto *rsp = conn_->response_body();
   while (!req->empty()) {
     // Read key for next record.
     Slice key;
@@ -876,7 +878,7 @@ DBSession::Continuation DBSession::Get() {
     }
 
     // Add record to response.
-    WriteRecord(record);
+    WriteRecord(record, rsp);
     l.Yield();
   }
 
@@ -987,25 +989,55 @@ DBSession::Continuation DBSession::Next(int version) {
     if (!req->Read(&limit, 8)) return TERMINATE;
   }
   bool deletions = (flags & DBNEXT_DELETIONS) != 0;
-  bool with_value = !(flags & DBNEXT_NOVALUE);
+  bool novalue = (flags & DBNEXT_NOVALUE) != 0;
 
   Record record;
   for (int n = 0; n < num; ++n) {
     // Fetch next record.
     if ((limit != -1 && iterator >= limit) ||
-        !l.db()->Next(&record, &iterator, deletions, with_value)) {
+        !l.db()->Next(&record, &iterator, deletions, novalue)) {
       if (n == 0) return Response(DBDONE);
       break;
     }
     if (iterator == -1) return Error("error fetching next record");
 
     // Add record to response.
-    WriteRecord(record, with_value);
+    WriteRecord(record, rsp, novalue);
     l.Yield();
   }
 
   rsp->Write(&iterator, 8);
-  return Response(with_value ? DBRECORD : DBKEY);
+  return Response(novalue ? DBKEY : DBRECORD);
+}
+
+DBSession::Continuation DBSession::Stream() {
+  // Supported stream flags.
+  static const uint8 supports =
+    DBNEXT_DELETIONS |
+    DBNEXT_LIMIT |
+    DBNEXT_NOVALUE;
+
+  if (mount_ == nullptr) return Error("no database");
+  DBLock l(mount_);
+  auto *req = conn_->request();
+
+  uint8 flags = 0;
+  if (!req->Read(&flags, 1)) return TERMINATE;
+
+  if (flags & ~supports) return Error("not supported");
+  uint64 iterator;
+  if (!req->Read(&iterator, 8)) return TERMINATE;
+  uint64 limit = -1;
+  if (flags & DBNEXT_LIMIT) {
+    if (!req->Read(&limit, 8)) return TERMINATE;
+  }
+  bool deletions = (flags & DBNEXT_DELETIONS) != 0;
+  bool novalue = (flags & DBNEXT_NOVALUE) != 0;
+
+  // Reply with database record stream.
+  auto *stream = new DBStream(mount_, iterator, limit, deletions, novalue);
+  conn_->SendStream(stream);
+  return RESPOND;
 }
 
 DBSession::Continuation DBSession::Epoch() {
@@ -1074,8 +1106,9 @@ bool DBSession::ReadRecord(Record *record) {
   return true;
 }
 
-void DBSession::WriteRecord(const Record &record, bool with_value) {
-  auto *rsp = conn_->response_body();
+void DBSession::WriteRecord(const Record &record,
+                            IOBuffer *rsp,
+                            bool novalue) {
   uint32 ksize = record.key.size() << 1;
   if (record.version != 0) ksize |= 1;
   rsp->Write(&ksize, 4);
@@ -1087,9 +1120,57 @@ void DBSession::WriteRecord(const Record &record, bool with_value) {
 
   uint32 vsize = record.value.size();
   rsp->Write(&vsize, 4);
-  if (with_value) {
+  if (!novalue) {
     rsp->Write(record.value.data(), record.value.size());
   }
+}
+
+DBStream::DBStream(DBMount *mount, uint64 iterator, uint64 limit,
+                   bool deletions, bool novalue)
+  : mount_(mount), iterator_(iterator), limit_(limit),
+    deletions_(deletions), novalue_(novalue) {
+}
+
+DBStream::~DBStream() {
+}
+
+int DBStream::Fill(IOBuffer *buffer) {
+  DBLock l(mount_);
+  int n = 0;
+  while (!done_) {
+    if (recbuf_.empty()) {
+      // Fetch next record.
+      Record record;
+      recbuf_.Append(sizeof(DBHeader));
+      if (limit_ != -1 && iterator_ >= limit_) {
+        done_ = true;
+        recbuf_.Write(&iterator_, 8);
+      } else if (l.db()->Next(&record, &iterator_, deletions_, novalue_)) {
+        // Write record to record output buffer.
+        DBSession::WriteRecord(record, &recbuf_, novalue_);
+      } else {
+        done_ = true;
+        recbuf_.Write(&iterator_, 8);
+      }
+      DBHeader *hdr = reinterpret_cast<DBHeader *>(recbuf_.begin());
+      if (done_) {
+        hdr->verb = DBEND;
+        hdr->size = 8;
+      } else {
+        hdr->verb = DBDATA;
+        hdr->size = recbuf_.available() - sizeof(sizeof(DBHeader));
+      }
+    }
+
+    // Fill response buffer.
+    size_t bytes = recbuf_.available();
+    size_t remaining = buffer->remaining();
+    if (remaining < bytes) bytes = remaining;
+    if (bytes == 0) break;
+    buffer->Copy(&recbuf_, bytes);
+    n += bytes;
+  }
+  return n;
 }
 
 }  // namespace sling

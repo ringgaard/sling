@@ -51,6 +51,9 @@ struct DBIterator {
 // protocol to communicate with the database server.
 class DBClient {
  public:
+  // Database iteration callback.
+  typedef std::function<Status(const DBRecord &record)> Callback;
+
   ~DBClient() { Close(); }
 
   // Connect to database server. The format of the database name is:
@@ -98,6 +101,9 @@ class DBClient {
   Status Next(DBIterator *iterator, DBRecord *record);
   Status Next(DBIterator *iterator, std::vector<DBRecord> *records);
 
+  // Receive stream of database records using callback.
+  Status Stream(DBIterator *iterator, Callback cb);
+
   // Get current epoch for database. This can be used as the initial iterator
   // value for reading new records from the database.
   Status Epoch(uint64 *epoch);
@@ -116,7 +122,7 @@ class DBClient {
   void WriteRecord(DBRecord *record);
 
   // Read record from response.
-  Status ReadRecord(DBRecord *record, IOBuffer *buffer = nullptr);
+  Status ReadRecord(DBRecord *record, IOBuffer *buffer, bool novalue);
 
   // Read record information from response.
   Status ReadRecordInfo(DBRecord *record, IOBuffer *buffer = nullptr);

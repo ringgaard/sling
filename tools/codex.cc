@@ -53,6 +53,7 @@ DEFINE_bool(position, false, "Output file position");
 DEFINE_string(recout, "", "Output to record file");
 DEFINE_string(dbout, "", "Output to database");
 DEFINE_bool(bulk, false, "Database bulk loading");
+DEFINE_bool(stream, false, "Fetch database records using stream");
 
 using namespace sling;
 using namespace sling::nlp;
@@ -152,24 +153,31 @@ void DisplayDatabase(const string &filename) {
   DBClient db;
   CHECK(db.Connect(filename, "codex"));
   if (FLAGS_key.empty()) {
-    std::vector<DBRecord> records;
     DBIterator iterator;
     iterator.batch = FLAGS_batch;
     iterator.novalue = FLAGS_keys;
     if (FLAGS_follow) CHECK(db.Epoch(&iterator.position));
-    for (;;) {
-      Status st = db.Next(&iterator, &records);
-      if (!st.ok()) {
-        if (st.code() == ENOENT) {
-          if (!FLAGS_follow) break;
-          usleep(FLAGS_poll * 1000);
-        } else {
-          LOG(FATAL) << "Error reading from database "
-                     << filename << ": " << st;
-        }
-      }
-      for (auto &record : records) {
+    if (FLAGS_stream) {
+      Status st = db.Stream(&iterator, [](const DBRecord &record) {
         DisplayRecord(record.key, record.version, record.value);
+        return Status::OK;
+      });
+    } else {
+      std::vector<DBRecord> records;
+      for (;;) {
+        Status st = db.Next(&iterator, &records);
+        if (!st.ok()) {
+          if (st.code() == ENOENT) {
+            if (!FLAGS_follow) break;
+            usleep(FLAGS_poll * 1000);
+          } else {
+            LOG(FATAL) << "Error reading from database "
+                       << filename << ": " << st;
+          }
+        }
+        for (auto &record : records) {
+          DisplayRecord(record.key, record.version, record.value);
+        }
       }
     }
   } else {

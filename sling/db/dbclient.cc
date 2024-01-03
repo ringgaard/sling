@@ -152,7 +152,7 @@ Status DBClient::Get(const Slice &key, DBRecord *record, IOBuffer *buffer) {
     WriteKey(key);
     Status st = Do(DBGET, buffer);
     if (!st.ok()) return st;
-    return ReadRecord(record, buffer);
+    return ReadRecord(record, buffer, false);
   });
 }
 
@@ -167,7 +167,7 @@ Status DBClient::Get(const std::vector<Slice> &keys,
     if (!st.ok()) return st;
     records->resize(keys.size());
     for (int i = 0; i < keys.size(); ++i) {
-      Status st = ReadRecord(&records->at(i), buffer);
+      Status st = ReadRecord(&records->at(i), buffer, false);
       if (!st.ok()) return st;
     }
     return Status::OK;
@@ -181,7 +181,7 @@ Status DBClient::Head(const Slice &key, DBRecord *record) {
     Status st = Do(DBHEAD);
     if (!st.ok()) return st;
     record->key = key;
-    return ReadRecordInfo(record);
+    return ReadRecordInfo(record, &response_);
   });
 }
 
@@ -252,7 +252,7 @@ Status DBClient::Next(DBIterator *iterator, DBRecord *record) {
     Status st = Do(DBNEXT2, iterator->buffer);
     if (!st.ok()) return st;
     if (reply_ == DBDONE) return Status(ENOENT, "No more records");
-    st = ReadRecord(record, iterator->buffer);
+    st = ReadRecord(record, iterator->buffer, iterator->novalue);
     if (!st.ok()) return st;
     if (!response_.Read(&iterator->position, 8)) return Truncated();
     return Status::OK;
@@ -277,13 +277,46 @@ Status DBClient::Next(DBIterator *iterator, std::vector<DBRecord> *records) {
     if (reply_ == DBDONE) return Status(ENOENT, "No more records");
     DBRecord record;
     while (buffer->available() > 8) {
-      st = ReadRecord(&record, buffer);
+      st = ReadRecord(&record, buffer, iterator->novalue);
       if (!st.ok()) return st;
       records->push_back(record);
     }
     if (!buffer->Read(&iterator->position, 8)) return Truncated();
     return Status::OK;
   });
+}
+
+Status DBClient::Stream(DBIterator *iterator, Callback cb) {
+  IOBuffer *buffer = iterator->buffer ? iterator->buffer : &response_;
+  uint8 flags = 0;
+  if (iterator->deletions) flags |= DBNEXT_DELETIONS;
+  if (iterator->limit != -1) flags |= DBNEXT_LIMIT;
+  if (iterator->novalue) flags |= DBNEXT_NOVALUE;
+  request_.Write(&flags, 1);
+  request_.Write(&iterator->position, 8);
+  if (iterator->limit != -1) request_.Write(&iterator->limit, 8);
+
+  Status st = Send(DBSTREAM, &request_);
+  if (!st.ok()) return st;
+
+  DBRecord record;
+  bool done = false;
+  while (!done) {
+    st = Receive(buffer);
+    if (!st.ok()) return st;
+    if (reply_ == DBEND) {
+      done = true;
+      if (!buffer->Read(&iterator->position, 8)) return Truncated();
+    } else if (reply_ == DBDATA) {
+      st = ReadRecord(&record, buffer, iterator->novalue);
+      if (!st.ok()) return st;
+      st = cb(record);
+      if (!st.ok()) return st;
+    } else {
+      return Status(EBADMSG, "bad db packet");
+    }
+  }
+  return Status::OK;
 }
 
 Status DBClient::Epoch(uint64 *epoch) {
@@ -318,7 +351,7 @@ void DBClient::WriteRecord(DBRecord *record) {
   request_.Write(record->value.data(), record->value.size());
 }
 
-Status DBClient::ReadRecord(DBRecord *record, IOBuffer *buffer) {
+Status DBClient::ReadRecord(DBRecord *record, IOBuffer *buffer, bool novalue) {
   // Use internal reponse buffer if none has been supplied.
   if (buffer == nullptr) buffer = &response_;
 
@@ -344,7 +377,7 @@ Status DBClient::ReadRecord(DBRecord *record, IOBuffer *buffer) {
   if (!buffer->Read(&vsize, 4)) return Truncated();
 
   // Read value.
-  if (reply_ == DBKEY) {
+  if (novalue) {
     char *bad = reinterpret_cast<char *>(0xDECADE0FABBABABE);
     record->value = Slice(bad, vsize);
   } else {
@@ -420,32 +453,34 @@ Status DBClient::Send(DBVerb verb, IOBuffer *request) {
 }
 
 Status DBClient::Receive(IOBuffer *response) {
+  DBHeader hdr;
+  char *data = reinterpret_cast<char *>(&hdr);
+  int left = sizeof(DBHeader);
+  while (left > 0) {
+    int rc = recv(sock_, data, left, 0);
+    if (rc == 0) return Status(EPIPE, "Connection closed");
+    if (rc < 0) return Error("recv");
+    data += rc;
+    Perf::add_network_receive(rc);
+    left -= rc;
+  }
+  reply_ = hdr.verb;
+
   response->Clear();
-  response->Ensure(sizeof(DBHeader));
-  int size = -1;
-  while (size < 0 || response->available() < size) {
-    int rc = recv(sock_, response->end(), response->remaining(), 0);
+  response->Ensure(hdr.size);
+  left = hdr.size;
+  while (left > 0) {
+    int rc = recv(sock_, response->end(), left, 0);
     if (rc == 0) return Status(EPIPE, "Connection closed");
     if (rc < 0) return Error("recv");
     response->Append(rc);
     Perf::add_network_receive(rc);
-    if (size < 0 && response->available() >= sizeof(DBHeader)) {
-      auto *hdr = DBHeader::from(response->begin());
-      size = sizeof(DBHeader) + hdr->size;
-      response->Ensure(size);
-    }
+    left -= rc;
   }
-  if (response->available() > size) {
-    return Status(EMSGSIZE, "Response too long");
-  }
-
-  // Consume header.
-  DBHeader *hdr = response->consume<DBHeader>();
-  reply_ = hdr->verb;
 
   // Check for errors.
   if (reply_ == DBERROR) {
-    return Status(EINVAL, response->Consume(hdr->size), hdr->size);
+    return Status(EINVAL, response->Consume(hdr.size), hdr.size);
   }
 
   return Status::OK;

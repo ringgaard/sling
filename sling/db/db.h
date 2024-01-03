@@ -98,7 +98,7 @@ class Database {
   Status Backup();
 
   // Get record from database. Return true if found.
-  bool Get(const Slice &key, Record *record, bool with_value = true);
+  bool Get(const Slice &key, Record *record, bool novalue = false);
 
   // Add or update record in database. Return record id of new record.
   uint64 Put(const Record &record,
@@ -115,7 +115,7 @@ class Database {
   //   while (db->Next(&record, &iterator)) { ... }
   bool Next(Record *record, uint64 *iterator,
             bool deletions = false,
-            bool with_value = true);
+            bool novalue = false);
 
   // Check if record id is valid.
   bool Valid(uint64 recid);
@@ -216,7 +216,7 @@ class Database {
   string DataFile(int shard) const;
 
   // Read data record (key).
-  Status ReadRecord(uint64 recid, Record *record, bool with_value);
+  Status ReadRecord(uint64 recid, Record *record, bool novalue);
 
   // Add new empty data shard.
   Status AddDataShard();

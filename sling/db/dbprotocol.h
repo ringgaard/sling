@@ -35,6 +35,7 @@ enum DBVerb : uint32 {
   DBEPOCH     = 6,     // get epoch for database
   DBHEAD      = 7,     // check for existence of key(s)
   DBNEXT2     = 8,     // retrieve the next record(s), version 2
+  DBSTREAM    = 9,     // retrieve stream of records
 
   // Reply verbs.
   DBOK        = 128,   // success reply
@@ -44,7 +45,9 @@ enum DBVerb : uint32 {
   DBDONE      = 132,   // no more records
   DBRECID     = 133,   // reply with recid for current epoch
   DBRECINFO   = 134,   // reply with record information
-  DBKEY       = 135,   // reply with key and record information
+  DBKEY       = 135,   // reply with key/record information
+  DBDATA      = 136,   // stream reply with key/record information
+  DBEND       = 137,   // end of stream
 };
 
 // Update mode for DBPUT.
@@ -156,6 +159,14 @@ struct DBHeader {
 //     {version:uint64};     (if ksize & 1)
 //     vsize:uint32;
 //   }
+//
+//
+// DBSTREAM flags:uint8 start:uint64 {limit:uint64} ->
+//          DBDATA {record}* |
+//          DBDONE epoch
+//
+// Like DBNEXT2, but result is streamed back using DBDATA packets ending with
+// DBDONE when all records have been streamed.
 //
 // DBBULK enable:uint32 -> DBOK
 //

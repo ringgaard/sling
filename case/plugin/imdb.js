@@ -69,19 +69,19 @@ const kinships = {
   "Grandfather": {prop: n_relative, qual: frame("Q9238344"), rank: 101},
   "Grandmother": {prop: n_relative, qual: frame("Q9235758"), rank: 102},
 
-  "Great grandparent": {
+  "Great Grandparent": {
     prop: n_relative,
     qual: frame("Q2500619"),
-    male: "Great grandfather",
-    female: "Great grandmother",
+    male: "Great Grandfather",
+    female: "Great Grandmother",
     rank: 106,
   },
-  "Great grandfather": {
+  "Great Grandfather": {
     prop: n_relative,
     qual: frame("Q2500621"),
     rank: 104,
   },
-  "Great grandmother": {
+  "Great Grandmother": {
     prop: n_relative,
     qual: frame("Q2500620"),
     rank: 105,
