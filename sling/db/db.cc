@@ -276,7 +276,7 @@ uint64 Database::Put(const Record &record, DBMode mode, DBResult *result) {
 
     // Read record from data file and check if keys match. In ADD mode we only
     // need the record key.
-    Status st = ReadRecord(recid, &rec, mode != DBADD);
+    Status st = ReadRecord(recid, &rec, mode == DBADD);
     if (!st) {
       if (result != nullptr) *result = DBFAULT;
       return -1;
