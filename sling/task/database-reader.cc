@@ -55,17 +55,8 @@ class DatabaseReader : public Process {
       // Read records from database and output to output channel.
       DBIterator iterator;
       iterator.batch = task->Get("db_read_batch", 128);
-      std::vector<DBRecord> records;
-      for (;;) {
-        // Read next batch.
-        st = db.Next(&iterator, &records);
-        if (!st.ok()) {
-          if (st.code() == ENOENT) break;
-          LOG(FATAL) << "Error reading from database " << dbname << ": " << st;
-        }
-
-        // Send messages on output channel.
-        for (DBRecord &rec : records) {
+      if (task->Get("stream", false)) {
+        Status st = db.Stream(&iterator, [&](const DBRecord &rec) {
           // Update stats.
           db_records_read->Increment();
           db_bytes_read->Increment(rec.key.size() + rec.value.size());
@@ -75,6 +66,33 @@ class DatabaseReader : public Process {
                                          serial ? serial : rec.version,
                                          rec.value);
           output->Send(message);
+          return Status::OK;
+        });
+        if (!st.ok()) {
+          LOG(FATAL) << "Error reading from database " << dbname << ": " << st;
+        }
+      } else {
+        std::vector<DBRecord> records;
+        for (;;) {
+          // Read next batch.
+          st = db.Next(&iterator, &records);
+          if (!st.ok()) {
+            if (st.code() == ENOENT) break;
+            LOG(FATAL) << "Error reading from database " << dbname << ": " << st;
+          }
+
+          // Send messages on output channel.
+          for (DBRecord &rec : records) {
+            // Update stats.
+            db_records_read->Increment();
+            db_bytes_read->Increment(rec.key.size() + rec.value.size());
+
+            // Send message with record to output channel.
+            Message *message = new Message(rec.key,
+                                           serial ? serial : rec.version,
+                                           rec.value);
+            output->Send(message);
+          }
         }
       }
 
