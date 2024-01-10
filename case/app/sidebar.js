@@ -58,6 +58,19 @@ class SideBar extends Component {
     this.find("#docname").update(docname);
     this.attach(this.onmenu, "select", "md-menu");
     this.attach(this.onnavigate, "click", "#titlebox");
+
+    this.bind("#editbar", "click", e => {
+      let cmd = e.target.parentElement.parentElement.id;
+      if (cmd == "save") {
+        this.editmode(false);
+      } else if (cmd == "discard") {
+        this.editmode(false);
+      }
+      let viewer = this.find("document-viewer");
+      viewer.execute(cmd);
+    });
+
+    this.attach(this.onkeydown, "keydown", "document-viewer");
   }
 
   mark_dirty(topic) {
@@ -68,7 +81,6 @@ class SideBar extends Component {
 
   async onmenu(e) {
     let command = e.target.id;
-    let document = this.state;
 
     if (command == "close") {
       this.update(null);
@@ -88,6 +100,41 @@ class SideBar extends Component {
       this.onphrasematch();
     } else if (command == "topicmatch") {
       this.ontopicmatch();
+    } else if (command == "editmode") {
+      this.editmode(true);
+    }
+  }
+
+  editmode(enable) {
+    let viewer = this.find("document-viewer");
+    if (enable) {
+      viewer.editmode(true);
+      this.find("#editbox").style.display = "flex";
+    } else {
+      viewer.editmode(false);
+      this.find("#editbox").style.display = "none";
+    }
+  }
+
+  onkeydown(e) {
+    let viewer = this.find("document-viewer");
+    if (viewer.editing) {
+      if (e.ctrlKey || e.metaKey) {
+        if (e.code === "KeyM") {
+          viewer.execute("mention");
+        } else if (e.code === "KeyD") {
+          e.preventDefault();
+          viewer.execute("clear");
+        } else if (e.code === "KeyS") {
+          e.preventDefault();
+          console.log("save doc");
+          this.editmode(false);
+        }
+      } else if (e.code === "Escape") {
+        e.preventDefault();
+        console.log("discard doc");
+        this.editmode(false);
+      }
     }
   }
 
@@ -422,10 +469,25 @@ class SideBar extends Component {
             <md-menu-item id="analyze">Analyze</md-menu-item>
             <md-menu-item id="phrasematch">Match phrases</md-menu-item>
             <md-menu-item id="topicmatch">Match topics</md-menu-item>
+            <md-menu-item id="editmode">Edit mode</md-menu-item>
             <md-menu-item id="close">Close</md-menu-item>
           </md-menu>
         </div>
         <document-viewer></document-viewer>
+        <div id="editbox">
+          <div id="editbar">
+            <md-icon-button id="save" icon="save_alt"></md-icon-button>
+            <md-icon-button id="mention" icon="data_array"></md-icon-button>
+            <md-icon-button id="bold" icon="format_bold"></md-icon-button>
+            <md-icon-button id="italic" icon="format_italic"></md-icon-button>
+            <md-icon-button id="list" icon="format_list_bulleted"></md-icon-button>
+            <md-icon-button id="indent" icon="format_indent_increase"></md-icon-button>
+            <md-icon-button id="outdent" icon="format_indent_decrease"></md-icon-button>
+            <md-icon-button id="title" icon="title"></md-icon-button>
+            <md-icon-button id="clear" icon="format_clear"></md-icon-button>
+            <md-icon-button id="discard" icon="cancel"></md-icon-button>
+          </div>
+        </div>
       </div>
     `;
   }
@@ -478,8 +540,24 @@ class SideBar extends Component {
         overflow: auto;
         padding: 0;
       }
-      $ span.unknown {
+      $ mention.unknown {
         text-decoration: underline wavy red;
+      }
+      $ #editbox {
+        display: none;
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        justify-content: center;
+      }
+      $ #editbar {
+        display: flex;
+        color: white;
+        background: #808080;
+        padding: 4px 12px 4px 12px;
+        margin: 12px;
+        border-radius: 12px;
       }
     `;
   }

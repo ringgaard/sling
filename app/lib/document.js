@@ -25,7 +25,7 @@ export class Mention {
   }
 
   text(plain) {
-    let text = this.document.text.slice(this.begin, this.end);
+    let text = this.content || this.document.text.slice(this.begin, this.end);
     if (plain) text = detag(text);
     return text;
   }
@@ -87,9 +87,7 @@ export class Document {
               let obj;
               try {
                 obj = r.parse();
-                let index = this.mentions.length;
-                let mention = new Mention(this, index, begin, end, obj);
-                this.mentions.push(mention);
+                let mention = this.add_mention(begin, end);
                 mention.sbegin = sbegin;
                 mention.send = r.pos - 1;
                 if (phrasemap && (obj instanceof Frame)) {
@@ -119,9 +117,7 @@ export class Document {
           } else {
             let begin = stack.pop();
             let end = text.length;
-            let index = this.mentions.length;
-            let mention = new Mention(this, index, begin, end);
-            this.mentions.push(mention);
+            let mention = this.add_mention(begin, end);
             mention.sbegin = source_stack.pop();
             mention.send = r.pos;
             if (phrasemap) {
@@ -152,6 +148,13 @@ export class Document {
       }
     }
     this.text = text;
+  }
+
+  add_mention(begin, end, annotation) {
+    let index = this.mentions.length;
+    let mention = new Mention(this, index, begin, end, annotation);
+    this.mentions.push(mention);
+    return mention;
   }
 
   mention(idx) {

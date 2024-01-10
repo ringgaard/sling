@@ -52,6 +52,27 @@ function selecting() {
   return selection && selection.type === 'Range';
 }
 
+function selected_mention() {
+  let s = window.getSelection();
+  if (!s || s.isCollapsed) return;
+  let r = s.getRangeAt(0);
+
+  // Check if selection inside mention.
+  let parent = r.commonAncestorContainer;
+  if (parent.nodeType == Node.TEXT_NODE) parent = parent.parentNode;
+  if (parent.tagName != "MENTION") return;
+
+  // Check if whole mention is selected.
+  let start = r.startContainer;
+  let end = r.endContainer;
+  if (!start || start.nodeType != Node.TEXT_NODE) return;
+  if (!end || end.nodeType != Node.TEXT_NODE) return;
+  if (r.startOffset != 0) return;
+  if (r.endOffset != end.length) return;
+
+  return parent;
+}
+
 class AnnotationBox extends Component {
   onconnected() {
     this.attach(this.onpointerdown, "pointerdown");
@@ -222,10 +243,14 @@ Component.register(AnnotationBox);
 
 export class DocumentViewer extends Component {
   onconnected() {
+    this.setAttribute("spellcheck", false);
     this.attach(this.onmouse, "mouseover");
     this.attach(this.clear_popup, "mouseleave");
     this.attach(this.clear_popup, "selectstart");
     this.attach(this.onclick, "click");
+
+    // Prevent other clipboard handlers in app from handling event.
+    this.bind(null, "paste", e => e.stopPropagation());
   }
 
   async onmouse(e) {
@@ -240,8 +265,8 @@ export class DocumentViewer extends Component {
     let span = e.target;
     while (span != this) {
       if (span == this.popup) return;
-      if (span.tagName === 'SPAN') break;
-      span = span.parentElement;
+      if (span.tagName == 'MENTION') break;
+      span = span.parentNode;
     }
 
     // Close existing popup.
@@ -250,7 +275,7 @@ export class DocumentViewer extends Component {
     }
 
     // Get mention for span.
-    let mid = span.getAttribute("mention");
+    let mid = span.getAttribute("index");
     if (!mid) return;
     let doc = this.state;
     let mention = doc.mentions[parseInt(mid)];
@@ -275,6 +300,7 @@ export class DocumentViewer extends Component {
     if (!this.lineheight) {
       this.lineheight = this.find(".linemeasure").offsetHeight;
     }
+
     // Adjust annotation box position.
     const boxwidth = Math.max(span.offsetWidth, 180);
     let top = span.offsetTop + span.offsetHeight;
@@ -300,7 +326,7 @@ export class DocumentViewer extends Component {
     }
 
     let target = e.target;
-    let mid = target.getAttribute("mention");
+    let mid = target.getAttribute("index");
     if (!mid) return;
     let doc = this.state;
     let mention = doc.mentions[parseInt(mid)];
@@ -325,6 +351,88 @@ export class DocumentViewer extends Component {
 
   visible() { return this.state && this.state.source; }
 
+  editmode(enable) {
+    this.setAttribute("contenteditable", enable);
+    this.editing = enable;
+  }
+
+  execute(cmd) {
+    if (!this.editing) return;
+    console.log("execute", cmd);
+    if (cmd == "bold") {
+      // Bold text.
+      document.execCommand("bold");
+    } else if (cmd == "italic") {
+      // Italic text.
+      document.execCommand("italic");
+    } else if (cmd == "list") {
+      // Insert bullet list.
+      document.execCommand("insertUnorderedList");
+    } else if (cmd == "indent") {
+      // Indent text.
+      document.execCommand("indent");
+    } else if (cmd == "outdent") {
+      // Unindent text.
+      document.execCommand("outdent");
+    } else if (cmd == "clear") {
+      let mention = selected_mention();
+      if (mention) {
+        // Remove mention.
+        let text = document.createTextNode(mention.innerText);
+        mention.replaceWith(text);
+        let range = document.createRange();
+        range.selectNode(text);
+        let selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+      } else {
+        // Clear formatting.
+        let selection = window.getSelection();
+        if (selection && !selection.isCollapsed) {
+          let text = selection.toString();
+          let range = selection.getRangeAt(0);
+          range.deleteContents();
+          range.insertNode(document.createTextNode(text));
+        }
+      }
+    } else if (cmd == "title") {
+      // Headline.
+      let text = window.getSelection().toString();
+      console.log("selection", text);
+      document.execCommand("delete");
+      document.execCommand('insertHTML', false, `<h2>${text}</h2>`);
+    } else if (cmd == "mention") {
+      // Add new mention.
+      let selection = window.getSelection();
+      if (selection && !selection.isCollapsed) {
+        // Create new mention.
+        let text = selection.toString();
+        let doc = this.state;
+        let mention = doc.add_mention();
+        mention.content = text;
+
+        // Add mention span to document.
+        let range = selection.getRangeAt(0);
+        range.deleteContents();
+        let elem = document.createElement("mention");
+        elem.setAttribute("index", mention.index);
+        elem.append(document.createTextNode(text));
+        range.insertNode(elem);
+        range.collapse();
+
+        // Set mention level.
+        let e = elem;
+        let level = 0;
+        while (e != this) {
+          if (e.tagName == 'MENTION') level++;
+          e = e.parentNode;
+        }
+        elem.classList.add("l" + level);
+        elem.classList.add("unknown");
+      }
+    }
+  }
+
   goto(topic) {
     // Find first mention.
     let doc = this.state;
@@ -332,7 +440,7 @@ export class DocumentViewer extends Component {
     if (!m) return;
 
     // Scroll mention into view.
-    let span = this.querySelector(`span[mention="${m.index}"]`);
+    let span = this.querySelector(`mention[index="${m.index}"]`);
     if (span) span.scrollIntoView({block: "center"});
   }
 
@@ -342,13 +450,13 @@ export class DocumentViewer extends Component {
 
     let h = new Array();
 
-    // Spans sorted by begin and end positions.
+    // Mentions sorted by begin and end positions.
     let starts = doc.mentions.slice();
     let ends = doc.mentions.slice();
     starts.sort((a, b) => a.begin - b.begin || b.end - a.end);
     ends.sort((a, b) => a.end - b.end || b.begin - a.begin);
 
-    // Generate HTML with spans.
+    // Generate HTML with mentions.
     let from = 0;
     let text = doc.text;
     let n = doc.mentions.length;
@@ -366,7 +474,7 @@ export class DocumentViewer extends Component {
           from = pos;
         }
         level--;
-        h.push("</span>");
+        h.push("</mention>");
         ei++;
       }
 
@@ -388,12 +496,12 @@ export class DocumentViewer extends Component {
         } else {
           cls += " unknown";
         }
-        h.push(`<span class="${cls}" mention=${mention.index}>`);
+        h.push(`<mention class="${cls}" index=${mention.index}>`);
         si++;
       }
     }
     h.push(text.slice(from));
-    while (ei++ < n) h.push("</span>");
+    while (ei++ < n) h.push("</mention>");
 
     // Output ghost paragraph for line height measurement.
     h.push('<p><span class="linemeasure">M</span></p>');
@@ -409,6 +517,7 @@ export class DocumentViewer extends Component {
         line-height: 1.5;
         padding: 4px 8px;
         position: relative;
+        outline: none;
       }
       $ .linemeasure {
         visibility: hidden;
@@ -416,27 +525,27 @@ export class DocumentViewer extends Component {
       $ p {
         margin-right: 8px;
       }
-      $ span {
+      $ mention {
         color: #0000dd;
         cursor: pointer;
       }
-      $ span.highlight {
+      $ mention.highlight {
         background-color: #fce94f;
         padding: 4px 0 4px 0;
       }
-      $ span:hover {
+      $ mention:hover {
         text-decoration: underline;
       }
-      $ span.l1:hover .l1 {
+      $ mention.l1:hover .l1 {
         color: blue;
       }
-      $ span.l1:hover .l2 {
+      $ mention.l1:hover .l2 {
         color: green;
       }
-      $ span.l1:hover .l3 {
+      $ mention.l1:hover .l3 {
         color: red;
       }
-      $ span.l1:hover .l4 {
+      $ mention.l1:hover .l4 {
         color: orange;
       }
       $ aside {

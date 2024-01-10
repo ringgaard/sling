@@ -106,7 +106,7 @@ while True:
                      json={"scroll": "1m", "scroll_id": scroll_id})
     if r.status_code == 429:
       reset = int(r.headers.get("x-ratelimit-reset", 60))
-      log.info("scroll rate limit", reset, "secs")
+      print("scroll rate limit", reset, "secs")
       time.sleep(reset)
     else:
       r.raise_for_status()

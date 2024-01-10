@@ -66,6 +66,7 @@ escapes = [
   ("</b> <b>", " "),
   ("</em><em>", ""),
   ("</em> <em>", " "),
+  ("ii", "ü"),
 ]
 
 LEVEL_START       = 0
@@ -131,20 +132,21 @@ class PDFLine:
       word = span["text"]
       fontsize = span["size"]
       flags = span["flags"]
-      #print(word, int(fontsize), span["font"], span["flags"])
 
       # Skip reference numbers.
-      if fontsize < book.refsize and word.isnumeric():
+      if fontsize <= book.refsize and word.isnumeric():
         refno = int(word)
         if refno > book.nextref and refno < book.nextref + 5:
           if refno == book.nextref + 2:
-            print("missing refno", book.nextref)
+            print("missing refno", book.nextref + 1)
           elif refno != book.nextref + 1:
-            print("missing refnos [%d-%d]" % (book.nextref, refno - 1))
+            print("missing refnos [%d-%d]" % (book.nextref + 1, refno - 1))
 
-          #print("ref", word, fontsize, span["font"], span["flags"])
+          print("skip ref", word, fontsize, span["font"], span["flags"])
           book.nextref = refno
           continue
+
+      #print(word, int(fontsize), span["font"], span["flags"])
 
       # Font variants.
       if word != " ":
@@ -265,7 +267,7 @@ class PDFPage:
           if l.indent: points += 1
           if l.y0 - prev.y0 > height: points += 1
           points += l.capital()
-          if points > 1: l.para = True
+          if points > 2: l.para = True
         prev = l
     elif parbreak == 1 or parbreak == 2:
       # Multi-column (1) and Blaa Bog (2)
@@ -357,6 +359,7 @@ class PDFBook:
     self.meta = {}
     self.nextref = 0
     self.refsize = 0
+    self.refsbychapter = False
 
   def read_toc(self, filename):
     last_toc_pageno = 0
@@ -395,13 +398,18 @@ class PDFBook:
 
   def extract(self, pdf):
     self.refsize = self.param("refsize", 0)
+    refsbychapter = self.param("refsbychapter", False)
     ignore = [int(p) for p in self.param("ignore", "0").split(",")]
-    pnum = 0;
+    pnum = 0
+
     for p in pdf:
       pnum += 1
       if pnum in ignore: continue
       page = PDFPage(self)
       self.pages.append(page)
+      if refsbychapter and pnum in self.chapters:
+        print("Chapter", self.chapters[pnum].title)
+        self.nextref = 0
       page.extract(p)
 
   def analyze_boilerplate(self):
