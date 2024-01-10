@@ -112,7 +112,7 @@ class WikidataWorkflow:
     with self.wf.namespace("wikisnap"):
       # Read frames from database.
       snapshot = self.wf.read(self.wikidatadb(), name="db-reader",
-                              params={"stream": True})
+                              params={"stream": False})
       input = self.wf.parallel(snapshot, queue=16384)
 
       # Split snapshot into items, properties, and redirects.
