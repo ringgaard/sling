@@ -59,6 +59,9 @@ class SideBar extends Component {
     this.attach(this.onmenu, "select", "md-menu");
     this.attach(this.onnavigate, "click", "#titlebox");
 
+    this.viewer = this.find("document-viewer");
+    this.attach(this.onkeydown, "keydown", "document-viewer");
+
     this.bind("#editbar", "click", e => {
       let cmd = e.target.parentElement.parentElement.id;
       if (cmd == "save") {
@@ -66,11 +69,8 @@ class SideBar extends Component {
       } else if (cmd == "discard") {
         this.editmode(false);
       }
-      let viewer = this.find("document-viewer");
-      viewer.execute(cmd);
+      this.viewer.execute(cmd);
     });
-
-    this.attach(this.onkeydown, "keydown", "document-viewer");
   }
 
   mark_dirty(topic) {
@@ -106,25 +106,23 @@ class SideBar extends Component {
   }
 
   editmode(enable) {
-    let viewer = this.find("document-viewer");
     if (enable) {
-      viewer.editmode(true);
+      this.viewer.editmode(true);
       this.find("#editbox").style.display = "flex";
     } else {
-      viewer.editmode(false);
+      this.viewer.editmode(false);
       this.find("#editbox").style.display = "none";
     }
   }
 
   onkeydown(e) {
-    let viewer = this.find("document-viewer");
-    if (viewer.editing) {
+    if (this.viewer.editing) {
       if (e.ctrlKey || e.metaKey) {
         if (e.code === "KeyM") {
-          viewer.execute("mention");
+          this.viewer.execute("mention");
         } else if (e.code === "KeyD") {
           e.preventDefault();
-          viewer.execute("clear");
+          this.viewer.execute("clear");
         } else if (e.code === "KeyS") {
           e.preventDefault();
           console.log("save doc");
@@ -367,28 +365,47 @@ class SideBar extends Component {
     this.style.cursor = "";
 
     // Open reconciliation dialog.
-    let dialog = new SearchResultsDialog({
-      title: "Reconcile with...",
-      items: results});
-    let ref = await dialog.show();
+    let ref = await this.viewer.refocus(async () => {
+      let dialog = new SearchResultsDialog({
+        title: "Reconcile with...",
+        items: results});
+      return await dialog.show();
+    });
     if (ref === false) return;
 
-    // Update phrase table.
-    let source = mention.document.source;
-    let context = mention.document.context;
-    if (source instanceof Frame) {
-      let text = mention.text();
+    if (this.viewer.editing) {
+      // Update mention in document.
       if (ref === null) {
-        source.purge((name, value) => name == text);
+        if (mention.annotation?.isanonymous()) {
+          mention.annotation.remove(n_is);
+        } else {
+          mention.annotation = null;
+        }
       } else {
-        source.set(text, frame(ref));
+        if (mention.annotation?.isanonymous()) {
+          mention.annotation.put(n_is, frame(ref));
+        } else {
+          mention.annotation = frame(ref);
+        }
       }
-    }
+    } else {
+      // Update phrase table.
+      let source = mention.document.source;
+      let context = mention.document.context;
+      if (source instanceof Frame) {
+        let text = mention.text();
+        if (ref === null) {
+          source.purge((name, value) => name == text);
+        } else {
+          source.set(text, frame(ref));
+        }
+      }
 
-    // Update document.
-    let newdoc = new Document(store, source, context);
-    this.refresh(newdoc);
-    this.mark_dirty(context.topic);
+      // Update document.
+      let newdoc = new Document(store, source, context);
+      this.refresh(newdoc);
+      this.mark_dirty(context.topic);
+    }
   }
 
   async onnavigate(e) {
@@ -414,22 +431,20 @@ class SideBar extends Component {
   }
 
   onupdated() {
-    let viewer = this.find("document-viewer");
-    if (viewer) viewer.update(this.state);
+    this.viewer.update(this.state);
   }
 
   refresh(newdoc) {
     if (!same(this.state, newdoc)) return;
-    let viewer = this.find("document-viewer");
-    let scroll = viewer.scrollTop;
+    let scroll = this.viewer.scrollTop;
     this.state = newdoc;
-    viewer.update(newdoc);
-    viewer.scrollTop = scroll;
+    this.viewer.update(newdoc);
+    this.viewer.scrollTop = scroll;
   }
 
   async goto(doc) {
     await this.update(doc);
-    this.find("document-viewer").goto(doc.context.match);
+    this.viewer.goto(doc.context.match);
   }
 
   async check_rights(topic) {

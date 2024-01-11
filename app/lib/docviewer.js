@@ -332,6 +332,7 @@ export class DocumentViewer extends Component {
     let mention = doc.mentions[parseInt(mid)];
     let annotation = store.resolve(mention.annotation)
 
+    e.stopPropagation();
     if (e.ctrlKey) {
       this.dispatch("annotate", {mention, event: e}, true);
     } else if (annotation && annotation.id) {
@@ -339,7 +340,6 @@ export class DocumentViewer extends Component {
     } else {
       this.dispatch("reconcile", {mention, event: e}, true);
     }
-    e.stopPropagation();
   }
 
   clear_popup() {
@@ -442,6 +442,23 @@ export class DocumentViewer extends Component {
     // Scroll mention into view.
     let span = this.querySelector(`mention[index="${m.index}"]`);
     if (span) span.scrollIntoView({block: "center"});
+  }
+
+  async refocus(scope) {
+    if (this.editing) {
+      // Save and restore scroll position and selection in edit mode.
+      let s = window.getSelection();
+      let scroll = this.scrollTop;
+      let position = s.getRangeAt(0);
+      let ret = await scope();
+      this.scrollTop = scroll;
+      this.focus();
+      s.removeAllRanges();
+      s.addRange(position);
+      return ret;
+    } else {
+      return await scope();
+    }
   }
 
   render() {
