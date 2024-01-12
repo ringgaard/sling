@@ -1545,5 +1545,12 @@ export class Printer {
       this.write(JSON.stringify(symbol));
     }
   }
+
+  // Return output and reset output buffer.
+  reset_output() {
+    let out = this.output;
+    this.output = "";
+    return out;
+  }
 }
 

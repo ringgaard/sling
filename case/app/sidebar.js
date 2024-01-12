@@ -65,9 +65,14 @@ class SideBar extends Component {
     this.bind("#editbar", "click", e => {
       let cmd = e.target.parentElement.parentElement.id;
       if (cmd == "save") {
-        this.editmode(false);
+        let doc = this.viewer.state;
+        doc.regenerate(this.viewer);
+        //this.editmode(false);
       } else if (cmd == "discard") {
-        this.editmode(false);
+        let doc = this.viewer.state;
+        console.log(doc);
+        console.log(doc.tolex());
+        //this.editmode(false);
       }
       this.viewer.execute(cmd);
     });
@@ -376,6 +381,10 @@ class SideBar extends Component {
     if (this.viewer.editing) {
       // Update mention in document.
       if (ref === null) {
+        for (let d of mention.dependants()) {
+          let elem = this.viewer.querySelector(`mention[index="${d.index}"]`);
+          if (elem) elem.classList.add("unknown");
+        }
         if (mention.annotation?.isanonymous()) {
           mention.annotation.remove(n_is);
         } else {
@@ -386,6 +395,10 @@ class SideBar extends Component {
           mention.annotation.put(n_is, frame(ref));
         } else {
           mention.annotation = frame(ref);
+        }
+        for (let d of mention.dependants()) {
+          let elem = this.viewer.querySelector(`mention[index="${d.index}"]`);
+          if (elem) elem.classList.remove("unknown");
         }
       }
     } else {

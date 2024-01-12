@@ -3,7 +3,19 @@
 
 // SLING document.
 
-import {Frame, Reader} from "./frame.js";
+import {Frame, Reader, Printer} from "./frame.js";
+
+// HTML escapes.
+const escapes = {
+  '&': "&#38;",
+  '<': "&#60;",
+  '>': "&#62;",
+  '{': "&#123;",
+  '|': "&#124;",
+  '}': "&#125;",
+  '[': "&#91;",
+  ']': "&#93;",
+}
 
 export function detag(html) {
   return html
@@ -13,6 +25,52 @@ export function detag(html) {
     });
 }
 
+function escape(text) {
+  return text.replace(/[&<>{}\[\]|]/g, c => escapes[c]);
+}
+
+// Convert DOM fragment into LEX format with text and mentions.
+class DOMLexer {
+  constructor(document, dom) {
+    this.document = document;
+    this.text = "";
+    this.mentions = new Array();
+    this.traverse_children(dom);
+  }
+
+  traverse(node) {
+    if (node.nodeType == Node.TEXT_NODE) {
+      this.text += escape(node.nodeValue);
+    } else if (node.nodeType == Node.ELEMENT_NODE) {
+      let tagname = node.nodeName.toLowerCase();
+      if (tagname == "mention") {
+        let begin = this.text.length;
+        let mid = node.getAttribute("index");
+        let annotation = this.document.mentions[mid]?.annotation;
+        this.traverse_children(node);
+        let end = this.text.length;
+
+        let index = this.mentions.length;
+        let mention = new Mention(this.document, index, begin, end, annotation);
+        this.mentions.push(mention);
+      } else if (tagname == "span") {
+        this.traverse_children(node);
+      } else if (node.className != "hidden") {
+        this.text += `<${tagname}>`;
+        this.traverse_children(node);
+        this.text += `</${tagname}>`;
+        if (tagname == "p") this.text += "\n";
+      }
+    }
+  }
+
+  traverse_children(elem) {
+    for (let child = elem.firstChild; child; child = child.nextSibling) {
+      this.traverse(child);
+    }
+  }
+}
+
 export class Mention {
   constructor(document, index, begin, end, annotation) {
     this.document = document;
@@ -20,21 +78,39 @@ export class Mention {
     this.begin = begin;
     this.end = end;
     this.annotation = annotation;
-    this.sbegin = null;
-    this.send = null;
   }
 
+  // (Plain) text for mention.
   text(plain) {
     let text = this.content || this.document.text.slice(this.begin, this.end);
     if (plain) text = detag(text);
     return text;
   }
 
+  // Resolved mention annotation.
   resolved() {
     if (!this.annotation) return null;
     let topic = this.document.store.resolve(this.annotation);
     if (topic.isanonymous()) return null;
     return topic;
+  }
+
+  // Return set of mentions depending on this mention.
+  dependants() {
+    let deps = new Array();
+    let r = this.resolved();
+    if (r) {
+      let closure = new Set();
+      closure.add(r);
+      for (let m of this.document.mentions) {
+        let r = m.resolved();
+        if (closure.has(r)) {
+          deps.push(m);
+          closure.add(m.annotation);
+        }
+      }
+    }
+    return deps;
   }
 }
 
@@ -84,21 +160,19 @@ export class Document {
             let end = text.length;
             let sbegin = source_stack.pop();
             for (;;) {
-              let obj;
               try {
-                obj = r.parse();
-                let mention = this.add_mention(begin, end);
+                let obj = r.parse();
+                let mention = this.add_mention(begin, end, obj);
                 mention.sbegin = sbegin;
                 mention.send = r.pos - 1;
-                if (phrasemap && (obj instanceof Frame)) {
+                if (phrasemap &&
+                    (obj instanceof Frame) &&
+                    obj.isanonymous() &&
+                    !obj.has(this.store.is)) {
                   let phrase = text.slice(begin, end);
                   let mapping = phrasemap.get(phrase);
                   if (mapping) {
-                    if (obj.isanonymous()) {
-                      obj.set(this.store.is, mapping);
-                    } else {
-                      mention.annotation = mapping;
-                    }
+                    obj.set(this.store.is, mapping);
                   }
                 }
                 if (r.token == 93 || r.end()) break;
@@ -202,6 +276,137 @@ export class Document {
       }
     }
     return it(this.mentions, query, partial);
+  }
+
+  regenerate(dom) {
+    let lexer = new DOMLexer(this, dom);
+    console.log(lexer.text);
+    console.log(lexer.mentions);
+  }
+
+  tohtml() {
+    let h = new Array();
+
+    // Mentions sorted by begin and end positions.
+    let starts = this.mentions.slice();
+    let ends = this.mentions.slice();
+    starts.sort((a, b) => a.begin - b.begin || b.end - a.end);
+    ends.sort((a, b) => a.end - b.end || b.begin - a.begin);
+
+    // Generate HTML with mentions.
+    let from = 0;
+    let text = this.text;
+    let n = this.mentions.length;
+    let si = 0;
+    let ei = 0;
+    let level = 0;
+    let match = this.context && this.context.match;
+    let altmatch = match && match.get(n_is);
+    for (let pos = 0; pos < text.length; ++pos) {
+      // Output span ends.
+      while (ei < n && ends[ei].end < pos) ei++;
+      while (ei < n && ends[ei].end == pos) {
+        if (from < pos) {
+          h.push(text.slice(from, pos));
+          from = pos;
+        }
+        level--;
+        h.push("</mention>");
+        ei++;
+      }
+
+      // Output span starts.
+      while (si < n && starts[si].begin < pos) si++;
+      while (si < n && starts[si].begin == pos) {
+        if (from < pos) {
+          h.push(text.slice(from, pos));
+          from = pos;
+        }
+        level++;
+        let cls = `l${level}`;
+        let mention = starts[si];
+        let topic = mention.resolved();
+        if (topic) {
+          if (match && (topic == match || topic == altmatch)) {
+            cls += " highlight";
+          }
+        } else {
+          cls += " unknown";
+        }
+        h.push(`<mention class="${cls}" index=${mention.index}>`);
+        si++;
+      }
+    }
+    h.push(text.slice(from));
+    while (ei++ < n) h.push("</mention>");
+
+    // TODO: output themes
+    return h.join("");
+  }
+
+  tolex() {
+    let h = new Array();
+    let printer = new Printer(this.store);
+
+    // Mentions sorted by begin and end positions.
+    let starts = this.mentions.slice();
+    let ends = this.mentions.slice();
+    starts.sort((a, b) => a.begin - b.begin || b.end - a.end);
+    ends.sort((a, b) => a.end - b.end || b.begin - a.begin);
+
+    // Generate LEX with mentions.
+    let from = 0;
+    let text = this.text;
+    let n = this.mentions.length;
+    let si = 0;
+    let ei = 0;
+
+    function output_annotation(mention) {
+      let annotation = mention?.annotation;
+      if (annotation) {
+        h.push("|");
+        if (annotation.isanonymous()) {
+          printer.print(annotation);
+          h.push(printer.reset_output());
+        } else {
+          h.push(annotation.id);
+        }
+      }
+    }
+
+    for (let pos = 0; pos < text.length; ++pos) {
+      // Output mention ends.
+      while (ei < n && ends[ei].end < pos) ei++;
+      while (ei < n && ends[ei].end == pos) {
+        if (from < pos) {
+          h.push(text.slice(from, pos));
+          from = pos;
+        }
+        output_annotation(ends[ei]);
+        h.push("]");
+        ei++;
+      }
+
+      // Output mention starts.
+      while (si < n && starts[si].begin < pos) si++;
+      while (si < n && starts[si].begin == pos) {
+        if (from < pos) {
+          h.push(text.slice(from, pos));
+          from = pos;
+        }
+        h.push("[");
+        si++;
+      }
+    }
+    h.push(text.slice(from));
+    while (ei < n) {
+      output_annotation(ends[ei]);
+      h.push("]");
+      ei++;
+    }
+
+    // TODO: output themes
+    return h.join("");
   }
 }
 

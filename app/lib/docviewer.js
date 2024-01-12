@@ -462,69 +462,15 @@ export class DocumentViewer extends Component {
   }
 
   render() {
+    // Generate document as HTML.
     let doc = this.state;
     if (!doc) return;
-
-    let h = new Array();
-
-    // Mentions sorted by begin and end positions.
-    let starts = doc.mentions.slice();
-    let ends = doc.mentions.slice();
-    starts.sort((a, b) => a.begin - b.begin || b.end - a.end);
-    ends.sort((a, b) => a.end - b.end || b.begin - a.begin);
-
-    // Generate HTML with mentions.
-    let from = 0;
-    let text = doc.text;
-    let n = doc.mentions.length;
-    let si = 0;
-    let ei = 0;
-    let level = 0;
-    let match = doc.context && doc.context.match;
-    let altmatch = match && match.get(n_is);
-    for (let pos = 0; pos < text.length; ++pos) {
-      // Output span ends.
-      while (ei < n && ends[ei].end < pos) ei++;
-      while (ei < n && ends[ei].end == pos) {
-        if (from < pos) {
-          h.push(text.slice(from, pos));
-          from = pos;
-        }
-        level--;
-        h.push("</mention>");
-        ei++;
-      }
-
-      // Output span starts.
-      while (si < n && starts[si].begin < pos) si++;
-      while (si < n && starts[si].begin == pos) {
-        if (from < pos) {
-          h.push(text.slice(from, pos));
-          from = pos;
-        }
-        level++;
-        let cls = `l${level}`;
-        let mention = starts[si];
-        let topic = mention.resolved();
-        if (topic) {
-          if (match && (topic == match || topic == altmatch)) {
-            cls += " highlight";
-          }
-        } else {
-          cls += " unknown";
-        }
-        h.push(`<mention class="${cls}" index=${mention.index}>`);
-        si++;
-      }
-    }
-    h.push(text.slice(from));
-    while (ei++ < n) h.push("</mention>");
+    let html = doc.tohtml();
 
     // Output ghost paragraph for line height measurement.
-    h.push('<p><span class="linemeasure">M</span></p>');
+    html += '<p class="hidden"><span class="linemeasure">"M</span></p>';
 
-    // TODO: output themes
-    return h.join("");
+    return html;
   }
 
   static stylesheet() {
