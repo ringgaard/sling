@@ -19,7 +19,7 @@ embed_data(
     "lib/oneof.js",
     "lib/document.js",
     "lib/docview.js",
-    "lib/docviewer.js",
+    "lib/docedit.js",
     "lib/gallery.js",
     "lib/material.js",
     "lib/frame.js",

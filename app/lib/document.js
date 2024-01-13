@@ -301,7 +301,7 @@ export class Document {
     let ei = 0;
     let level = 0;
     let match = this.context && this.context.match;
-    let altmatch = match && match.get(n_is);
+    let altmatch = match && match.get(this.store.is);
     for (let pos = 0; pos < text.length; ++pos) {
       // Output span ends.
       while (ei < n && ends[ei].end < pos) ei++;
@@ -367,7 +367,7 @@ export class Document {
         h.push("|");
         if (annotation.isanonymous()) {
           printer.print(annotation);
-          h.push(printer.reset_output());
+          h.push(printer.flush_output());
         } else {
           h.push(annotation.id);
         }

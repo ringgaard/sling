@@ -7,7 +7,6 @@ import {Frame, QString} from "/common/lib/frame.js";
 import {store, frame, settings} from "/common/lib/global.js";
 import {Time, LabelCollector, latlong} from "/common/lib/datatype.js";
 import {Document} from "/common/lib/document.js";
-import {DocumentViewer} from "/common/lib/docviewer.js";
 import {PhotoGallery, censor, imageurl, mediadb} from "/common/lib/gallery.js";
 
 import {url_format} from "./schema.js";

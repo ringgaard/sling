@@ -6,7 +6,7 @@ import {store, frame, settings} from "/common/lib/global.js";
 import {Component} from "/common/lib/component.js";
 import {Document} from "/common/lib/document.js";
 import {inform, MdDialog, StdDialog} from "/common/lib/material.js";
-import {DocumentViewer} from "/common/lib/docviewer.js";
+import {DocumentEditor} from "/common/lib/docedit.js";
 
 import {search, kbsearch, SearchResultsDialog} from "./search.js";
 import {langcode} from "./schema.js";
@@ -59,22 +59,23 @@ class SideBar extends Component {
     this.attach(this.onmenu, "select", "md-menu");
     this.attach(this.onnavigate, "click", "#titlebox");
 
-    this.viewer = this.find("document-viewer");
-    this.attach(this.onkeydown, "keydown", "document-viewer");
+    this.editor = this.find("document-editor");
+    this.attach(this.onkeydown, "keydown", "document-editor");
 
     this.bind("#editbar", "click", e => {
       let cmd = e.target.parentElement.parentElement.id;
       if (cmd == "save") {
-        let doc = this.viewer.state;
-        doc.regenerate(this.viewer);
+        let doc = this.editor.state;
+        doc.regenerate(this.editor);
         //this.editmode(false);
       } else if (cmd == "discard") {
-        let doc = this.viewer.state;
+        let doc = this.editor.state;
         console.log(doc);
         console.log(doc.tolex());
         //this.editmode(false);
+      } else {
+        this.editor.execute(cmd);
       }
-      this.viewer.execute(cmd);
     });
   }
 
@@ -112,22 +113,22 @@ class SideBar extends Component {
 
   editmode(enable) {
     if (enable) {
-      this.viewer.editmode(true);
+      this.editor.editmode(true);
       this.find("#editbox").style.display = "flex";
     } else {
-      this.viewer.editmode(false);
+      this.editor.editmode(false);
       this.find("#editbox").style.display = "none";
     }
   }
 
   onkeydown(e) {
-    if (this.viewer.editing) {
+    if (this.editor.editing) {
       if (e.ctrlKey || e.metaKey) {
         if (e.code === "KeyM") {
-          this.viewer.execute("mention");
+          this.editor.execute("mention");
         } else if (e.code === "KeyD") {
           e.preventDefault();
-          this.viewer.execute("clear");
+          this.editor.execute("clear");
         } else if (e.code === "KeyS") {
           e.preventDefault();
           console.log("save doc");
@@ -370,7 +371,7 @@ class SideBar extends Component {
     this.style.cursor = "";
 
     // Open reconciliation dialog.
-    let ref = await this.viewer.refocus(async () => {
+    let ref = await this.editor.refocus(async () => {
       let dialog = new SearchResultsDialog({
         title: "Reconcile with...",
         items: results});
@@ -378,11 +379,11 @@ class SideBar extends Component {
     });
     if (ref === false) return;
 
-    if (this.viewer.editing) {
+    if (this.editor.editing) {
       // Update mention in document.
       if (ref === null) {
         for (let d of mention.dependants()) {
-          let elem = this.viewer.querySelector(`mention[index="${d.index}"]`);
+          let elem = this.editor.querySelector(`mention[index="${d.index}"]`);
           if (elem) elem.classList.add("unknown");
         }
         if (mention.annotation?.isanonymous()) {
@@ -392,12 +393,12 @@ class SideBar extends Component {
         }
       } else {
         if (mention.annotation?.isanonymous()) {
-          mention.annotation.put(n_is, frame(ref));
+          mention.annotation.set(n_is, frame(ref));
         } else {
           mention.annotation = frame(ref);
         }
         for (let d of mention.dependants()) {
-          let elem = this.viewer.querySelector(`mention[index="${d.index}"]`);
+          let elem = this.editor.querySelector(`mention[index="${d.index}"]`);
           if (elem) elem.classList.remove("unknown");
         }
       }
@@ -444,20 +445,20 @@ class SideBar extends Component {
   }
 
   onupdated() {
-    this.viewer.update(this.state);
+    this.editor.update(this.state);
   }
 
   refresh(newdoc) {
     if (!same(this.state, newdoc)) return;
-    let scroll = this.viewer.scrollTop;
+    let scroll = this.editor.scrollTop;
     this.state = newdoc;
-    this.viewer.update(newdoc);
-    this.viewer.scrollTop = scroll;
+    this.editor.update(newdoc);
+    this.editor.scrollTop = scroll;
   }
 
   async goto(doc) {
     await this.update(doc);
-    this.viewer.goto(doc.context.match);
+    this.editor.goto(doc.context.match);
   }
 
   async check_rights(topic) {
@@ -501,7 +502,7 @@ class SideBar extends Component {
             <md-menu-item id="close">Close</md-menu-item>
           </md-menu>
         </div>
-        <document-viewer></document-viewer>
+        <document-editor></document-editor>
         <div id="editbox">
           <div id="editbar">
             <md-icon-button id="save" icon="save_alt"></md-icon-button>
@@ -562,7 +563,7 @@ class SideBar extends Component {
       $ #menu {
         flex: none;
       }
-      $ document-viewer {
+      $ document-editor {
         width: 100%;
         height: 100%;
         overflow: auto;
@@ -586,6 +587,10 @@ class SideBar extends Component {
         padding: 4px 12px 4px 12px;
         margin: 12px;
         border-radius: 12px;
+      }
+      $ #editbar md-icon-button button {
+        height: 32px;
+        width: 32px;
       }
     `;
   }

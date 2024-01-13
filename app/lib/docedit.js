@@ -1,7 +1,7 @@
 // Copyright 2023 Ringgaard Research ApS
 // Licensed under the Apache License, Version 2
 
-// Document viewer web component.
+// Document editor web component.
 
 import {store, frame} from "./global.js";
 import {Frame, QString} from "./frame.js";
@@ -241,7 +241,7 @@ class AnnotationBox extends Component {
 
 Component.register(AnnotationBox);
 
-export class DocumentViewer extends Component {
+export class DocumentEditor extends Component {
   onconnected() {
     this.setAttribute("spellcheck", false);
     this.attach(this.onmouse, "mouseover");
@@ -487,6 +487,11 @@ export class DocumentViewer extends Component {
       }
       $ p {
         margin-right: 8px;
+        margin-top: 0.5em;
+        margin-bottom: 0.5em
+      }
+      $ h1 {
+        line-height: 1;
       }
       $ mention {
         color: #0000dd;
@@ -520,5 +525,5 @@ export class DocumentViewer extends Component {
   }
 };
 
-Component.register(DocumentViewer);
+Component.register(DocumentEditor);
 

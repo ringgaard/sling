@@ -97,7 +97,7 @@ import {store, frame, settings} from "/common/lib/global.js";
 import {Component} from "/common/lib/component.js";
 import {value_text, LabelCollector} from "/common/lib/datatype.js";
 import {Document} from "/common/lib/document.js";
-import {DocumentViewer} from "/common/lib/docviewer.js";
+import {DocumentEditor} from "/common/lib/docedit.js";
 import {MdApp, MdCard, inform} from "/common/lib/material.js";
 
 const n_name = frame("name");
@@ -263,7 +263,7 @@ class ArticlePanel extends MdCard {
     }
     h.push('<md-text id="summary"></md-text>');
     h.push('<md-image id="image"></md-image>');
-    h.push('<document-viewer id="document"></document-viewer>');
+    h.push('<document-editor id="document"></document-editor>');
     h.push('</div>');
     return h.join("");
   }
@@ -309,7 +309,7 @@ class ArticlePanel extends MdCard {
         max-height: 500px;
         max-width: 100%;
       }
-      $ document-viewer {
+      $ document-editor {
         font-size: 1.2rem;
       }
     `;

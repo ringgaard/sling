@@ -1547,7 +1547,7 @@ export class Printer {
   }
 
   // Return output and reset output buffer.
-  reset_output() {
+  flush_output() {
     let out = this.output;
     this.output = "";
     return out;
