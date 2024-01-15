@@ -397,7 +397,7 @@ class TopicCard extends Component {
 
   oninit() {
     let editor = this.match("#editor");
-    this.readonly = editor && editor.readonly;
+    this.readonly = editor?.readonly;
 
     this.bind("#topic-actions", "menu", e => {
       let action = e.detail;

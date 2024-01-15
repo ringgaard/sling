@@ -34,28 +34,20 @@ const work_ownership = new Set();
 class SideBar extends Component {
   visible() { return this.state; }
 
-  onconnected() {
-    this.editor = this.match("#editor");
-  }
-
   oninit() {
-    this.attach(this.onedit, "edit");
+    this.attach(this.onunmention, "unmention");
     this.attach(this.onhighlight, "highlight");
     this.attach(this.onreconcile, "reconcile");
+    this.attach(this.ondirty, "dirty");
+  }
+
+  onconnected() {
+    this.cased = this.match("#editor");
   }
 
   onrendered() {
     if (!this.state) return;
 
-    let context = this.state.context;
-    let source = this.state.source;
-    let tocname = context.topic.get(n_name);
-    let docname;
-    if (source instanceof Frame) {
-      docname = source.get(n_name);
-    }
-    this.find("#tocname").update(tocname);
-    this.find("#docname").update(docname);
     this.attach(this.onmenu, "select", "md-menu");
     this.attach(this.onnavigate, "click", "#titlebox");
 
@@ -65,30 +57,42 @@ class SideBar extends Component {
     this.bind("#editbar", "click", e => {
       let cmd = e.target.parentElement.parentElement.id;
       if (cmd == "save") {
-        let doc = this.editor.state;
-        doc.regenerate(this.editor);
-        //this.editmode(false);
+        this.commit();
       } else if (cmd == "discard") {
-        let doc = this.editor.state;
-        console.log(doc);
-        console.log(doc.tolex());
-        //this.editmode(false);
+        this.onrevert();
       } else {
         this.editor.execute(cmd);
       }
     });
+    this.update_title();
+  }
+
+  dirty() {
+    return this.editor?.dirty;
+  }
+
+  commit() {
+    if (this.dirty()) {
+      this.editor.save();
+      this.mark_dirty();
+    }
   }
 
   mark_dirty(topic) {
-    this.editor.mark_dirty();
-    this.editor.topic_updated(topic);
-    this.editor.update_topic(topic);
+    this.cased.mark_dirty();
+    this.cased.topic_updated(topic);
+    this.cased.update_topic(topic);
+  }
+
+  ondirty(e) {
+    this.update_title();
   }
 
   async onmenu(e) {
     let command = e.target.id;
 
     if (command == "close") {
+      this.commit();
       this.update(null);
     } else if (command == "next") {
       this.onnext();
@@ -104,45 +108,37 @@ class SideBar extends Component {
       this.onanalyze();
     } else if (command == "phrasematch") {
       this.onphrasematch();
-    } else if (command == "topicmatch") {
-      this.ontopicmatch();
-    } else if (command == "editmode") {
-      this.editmode(true);
-    }
-  }
-
-  editmode(enable) {
-    if (enable) {
-      this.editor.editmode(true);
-      this.find("#editbox").style.display = "flex";
-    } else {
-      this.editor.editmode(false);
-      this.find("#editbox").style.display = "none";
     }
   }
 
   onkeydown(e) {
-    if (this.editor.editing) {
+    if (!this.editor.readonly()) {
       if (e.ctrlKey || e.metaKey) {
         if (e.code === "KeyM") {
           this.editor.execute("mention");
         } else if (e.code === "KeyD") {
           e.preventDefault();
+          e.stopPropagation();
           this.editor.execute("clear");
         } else if (e.code === "KeyS") {
           e.preventDefault();
-          console.log("save doc");
-          this.editmode(false);
+          e.stopPropagation();
+          this.onsave();
         }
       } else if (e.code === "Escape") {
         e.preventDefault();
-        console.log("discard doc");
-        this.editmode(false);
+        this.onrevert();
       }
     }
   }
 
+  onunmention(e) {
+    let mention = e && e.detail;
+    this.editor.remove_mention(mention);
+  }
+
   async onedit(e) {
+    this.commit();
     let source = this.state.source;
     let context = this.state.context;
     let topic = context.topic;
@@ -165,6 +161,20 @@ class SideBar extends Component {
     }
   }
 
+  onsave() {
+    this.commit();
+  }
+
+  async onrevert() {
+    if (!this.dirty()) return;
+    let ok = await StdDialog.ask("Revert", "Discard changes to document?");
+    if (ok) {
+      let source = this.state.source;
+      let context = this.state.context;
+      this.editor.update(new Document(store, source, context));
+    }
+  }
+
   async ondelete() {
     let context = this.state.context;
     let topic = context.topic;
@@ -179,6 +189,7 @@ class SideBar extends Component {
   }
 
   onnext() {
+    this.commit();
     let context = this.state.context;
     let topic = context.topic;
     let index = context.index;
@@ -200,6 +211,7 @@ class SideBar extends Component {
   }
 
   onprev() {
+    this.commit();
     let context = this.state.context;
     let topic = context.topic;
     let index = context.index - 1;
@@ -231,6 +243,7 @@ class SideBar extends Component {
       inform("No document analyzer configured");
       return;
     }
+    this.commit();
 
     let source = this.state.source;
     let context = this.state.context;
@@ -278,12 +291,9 @@ class SideBar extends Component {
     let index = 0;
     for (let lex of context.topic.all(n_lex)) {
       if (index++ == context.index) break;
-      if (lex instanceof Frame) {
-        for (let [k, v] of lex) {
-          if (typeof(k) === 'string' && (v instanceof Frame)) {
-            phrases.set(k, v);
-          }
-        }
+      let document = new Document(store, lex);
+      for (let m of document.annotated_mentions()) {
+        phrases.set(m.text(), m.annotation.resolve());
       }
     }
 
@@ -298,45 +308,21 @@ class SideBar extends Component {
         } else {
           m.annotation = match;
         }
-        source.set(phrase, match);
-        updates++;
-      }
-    }
-
-    if (updates > 0) {
-      this.update(new Document(store, source, context));
-      this.mark_dirty(doc);
-      inform(`${updates} phrase mappings added`);
-    }
-  }
-
-  ontopicmatch() {
-    let doc = this.state;
-    let index = editor.get_index();
-    let updates = 0;
-    for (let m of doc.mentions) {
-      if (m.annotation && m.annotation.length > 0) continue;
-      let phrase = m.text();
-      let match = index.find(phrase);
-      if (match) {
-        if (m.annotation) {
-          m.annotation.set(n_is, match);
-        } else {
-          m.annotation = match;
+        for (let d of m.dependants()) {
+          this.editor.update_mention_status(d, false);
+          updates++;
         }
-        source.set(phrase, match);
-        updates++;
       }
     }
 
     if (updates > 0) {
-      this.update(new Document(store, source, context));
-      this.mark_dirty(doc);
-      inform(`${updates} topic mappings added`);
+      this.editor.mark_dirty();
+      inform(`${updates} mentions resolved`);
     }
   }
 
   async onreconcile(e) {
+    if (this.editor.readonly()) return;
     let mention = e.detail.mention;
     let query = mention.text(true);
 
@@ -357,13 +343,13 @@ class SideBar extends Component {
     }
 
     // Search for matches.
-    let backends = [editor.search.bind(editor), docsearch, kbsearch];
+    let backends = [this.cased.search.bind(this.cased), docsearch, kbsearch];
     let options = {
       full: true,
       swap: true,
       plural: true,
       submatch: true,
-      local: editor.get_index(),
+      local: this.cased.get_index(),
     };
 
     this.style.cursor = "wait";
@@ -379,51 +365,31 @@ class SideBar extends Component {
     });
     if (ref === false) return;
 
-    if (this.editor.editing) {
-      // Update mention in document.
-      if (ref === null) {
-        for (let d of mention.dependants()) {
-          let elem = this.editor.querySelector(`mention[index="${d.index}"]`);
-          if (elem) elem.classList.add("unknown");
-        }
-        if (mention.annotation?.isanonymous()) {
-          mention.annotation.remove(n_is);
-        } else {
-          mention.annotation = null;
-        }
+    // Update mention in document.
+    if (ref === null) {
+      for (let d of mention.dependants()) {
+        this.editor.update_mention_status(d, true);
+      }
+      if (mention.annotation?.isanonymous()) {
+        mention.annotation.remove(n_is);
       } else {
-        if (mention.annotation?.isanonymous()) {
-          mention.annotation.set(n_is, frame(ref));
-        } else {
-          mention.annotation = frame(ref);
-        }
-        for (let d of mention.dependants()) {
-          let elem = this.editor.querySelector(`mention[index="${d.index}"]`);
-          if (elem) elem.classList.remove("unknown");
-        }
+        mention.annotation = null;
       }
     } else {
-      // Update phrase table.
-      let source = mention.document.source;
-      let context = mention.document.context;
-      if (source instanceof Frame) {
-        let text = mention.text();
-        if (ref === null) {
-          source.purge((name, value) => name == text);
-        } else {
-          source.set(text, frame(ref));
-        }
+      if (mention.annotation?.isanonymous()) {
+        mention.annotation.set(n_is, frame(ref));
+      } else {
+        mention.annotation = frame(ref);
       }
-
-      // Update document.
-      let newdoc = new Document(store, source, context);
-      this.refresh(newdoc);
-      this.mark_dirty(context.topic);
+      for (let d of mention.dependants()) {
+        this.editor.update_mention_status(d, false);
+      }
     }
+    this.editor.mark_dirty();
   }
 
   async onnavigate(e) {
-    await this.editor.navigate_to(this.state.context.topic);
+    await this.cased.navigate_to(this.state.context.topic);
   }
 
   async onhighlight(e) {
@@ -446,6 +412,19 @@ class SideBar extends Component {
 
   onupdated() {
     this.editor.update(this.state);
+
+    let editbox = this.find("#editbox");
+    editbox.style.display = this.editor.readonly() ? "none" : "flex";
+  }
+
+  update_title() {
+    let context = this.state.context;
+    let source = this.state.source;
+    let tocname = context.topic.get(n_name);
+    let docname = (source instanceof Frame) ? source.get(n_name) : "";
+    if (this.dirty()) docname = "*" + docname;
+    this.find("#tocname").update(tocname);
+    this.find("#docname").update(docname);
   }
 
   refresh(newdoc) {
@@ -457,12 +436,15 @@ class SideBar extends Component {
   }
 
   async goto(doc) {
+    this.commit();
     await this.update(doc);
-    this.editor.goto(doc.context.match);
+    if (doc.context?.match) {
+      this.editor.goto(doc.context.match);
+    }
   }
 
   async check_rights(topic) {
-    if (!this.editor.readonly) return true;
+    if (!this.cased.readonly) return true;
     if (!topic.has(n_copyright, n_copyrighted)) return true;
     let topicid = topic.id;
     if (work_ownership.has(topicid)) return true;
@@ -490,30 +472,28 @@ class SideBar extends Component {
             <md-text id="docname"></md-text>
           </div>
           <md-menu id="menu">
-            <md-menu-item id="edit">Edit</md-menu-item>
             <md-menu-item id="delete">Delete</md-menu-item>
             <md-menu-item id="next">Next</md-menu-item>
             <md-menu-item id="prev">Previous</md-menu-item>
             <md-menu-item id="bookmark">Bookmark</md-menu-item>
             <md-menu-item id="analyze">Analyze</md-menu-item>
             <md-menu-item id="phrasematch">Match phrases</md-menu-item>
-            <md-menu-item id="topicmatch">Match topics</md-menu-item>
-            <md-menu-item id="editmode">Edit mode</md-menu-item>
+            <md-menu-item id="edit">Edit LEX</md-menu-item>
             <md-menu-item id="close">Close</md-menu-item>
           </md-menu>
         </div>
         <document-editor></document-editor>
         <div id="editbox">
           <div id="editbar">
-            <md-icon-button id="save" icon="save_alt"></md-icon-button>
             <md-icon-button id="mention" icon="data_array"></md-icon-button>
+            <md-icon-button id="clear" icon="format_clear"></md-icon-button>
             <md-icon-button id="bold" icon="format_bold"></md-icon-button>
             <md-icon-button id="italic" icon="format_italic"></md-icon-button>
             <md-icon-button id="list" icon="format_list_bulleted"></md-icon-button>
             <md-icon-button id="indent" icon="format_indent_increase"></md-icon-button>
             <md-icon-button id="outdent" icon="format_indent_decrease"></md-icon-button>
             <md-icon-button id="title" icon="title"></md-icon-button>
-            <md-icon-button id="clear" icon="format_clear"></md-icon-button>
+            <md-icon-button id="save" icon="save_alt"></md-icon-button>
             <md-icon-button id="discard" icon="cancel"></md-icon-button>
           </div>
         </div>

@@ -92,8 +92,8 @@ class AnnotationBox extends Component {
       this.dispatch("reconcile", {mention, event: e}, true);
     } else if (target.id == "highlight") {
       this.dispatch("highlight", {mention, event: e}, true);
-    } else if (target.id == "edit") {
-      this.dispatch("edit", mention, true);
+    } else if (target.id == "unmention") {
+      this.dispatch("unmention", mention, true);
     } else if (target.id == "copy") {
       let text = mention.text(true);
       if (e.ctrlKey && (mention.annotation instanceof Frame)) {
@@ -110,15 +110,19 @@ class AnnotationBox extends Component {
     let annotation = mention.annotation;
 
     let h = new Array();
-    h.push(`
-      <div>
+    h.push("<div>");
+    if (!mention.document.readonly()) {
+      h.push(`
         <md-icon icon="add_circle" class="action" id="annotate"></md-icon>
         <md-icon icon="join_right" class="action" id="reconcile"></md-icon>
-        <md-icon icon="content_copy" class="action" id="copy"></md-icon>
-        <md-icon icon="edit" class="action" id="edit"></md-icon>
-        <md-icon icon="square" class="action hilite" id="highlight"></md-icon>
-      </div>
+        <md-icon icon="delete" class="action" id="unmention"></md-icon>
+      `);
+    }
+    h.push(`
+      <md-icon icon="content_copy" class="action" id="copy"></md-icon>
+      <md-icon icon="square" class="action hilite" id="highlight"></md-icon>
     `);
+    h.push("</div>");
 
     if (typeof(annotation) === 'string') {
       let url = annotation;
@@ -243,7 +247,7 @@ Component.register(AnnotationBox);
 
 export class DocumentEditor extends Component {
   onconnected() {
-    this.setAttribute("spellcheck", false);
+    this.dirty = false;
     this.attach(this.onmouse, "mouseover");
     this.attach(this.clear_popup, "mouseleave");
     this.attach(this.clear_popup, "selectstart");
@@ -251,6 +255,58 @@ export class DocumentEditor extends Component {
 
     // Prevent other clipboard handlers in app from handling event.
     this.bind(null, "paste", e => e.stopPropagation());
+  }
+
+  onupdated() {
+    if (this.dirty) this.mark_clean();
+  }
+
+  readonly() {
+    return this.state?.readonly();
+  }
+
+  content() {
+    return this.find(".content");
+  }
+
+  onrendered() {
+    // Monitor changes to document content DOM.
+    let observer = new MutationObserver((mutations) => this.mark_dirty());
+    observer.observe(this.content(), {
+      subtree: true,
+      characterData: true,
+      childList: true,
+    });
+  }
+
+  mark_dirty() {
+    if (!this.dirty) {
+      this.dirty = true;
+      this.dispatch("dirty", true, true);
+    }
+  }
+
+  mark_clean() {
+    if (this.dirty) {
+      this.dirty = false;
+      this.dispatch("dirty", false, true);
+    }
+  }
+
+  regenerate(dom) {
+    let lexer = new DOMLexer(this, dom);
+    this.mentions = lexer.mentions;
+    this.text = lexer.text;
+  }
+
+  save() {
+    if (this.dirty) {
+      let doc = this.state;
+      doc.regenerate(this.content());
+      doc.save();
+      this.update(doc);
+      this.mark_clean();
+    }
   }
 
   async onmouse(e) {
@@ -351,13 +407,20 @@ export class DocumentEditor extends Component {
 
   visible() { return this.state && this.state.source; }
 
-  editmode(enable) {
-    this.setAttribute("contenteditable", enable);
-    this.editing = enable;
+  remove_mention(mention) {
+    // Remove mention.
+    let elem = this.querySelector(`mention[index="${mention.index}"]`);
+    let text = document.createTextNode(elem.innerText);
+    elem.replaceWith(text);
+    let range = document.createRange();
+    range.selectNode(text);
+    let selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
   }
 
   execute(cmd) {
-    if (!this.editing) return;
+    if (this.readonly()) return;
     console.log("execute", cmd);
     if (cmd == "bold") {
       // Bold text.
@@ -445,7 +508,9 @@ export class DocumentEditor extends Component {
   }
 
   async refocus(scope) {
-    if (this.editing) {
+    if (this.readonly()) {
+      return await scope();
+    } else {
       // Save and restore scroll position and selection in edit mode.
       let s = window.getSelection();
       let scroll = this.scrollTop;
@@ -456,8 +521,15 @@ export class DocumentEditor extends Component {
       s.removeAllRanges();
       s.addRange(position);
       return ret;
+    }
+  }
+
+  update_mention_status(mention, unknown) {
+    let elem = this.querySelector(`mention[index="${mention.index}"]`);
+    if (unknown) {
+      elem?.classList.add("unknown");
     } else {
-      return await scope();
+      elem?.classList.remove("unknown");
     }
   }
 
@@ -465,10 +537,16 @@ export class DocumentEditor extends Component {
     // Generate document as HTML.
     let doc = this.state;
     if (!doc) return;
-    let html = doc.tohtml();
 
-    // Output ghost paragraph for line height measurement.
-    html += '<p class="hidden"><span class="linemeasure">"M</span></p>';
+    let content = doc.tohtml();
+    let editable = !this.readonly();
+
+    return `
+      <div class="content" spellcheck="false"
+           contenteditable="${editable}">${content}</div>
+      <p><span class="linemeasure">"M</span></p>
+      <div class="footer"></div>
+    `;
 
     return html;
   }
@@ -480,6 +558,9 @@ export class DocumentEditor extends Component {
         line-height: 1.5;
         padding: 4px 8px;
         position: relative;
+        outline: none;
+      }
+      $ .content {
         outline: none;
       }
       $ .linemeasure {
@@ -520,6 +601,9 @@ export class DocumentEditor extends Component {
         background-color: #ecf0f1;
         padding: 6px;
         margin: 0px 24px;
+      }
+      $ .footer {
+        height: 50px;
       }
     `;
   }

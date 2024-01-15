@@ -552,7 +552,7 @@ class DocumentItem extends Component {
   async onclick(e) {
     let sidebar = this.match("#editor").sidebar;
     let doc = new Document(store, this.state.source, this.state.context);
-    sidebar.update(doc);
+    sidebar.goto(doc);
   }
 
   render() {
@@ -852,7 +852,8 @@ class ItemPanel extends Component {
     // Split item into properties, media, xrefs, and subtopics.
     let item = this.state;
     if (!item) return;
-    let top = this.parentNode && this.parentNode.closest("item-panel") == null;
+    let top = this.parentNode?.closest("item-panel") == null;
+    let readonly = this.closest("topic-card")?.readonly;
     let id = null;
     let names = new Array();
     let description = null;
@@ -883,7 +884,8 @@ class ItemPanel extends Component {
       } else if (name === n_description) {
         description = value;
       } else if (name === n_lex) {
-        docs.push({source: value, context: {topic: item, index: docs.length}});
+        let context = {topic: item, index: docs.length, readonly};
+        docs.push({source: value, context});
       } else if (name === n_internal) {
         // Skip internals.
       } else if ((name instanceof Frame) && name.get(n_target) == n_xref_type) {

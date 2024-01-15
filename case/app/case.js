@@ -170,6 +170,7 @@ class CaseEditor extends MdApp {
 
   onbeforeunload(e) {
     // Notify about unsaved changes.
+    this.sidebar.commit();
     if (this.dirty) {
       e.preventDefault();
       e.returnValue = "";
@@ -370,6 +371,7 @@ class CaseEditor extends MdApp {
 
   async onsave(e) {
     if (this.readonly) return;
+    this.sidebar.commit();
     if (this.dirty) {
       // Update modification time.
       let ts = new Date().toJSON();

@@ -49,17 +49,21 @@ class DOMLexer {
         let annotation = this.document.mentions[mid]?.annotation;
         this.traverse_children(node);
         let end = this.text.length;
-
         let index = this.mentions.length;
         let mention = new Mention(this.document, index, begin, end, annotation);
         this.mentions.push(mention);
       } else if (tagname == "span") {
         this.traverse_children(node);
-      } else if (node.className != "hidden") {
+      } else if (tagname == "p") {
+        if (this.text.slice(-1) != "\n") this.text += "\n";
+        this.text += `<${tagname}>`;
+        this.traverse_children(node);
+        this.text = this.text.trimEnd();
+        this.text += `</${tagname}>`;
+      } else {
         this.text += `<${tagname}>`;
         this.traverse_children(node);
         this.text += `</${tagname}>`;
-        if (tagname == "p") this.text += "\n";
       }
     }
   }
@@ -224,6 +228,10 @@ export class Document {
     this.text = text;
   }
 
+  readonly() {
+    return this.context?.readonly;
+  }
+
   add_mention(begin, end, annotation) {
     let index = this.mentions.length;
     let mention = new Mention(this, index, begin, end, annotation);
@@ -264,6 +272,21 @@ export class Document {
     }
   }
 
+  annotated_mentions() {
+    let annotated = new Array();
+    for (let m of this.mentions) {
+      let a = m.annotation;
+      if (!a || !(a instanceof Frame)) continue;
+      if (a.isanonymous()) {
+        let redirect = a.get(this.store.is);
+        if (redirect && !redirect.isanonymous()) annotated.push(m);
+      } else {
+        annotated.push(m);
+      }
+    }
+    return annotated;
+  }
+
   search(query, partial) {
     let it = function* (mentions, query, partial) {
       for (let m of mentions) {
@@ -280,8 +303,17 @@ export class Document {
 
   regenerate(dom) {
     let lexer = new DOMLexer(this, dom);
-    console.log(lexer.text);
-    console.log(lexer.mentions);
+    this.mentions = lexer.mentions;
+    this.text = lexer.text;
+  }
+
+  save() {
+    let lex = this.tolex();
+    if (this.source instanceof Frame) {
+      this.source.set(this.store.is, lex);
+    } else {
+      this.source = lex;
+    }
   }
 
   tohtml() {
