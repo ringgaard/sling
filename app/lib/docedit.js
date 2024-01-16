@@ -47,11 +47,6 @@ function isredirect(frame) {
   return frame.length == 1 && frame.name(0) == n_is;
 }
 
-function selecting() {
-  var selection = window.getSelection();
-  return selection && selection.type === 'Range';
-}
-
 function selected_mention() {
   let s = window.getSelection();
   if (!s || s.isCollapsed) return;
@@ -252,6 +247,7 @@ export class DocumentEditor extends Component {
     this.attach(this.clear_popup, "mouseleave");
     this.attach(this.clear_popup, "selectstart");
     this.attach(this.onclick, "click");
+    this.attach(this.onkeydown, "keydown");
 
     // Prevent other clipboard handlers in app from handling event.
     this.bind(null, "paste", e => e.stopPropagation());
@@ -310,12 +306,12 @@ export class DocumentEditor extends Component {
   }
 
   async onmouse(e) {
-    // Ignore if selecting text or ctrl or shift is down.
-    if (selecting()) {
+    // Ignore if ctrl, shift, or mouse button is pressed.
+    if (e.ctrlKey || e.shiftKey) return;
+    if (e.buttons) {
       this.clear_popup();
       return;
     }
-    if (e.ctrlKey || e.shiftKey) return;
 
     // Find first enclosing span.
     let span = e.target;
@@ -375,12 +371,19 @@ export class DocumentEditor extends Component {
     this.popup.style.left = `${left}px`;
   }
 
-  onclick(e) {
-    if (selecting()) {
-      this.clear_popup();
-      return;
+  onkeydown(e) {
+    if (!this.readonly()) {
+      if (e.code === "Enter") {
+        //e.preventDefault();
+        //e.stopPropagation();
+        //document.execCommand("insertParagraph");
+        //document.execCommand("insertHTML", false, "<p></p>");
+        console.log("enter", this.content().innerHTML);
+      }
     }
+  }
 
+  onclick(e) {
     let target = e.target;
     let mid = target.getAttribute("index");
     if (!mid) return;
@@ -461,7 +464,6 @@ export class DocumentEditor extends Component {
     } else if (cmd == "title") {
       // Headline.
       let text = window.getSelection().toString();
-      console.log("selection", text);
       document.execCommand("delete");
       document.execCommand('insertHTML', false, `<h2>${text}</h2>`);
     } else if (cmd == "mention") {
@@ -544,7 +546,7 @@ export class DocumentEditor extends Component {
     return `
       <div class="content" spellcheck="false"
            contenteditable="${editable}">${content}</div>
-      <p><span class="linemeasure">"M</span></p>
+      <p><span class="linemeasure">M</span></p>
       <div class="footer"></div>
     `;
 
@@ -562,6 +564,10 @@ export class DocumentEditor extends Component {
       }
       $ .content {
         outline: none;
+      }
+      $ .content:empty::before {
+        content: "(empty)";
+        color: #aaaaaa;
       }
       $ .linemeasure {
         visibility: hidden;

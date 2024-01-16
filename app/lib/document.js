@@ -60,6 +60,10 @@ class DOMLexer {
         this.traverse_children(node);
         this.text = this.text.trimEnd();
         this.text += `</${tagname}>`;
+      } else if (tagname == "div") {
+        this.text += "<p>";
+        this.traverse_children(node);
+        this.text += "</p>\n";
       } else {
         this.text += `<${tagname}>`;
         this.traverse_children(node);

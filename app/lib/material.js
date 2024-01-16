@@ -444,20 +444,35 @@ Component.register(MdDialogBottom);
 
 export class StdDialog extends MdDialog {
   onconnected() {
+    super.onconnected();
+    let s = this.state;
+    if (!s) return;
     this.action = {};
-    if (this.state && this.state.buttons) {
+    if (s.buttons) {
       for (let button of Object.keys(this.state.buttons)) {
         let id = button.replace(/ /g, "-").toLowerCase();
         this.action[id] = this.state.buttons[button];
         this.bind("#" + id, "click", e => this.onclick(e));
       }
     }
+    if (s.value || s.label) {
+      let input = this.find("#input");
+      input.update(s.value);
+    }
   }
 
   onclick(e) {
     if (e.target.id != "cancel" && e.target.id != "submit") {
-      this.close(this.action[e.target.id]);
+      let value = this.action[e.target.id];
+      if (value && (this.state.value || this.state.label)) {
+        value = this.find("#input").value;
+      }
+      this.close(value);
     }
+  }
+
+  submit() {
+    this.close(this.find("#input").value);
   }
 
   render() {
@@ -476,6 +491,17 @@ export class StdDialog extends MdDialog {
       h.push("<div>");
       h.push(Component.escape(s.message).replace(/\n/g, "<br>"));
       h.push("</div>");
+    }
+    if (s.value || s.label) {
+      h.push(`
+        <div>
+          <md-text-field
+            id="input"
+            label="${Component.escape(s.label)}"
+            value="${Component.escape(s.value)}">
+          </md-text-field>
+        </div>
+      `);
     }
     if (s.buttons) {
       h.push("<md-dialog-bottom center>");
@@ -519,6 +545,12 @@ export class StdDialog extends MdDialog {
     return StdDialog.choose(title, message, buttons);
   }
 
+  static prompt(title, label, value, ok = "OK", cancel = "Cancel") {
+    let buttons = {[cancel]: false, [ok]: true};
+    let dialog = new StdDialog({title, buttons, label, value});
+    return dialog.show();
+  }
+
   static stylesheet() {
     return `
       $ {
@@ -526,8 +558,11 @@ export class StdDialog extends MdDialog {
         min-width: 200px;
       }
       $ md-icon {
-         font-size: 48px;
-         margin-right: 8px;
+        font-size: 48px;
+        margin-right: 8px;
+      }
+      $ md-text-field {
+        width: 400px;
       }
     `;
   }

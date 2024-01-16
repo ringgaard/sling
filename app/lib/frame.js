@@ -128,7 +128,7 @@ export class Store {
       if (obj instanceof Frame) {
         if (!obj.isanonymous()) return obj;
         let qua = obj.get(this.is);
-        if (!qua) return obj;
+        if (qua === undefined) return obj;
         obj = qua;
       } else {
         return obj;

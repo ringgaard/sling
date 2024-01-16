@@ -74,7 +74,7 @@ class SideBar extends Component {
   commit() {
     if (this.dirty()) {
       this.editor.save();
-      this.mark_dirty();
+      this.mark_dirty(this.state?.context?.topic);
     }
   }
 
@@ -98,6 +98,8 @@ class SideBar extends Component {
       this.onnext();
     } else if (command == "prev") {
       this.onprev();
+    } else if (command == "rename") {
+      this.onrename();
     } else if (command == "delete") {
       this.ondelete();
     } else if (command == "bookmark") {
@@ -172,6 +174,21 @@ class SideBar extends Component {
       let source = this.state.source;
       let context = this.state.context;
       this.editor.update(new Document(store, source, context));
+    }
+  }
+
+  async onrename() {
+    let context = this.state.context;
+    let topic = context.topic;
+    let source = this.state.source;
+    if (source instanceof Frame) {
+      let title = source.get(n_name);
+      title = await StdDialog.prompt("Rename document", "Document name", title);
+      if (title) {
+        source.set(n_name, title);
+        this.mark_dirty(topic);
+        this.update_title();
+      }
     }
   }
 
@@ -415,6 +432,7 @@ class SideBar extends Component {
 
     let editbox = this.find("#editbox");
     editbox.style.display = this.editor.readonly() ? "none" : "flex";
+    this.editor.focus();
   }
 
   update_title() {
@@ -472,6 +490,7 @@ class SideBar extends Component {
             <md-text id="docname"></md-text>
           </div>
           <md-menu id="menu">
+            <md-menu-item id="rename">Rename</md-menu-item>
             <md-menu-item id="delete">Delete</md-menu-item>
             <md-menu-item id="next">Next</md-menu-item>
             <md-menu-item id="prev">Previous</md-menu-item>

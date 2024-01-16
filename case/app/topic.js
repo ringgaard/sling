@@ -380,6 +380,7 @@ class TopicToolbox extends MdToolbox {
             tooltip-align="right">
           </md-icon-button>
           <md-menu id="topic-menu">
+            <md-menu-item id="newdoc">Add document</md-menu-item>
             <md-menu-item id="extract">Extract text</md-menu-item>
             <md-menu-item id="mentions">Find mentions</md-menu-item>
           </md-menu>
@@ -426,7 +427,9 @@ class TopicCard extends Component {
 
     this.bind("#topic-actions", "select", e => {
       let action = e.detail.id;
-      if (action == "extract") {
+      if (action == "newdoc") {
+        this.onnewdoc(e);
+      } else if (action == "extract") {
         this.onextract(e);
       } else if (action == "mentions") {
         this.onmentions(e);
@@ -920,6 +923,19 @@ class TopicCard extends Component {
     let url = new URL(window.location);
     url.hash = `t=${id}`;
     navigator.clipboard.writeText(url.toString());
+  }
+
+  async onnewdoc(e) {
+    let title = await StdDialog.prompt("Add document", "Document name", "");
+    if (title) {
+      let topic = this.state;
+      let lex = store.frame()
+      lex.add(n_name, title);
+      lex.add(n_is, "<p><br/></p>");
+      topic.add(n_lex, lex);
+      this.mark_dirty();
+      this.refresh();
+    }
   }
 
   async onextract(e) {
