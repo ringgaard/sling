@@ -103,6 +103,11 @@ export class Mention {
     return topic;
   }
 
+  // Check if mention is empty.
+  empty() {
+    return this.begin == this.end;
+  }
+
   // Return set of mentions depending on this mention.
   dependants() {
     let deps = new Array();
@@ -339,18 +344,6 @@ export class Document {
     let match = this.context && this.context.match;
     let altmatch = match && match.get(this.store.is);
     for (let pos = 0; pos < text.length; ++pos) {
-      // Output span ends.
-      while (ei < n && ends[ei].end < pos) ei++;
-      while (ei < n && ends[ei].end == pos) {
-        if (from < pos) {
-          h.push(text.slice(from, pos));
-          from = pos;
-        }
-        level--;
-        h.push("</mention>");
-        ei++;
-      }
-
       // Output span starts.
       while (si < n && starts[si].begin < pos) si++;
       while (si < n && starts[si].begin == pos) {
@@ -371,6 +364,18 @@ export class Document {
         }
         h.push(`<mention class="${cls}" index=${mention.index}>`);
         si++;
+      }
+
+      // Output span ends.
+      while (ei < n && ends[ei].end < pos) ei++;
+      while (ei < n && ends[ei].end == pos) {
+        if (from < pos) {
+          h.push(text.slice(from, pos));
+          from = pos;
+        }
+        level--;
+        h.push("</mention>");
+        ei++;
       }
     }
     h.push(text.slice(from));
@@ -411,18 +416,6 @@ export class Document {
     }
 
     for (let pos = 0; pos < text.length; ++pos) {
-      // Output mention ends.
-      while (ei < n && ends[ei].end < pos) ei++;
-      while (ei < n && ends[ei].end == pos) {
-        if (from < pos) {
-          h.push(text.slice(from, pos));
-          from = pos;
-        }
-        output_annotation(ends[ei]);
-        h.push("]");
-        ei++;
-      }
-
       // Output mention starts.
       while (si < n && starts[si].begin < pos) si++;
       while (si < n && starts[si].begin == pos) {
@@ -430,14 +423,32 @@ export class Document {
           h.push(text.slice(from, pos));
           from = pos;
         }
-        h.push("[");
+        if (!starts[si].empty()) {
+          h.push("[");
+        }
         si++;
+      }
+
+      // Output mention ends.
+      while (ei < n && ends[ei].end < pos) ei++;
+      while (ei < n && ends[ei].end == pos) {
+        if (from < pos) {
+          h.push(text.slice(from, pos));
+          from = pos;
+        }
+        if (!ends[ei].empty()) {
+          output_annotation(ends[ei]);
+          h.push("]");
+        }
+        ei++;
       }
     }
     h.push(text.slice(from));
     while (ei < n) {
-      output_annotation(ends[ei]);
-      h.push("]");
+      if (!ends[ei].empty()) {
+        output_annotation(ends[ei]);
+        h.push("]");
+      }
       ei++;
     }
 

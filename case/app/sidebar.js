@@ -123,9 +123,11 @@ class SideBar extends Component {
           e.stopPropagation();
           this.editor.execute("clear");
         } else if (e.code === "KeyS") {
-          e.preventDefault();
-          e.stopPropagation();
-          this.onsave();
+          if (this.dirty()) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.onsave();
+          }
         }
       } else if (e.code === "Escape") {
         e.preventDefault();

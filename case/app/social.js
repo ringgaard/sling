@@ -311,6 +311,10 @@ let xrefs = [
     property: frame("P7300"),
   },
   {
+    pattern: /^https?:\/\/mubi\.com\/en\/cast\/(.+)/,
+    property: frame("P7300"),
+  },
+  {
     pattern: /^https?:\/\/(?:www\.)?findagrave\.com\/memorial\/(\d+)/,
     property: frame("P535"),
   },

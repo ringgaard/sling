@@ -453,12 +453,20 @@ export class DocumentEditor extends Component {
         selection.addRange(range);
       } else {
         // Clear formatting.
+        //document.execCommand("removeFormat");
         let selection = window.getSelection();
         if (selection && !selection.isCollapsed) {
+          // Replace selection with plain text.
           let text = selection.toString();
           let range = selection.getRangeAt(0);
           range.deleteContents();
           range.insertNode(document.createTextNode(text));
+
+          // Remove empty mentions.
+          let container = range.commonAncestorContainer;
+          for (let elem of container.querySelectorAll("mention")) {
+            if (elem.innerText == "") elem.remove();
+          }
         }
       }
     } else if (cmd == "title") {
