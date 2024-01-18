@@ -63,6 +63,7 @@ export class PhotoGallery extends MdModal {
     super();
     this.first = true;
     this.edited = false;
+    this.zoom = 1;
   }
 
   onconnected() {
@@ -71,6 +72,8 @@ export class PhotoGallery extends MdModal {
     this.attach(this.onopennew, "click", "#open");
     this.attach(this.onfullsize, "click", "#fullsize");
     this.attach(this.onfullscreen, "click", "#fullscreen");
+    this.attach(this.onzoomin, "click", "#zoomin");
+    this.attach(this.onzoomout, "click", "#zoomout");
     this.attach(this.oncopyurl, "click", "#copyurl");
     this.attach(this.close, "click", "#close");
     this.attach(this.onsource, "click", ".domain");
@@ -85,7 +88,8 @@ export class PhotoGallery extends MdModal {
         url: image.url,
         caption: image.text,
         nsfw: image.nsfw,
-        image: null
+        image: null,
+        selected: false,
       });
     }
 
@@ -110,6 +114,10 @@ export class PhotoGallery extends MdModal {
       this.onfullscreen(e);
     } else if (e.keyCode == 90) {
       this.onfullsize(e);
+    } else if (e.keyCode == 83) {
+      this.onselect(e);
+    } else if (e.keyCode == 71) {
+      this.ongallery(e);
     }
   }
 
@@ -186,10 +194,45 @@ export class PhotoGallery extends MdModal {
     photo.classList.toggle("full");
   }
 
+  onzoomin(e) {
+    e.stopPropagation();
+    this.zoom += 0.25;
+    this.display(this.current);
+  }
+
+  onzoomout(e) {
+    e.stopPropagation();
+    this.zoom -= 0.25;
+    this.display(this.current);
+  }
+
   oncopyurl(e) {
     e.stopPropagation();
     let photo = this.photos[this.current];
     navigator.clipboard.writeText(photo.url);
+  }
+
+  onselect(e) {
+    let photo = this.photos[this.current];
+    if (photo.selected) {
+      this.find("#flag").classList.add("unmarked");
+      photo.selected = false;
+    } else {
+      this.find("#flag").classList.remove("unmarked");
+      photo.selected = true;
+    }
+  }
+
+  ongallery(e) {
+    let selected = new Array();
+    for (let photo of this.photos) {
+      if (photo.selected) {
+        selected.push(photo.nsfw ? "!" + photo.url : photo.url);
+      }
+    }
+    if (selected.length > 0) {
+      navigator.clipboard.writeText("gallery:" + selected.join(" "));
+    }
   }
 
   onclose(e) {
@@ -233,6 +276,13 @@ export class PhotoGallery extends MdModal {
     let counter = `${this.current + 1} / ${this.photos.length}`;
     this.find(".counter").update(counter);
 
+    if (this.zoom == 1) {
+      photo.image.style = "";
+    } else {
+      photo.image.style.transform = `scale(${this.zoom})`;
+      photo.image.style.transformOrigin = "0 0";
+    }
+
     let url = new URL(photo.url);
     let domain = url.hostname;
     if (domain.startsWith("www.")) domain = domain.slice(4);
@@ -263,7 +313,13 @@ export class PhotoGallery extends MdModal {
     if (photo.width && photo.height) {
       let w = photo.width;
       let h = photo.height;
-      this.find(".size").update(w && h ? `${w} x ${h}`: null);
+      let zoom = this.zoom == 1 ? "" : ` (${Math.round(this.zoom * 100)}%)`;
+      this.find(".size").update(w && h ? `${w} x ${h}` + zoom : null);
+    }
+    if (photo.selected) {
+      this.find("#flag").classList.remove("unmarked");
+    } else {
+      this.find("#flag").classList.add("unmarked");
     }
   }
 
@@ -303,6 +359,10 @@ export class PhotoGallery extends MdModal {
       </div>
       <md-text class="size"></md-text>
       <div class="toolbox">
+        <md-icon-button id="zoomout" icon="zoom_out">
+        </md-icon-button>
+        <md-icon-button id="zoomin" icon="zoom_in">
+        </md-icon-button>
         <md-icon-button id="open" icon="open_in_new">
         </md-icon-button>
         <md-icon-button id="fullsize" icon="fit_screen">
@@ -318,6 +378,7 @@ export class PhotoGallery extends MdModal {
         <md-text class="domain"></md-text>
         <photo-copyright class="copyright"></photo-copyright>
         <md-text class="nsfw"></md-text>
+        <md-icon id="flag" icon="flag"></md-icon>
       </div>
       <md-text class="counter"></md-text>
       <a class="prev">&#10094;</a>
@@ -437,6 +498,10 @@ export class PhotoGallery extends MdModal {
         padding: 2px 4px;
         margin: 2px;
         color: #d10023;
+      }
+
+      $ .unmarked {
+        visibility: hidden;
       }
 
       $ .size {
