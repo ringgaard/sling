@@ -192,17 +192,20 @@ export class PhotoGallery extends MdModal {
     e.stopPropagation();
     let photo = this.find(".photo");
     photo.classList.toggle("full");
+    this.display(this.current);
   }
 
   onzoomin(e) {
     e.stopPropagation();
+    this.find(".photo").classList.add("full");
     this.zoom += 0.25;
     this.display(this.current);
   }
 
   onzoomout(e) {
     e.stopPropagation();
-    this.zoom -= 0.25;
+    this.find(".photo").classList.add("full");
+    if (this.zoom >= 0.5) this.zoom -= 0.25;
     this.display(this.current);
   }
 
@@ -228,6 +231,7 @@ export class PhotoGallery extends MdModal {
     for (let photo of this.photos) {
       if (photo.selected) {
         selected.push(photo.nsfw ? "!" + photo.url : photo.url);
+        photo.selected = false;
       }
     }
     if (selected.length > 0) {
@@ -276,11 +280,12 @@ export class PhotoGallery extends MdModal {
     let counter = `${this.current + 1} / ${this.photos.length}`;
     this.find(".counter").update(counter);
 
-    if (this.zoom == 1) {
-      photo.image.style = "";
-    } else {
+    let fullsize = this.find(".photo").classList.contains("full");
+    if (fullsize) {
       photo.image.style.transform = `scale(${this.zoom})`;
       photo.image.style.transformOrigin = "0 0";
+    } else {
+      photo.image.style = "";
     }
 
     let url = new URL(photo.url);
@@ -313,7 +318,7 @@ export class PhotoGallery extends MdModal {
     if (photo.width && photo.height) {
       let w = photo.width;
       let h = photo.height;
-      let zoom = this.zoom == 1 ? "" : ` (${Math.round(this.zoom * 100)}%)`;
+      let zoom = fullsize ? ` (${Math.round(this.zoom * 100)}%)` : "";
       this.find(".size").update(w && h ? `${w} x ${h}` + zoom : null);
     }
     if (photo.selected) {
