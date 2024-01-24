@@ -472,7 +472,12 @@ export class StdDialog extends MdDialog {
   }
 
   submit() {
-    this.close(this.find("#input").value);
+    let s = this.state;
+    if (s.value || s.label) {
+      this.close(this.find("#input").value);
+    } else {
+      this.close(true);
+    }
   }
 
   render() {

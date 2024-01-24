@@ -248,6 +248,7 @@ export class DocumentEditor extends Component {
     this.attach(this.clear_popup, "selectstart");
     this.attach(this.onclick, "click");
     this.attach(this.onkeydown, "keydown");
+    this.attach(this.onfind, "find");
 
     // Prevent other clipboard handlers in app from handling event.
     this.bind(null, "paste", e => e.stopPropagation());
@@ -265,7 +266,19 @@ export class DocumentEditor extends Component {
     return this.find(".content");
   }
 
+  docbox() {
+    return this.find(".docbox");
+  }
+
   onrendered() {
+    // Edit bar commands.
+    if (!this.readonly()) {
+      this.bind("#editbar", "click", e => {
+        let cmd = e.target.parentElement.parentElement.id;
+        this.execute(cmd);
+      });
+    }
+
     // Monitor changes to document content DOM.
     let observer = new MutationObserver((mutations) => this.mark_dirty());
     observer.observe(this.content(), {
@@ -289,19 +302,14 @@ export class DocumentEditor extends Component {
     }
   }
 
-  regenerate(dom) {
-    let lexer = new DOMLexer(this, dom);
-    this.mentions = lexer.mentions;
-    this.text = lexer.text;
-  }
-
   save() {
     if (this.dirty) {
       let doc = this.state;
       doc.regenerate(this.content());
       doc.save();
-      this.update(doc);
+      this.refocus(() => this.update(doc));
       this.mark_clean();
+      this.dispatch("saved", this, true);
     }
   }
 
@@ -346,7 +354,7 @@ export class DocumentEditor extends Component {
     // Open new annotation box popup.
     this.clear_popup();
     this.popup = new AnnotationBox(mention);
-    this.append(this.popup);
+    this.docbox().append(this.popup);
 
     // Get paragraph line height.
     if (!this.lineheight) {
@@ -373,13 +381,45 @@ export class DocumentEditor extends Component {
 
   onkeydown(e) {
     if (!this.readonly()) {
-      if (e.code === "Enter") {
-        //e.preventDefault();
-        //e.stopPropagation();
-        //document.execCommand("insertParagraph");
-        //document.execCommand("insertHTML", false, "<p></p>");
-        console.log("enter", this.content().innerHTML);
+      if ((e.ctrlKey || e.metaKey) && e.code === "KeyM") {
+        this.execute("mention");
+      } else if ((e.ctrlKey || e.metaKey) && e.code === "KeyD") {
+        e.preventDefault();
+        e.stopPropagation();
+        this.execute("clear");
+      } else if ((e.ctrlKey || e.metaKey) && e.code === "KeyS") {
+        e.preventDefault();
+        e.stopPropagation();
+        this.execute("save");
+      } else if (e.code === "Escape") {
+        e.preventDefault();
+        this.execute("revert");
+      } else if ((e.ctrlKey || e.metaKey) && e.code === "KeyF") {
+        e.preventDefault();
+        let findbox = this.find("md-find-box");
+        let selection = window.getSelection();
+        if (!selection.isCollapsed) {
+          this.lastsearch = selection.toString();
+        } else if (!this.lastsearch) {
+          this.lastsearch = "";
+        }
+        console.log("find", this.lastsearch);
+        findbox.update(this.lastsearch);
+      } else if ((e.ctrlKey || e.metaKey) && e.code === "KeyG") {
+        e.preventDefault();
+        console.log("find again");
       }
+    }
+  }
+
+  onfind(e) {
+    if (e.detail) {
+      let text = e.detail.text;
+      let backwards = e.detail.backwards;
+      console.log("search", text, backwards);
+      this.lastsearch = text;
+    } else {
+      this.content().focus();
     }
   }
 
@@ -424,7 +464,6 @@ export class DocumentEditor extends Component {
 
   execute(cmd) {
     if (this.readonly()) return;
-    console.log("execute", cmd);
     if (cmd == "bold") {
       // Bold text.
       document.execCommand("bold");
@@ -503,6 +542,10 @@ export class DocumentEditor extends Component {
         elem.classList.add("l" + level);
         elem.classList.add("unknown");
       }
+    } else if (cmd == "save") {
+      this.save();
+    } else if (cmd == "revert") {
+      this.dispatch("revert", this, true);
     }
   }
 
@@ -523,11 +566,11 @@ export class DocumentEditor extends Component {
     } else {
       // Save and restore scroll position and selection in edit mode.
       let s = window.getSelection();
-      let scroll = this.scrollTop;
+      let scroll = this.docbox().scrollTop;
       let position = s.getRangeAt(0);
       let ret = await scope();
-      this.scrollTop = scroll;
-      this.focus();
+      this.docbox().scrollTop = scroll;
+      this.docbox().focus();
       s.removeAllRanges();
       s.addRange(position);
       return ret;
@@ -550,15 +593,40 @@ export class DocumentEditor extends Component {
 
     let content = doc.tohtml();
     let editable = !this.readonly();
+    let h = new Array();
+    h.push(`
+      <div class="docbox">
+        <div class="content" spellcheck="false"
+             contenteditable="${editable}">${content}</div>
+        <p><span class="linemeasure">M</span></p>
+        <div class="footer"></div>
+      </div>
+      <md-find-box></md-find-box>
+    `);
 
-    return `
-      <div class="content" spellcheck="false"
-           contenteditable="${editable}">${content}</div>
-      <p><span class="linemeasure">M</span></p>
-      <div class="footer"></div>
-    `;
+    if (editable) {
+      h.push(`
+        <div id="editbox">
+          <div id="editbar">
+            <md-icon-button id="mention" icon="data_array"></md-icon-button>
+            <md-icon-button id="clear" icon="format_clear"></md-icon-button>
+            <md-icon-button id="bold" icon="format_bold"></md-icon-button>
+            <md-icon-button id="italic" icon="format_italic"></md-icon-button>
+            <md-icon-button id="list" icon="format_list_bulleted">
+            </md-icon-button>
+            <md-icon-button id="indent" icon="format_indent_increase">
+            </md-icon-button>
+            <md-icon-button id="outdent" icon="format_indent_decrease">
+            </md-icon-button>
+            <md-icon-button id="title" icon="title"></md-icon-button>
+            <md-icon-button id="save" icon="save_alt"></md-icon-button>
+            <md-icon-button id="revert" icon="cancel"></md-icon-button>
+          </div>
+        </div>
+      `);
+    }
 
-    return html;
+    return h.join("");
   }
 
   static stylesheet() {
@@ -568,7 +636,12 @@ export class DocumentEditor extends Component {
         line-height: 1.5;
         padding: 4px 8px;
         position: relative;
-        outline: none;
+      }
+      $ .docbox {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
       }
       $ .content {
         outline: none;
@@ -618,6 +691,33 @@ export class DocumentEditor extends Component {
       }
       $ .footer {
         height: 50px;
+      }
+      $ md-find-box {
+        position: absolute;
+        top: 0;
+        right: 0;
+        background: white;
+        font-family: Roboto,Helvetica,sans-serif;
+      }
+      $ #editbox {
+        display: flex;
+        position: absolute;
+        bottom: 48px;
+        left: 0;
+        right: 0;
+        justify-content: center;
+      }
+      $ #editbar {
+        display: flex;
+        color: white;
+        background: #808080;
+        padding: 4px 12px 4px 12px;
+        margin: 12px;
+        border-radius: 12px;
+      }
+      $ #editbar md-icon-button button {
+        height: 32px;
+        width: 32px;
       }
     `;
   }

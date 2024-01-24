@@ -39,6 +39,8 @@ class SideBar extends Component {
     this.attach(this.onhighlight, "highlight");
     this.attach(this.onreconcile, "reconcile");
     this.attach(this.ondirty, "dirty");
+    this.attach(this.onsaved, "saved");
+    this.attach(this.onrevert, "revert");
   }
 
   onconnected() {
@@ -47,23 +49,9 @@ class SideBar extends Component {
 
   onrendered() {
     if (!this.state) return;
-
+    this.editor = this.find("document-editor");
     this.attach(this.onmenu, "select", "md-menu");
     this.attach(this.onnavigate, "click", "#titlebox");
-
-    this.editor = this.find("document-editor");
-    this.attach(this.onkeydown, "keydown", "document-editor");
-
-    this.bind("#editbar", "click", e => {
-      let cmd = e.target.parentElement.parentElement.id;
-      if (cmd == "save") {
-        this.commit();
-      } else if (cmd == "discard") {
-        this.onrevert();
-      } else {
-        this.editor.execute(cmd);
-      }
-    });
     this.update_title();
   }
 
@@ -71,17 +59,14 @@ class SideBar extends Component {
     return this.editor?.dirty;
   }
 
-  commit() {
-    if (this.dirty()) {
-      this.editor.save();
-      this.mark_dirty(this.state?.context?.topic);
-    }
-  }
-
   mark_dirty(topic) {
     this.cased.mark_dirty();
     this.cased.topic_updated(topic);
     this.cased.update_topic(topic);
+  }
+
+  onsaved() {
+    this.mark_dirty(this.state?.context?.topic);
   }
 
   ondirty(e) {
@@ -110,29 +95,6 @@ class SideBar extends Component {
       this.onanalyze();
     } else if (command == "phrasematch") {
       this.onphrasematch();
-    }
-  }
-
-  onkeydown(e) {
-    if (!this.editor.readonly()) {
-      if (e.ctrlKey || e.metaKey) {
-        if (e.code === "KeyM") {
-          this.editor.execute("mention");
-        } else if (e.code === "KeyD") {
-          e.preventDefault();
-          e.stopPropagation();
-          this.editor.execute("clear");
-        } else if (e.code === "KeyS") {
-          if (this.dirty()) {
-            e.preventDefault();
-            e.stopPropagation();
-            this.onsave();
-          }
-        }
-      } else if (e.code === "Escape") {
-        e.preventDefault();
-        this.onrevert();
-      }
     }
   }
 
@@ -165,8 +127,8 @@ class SideBar extends Component {
     }
   }
 
-  onsave() {
-    this.commit();
+  commit() {
+    this.editor?.save();
   }
 
   async onrevert() {
@@ -431,9 +393,6 @@ class SideBar extends Component {
 
   onupdated() {
     this.editor.update(this.state);
-
-    let editbox = this.find("#editbox");
-    editbox.style.display = this.editor.readonly() ? "none" : "flex";
     this.editor.focus();
   }
 
@@ -449,10 +408,10 @@ class SideBar extends Component {
 
   refresh(newdoc) {
     if (!same(this.state, newdoc)) return;
-    let scroll = this.editor.scrollTop;
-    this.state = newdoc;
-    this.editor.update(newdoc);
-    this.editor.scrollTop = scroll;
+    this.editor.refocus(() => {
+      this.state = newdoc;
+      this.editor.update(newdoc);
+    });
   }
 
   async goto(doc) {
@@ -504,20 +463,6 @@ class SideBar extends Component {
           </md-menu>
         </div>
         <document-editor></document-editor>
-        <div id="editbox">
-          <div id="editbar">
-            <md-icon-button id="mention" icon="data_array"></md-icon-button>
-            <md-icon-button id="clear" icon="format_clear"></md-icon-button>
-            <md-icon-button id="bold" icon="format_bold"></md-icon-button>
-            <md-icon-button id="italic" icon="format_italic"></md-icon-button>
-            <md-icon-button id="list" icon="format_list_bulleted"></md-icon-button>
-            <md-icon-button id="indent" icon="format_indent_increase"></md-icon-button>
-            <md-icon-button id="outdent" icon="format_indent_decrease"></md-icon-button>
-            <md-icon-button id="title" icon="title"></md-icon-button>
-            <md-icon-button id="save" icon="save_alt"></md-icon-button>
-            <md-icon-button id="discard" icon="cancel"></md-icon-button>
-          </div>
-        </div>
       </div>
     `;
   }
@@ -567,31 +512,10 @@ class SideBar extends Component {
       $ document-editor {
         width: 100%;
         height: 100%;
-        overflow: auto;
         padding: 0;
       }
       $ mention.unknown {
         text-decoration: underline wavy red;
-      }
-      $ #editbox {
-        display: none;
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        justify-content: center;
-      }
-      $ #editbar {
-        display: flex;
-        color: white;
-        background: #808080;
-        padding: 4px 12px 4px 12px;
-        margin: 12px;
-        border-radius: 12px;
-      }
-      $ #editbar md-icon-button button {
-        height: 32px;
-        width: 32px;
       }
     `;
   }
