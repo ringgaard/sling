@@ -237,6 +237,7 @@ export class PhotoGallery extends MdModal {
     if (selected.length > 0) {
       navigator.clipboard.writeText("gallery:" + selected.join(" "));
     }
+    this.display(this.current);
   }
 
   onclose(e) {
