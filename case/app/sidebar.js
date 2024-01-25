@@ -55,6 +55,10 @@ class SideBar extends Component {
     this.update_title();
   }
 
+  commit() {
+    this.editor?.save();
+  }
+
   dirty() {
     return this.editor?.dirty;
   }
@@ -125,10 +129,6 @@ class SideBar extends Component {
       let newdoc = new Document(store, result, context);
       this.refresh(newdoc);
     }
-  }
-
-  commit() {
-    this.editor?.save();
   }
 
   async onrevert() {
@@ -481,8 +481,6 @@ class SideBar extends Component {
       $ #main {
         display: flex;
         flex-direction: column;
-        overflow: hidden;
-        width: 100%;
         padding-left: 10px;
       }
       $ #banner {

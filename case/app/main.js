@@ -357,14 +357,6 @@ class CaseApp extends Component {
       }
     }
   }
-
-  static stylesheet() {
-    return `
-      $ md-column-layout {
-        overflow: hidden;
-      };
-    `;
-  }
 }
 
 Component.register(CaseApp);

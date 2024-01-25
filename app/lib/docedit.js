@@ -307,7 +307,6 @@ export class DocumentEditor extends Component {
       let doc = this.state;
       doc.regenerate(this.content());
       doc.save();
-      this.refocus(() => this.update(doc));
       this.mark_clean();
       this.dispatch("saved", this, true);
     }
@@ -403,11 +402,104 @@ export class DocumentEditor extends Component {
         } else if (!this.lastsearch) {
           this.lastsearch = "";
         }
-        console.log("find", this.lastsearch);
+        this.searchpos = selection.getRangeAt(0);
         findbox.update(this.lastsearch);
       } else if ((e.ctrlKey || e.metaKey) && e.code === "KeyG") {
         e.preventDefault();
-        console.log("find again");
+        if (this.lastsearch) {
+          console.log("find again");
+          this.searchpos = window.getSelection()?.getRangeAt(0);
+          if (this.searchpos) this.find_forward(this.lastsearch);
+        }
+      }
+    }
+  }
+
+  find_forward(text) {
+    let node = this.searchpos.endContainer;
+    let ofs = this.searchpos.endOffset;
+    let root = this.content();
+    while (node) {
+      // Seach for text in text nodex.
+      if (node.nodeType == Node.TEXT_NODE) {
+        let content = node.nodeValue;
+        let hit = content.indexOf(text, ofs);
+        if (hit != -1) {
+          // Select hit.
+          let range = new Range();
+          range.setStart(node, hit);
+          range.setEnd(node, hit + text.length);
+          this.set_focus(range);
+          this.searchpos = range;
+          let rect = range.getBoundingClientRect();
+          let y = rect.top + rect.height / 2;
+
+          // Scroll hit into view.
+          let docbox = this.docbox();
+          docbox.scrollTop += y - docbox.clientHeight / 2 - docbox.clientTop;
+          return;
+        }
+        ofs = undefined;
+      }
+
+      // Traverse DOM.
+      if (node.firstChild) {
+        node = node.firstChild;
+      } else {
+        while (!node.nextSibling) {
+          node = node.parentNode;
+          if (node == root) {
+            this.set_focus(this.searchpos);
+            return;
+          }
+        }
+        node = node.nextSibling;
+      }
+    }
+  }
+
+  find_backward(text) {
+    console.log("findback", text, this.searchpos);
+    let node = this.searchpos.startContainer;
+    let ofs = this.searchpos.startOffset;
+    let root = this.content();
+    while (node) {
+      // Seach for text in text nodex.
+      //console.log("node", node);
+      if (node.nodeType == Node.TEXT_NODE) {
+        let content = node.nodeValue;
+        if (ofs) content = content.substring(0, ofs);
+        let hit = content.lastIndexOf(text);
+        if (hit != -1) {
+          // Select hit.
+          let range = new Range();
+          range.setStart(node, hit);
+          range.setEnd(node, hit + text.length);
+          this.set_focus(range);
+          this.searchpos = range;
+          let rect = range.getBoundingClientRect();
+          let y = rect.top + rect.height / 2;
+
+          // Scroll hit into view.
+          let docbox = this.docbox();
+          docbox.scrollTop += y - docbox.clientHeight / 2 - docbox.clientTop;
+          return;
+        }
+        ofs = undefined;
+      }
+
+      // Traverse DOM.
+      if (node.lastChild) {
+        node = node.lastChild;
+      } else {
+        while (!node.previousSibling) {
+          node = node.parentNode;
+          if (node == root) {
+            this.set_focus(this.searchpos);
+            return;
+          }
+        }
+        node = node.previousSibling;
       }
     }
   }
@@ -416,10 +508,14 @@ export class DocumentEditor extends Component {
     if (e.detail) {
       let text = e.detail.text;
       let backwards = e.detail.backwards;
-      console.log("search", text, backwards);
       this.lastsearch = text;
+      if (backwards) {
+        this.find_backward(text);
+      } else {
+        this.find_forward(text);
+      }
     } else {
-      this.content().focus();
+      this.set_focus(this.searchpos);
     }
   }
 
@@ -577,6 +673,14 @@ export class DocumentEditor extends Component {
     }
   }
 
+  set_focus(position) {
+    if (position) {
+      let s = window.getSelection();
+      s.removeAllRanges();
+      s.addRange(position);
+    }
+  }
+
   update_mention_status(mention, unknown) {
     let elem = this.querySelector(`mention[index="${mention.index}"]`);
     if (unknown) {
@@ -594,14 +698,14 @@ export class DocumentEditor extends Component {
     let content = doc.tohtml();
     let editable = !this.readonly();
     let h = new Array();
+    h.push("<md-find-box></md-find-box>");
+
     h.push(`
       <div class="docbox">
         <div class="content" spellcheck="false"
              contenteditable="${editable}">${content}</div>
-        <p><span class="linemeasure">M</span></p>
-        <div class="footer"></div>
+        <p class="footer"><span class="linemeasure">M</span></p>
       </div>
-      <md-find-box></md-find-box>
     `);
 
     if (editable) {
@@ -690,7 +794,7 @@ export class DocumentEditor extends Component {
         margin: 0px 24px;
       }
       $ .footer {
-        height: 50px;
+        height: 64px;
       }
       $ md-find-box {
         position: absolute;
@@ -702,17 +806,17 @@ export class DocumentEditor extends Component {
       $ #editbox {
         display: flex;
         position: absolute;
-        bottom: 48px;
+        bottom: 100px;
         left: 0;
         right: 0;
         justify-content: center;
+        padding-bottom: 16px;
       }
       $ #editbar {
         display: flex;
         color: white;
         background: #808080;
         padding: 4px 12px 4px 12px;
-        margin: 12px;
         border-radius: 12px;
       }
       $ #editbar md-icon-button button {

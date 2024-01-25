@@ -52,6 +52,7 @@ class DOMLexer {
         let index = this.mentions.length;
         let mention = new Mention(this.document, index, begin, end, annotation);
         this.mentions.push(mention);
+        node.setAttribute("index", index);
       } else if (tagname == "span") {
         this.traverse_children(node);
       } else if (tagname == "p") {

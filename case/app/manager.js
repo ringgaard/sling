@@ -167,18 +167,6 @@ class CaseManager extends material.MdApp {
     </md-column-layout>
     `;
   }
-
-  static stylesheet() {
-    return `
-      $ md-row-layout {
-        overflow: auto;
-        height: 100%;
-      }
-      $ md-drawer {
-        padding: 10px;
-      }
-    `;
-  }
 }
 
 Component.register(CaseManager);

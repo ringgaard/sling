@@ -1890,16 +1890,19 @@ class CaseEditor extends MdApp {
 
   static stylesheet() {
     return `
+      $ {
+        display: flex;
+      }
       $ md-toolbar {
-        padding-left: 2px;
+        padding: 6px 0 6px 2px;
       }
       $ #title {
         white-space: nowrap;
       }
       $ #container {
+        flex: 1;
         display: flex;
         flex-direction: row;
-        overflow: auto;
         height: 100%;
         width: 100%;
         min-width: 100%;

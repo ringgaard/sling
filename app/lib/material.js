@@ -302,7 +302,7 @@ Component.register(MdModal);
 export class MdDialog extends Component {
   onconnected() {
     // Set focus to first input.
-    let active = this.find("input,textarea");
+    let active = this.find('input,textarea,div[contenteditable="true"]');
     if (active) active.focus();
   }
 
@@ -588,11 +588,8 @@ export class MdToolbar extends Component {
         align-items: center;
         background-color: #00A0D6;
         color: rgb(255,255,255);
-        height: 56px;
-        max-height: 56px;
         font-size: 20px;
         padding: 0px 4px;
-        margin: 0;
         box-shadow: 0 1px 8px 0 rgba(0,0,0,.2),
                     0 3px 4px 0 rgba(0,0,0,.14),
                     0 3px 3px -2px rgba(0,0,0,.12);
