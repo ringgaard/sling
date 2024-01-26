@@ -698,7 +698,6 @@ export class DocumentEditor extends Component {
     let content = doc.tohtml();
     let editable = !this.readonly();
     let h = new Array();
-    h.push("<md-find-box></md-find-box>");
 
     h.push(`
       <div class="docbox">
@@ -729,6 +728,8 @@ export class DocumentEditor extends Component {
         </div>
       `);
     }
+
+    h.push("<md-find-box></md-find-box>");
 
     return h.join("");
   }
