@@ -1903,10 +1903,7 @@ class CaseEditor extends MdApp {
         flex: 1;
         display: flex;
         flex-direction: row;
-        height: 100%;
-        width: 100%;
-        min-width: 100%;
-
+        min-height: 0;
       }
       $ md-toolbar md-icon-button.tool {
         margin-left: -8px;

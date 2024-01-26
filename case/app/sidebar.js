@@ -392,8 +392,10 @@ class SideBar extends Component {
   }
 
   onupdated() {
-    this.editor.update(this.state);
-    this.editor.focus();
+    if (this.editor) {
+      this.editor.update(this.state);
+      this.editor.focus();
+    }
   }
 
   update_title() {

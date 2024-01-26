@@ -78,18 +78,11 @@ export class MdContent extends Component {
   static stylesheet() {
     return `
       $ {
-        flex: 1;
+        flex: 1 1 0%;
         padding: 8px;
         display: block;
         overflow: auto;
-        color: rgb(0,0,0);
         background-color: #eeeeee;
-
-        position: relative;
-
-        flex-basis: 0%;
-        flex-grow: 1;
-        flex-shrink: 1;
       }
     `;
   }
@@ -589,7 +582,7 @@ export class MdToolbar extends Component {
         background-color: #00A0D6;
         color: rgb(255,255,255);
         font-size: 20px;
-        padding: 0px 4px;
+        padding: 6px;
         box-shadow: 0 1px 8px 0 rgba(0,0,0,.2),
                     0 3px 4px 0 rgba(0,0,0,.14),
                     0 3px 3px -2px rgba(0,0,0,.12);

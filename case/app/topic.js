@@ -254,7 +254,6 @@ class TopicList extends Component {
         display: block;
         padding-bottom: 500px;
       }
-
       $::selection {
         background-color: transparent;
         user-select: none;

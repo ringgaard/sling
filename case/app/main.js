@@ -357,6 +357,16 @@ class CaseApp extends Component {
       }
     }
   }
+
+  static stylesheet() {
+    return `
+      $ {
+        width: 100vw;
+        height: 100vh;
+        margin: 0;
+      }
+    `;
+  }
 }
 
 Component.register(CaseApp);
