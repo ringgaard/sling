@@ -393,6 +393,44 @@ class Profile:
       num_added += self.add_photo(url, caption, None, nsfw)
     return num_added
 
+  # Remove all matching photos from another profile.
+  def remove(self, other):
+    # Get fingerprints for photos in profile.
+    photos = {}
+    self.preload_fingerprints()
+    for media in self.media():
+      url = other.url(media)
+      photo = get_photo(self.itemid, url)
+      if photo is None: continue
+      photos[photo.fingerprint] = photo
+
+    # Find duplicates from other profile.
+    duplicates = set()
+    other.preload_fingerprints()
+    for media in other.media():
+      url = other.url(media)
+
+      # Get photo information.
+      photo = get_photo(other.itemid, url)
+      if photo is None: continue
+
+      # Check for duplicate.
+      dup = photos.get(photo.fingerprint)
+      if dup:
+        print("duplicate", dup.url, "of", url)
+        duplicates.add(dup.url)
+
+    # Remove duplicates.
+    if len(duplicates) > 0:
+      # Find photos to keep.
+      keep = []
+      for media in self.media():
+        url = self.url(media)
+        if url not in duplicates: keep.append(media)
+      self.replace(keep)
+
+    return len(duplicates)
+
   # Replace photos in profile:
   def replace(self, photos):
     slots = []

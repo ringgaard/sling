@@ -510,8 +510,9 @@ class SideBar extends Component {
         flex: none;
       }
       $ document-editor {
+        flex: 1;
+        min-height: 0;
         width: 100%;
-        height: 100%;
         padding: 0;
       }
       $ mention.unknown {

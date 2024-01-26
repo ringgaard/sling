@@ -806,7 +806,7 @@ export class DocumentEditor extends Component {
       $ #editbox {
         display: flex;
         position: absolute;
-        bottom: 100px;
+        bottom: 8px;
         left: 0;
         right: 0;
         justify-content: center;

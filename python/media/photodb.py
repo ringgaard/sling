@@ -68,6 +68,10 @@ flags.define("--other",
              default=None,
              help="add photos from other profile")
 
+flags.define("--different",
+             default=None,
+             help="remove photos from other profile")
+
 flags.define("--truncate",
              help="truncate after first deleted photo",
              default=False,
@@ -207,7 +211,14 @@ else:
   if flags.arg.other:
     # Add photos from other profile.
     other = photo.Profile(flags.arg.other)
+    print(other.count(), "photos in other profile")
     num_added += profile.copy(other)
+
+  if flags.arg.different:
+    # Remove photos from other profile.
+    other = photo.Profile(flags.arg.different)
+    print(other.count(), "photos in other profile")
+    num_removed += profile.remove(other)
 
   if flags.arg.remove or flags.arg.delete:
     # Remove media matching urls.
