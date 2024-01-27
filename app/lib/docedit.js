@@ -387,9 +387,11 @@ export class DocumentEditor extends Component {
         e.stopPropagation();
         this.execute("clear");
       } else if ((e.ctrlKey || e.metaKey) && e.code === "KeyS") {
-        e.preventDefault();
-        e.stopPropagation();
-        this.execute("save");
+        if (this.dirty) {
+          e.preventDefault();
+          e.stopPropagation();
+          this.execute("save");
+        }
       } else if (e.code === "Escape") {
         e.preventDefault();
         this.execute("revert");

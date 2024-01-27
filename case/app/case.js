@@ -210,7 +210,6 @@ class CaseEditor extends MdApp {
     let mention = e.detail.mention;
     let annotation = mention.annotation;
     let link = store.resolve(annotation);
-    let source = mention.document.source;
 
     // Create new topic unless there is already a topic for the item.
     let topic = link && this.get_index().ids.get(link.id);
@@ -248,11 +247,7 @@ class CaseEditor extends MdApp {
       }
     }
 
-    // Add phrase mapping.
-    if (source instanceof Frame) {
-      source.set(mention.text(), topic);
-    }
-
+    this.sidebar.update_mention_status(mention, false);
     this.update_topic(topic);
     this.topic_updated(topic);
     await this.update_topics();

@@ -408,6 +408,10 @@ class SideBar extends Component {
     this.find("#docname").update(docname);
   }
 
+  update_mention_status(mention, unknown) {
+    this.editor?.update_mention_status(mention, unknown);
+  }
+
   refresh(newdoc) {
     if (!same(this.state, newdoc)) return;
     this.editor.refocus(() => {
