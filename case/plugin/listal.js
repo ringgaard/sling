@@ -276,7 +276,9 @@ export default class ListalPlugin {
     let residence = fields.get("Currently Residing In");
     if (residence) {
       residence = await context.lookup(residence);
-      topic.put(n_residence, residence);
+      if (residence != place && residence != country) {
+        topic.put(n_residence, residence);
+      }
     }
 
     // Partner.

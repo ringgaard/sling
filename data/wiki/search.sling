@@ -112,6 +112,7 @@
     P27: item,        ; country of citizenship
 
     P569: date,       ; date of birth
+    P570: date,       ; date of death
 
     P106: item,       ; occupation
     P641: item,       ; sport
