@@ -7,10 +7,12 @@ import {Component} from "/common/lib/component.js";
 import {Frame} from "/common/lib/frame.js";
 import {store, frame} from "/common/lib/global.js";
 import {Document} from "/common/lib/document.js";
-import {LabelCollector} from "/common/lib/datatype.js";
+import {LabelCollector, ItemCollector} from "/common/lib/datatype.js";
 
 const n_lex = frame("lex");
 const n_name = frame("name");
+const n_popularity = frame("/w/item/popularity");
+const n_fanin = frame("/w/item/fanin");
 
 export default class BookWidget extends Component {
   onrendered() {
@@ -20,11 +22,11 @@ export default class BookWidget extends Component {
     this.attach(this.onalpha, "click", "#alpha");
     this.attach(this.onposition, "click", "#position");
     this.attach(this.onprominence, "click", "#prominence");
+    this.attach(this.oncentrality, "click", "#centrality");
   }
 
-  async index() {
+  async index(book) {
     let topicids = this.match("#editor").get_index().ids;
-    let book = this.state;
     let entrymap = new Map();
     let index = 0;
     let position = 1;
@@ -111,6 +113,27 @@ export default class BookWidget extends Component {
     document.querySelector("drawer-panel").set_index(index);
   }
 
+  async oncentrality(e) {
+    let index = await this.index(this.state);
+
+    let popularity = new Map();
+    let collector = new ItemCollector(store);
+    for (let entry of index.entries) {
+      let topic = entry.topic.link() || entry.topic;
+      collector.add(topic);
+    }
+    await collector.retrieve();
+    for (let entry of index.entries) {
+      let topic = entry.topic.link() || entry.topic;
+      let popularity = topic.get(n_popularity) || 0;
+      let fanin = topic.get(n_fanin) || 0;
+      entry.centrality = entry.count / (popularity + fanin + 1);
+    }
+
+    index.entries.sort((a, b) => b.centrality - a.centrality);
+    document.querySelector("drawer-panel").set_index(index);
+  }
+
   render() {
     let topic = this.state;
     if (!topic || !topic.has(n_lex)) return;
@@ -121,6 +144,7 @@ export default class BookWidget extends Component {
         <md-menu-item id="alpha">Index (alphabetically)</md-menu-item>
         <md-menu-item id="position">Index in order of appearance</md-menu-item>
         <md-menu-item id="prominence">Index by prominence</md-menu-item>
+        <md-menu-item id="centrality">Index by centrality</md-menu-item>
       </md-menu>
     `;
   }

@@ -1068,6 +1068,8 @@ Frame KnowledgeService::GetTopic(Store *store, Text id) {
   std::vector<Statement> statements;
   std::vector<Handle> media;
   Handles images(store);
+  Handle popularity = Handle::nil();
+  Handle fanin = Handle::nil();
   for (const Slot &s : item) {
     // Skip categories.
     if (s.name == n_category_) continue;
@@ -1075,6 +1077,16 @@ Frame KnowledgeService::GetTopic(Store *store, Text id) {
     // Collect media.
     if (s.name == n_media_) {
       media.push_back(s.value);
+      continue;
+    }
+
+    // Collect ranking.
+    if (s.name == n_popularity_) {
+      popularity = s.value;
+      continue;
+    }
+    if (s.name == n_fanin_) {
+      fanin = s.value;
       continue;
     }
 
@@ -1162,6 +1174,11 @@ Frame KnowledgeService::GetTopic(Store *store, Text id) {
   for (Handle &m : media) {
     b.Add(n_media_, m);
   }
+
+
+  // Add ranking.
+  if (!popularity.IsNil()) b.Add(n_popularity_, popularity);
+  if (!fanin.IsNil()) b.Add(n_fanin_, fanin);
 
   return b.Create();
 }

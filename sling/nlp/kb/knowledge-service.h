@@ -289,6 +289,9 @@ class KnowledgeService {
   Name n_media_legend_{names_, "P2096"};
   Name n_has_quality_{names_, "P1552"};
   Name n_not_safe_for_work_{names_, "Q2716583"};
+
+  Name n_popularity_{names_, "/w/item/popularity"};
+  Name n_fanin_{names_, "/w/item/fanin"};
 };
 
 }  // namespace nlp
