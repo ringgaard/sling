@@ -158,6 +158,10 @@ if mindeid is None and chkpt.checkpoint != 0: mindeid = chkpt.checkpoint
 last = None
 missing = 0
 while True:
+  if str(mindeid) in db:
+    mindeid += 1
+    continue
+
   print("fetch", mindeid)
   minde = fetch_obituary(mindeid)
   if minde != None:
@@ -171,7 +175,7 @@ while True:
   if flags.arg.end == None:
     if missing == flags.arg.margin: break
   else:
-    if mindeid == flags.arg.end: break
+    if mindeid >= flags.arg.end: break
 
   sys.stdout.flush()
   time.sleep(flags.arg.delay)

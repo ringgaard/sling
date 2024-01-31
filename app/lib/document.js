@@ -344,6 +344,7 @@ export class Document {
     let level = 0;
     let match = this.context && this.context.match;
     let altmatch = match && match.get(this.store.is);
+    let readonly = this.readonly();
     for (let pos = 0; pos < text.length; ++pos) {
       // Output span starts.
       while (si < n && starts[si].begin < pos) si++;
@@ -360,7 +361,7 @@ export class Document {
           if (match && (topic == match || topic == altmatch)) {
             cls += " highlight";
           }
-        } else {
+        } else if (!readonly) {
           cls += " unknown";
         }
         h.push(`<mention class="${cls}" index=${mention.index}>`);

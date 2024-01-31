@@ -409,7 +409,11 @@ class SideBar extends Component {
   }
 
   update_mention_status(mention, unknown) {
-    this.editor?.update_mention_status(mention, unknown);
+    if (this.editor) {
+      for (let d of mention.dependants()) {
+        this.editor.update_mention_status(d, unknown);
+      }
+    }
   }
 
   refresh(newdoc) {

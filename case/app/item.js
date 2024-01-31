@@ -47,6 +47,8 @@ const n_formatter_url = frame("P1630");
 const n_media_legend = frame("P2096");
 const n_has_quality = frame("P1552");
 const n_not_safe_for_work = frame("Q2716583");
+const n_popularity = frame("/w/item/popularity");
+const n_fanin = frame("/w/item/fanin");
 
 class KbLink extends Component {
   onconnected() {
@@ -888,6 +890,8 @@ class ItemPanel extends Component {
         docs.push({source: value, context});
       } else if (name === n_internal) {
         // Skip internals.
+      } else if (name === n_popularity || name === n_fanin) {
+        // Skip ḿetrics.
       } else if ((name instanceof Frame) && name.get(n_target) == n_xref_type) {
         xrefs.add(name, value);
       } else {
