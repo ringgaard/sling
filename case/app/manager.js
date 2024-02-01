@@ -595,6 +595,13 @@ class SettingsDialog extends material.MdDialog {
     this.find("#collaburl").value = settings.collaburl;
     this.find("#analyzer").value = settings.analyzer;
     this.find("#imagesearch").value = settings.imagesearch;
+    if (settings.casedb == 1) {
+      this.find("#serverdb").update(true);
+    } else {
+      this.find("#localdb").update(true);
+    }
+    this.find("#username").value = settings.username;
+    this.find("#password").value = settings.password;
     this.find("#userscripts").checked = settings.userscripts;
     this.find("#nsfw").checked = settings.nsfw;
   }
@@ -606,6 +613,10 @@ class SettingsDialog extends material.MdDialog {
     settings.collaburl = this.find("#collaburl").value;
     settings.analyzer = this.find("#analyzer").value;
     settings.imagesearch = this.find("#imagesearch").value;
+    if (this.find("#localdb").checked) settings.casedb = 0;
+    if (this.find("#serverdb").checked) settings.casedb = 1;
+    settings.username = this.find("#username").value;
+    settings.password = this.find("#password").value;
     settings.userscripts = this.find("#userscripts").checked;
     settings.nsfw = this.find("#nsfw").checked;
     save_settings();
@@ -639,6 +650,27 @@ class SettingsDialog extends material.MdDialog {
         <md-text-field
           id="picturesize"
           label="Profile picture size">
+        </md-text-field>
+        <md-radio-button
+          id="localdb"
+          name="casedb"
+          value="0"
+          label="Store case files locally">
+        </md-radio-button>
+        <md-radio-button
+          id="serverdb"
+          name="casedb"
+          value="1"
+          label="Store case files on server">
+        </md-radio-button>
+        <md-text-field
+          id="username"
+          label="Username">
+        </md-text-field>
+        <md-text-field
+          id="password"
+          password="1"
+          label="Password">
         </md-text-field>
         <md-switch id="userscripts" label="Enable user scripts"></md-switch>
         <md-switch id="nsfw" label="Show adult content (NSFW)"></md-switch>

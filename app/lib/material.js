@@ -1656,11 +1656,12 @@ class MdTextField extends Component {
   render() {
     let value = this.state ? Component.escape(this.state) : "";
     let label = this.attrs.label ? Component.escape(this.attrs.label) : "";
+    let password = this.attrs.password;
 
     return `
       <label>
         <div class="${value ? "above" : ""}">${label}</div>
-        <input value="${value}">
+        <input ${password ? 'type="password"' : ""} value="${value}">
       </label>
     `;
   }
