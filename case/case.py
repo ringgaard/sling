@@ -29,6 +29,7 @@ import services
 import imgcache
 import wikibase
 import extract
+import userdb
 
 flags.define("--port",
              help="HTTP port",
@@ -55,6 +56,11 @@ flags.define("--casedb",
              help="database for shared cases",
              default="case",
              metavar="DB")
+
+flags.define("--userdb",
+             help="location for user case files",
+             default="local/user",
+             metavar="PATH")
 
 flags.define("--media_service",
              help="Media cache service",
@@ -296,8 +302,13 @@ def owns_work(request):
   if client is None: client = "internal"
   log.info("%s OWNS WORK %s" % (client, work))
 
+@app.route("/case/user", methods=["GET", "PUT", "DELETE", "POST"])
+def userdb_request(request):
+  return userdb.handle(request)
+
 # Initialize services.
 services.init()
+userdb.init()
 
 # Run HTTP server.
 log.info("HTTP server listening on port", flags.arg.port)

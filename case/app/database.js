@@ -4,7 +4,8 @@
 // Local case database.
 
 import {Store, Encoder, Decoder} from "/common/lib/frame.js";
-import {store, frame} from "/common/lib/global.js";
+import {store, settings, frame} from "/common/lib/global.js";
+import {credentials} from "./crypto.js";
 
 const n_name = frame("name");
 const n_description = frame("description");
@@ -22,7 +23,7 @@ const n_link = frame("link");
 const n_has_quality = frame("P1552");
 const n_not_safe_for_work = frame("Q2716583");
 
-class CaseDatabase {
+class LocalCaseDatabase {
   // Open database.
   open() {
     return new Promise((resolve, reject) => {
@@ -62,8 +63,8 @@ class CaseDatabase {
     });
   }
 
-  onerror(e) {
-    console.log("Database error", e.target.error);
+  directory() {
+    return this.readall("casedir");
   }
 
   read(caseid) {
@@ -85,35 +86,6 @@ class CaseDatabase {
         reject(e);
       }
     });
-  }
-
-  async writemeta(casefile) {
-    function date(ts) {
-      return ts ? new Date(ts) : null;
-    }
-
-    // Build case directory record.
-    let caseid = casefile.get(n_caseid);
-    let main = casefile.get(n_main);
-    let rec = {
-      id: caseid,
-      name: main.get(n_name),
-      description: main.get(n_description),
-      created: date(casefile.get(n_created)),
-      modified: date(casefile.get(n_modified)),
-      shared: date(casefile.get(n_shared)),
-      share: !!casefile.get(n_share),
-      publish: !!casefile.get(n_publish),
-      collaborate: !!casefile.get(n_collaborate),
-      secret: casefile.get(n_secret),
-      link: !!casefile.get(n_link),
-      nsfw: main.has(n_has_quality, n_not_safe_for_work),
-    };
-
-    // Write record to database.
-    await this.writerec("casedir", rec);
-
-    return rec;
   }
 
   async write(casefile) {
@@ -144,8 +116,33 @@ class CaseDatabase {
     }
   }
 
-  readdir() {
-    return this.readall("casedir");
+  async writemeta(casefile) {
+    function date(ts) {
+      return ts ? new Date(ts) : null;
+    }
+
+    // Build case directory record.
+    let caseid = casefile.get(n_caseid);
+    let main = casefile.get(n_main);
+    let rec = {
+      id: caseid,
+      name: main.get(n_name),
+      description: main.get(n_description),
+      created: date(casefile.get(n_created)),
+      modified: date(casefile.get(n_modified)),
+      shared: date(casefile.get(n_shared)),
+      share: !!casefile.get(n_share),
+      publish: !!casefile.get(n_publish),
+      collaborate: !!casefile.get(n_collaborate),
+      secret: casefile.get(n_secret),
+      link: !!casefile.get(n_link),
+      nsfw: main.has(n_has_quality, n_not_safe_for_work),
+    };
+
+    // Write record to database.
+    await this.writerec("casedir", rec);
+
+    return rec;
   }
 
   readall(table) {
@@ -188,7 +185,74 @@ class CaseDatabase {
       req.onerror = e => { reject(e); };
     });
   }
+
+  onerror(e) {
+    console.log("Database error", e.target.error);
+  }
 }
 
-export var casedb = new CaseDatabase();
+class ServerCaseDatabase {
+  async open() {
+    this.username = settings.username;
+    this.credentials = await credentials(settings.username, settings.password);
+  }
+
+  async directory() {
+    let r = await this.fetch(`/case/user/${this.username}`)
+    let dir = await r.json();
+    return Object.values(dir);
+  }
+
+  async read(caseid) {
+    let r = await this.fetch(`/case/user/${this.username}/${caseid}`)
+    let casefile = store.parse(r);
+    return casefile;
+  }
+
+  async write(casefile) {
+    // Encode case data.
+    let encoder = new Encoder(store);
+    if (casefile.has(n_topics)) {
+      for (let topic of casefile.get(n_topics)) {
+        encoder.encode(topic);
+      }
+    }
+    encoder.encode(casefile);
+    let data = encoder.output();
+    let caseid = casefile.get(n_caseid);
+
+    // Store case on server.
+    let options = {};
+    options.method = "PUT";
+    options.headers = {"Content-Type": "application/sling"};
+    options.body = data;
+    let r = await this.fetch(`/case/user/${this.username}/${caseid}`, options)
+    let meta = await r.json();
+    return meta;
+  }
+
+  remove(caseid) {
+  }
+
+  writelink(casefile) {
+  }
+
+  backup(file) {
+  }
+
+  restore(file) {
+  }
+
+  async fetch(url, options) {
+    if (!options) options = {}
+    if (!options.headers) options.headers = {}
+    options.headers["Credentials"] = this.credentials;
+    let r = await fetch(url, options);
+    if (!r.ok) throw `Case store error ${url}: ${r.statusText}`;
+    return r;
+  }
+}
+
+export var casedb =
+  settings.casedb == 1 ? new ServerCaseDatabase() : new LocalCaseDatabase();
 

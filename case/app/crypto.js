@@ -48,6 +48,13 @@ function cryptokey(secret, usage) {
   return crypto.subtle.importKey("raw", secret, encryption,  false, [usage]);
 }
 
+export async function credentials(username, password) {
+  let plaintext = username + ":" + password;
+  let bytes = new TextEncoder().encode(plaintext);
+  let digest = await crypto.subtle.digest(hashing, bytes);
+  return bin2hex(digest);
+}
+
 export function generate_key(size) {
   let key = crypto.getRandomValues(new Uint8Array(size || keysize));
   return bin2hex(key);

@@ -106,7 +106,7 @@ class CaseApp extends Component {
         }
 
         // Read case list in background.
-        casedb.readdir().then(caselist => {
+        casedb.directory().then(caselist => {
           this.caselist = caselist;
         });
       } catch (e) {
@@ -164,7 +164,7 @@ class CaseApp extends Component {
 
         // Try to get secret from case directory if there is no key in the url.
         if (!secret) {
-          if (!this.caselist) this.caselist = await casedb.readdir();
+          if (!this.caselist) this.caselist = await casedb.directory();
           for (let caserec of this.caselist) {
             if (caserec.id == caseid) {
               secret = caserec.secret;
@@ -260,13 +260,18 @@ class CaseApp extends Component {
   }
 
   async save_case(casefile) {
-    // Write case to database.
-    let rec = await casedb.write(casefile);
+    try {
+      // Write case to database.
+      let rec = await casedb.write(casefile);
 
-    // Update case list.
-    if (this.caselist) {
-      this.caselist = this.caselist.filter(r => r.id != rec.id);
-      this.caselist.push(rec);
+      // Update case list.
+      if (this.caselist) {
+        this.caselist = this.caselist.filter(r => r.id != rec.id);
+        this.caselist.push(rec);
+      }
+    } catch (e) {
+      console.log("error", e);
+      inform(`Error saving case: ${e}`);
     }
   }
 
@@ -296,13 +301,18 @@ class CaseApp extends Component {
       await this.refresh_manager();
     } else {
       // Read case directory.
-      this.caselist = await casedb.readdir();
+      try {
+        this.caselist = await casedb.directory();
+      } catch (e) {
+        console.log("error", e);
+        inform(`Error reading case list: ${e}`);
+      }
       await this.refresh_manager();
     }
   }
 
   async refresh_manager() {
-    this.caselist.sort((a, b) => a.modified > b.modified ? -1 : 1);
+    this.caselist?.sort((a, b) => a.modified > b.modified ? -1 : 1);
     await this.manager.update(this.caselist);
   }
 
@@ -324,7 +334,7 @@ class CaseApp extends Component {
     }
     await casedb.writeall("casedir", casedir);
     await casedb.writeall("casedata", casedata);
-    this.caselist = await casedb.readdir();
+    this.caselist = await casedb.directory();
     await this.refresh_manager();
   }
 

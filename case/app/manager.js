@@ -135,6 +135,10 @@ class CaseManager extends material.MdApp {
   }
 
   prerender() {
+    let user = "";
+    if (settings.casedb == 1) {
+      user = `<div class="user">${settings.username}</div>`;
+    }
     return `
       <md-toolbar>
         <md-toolbar-logo></md-toolbar-logo>
@@ -152,6 +156,7 @@ class CaseManager extends material.MdApp {
           tooltip="Change settings"
           tooltip-align="right">
         </md-icon-button>
+        ${user}
         <md-menu id="menu">
           <md-menu-item id="backup">Backup</md-menu-item>
           <md-menu-item id="restore">Restore</md-menu-item>
@@ -165,6 +170,16 @@ class CaseManager extends material.MdApp {
         <case-list></case-list>
       </md-content>
     </md-column-layout>
+    `;
+  }
+
+  static stylesheet() {
+    return `
+      $ .user {
+        display: flex;
+        font-size: 14px;
+        align-items: center;
+      }
     `;
   }
 }
