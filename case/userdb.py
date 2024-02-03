@@ -96,7 +96,7 @@ class User:
     with open(filename, "wb") as f: f.write(data)
 
     # Update directory index.
-    self.get_index()
+    self.load_index()
     self.index[str(caseid)] = meta
     self.save_index()
 
