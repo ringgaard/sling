@@ -16,10 +16,12 @@
 
 import hashlib
 import json
+import os
 import os.path
 import sling
 import sling.net
 import sling.flags as flags
+import sling.log as log
 
 commons = sling.Store()
 
@@ -45,7 +47,7 @@ class User:
     self.homedir = flags.arg.userdb + "/" + self.username
     self.index = None
 
-  def get_index(self):
+  def load_index(self):
     # Load case index for user if not already done.
     if self.index is None:
       with open(self.homedir + "/index.json") as f:
@@ -59,9 +61,11 @@ class User:
 
   def handle_index(self):
     # Return case directory to user.
-    return self.get_index()
+    log.info("Case index for", self.username);
+    return self.load_index()
 
   def handle_fetch_case(self, caseid):
+    log.info("Load case #%d for %s" % (caseid, self.username));
     filename = "%s/%d.sling" % (self.homedir, caseid)
     return sling.net.HTTPFile(filename, "application/sling")
 
@@ -69,6 +73,7 @@ class User:
     # Parse case.
     store = sling.Store(commons)
     casefile = store.parse(data)
+    log.info("Save case #%d for %s" % (caseid, self.username));
 
     # Build meta record.
     main = casefile[n_main]
@@ -98,6 +103,23 @@ class User:
     # Return directory entry.
     return meta
 
+  def handle_delete_case(self, caseid):
+    log.info("Delete case #%d for %s" % (caseid, self.username));
+    self.load_index()
+    meta = self.index.get(str(caseid))
+    if meta is None: return 404
+
+    # Update index directory.
+    del self.index[str(caseid)]
+    self.save_index()
+
+    # Remove case file unless it is a link.
+    if not meta["link"]:
+      filename = "%s/%d.sling" % (self.homedir, caseid)
+      os.remove(filename)
+
+    return 200
+
 def handle(request):
   # Authenticate request.
   parts = request.path.split("/")
@@ -119,7 +141,7 @@ def handle(request):
     caseid = int(parts[2])
     return user.handle_store_case(caseid, request.body)
   elif request.method == "DELETE":
-    if len(parts) != 2 or not parts[2].isnumeric(): return 400
+    if len(parts) != 3 or not parts[2].isnumeric(): return 400
     caseid = int(parts[2])
     return user.handle_delete_case(caseid)
   else:
@@ -135,18 +157,4 @@ def init():
     user = User(entry)
     users[user.username] = user
   f.close()
-
-
-"""
-    python:
-      import hashlib
-      m = hashlib.sha256()
-      m.update(b"username:password")
-      cred = m.hexdigest()
-    HTTP: Credentials: sha256(user:passwd)
-  - GET https://ringgaard.com/case/store/<user> (read directory)
-  - GET https://ringgaard.com/case/store/<user>/<caseno> (read case)
-  - PUT https://ringgaard.com/case/store/<user>/<caseno> (write case)
-  - DELETE https://ringgaard.com/case/store/<user>/<caseno> (remove case)
-"""
 

@@ -231,7 +231,10 @@ class ServerCaseDatabase {
     return meta;
   }
 
-  remove(caseid) {
+  async remove(caseid) {
+    let options = {};
+    options.method = "DELETE";
+    await this.fetch(`/case/user/${this.username}/${caseid}`, options)
   }
 
   writelink(casefile) {

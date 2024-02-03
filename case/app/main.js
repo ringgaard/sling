@@ -239,13 +239,13 @@ class CaseApp extends Component {
     return casefile;
   }
 
-  delete_case(caseid, link) {
+  async delete_case(caseid) {
     // Remove case from database.
-    casedb.remove(caseid);
+    await casedb.remove(caseid);
 
     // Update case list.
     this.caselist = this.caselist.filter(r => r.id != caseid);
-    this.refresh_manager();
+    await this.refresh_manager();
   }
 
   async open_case(caseid) {

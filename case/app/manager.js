@@ -379,7 +379,7 @@ class CaseList extends material.MdCard {
         material.StdDialog.confirm("Delete case", message, "Delete")
         .then(result => {
           if (result) {
-            app.delete_case(caseid, link);
+            app.delete_case(caseid);
           }
         });
       }
