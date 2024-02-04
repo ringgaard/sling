@@ -217,6 +217,7 @@ class ServerCaseDatabase {
         encoder.encode(topic);
       }
     }
+    encoder.encode(casefile.get(n_main));
     encoder.encode(casefile);
     let data = encoder.output();
     let caseid = casefile.get(n_caseid);
