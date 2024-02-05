@@ -180,7 +180,7 @@ class CaseApp extends Component {
 
       // Add linked case to directory.
       casefile.add(n_link, true);
-      let rec = await casedb.writemeta(casefile);
+      let rec = await casedb.link(casefile);
 
       // Update case list.
       if (this.caselist) {

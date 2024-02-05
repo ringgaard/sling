@@ -302,7 +302,7 @@ def owns_work(request):
   if client is None: client = "internal"
   log.info("%s OWNS WORK %s" % (client, work))
 
-@app.route("/case/user", methods=["GET", "PUT", "DELETE", "POST"])
+@app.route("/case/user", methods=["GET", "PUT", "DELETE", "LINK"])
 def userdb_request(request):
   return userdb.handle(request)
 

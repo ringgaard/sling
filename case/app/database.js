@@ -116,6 +116,10 @@ class LocalCaseDatabase {
     }
   }
 
+  async link(casefile) {
+    return await this.writemeta(casefile);
+  }
+
   async writemeta(casefile) {
     function date(ts) {
       return ts ? new Date(ts) : null;
@@ -204,12 +208,36 @@ class ServerCaseDatabase {
   }
 
   async read(caseid) {
-    let r = await this.fetch(`/case/user/${this.username}/${caseid}`)
-    let casefile = store.parse(r);
-    return casefile;
+    try {
+      let r = await this.fetch(`/case/user/${this.username}/${caseid}`)
+      let casefile = store.parse(r);
+      return casefile;
+    } catch(e) {
+      return null;
+    }
   }
 
   async write(casefile) {
+    return await this.send(casefile, false);
+  }
+
+  async remove(caseid) {
+    let options = {};
+    options.method = "DELETE";
+    await this.fetch(`/case/user/${this.username}/${caseid}`, options)
+  }
+
+  async link(casefile) {
+    return await this.send(casefile, true);
+  }
+
+  backup(file) {
+  }
+
+  restore(file) {
+  }
+
+  async send(casefile, link) {
     // Encode case data.
     let encoder = new Encoder(store);
     if (casefile.has(n_topics)) {
@@ -224,27 +252,12 @@ class ServerCaseDatabase {
 
     // Store case on server.
     let options = {};
-    options.method = "PUT";
+    options.method = link ? "LINK" : "PUT";
     options.headers = {"Content-Type": "application/sling"};
     options.body = data;
     let r = await this.fetch(`/case/user/${this.username}/${caseid}`, options)
     let meta = await r.json();
     return meta;
-  }
-
-  async remove(caseid) {
-    let options = {};
-    options.method = "DELETE";
-    await this.fetch(`/case/user/${this.username}/${caseid}`, options)
-  }
-
-  writelink(casefile) {
-  }
-
-  backup(file) {
-  }
-
-  restore(file) {
   }
 
   async fetch(url, options) {

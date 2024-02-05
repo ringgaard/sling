@@ -40,6 +40,23 @@ commons.freeze()
 
 users = {}
 
+def metadata(caseid, casefile):
+  main = casefile[n_main]
+  meta = {
+    "id": caseid,
+    "name": main[n_name],
+    "description": main[n_description],
+    "created": casefile[n_created],
+    "modified": casefile[n_modified],
+    "shared": casefile[n_shared],
+    "share": bool(casefile[n_share]),
+    "publish": bool(casefile[n_publish]),
+    "collaborate": bool(casefile[n_collaborate]),
+    "secret": casefile[n_secret],
+    "link": bool(casefile[n_link]),
+  }
+  return meta
+
 class User:
   def __init__(self, entry):
     self.username = entry[0]
@@ -76,24 +93,28 @@ class User:
     log.info("Save case #%d for %s" % (caseid, self.username));
 
     # Build meta record.
-    main = casefile[n_main]
-    meta = {
-      "id": caseid,
-      "name": main[n_name],
-      "description": main[n_description],
-      "created": casefile[n_created],
-      "modified": casefile[n_modified],
-      "shared": casefile[n_shared],
-      "share": bool(casefile[n_share]),
-      "publish": bool(casefile[n_publish]),
-      "collaborate": bool(casefile[n_collaborate]),
-      "secret": casefile[n_secret],
-      "link": bool(casefile[n_link]),
-    }
+    meta = metadata(caseid, casefile)
 
     # Write case to store.
     filename = "%s/%d.sling" % (self.homedir, caseid)
     with open(filename, "wb") as f: f.write(data)
+
+    # Update directory index.
+    self.load_index()
+    self.index[str(caseid)] = meta
+    self.save_index()
+
+    # Return directory entry.
+    return meta
+
+  def handle_store_link(self, caseid, data):
+    # Parse case.
+    store = sling.Store(commons)
+    casefile = store.parse(data)
+    log.info("Link case #%d for %s" % (caseid, self.username));
+
+    # Build meta record.
+    meta = metadata(caseid, casefile)
 
     # Update directory index.
     self.load_index()
@@ -140,6 +161,10 @@ def handle(request):
     if len(parts) != 3 or not parts[2].isnumeric(): return 400
     caseid = int(parts[2])
     return user.handle_store_case(caseid, request.body)
+  elif request.method == "LINK":
+    if len(parts) != 3 or not parts[2].isnumeric(): return 400
+    caseid = int(parts[2])
+    return user.handle_store_link(caseid, request.body)
   elif request.method == "DELETE":
     if len(parts) != 3 or not parts[2].isnumeric(): return 400
     caseid = int(parts[2])
