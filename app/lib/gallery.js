@@ -6,6 +6,24 @@
 import {Component} from "./component.js";
 import {MdModal} from "./material.js";
 
+const IMAGE = 1;
+const VIDEO = 2;
+const GRAPHICS = 3;
+const DOCUMENT = 4;
+
+const media_types = {
+  ".jpeg": IMAGE,
+  ".jpg": IMAGE,
+  ".gif": IMAGE,
+  ".png": IMAGE,
+  ".webp": IMAGE,
+  ".mp4": VIDEO,
+  ".mpeg": VIDEO,
+  ".webm": VIDEO,
+  ".svg": GRAPHICS,
+  ".pdf": DOCUMENT,
+}
+
 export var mediadb = {
   enabled: true,
   thumb: true,
@@ -30,18 +48,25 @@ function mod(m, n) {
   return ((m % n) + n) % n;
 }
 
+export function mediatype(url) {
+  let pos = url.lastIndexOf(".");
+  if (pos == -1) return;
+  return media_types[url.substring(pos).toLowerCase()];
+}
+
 export function imageurl(url, thumb) {
   if (mediadb.enabled) {
     let escaped = encodeURIComponent(url);
     escaped = escaped.replace(/%3A/g, ":").replace(/%2F/g, "/");
-    if (thumb && mediadb.thumb && !url.endsWith(".svg")) {
-      return mediadb.thumbsvc + escaped;
-    } else {
-      return mediadb.mediasvc + escaped;
+    if (mediatype(url) == IMAGE) {
+      if (thumb && mediadb.thumb) {
+        return mediadb.thumbsvc + escaped;
+      } else {
+        return mediadb.mediasvc + escaped;
+      }
     }
-  } else {
-    return url;
   }
+  return url;
 }
 
 export function censor(gallery, nsfw) {
@@ -51,7 +76,7 @@ export function censor(gallery, nsfw) {
     if (!image.url) continue;
     if (!nsfw && image.nsfw) continue;
     if (urls.has(image.url)) continue;
-    if (image.url.endsWith(".tif") || image.url.endsWith(".tiff")) continue;
+    if (!mediatype(image.url)) continue;
     filtered.push(image);
     urls.add(image.url);
   }
@@ -322,10 +347,17 @@ export class PhotoGallery extends MdModal {
       let zoom = fullsize ? ` (${Math.round(this.zoom * 100)}%)` : "";
       this.find(".size").update(w && h ? `${w} x ${h}` + zoom : null);
     }
+
     if (photo.selected) {
       this.find("#flag").classList.remove("unmarked");
     } else {
       this.find("#flag").classList.add("unmarked");
+    }
+
+    if (mediatype(photo.url) == DOCUMENT) {
+      this.find(".toolbox").style.display = "none";
+    } else {
+      this.find(".toolbox").style.display = "flex";
     }
   }
 
@@ -335,14 +367,19 @@ export class PhotoGallery extends MdModal {
       let n = mod(position + i * direction, this.photos.length);
       if (this.photos[n].image == null) {
         let url = this.photos[n].url;
+        let type = mediatype(url);
         var viewer;
-        if (url.endsWith(".mp4") || url.endsWith(".webm")) {
-          viewer = document.createElement('video');
+        if (type == VIDEO) {
+          viewer = document.createElement("video");
           viewer.controls = true;
+        } else if (type == DOCUMENT) {
+          viewer = document.createElement("embed");
+          viewer.type = "application/pdf";
+          viewer.classList.add("doc");
         } else {
           viewer = new Image();
           viewer.style.cursor = "wait";
-          if (url.endsWith(".svg")) {
+          if (type == GRAPHICS) {
             viewer.style.background = "white";
             viewer.style.padding = "10px";
           }
@@ -419,6 +456,11 @@ export class PhotoGallery extends MdModal {
         height: auto;
         margin: auto;
         background-color: hsl(0, 0%, 90%);
+      }
+
+      $ .doc {
+        width: 100%;
+        height: 100%;
       }
 
       $ .full {

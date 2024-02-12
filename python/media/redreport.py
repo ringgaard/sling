@@ -413,14 +413,12 @@ class RedditPosting extends Component {
       }
       if (item.itemid) {
         let kburl = `https://ringgaard.com/kb/${item.itemid}`;
-        if (!sfw) kburl += "?nsfw=1";
         match += `<a href="${kburl}" target="knolbase">${item.itemid}</a>`;
       }
     } else if (item.matches == 0) {
       match = `No matches for <em>${item.query}</em>`
     } else if (item.matches == 1) {
       let kburl = `https://ringgaard.com/kb/${item.match}`;
-      if (!sfw) kburl += "?nsfw=1";
       match = `
          <b>${item.query}</b>:
          <a href="${kburl}" target="knolbase">${item.match}</a>
