@@ -7,7 +7,12 @@ import {Frame, QString} from "/common/lib/frame.js";
 import {store, frame, settings} from "/common/lib/global.js";
 import {Time, LabelCollector, latlong} from "/common/lib/datatype.js";
 import {Document} from "/common/lib/document.js";
-import {PhotoGallery, censor, imageurl, mediadb} from "/common/lib/gallery.js";
+import {
+  PhotoGallery,
+  censor,
+  imageurl,
+  mediadb,
+  hasthumb} from "/common/lib/gallery.js";
 
 import {url_format} from "./schema.js";
 import {get_widget} from "./plugins.js";
@@ -626,30 +631,38 @@ class PicturePanel extends Component {
   }
 
   onupdated() {
+    let thumb = null;
+    let index = 0;
+
     let images = this.state;
     if (images && images.length > 0) {
-      let index = 0;
       for (let i = 0; i < images.length; ++i) {
-        if (!images[i].nsfw) {
+        if (!images[i].nsfw && hasthumb(images[i].url)) {
           index = i;
           break;
         }
       }
-      let image = images[index];
-      let caption = image.text;
+      if (hasthumb(images[index].url)) thumb = images[index];
+    }
+
+    if (thumb) {
+      let caption = thumb.text;
       if (caption) {
         caption = caption.toString().replace(/\[\[|\]\]/g, '');
       }
-      if (images.length > 1) {
+
+      if (images?.length > 1) {
         if (!caption) caption = "";
         caption += ` [${index + 1}/${images.length}]`;
       }
 
-      this.find(".photo").update(imageurl(image.url, true));
+      this.find(".photo").update(imageurl(thumb.url, true));
       this.find(".caption").update(caption);
+      this.find("#nothumb").update(false);
     } else {
       this.find(".photo").update(null);
       this.find(".caption").update(null);
+      this.find("#nothumb").update(true);
     }
   }
 
@@ -678,6 +691,10 @@ class PicturePanel extends Component {
         font-size: 13px;
         color: #808080;
         padding: 5px;
+      }
+
+      $ #nothumb {
+        font-size: 64px;
       }
 
       $ img {
@@ -950,6 +967,7 @@ class ItemPanel extends Component {
           <widget-panel id="widget"></widget-panel>
           <picture-panel id="picture">
             <md-image class="photo"></md-image>
+            <md-icon id="nothumb" icon="photo_library"></md-icon>
             <md-text class="caption"></md-text>
           </picture-panel>
           <div id="hruler"></div>

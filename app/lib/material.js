@@ -448,10 +448,6 @@ export class StdDialog extends MdDialog {
         this.bind("#" + id, "click", e => this.onclick(e));
       }
     }
-    if (s.value || s.label) {
-      let input = this.find("#input");
-      input.update(s.value);
-    }
   }
 
   onclick(e) {
@@ -502,7 +498,11 @@ export class StdDialog extends MdDialog {
       `);
     }
     if (s.buttons) {
-      h.push("<md-dialog-bottom center>");
+      if (s.value || s.label) {
+        h.push("<md-dialog-bottom>");
+      } else {
+        h.push("<md-dialog-bottom center>");
+      }
       for (let button of Object.keys(s.buttons)) {
         let id = button.replace(/ /g, "-").toLowerCase();
         h.push(`<button id="${id}">${button}</button>`);

@@ -49,8 +49,10 @@ function mod(m, n) {
 }
 
 export function mediatype(url) {
+  let base = url.lastIndexOf("/");
+  if (base != -1) url = url.substring(base);
   let pos = url.lastIndexOf(".");
-  if (pos == -1) return;
+  if (pos == -1) return IMAGE;
   return media_types[url.substring(pos).toLowerCase()];
 }
 
@@ -67,6 +69,10 @@ export function imageurl(url, thumb) {
     }
   }
   return url;
+}
+
+export function hasthumb(url) {
+  return mediatype(url) == IMAGE;
 }
 
 export function censor(gallery, nsfw) {
