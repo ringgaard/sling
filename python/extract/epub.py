@@ -110,6 +110,10 @@ tags = {
     None: PARA,
     "chno": "h2",
     "chtxt": "h2",
+    "indentq": "blockquote",
+    "noindentq": "blockquote",
+    "noindentq1": "blockquote",
+    "h3b1": "h2",
   },
   commons["h1"]: KEEP,
   commons["h2"]: KEEP,
@@ -122,7 +126,10 @@ tags = {
   commons["i"]: KEEP,
   commons["strong"]: KEEP,
   commons["small"]: KEEP,
-  commons["sup"]: KEEP,
+  commons["sup"]: {
+    None: KEEP,
+    "calibre9": SKIP,
+  },
   commons["sub"]: KEEP,
   commons["div"]: {
     None: KEEP,

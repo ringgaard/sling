@@ -492,6 +492,7 @@ class SideBar extends Component {
         display: flex;
         flex-direction: column;
         padding-left: 10px;
+        flex: 1;
       }
       $ #banner {
         display: flex;

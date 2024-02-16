@@ -739,6 +739,7 @@ export class DocumentEditor extends Component {
   static stylesheet() {
     return `
       $ {
+        display: grid;
         font: 1rem anubis, serif;
         line-height: 1.5;
         padding: 4px 8px;
@@ -767,6 +768,15 @@ export class DocumentEditor extends Component {
       }
       $ h1 {
         line-height: 1;
+        font-family: arial;
+      }
+      $ h2 {
+        line-height: 1;
+        font-family: arial;
+      }
+      $ h3 {
+        line-height: 1;
+        font-family: arial;
       }
       $ mention {
         color: #0000dd;

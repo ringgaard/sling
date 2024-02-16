@@ -70,7 +70,7 @@ class KbApp extends MdApp {
     }
   }
 
-  navigate(id) {
+  navigate(id, push) {
     let state = history.state;
     if (state) {
       let item = state.item;
@@ -81,8 +81,10 @@ class KbApp extends MdApp {
     fetch("/kb/item?fmt=cjson&id=" + encodeURIComponent(id))
       .then(response => response.json())
       .then((item) => {
-        let state = {item: item, pos: 0};
-        history.pushState(state, item.text, "/kb/" + item.ref);
+        if (push) {
+          let state = {item: item, pos: 0};
+          history.pushState(state, item.text, "/kb/" + item.ref);
+        }
         this.display(item);
         this.find("md-content").scrollTop = 0;
       })
@@ -146,7 +148,7 @@ class KbLink extends Component {
     if (e.ctrlKey) {
       window.open("/kb/" + this.attrs.ref, "_blank");
     } else {
-      this.match("#app").navigate(this.attrs.ref);
+      this.match("#app").navigate(this.attrs.ref, true);
     }
   }
 
@@ -224,7 +226,7 @@ class KbSearchBox extends Component {
       search.set(query);
       this.onquery({detail: query, target: search});
     } else {
-      this.match("#app").navigate(item.ref);
+      this.match("#app").navigate(item.ref, true);
     }
   }
 
@@ -646,7 +648,7 @@ class KbDocumentCard extends MdCard {
       if (e.ctrlKey) {
         window.open("/kb/" + ref, "_blank");
       } else {
-        this.match("#app").navigate(ref);
+        this.match("#app").navigate(ref, true);
       }
     }
   }
