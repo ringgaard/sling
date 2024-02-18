@@ -4,7 +4,7 @@
 // Knowledge base browser.
 
 import {Component, stylesheet} from "/common/lib/component.js";
-import {MdApp, MdCard, MdModal, MdSearchResult, StdDialog}
+import {MdApp, MdCard, MdModal, MdSearchResult, StdDialog, inform}
   from "/common/lib/material.js";
 import {PhotoGallery, imageurl, censor} from "/common/lib/gallery.js";
 
@@ -46,6 +46,8 @@ stylesheet(`
 // App
 //-----------------------------------------------------------------------------
 
+var scrollmap = new Map();
+
 class KbApp extends MdApp {
   onconnected() {
     if (this.find("#websearch")) {
@@ -57,7 +59,9 @@ class KbApp extends MdApp {
     let itemid = document.head.querySelector('meta[property="itemid"]');
     if (itemid) {
       let id = itemid.content;
-      if (id.length > 0) this.navigate(id);
+      if (id.length > 0) {
+        this.navigate(id, true);
+      }
     }
 
     let qs = new URLSearchParams(window.location.search);
@@ -70,30 +74,32 @@ class KbApp extends MdApp {
     }
   }
 
-  navigate(id, push) {
-    let state = history.state;
-    if (state) {
-      let item = state.item;
-      state.pos = this.find("md-content").scrollTop;
-      history.replaceState(state, item.text, "/kb/" + item.ref);
-    }
+  async navigate(id, initial) {
+    let current = this.state?.ref;
+    if (current) scrollmap[current] = this.find("md-content").scrollTop;
 
-    fetch("/kb/item?fmt=cjson&id=" + encodeURIComponent(id))
-      .then(response => response.json())
-      .then((item) => {
-        if (push) {
-          let state = {item: item, pos: 0};
-          history.pushState(state, item.text, "/kb/" + item.ref);
-        }
-        this.display(item);
-        this.find("md-content").scrollTop = 0;
-      })
-      .catch(error => {
-        console.log("Item error", id, error.message, error.stack);
-      });
+    try {
+      let r = await fetch("/kb/item?fmt=cjson&id=" + encodeURIComponent(id));
+      if (!r.ok) {
+        inform(`Error fetching item ${id}: ${r.statusText}`);
+        return;
+      }
+      let item = await r.json();
+      if (initial) {
+        history.replaceState(item, "");
+      } else {
+        history.pushState(item, "");
+      }
+      this.display(item);
+      this.find("md-content").scrollTop = 0;
+    } catch (error) {
+      inform(`Item ${id} error: ${error.message}`);
+      console.log("Item error", id, error.message, error.stack);
+    }
   }
 
   display(item) {
+    this.state = item;
     this.find("#item").update(item);
     this.find("#document").update(item);
     this.find("#picture").update({
@@ -109,8 +115,9 @@ class KbApp extends MdApp {
   onpopstate(e) {
     let state = e.state;
     if (state) {
-      this.display(state.item);
-      this.find("md-content").scrollTop = state.pos;
+      this.display(state);
+      let pos = scrollmap[state.ref];
+      if (pos) this.find("md-content").scrollTop = pos;
     }
   }
 
@@ -148,7 +155,7 @@ class KbLink extends Component {
     if (e.ctrlKey) {
       window.open("/kb/" + this.attrs.ref, "_blank");
     } else {
-      this.match("#app").navigate(this.attrs.ref, true);
+      this.match("#app").navigate(this.attrs.ref);
     }
   }
 
@@ -177,7 +184,7 @@ class KbSearchBox extends Component {
     this.bind("md-search", "item", e => this.onitem(e));
   }
 
-  onquery(e) {
+  async onquery(e) {
     let detail = e.detail
     let target = e.target;
     let path = "/kb/query";
@@ -193,29 +200,29 @@ class KbSearchBox extends Component {
       search = true;
     }
 
-    fetch(`${path}?${params}&q=${encodeURIComponent(query)}`)
-      .then(response => response.json())
-      .then((data) => {
-        let items = [];
-        for (let item of data.matches) {
-          items.push(new MdSearchResult({
-            ref: item.ref,
-            name: item.text,
-            description: item.description,
-          }));
-        }
-        if (!search) {
-          items.push(new MdSearchResult({
-            name: "more...",
-            description: 'search for "' + query + '" 🔎',
-            query: query,
-          }));
-        }
-        target.populate(detail, items);
-      })
-      .catch(error => {
-        console.log("Query error", query, error.message, error.stack);
-      });
+    try {
+      let r = await fetch(`${path}?${params}&q=${encodeURIComponent(query)}`);
+      let data = await r.json();
+      let items = [];
+      for (let item of data.matches) {
+        items.push(new MdSearchResult({
+          ref: item.ref,
+          name: item.text,
+          description: item.description,
+        }));
+      }
+      if (!search) {
+        items.push(new MdSearchResult({
+          name: "more...",
+          description: 'search for "' + query + '" 🔎',
+          query: query,
+        }));
+      }
+      target.populate(detail, items);
+    } catch(error) {
+      inform(`Query error: ${error.message}`);
+      console.log("Query error", query, error.message, error.stack);
+    }
   }
 
   onitem(e) {
@@ -226,7 +233,7 @@ class KbSearchBox extends Component {
       search.set(query);
       this.onquery({detail: query, target: search});
     } else {
-      this.match("#app").navigate(item.ref, true);
+      this.match("#app").navigate(item.ref);
     }
   }
 
@@ -648,7 +655,7 @@ class KbDocumentCard extends MdCard {
       if (e.ctrlKey) {
         window.open("/kb/" + ref, "_blank");
       } else {
-        this.match("#app").navigate(ref, true);
+        this.match("#app").navigate(ref);
       }
     }
   }

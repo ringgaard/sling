@@ -39,15 +39,17 @@ using namespace sling::nlp;
 int main(int argc, char *argv[]) {
   InitProgram(&argc, &argv);
 
-  LOG(INFO) << "Loading knowledge base from " << FLAGS_kb;
-  Store commons;
-  LoadStore(FLAGS_kb, &commons);
-
+  // Initialize HTTP server.
   LOG(INFO) << "Start HTTP server on port " << FLAGS_port;
   SocketServerOptions options;
   HTTPServer http(options, FLAGS_host.c_str(), FLAGS_port);
   http.set_cors( FLAGS_cors);
   CHECK(http.Start(false));
+
+  // Load knowledge base.
+  LOG(INFO) << "Loading knowledge base from " << FLAGS_kb;
+  Store commons;
+  LoadStore(FLAGS_kb, &commons);
 
   // Initialize knowledge service.
   KnowledgeService kb;

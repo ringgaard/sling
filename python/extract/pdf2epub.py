@@ -360,13 +360,15 @@ class PDFBook:
     self.nextref = 0
     self.refsize = 0
     self.refsbychapter = False
+    self.tocfile = None
 
   def read_toc(self, filename):
     last_toc_pageno = 0
     with open(filename) as f:
       self.toc = []
       index = 1
-      for line in f.read().split("\n"):
+      self.tocfile = f.read()
+      for line in self.tocfile.split("\n"):
         line = line.strip()
         if len(line) == 0 or line[0] == ';': continue
         if line[0] == '!':
@@ -593,6 +595,9 @@ class PDFBook:
     toc.append('</navMap>')
     toc.append('</ncx>')
     zip.writestr("toc.ncx", "\n".join(toc))
+
+    # Write config file.
+    if self.tocfile: zip.writestr("pdf2epub.toc", self.tocfile)
 
     # Write chapters.
     h1 = self.param("h1", 32.0)
