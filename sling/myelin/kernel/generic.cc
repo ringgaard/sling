@@ -278,6 +278,26 @@ class CompositeTransformer : public Transformer {
       updates++;
     }
 
+    // Linear (pytorch) is defined as:
+    //   Linear(x,w,b) = Add(MatMul(x, Transpose(w)), b)
+    for (Flow::Operation *op : flow->Find("Linear")) {
+      if (op->indegree() != 3 || op->outdegree() != 1) continue;
+
+      Flow::Variable *x = op->inputs[0];
+      Flow::Variable *w = op->inputs[1];
+      Flow::Variable *b = op->inputs[2];
+      Flow::Variable *y = op->outputs[0];
+
+      FlowBuilder f(flow, op->func);
+      Scope s(&f, op->name, false);
+      auto *linear = f.Add(f.MatMul(x, f.Transpose(w)), b);
+
+      flow->RemoveOperation(op);
+      f.Bind(y, linear);
+
+      updates++;
+    }
+
     return updates > 0;
   }
 };

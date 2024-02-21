@@ -239,7 +239,10 @@ class Variable(object):
     return self.name
 
   def __str__(self):
-    s = "var " + self.name + " : " + self.typestr()
+    s = ""
+    if self.input: s+= "input "
+    if self.input: s+= "output "
+    s += "var " + self.name + " : " + self.typestr()
     if self.data is not None:
       s += " = " + str(self.data)
     s += " {\n"
