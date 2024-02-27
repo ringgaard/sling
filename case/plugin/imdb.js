@@ -39,7 +39,6 @@ const n_divorce = frame("Q93190");
 const n_kinship = frame("P1039");
 const n_num_children = frame("P1971");
 
-
 const n_gender = frame("P21");
 const n_female = frame("Q6581072");
 const n_male = frame("Q6581097");

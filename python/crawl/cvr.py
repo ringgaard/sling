@@ -101,9 +101,9 @@ while True:
   scroll_id = response.get("_scroll_id")
   if scroll_id == None: break
   while True:
-    r = requests.get(url + "/_search/scroll?scroll=1m",
+    r = requests.get(url + "/_search/scroll?scroll=10m",
                      auth=credentials,
-                     json={"scroll": "1m", "scroll_id": scroll_id})
+                     json={"scroll": "10m", "scroll_id": scroll_id})
     if r.status_code == 429:
       reset = int(r.headers.get("x-ratelimit-reset", 60))
       print("scroll rate limit", reset, "secs")

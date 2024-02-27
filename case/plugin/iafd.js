@@ -39,6 +39,7 @@ const hair_colors = {
   "Black": frame("Q1922956"),
   "Auburn": frame("Q2419551"),
   "Red": frame("Q152357"),
+  "Dark Brown": frame("Q17244894"),
 };
 
 function date2sling(d) {
