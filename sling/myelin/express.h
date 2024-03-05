@@ -81,7 +81,8 @@ class Express {
     NEG,         // negative, r=-x
     ABS,         // absolute value, r=|x|=max(x,neg(x))
     SIGN,        // sign of value, r=x<0?-x:x
-    RELU,        // rectified linear unit, r=max(0,a)
+    RELU,        // rectified linear unit, r=max(0,x)
+    GELU,        // gaussian error linear unit, r=0.5*x*(1+erf(x/sqrt(2)))
     SOFTSIGN,    // softsign, r=x/(|x|+1)
     SOFTPLUS,    // softplus, r=log(exp(x)+1)
     LOGSIGMOID,  // log sigmoid, r=log(1/(1+exp(-x)))=-softplus(-x))
@@ -210,6 +211,7 @@ class Express {
     SINCOF_P0, SINCOF_P1, SINCOF_P2,
     COSCOF_P0, COSCOF_P1, COSCOF_P2,
     ATAN_P0, ATAN_P1, ATAN_P2, ATAN_P3,
+    GELU_C1, GELU_C2, GELU_C3,
     NUM_CONSTANTS,
   };
 
@@ -671,6 +673,17 @@ class Express {
   Var *Relu(Var *x) {
     return Supports(RELU) ? Do(RELU, x) : Maximum(x, Zero());
   }
+  Var *Gelu(Var *x) {
+    if (Supports(GELU)) return Do(GELU, x);
+    if (approx_) {
+      return Mul(Mul(Number(HALF), x), Add(One(),
+             Tanh(Mul(Number(GELU_C2), Add(x,
+             Mul(Number(GELU_C1), Qube(x)))))));
+    } else {
+      return Mul(Mul(Number(HALF), x), Add(One(),
+             Erf(Mul(x, Number(GELU_C3)))));
+    }
+  }
   Var *Softsign(Var *x) { return Div(x, Add(Abs(x), One())); }
   Var *Softplus(Var *x) { return Log(Add(Exp(x), One())); }
   Var *LogSigmoid(Var *x) { return Neg(Softplus(Neg(x))); }
@@ -679,6 +692,9 @@ class Express {
   }
   Var *Square(Var *x) {
     return Supports(SQUARE) ? Do(SQUARE, x) : Mul(x, x);
+  }
+  Var *Qube(Var *x) {
+    return Mul(Square(x), x);
   }
   Var *Sqrt(Var *x) { return Do(SQRT, x); }
   Var *Rsqrt(Var *x) {

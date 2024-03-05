@@ -39,6 +39,11 @@ def relu(x):
 def erf(x):
   return np.array([math.erf(v) for v in x])
 
+def gelu(x):
+  return 0.5 * x * (1 + erf(x / np.sqrt(2)))
+  # Faster approximation:
+  #return 0.5 * x * (1 + np.tanh(np.sqrt(2 / np.pi) * (x + 0.044715 * x ** 3)))
+
 def gather(d, i):
   if len(i.shape) == 0: return np.take(d, i, axis=0)
   return np.take(d, i, axis=0).reshape(i.shape[:-1] + d.shape[i.shape[1]:])
@@ -113,6 +118,8 @@ def compute(flow, f, data):
       v[o[0]] = np.arctanh(v[i[0]])
     elif op.type == "Relu":
       v[o[0]] = relu(v[i[0]])
+    elif op.type == "Gelu":
+      v[o[0]] = gelu(v[i[0]])
     elif op.type == "Sqrt":
       v[o[0]] = np.sqrt(v[i[0]])
     elif op.type == "Rsqrt":

@@ -546,6 +546,13 @@ def relu_test(n):
   y = f.relu(x)
   check(flow, n)
 
+def gelu_test(n):
+  flow = myelin.Flow()
+  f = flow.define("gelu")
+  x = f.var("x", dt, [n])
+  y = f.gelu(x)
+  check(flow, n, atol=1e-6)
+
 def min_test(n):
   flow = myelin.Flow()
   f = flow.define("min")
@@ -983,6 +990,13 @@ def bcast_outer_test(m, n):
   z = f.add(x, y)
   check(flow, (m, n))
 
+def variance_test(n, m):
+  flow = myelin.Flow()
+  f = flow.define("variance")
+  x = f.var("x", dt, [n, m])
+  v = f.variance(x, axis=1)
+  check(flow, n)
+
 # Check for specific test to run.
 if flags.arg.test:
   print("Running test", flags.arg.test)
@@ -1032,6 +1046,7 @@ for i in sizes:
   abs_test(i)
   square_test(i)
   relu_test(i)
+  gelu_test(i)
   floor_test(i)
   ceil_test(i)
   round_test(i)

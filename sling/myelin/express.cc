@@ -40,6 +40,7 @@ static std::map<string, Express::OpType> optypes = {
   {"Abs", Express::ABS},
   {"Sign", Express::SIGN},
   {"Relu", Express::RELU},
+  {"Gelu", Express::GELU},
   {"Softsign", Express::SOFTSIGN},
   {"Softplus", Express::SOFTPLUS},
   {"LogSigmoid", Express::LOGSIGMOID},
@@ -137,7 +138,7 @@ static const string opname[] = {
   "Id",
   "Add", "Sub", "Mul", "Div", "Mod",
   "Minimum", "Maximum",
-  "Neg", "Abs", "Sign", "Relu", "Softsign", "Softplus", "LogSigmoid",
+  "Neg", "Abs", "Sign", "Relu", "Gelu", "Softsign", "Softplus", "LogSigmoid",
   "Reciprocal", "Square", "Sqrt", "Rsqrt",
   "Log", "Exp", "Sigmoid", "Erf", "Log2", "Exp2", "Pow",
   "Sin", "Cos", "Tan", "Cot", "Sec", "Csc",
@@ -562,6 +563,11 @@ Express::Constant Express::constants[Express::NUM_CONSTANTS] = {
   FLTCONST(-1.38776856032e-1),          // ATAN_P1
   FLTCONST(1.99777106478e-1),           // ATAN_P2
   FLTCONST(-3.33329491539e-1),          // ATAN_P3
+
+  // Contants for GELU.
+  FLTCONST(0.044715),                   // GELU_C1
+  FLTCONST(0.7978845608),               // GELU_C2 (sqrt(2 / pi))
+  FLTCONST(0.70710678118),              // GELU_C3 (1 / sqrt(2))
 };
 
 int Express::NeutralValue(OpType type) {
@@ -677,6 +683,7 @@ Express::Var *Express::Expand(OpType type, std::vector<Var *> &args) {
       case Express::ABS: result = Abs(args[0]); break;
       case Express::SIGN: result = Sign(args[0]); break;
       case Express::RELU: result = Relu(args[0]); break;
+      case Express::GELU: result = Gelu(args[0]); break;
       case Express::SOFTSIGN: result = Softsign(args[0]); break;
       case Express::SOFTPLUS: result = Softplus(args[0]); break;
       case Express::LOGSIGMOID: result = LogSigmoid(args[0]); break;

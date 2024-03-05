@@ -326,6 +326,8 @@ class Builder:
     result = self.op("Gather", inputs, name)
     if len(indices.shape) == 0:
       result.shape = params.shape[1:]
+    elif len(indices.shape) == 1:
+      result.shape = indices.shape + params.shape[1:]
     else:
       result.shape = indices.shape[:-1] + params.shape[indices.shape[-1]:]
     return result
@@ -427,6 +429,9 @@ class Builder:
 
   def relu(self, x, name=None):
     return self.op("Relu", [x], name)
+
+  def gelu(self, x, name=None):
+    return self.op("Gelu", [x], name)
 
   def sin(self, x, name=None):
     return self.op("Sin", [x], name)
@@ -618,6 +623,10 @@ class Builder:
       if axis < 0: axis = len(x.shape) + axis
       size = x.shape[axis]
     return self.div(sum, self.const(size, x.type), name=name)
+
+  def variance(self, x, axis=None, keepdims=None, name=None):
+    average = self.mean(x, axis, keepdims=True)
+    return self.mean(self.square(self.sub(x, average)), axis=axis)
 
   def norm(self, x, name=None):
     return self.sqrt(self.sum(self.square(x)), name)

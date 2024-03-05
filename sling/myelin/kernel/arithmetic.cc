@@ -86,6 +86,7 @@ static Express::OpType OpType(const string &op) {
     {"Abs", Express::ABS},
     {"Sign", Express::SIGN},
     {"Relu", Express::RELU},
+    {"Gelu", Express::GELU},
     {"Softsign", Express::SOFTSIGN},
     {"Softplus", Express::SOFTPLUS},
     {"LogSigmoid", Express::LOGSIGMOID},
@@ -1210,6 +1211,7 @@ void RegisterArithmeticLibrary(Library *library) {
   library->Register(new Calculate("AbsExpr", "Abs", 1));
   library->Register(new Calculate("SignExpr", "Sign", 1));
   library->Register(new Calculate("ReluExpr", "Relu", 1));
+  library->Register(new Calculate("GeluExpr", "Gelu", 1));
   library->Register(new Calculate("SoftsignExpr", "Softsign", 1));
   library->Register(new Calculate("SoftplusExpr", "Softplus", 1));
   library->Register(new Calculate("LogSigmoidExpr", "LogSigmoid", 1));

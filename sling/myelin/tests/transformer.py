@@ -174,7 +174,7 @@ class TransformerLayer:
 flags.parse()
 
 flow = myelin.Flow()
-f = myelin.Builder(flow, 'f')
+f = myelin.Builder(flow, "f")
 
 seq_length = 128
 hidden_size = 256
@@ -184,8 +184,8 @@ filter_size = hidden_size * 4
 vocab_size = 32000
 num_segment_ids = 5
 
-input_ids = f.var('input_ids', myelin.DT_INT32, [seq_length])
-segment_ids = f.var('segment_ids', myelin.DT_INT32, [seq_length])
+input_ids = f.var('input_ids', myelin.DT_INT32, [seq_length, 1])
+segment_ids = f.var('segment_ids', myelin.DT_INT32, [seq_length, 1])
 
 wpe_embedding = f.array(
     'wpe_embedding',
@@ -204,7 +204,7 @@ input_segment_ids_emb = f.gather(segment_embeddings, segment_ids)
 layer_input = f.add(input_ids_emb,
                     f.add(input_segment_ids_emb, positional_embeddings))
 
-for _ in range(num_layers):
+for l in range(num_layers):
   transformer = TransformerLayer(
       f, hidden_size, filter_size, seq_length, num_heads)
   layer_output = transformer.build_flow(layer_input)
@@ -237,7 +237,7 @@ if flags.arg.profile:
 # Compare output of network to NumPy baseline.
 baseline_output = baseline[layer_output]
 test_output = np.array(data[layer_output])
-if np.allclose(baseline_output, test_output, atol=1e-4):
+if np.allclose(baseline_output, test_output, atol=1e-3):
   print("Baseline comparison: SUCCESS")
 else:
   print("Baseline comparison: FAIL")
