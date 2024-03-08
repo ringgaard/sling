@@ -183,6 +183,8 @@ static bool LoadMKLLibrary() {
 
   mkl_support = (cblas_sgemm != nullptr);
   mkl_batch_support = (cblas_sgemm_batch != nullptr);
+  // batch matmul disabled for now because of profiling crashes.
+  mkl_batch_support = false;
   mkl_jit_support = (mkl_cblas_jit_create_sgemm != nullptr);
 
   return true;

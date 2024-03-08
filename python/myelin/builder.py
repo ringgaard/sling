@@ -635,10 +635,11 @@ class Builder:
     return self.mul(x, self.rcp(self.norm(x)), name)
 
   def softmax(self, x, axis=None, name=None):
-    if axis is None:
-      return self.op("SoftMax", [x], name)
-    else:
-      return self.reduce("SoftMax", x, axis, False, name)
+    v = self.op("SoftMax", [x], name)
+    if axis:
+      if axis < 0: axis = len(x.shape) + axis
+      v.producer.add_attr("axis", axis)
+    return v
 
   def logsumexp(self, x, axis=None, keepdims=None, name=None):
     return self.reduce("LogSumExp", x, axis, keepdims, name)

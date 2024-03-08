@@ -525,6 +525,13 @@ def softmax_test(n):
   y = f.softmax(x)
   check(flow, n)
 
+def softmax_axis_test(n, m, a):
+  flow = myelin.Flow()
+  f = flow.define("softmax_axis")
+  x = f.var("x", dt, [n, m])
+  y = f.softmax(x, axis=a)
+  check(flow, (n, m, a))
+
 def logsumexp_test(n):
   flow = myelin.Flow()
   f = flow.define("logsumexp")
@@ -1122,6 +1129,7 @@ for i in sizes:
       argmin_axis_test([i, j], axis)
       argmax_axis_test([i, j], axis)
       if dt == myelin.DT_FLOAT or dt == myelin.DT_DOUBLE:
+        softmax_axis_test(i, j, axis)
         for keepdims in [False, True]:
           logsumexp_axis_test(i, j, axis, keepdims)
 

@@ -51,9 +51,13 @@ def gather(d, i):
 def onehot(x, size):
   return np.eye(size)[x]
 
-def softmax(x):
-  e = np.exp(x - np.max(x))
-  return e / e.sum()
+def softmax(x, axis=None):
+  if axis is None:
+    e = np.exp(x - np.max(x))
+    return e / e.sum()
+  else:
+    e = np.exp(x - np.max(x, axis=axis, keepdims=True))
+    return e / e.sum(axis=axis, keepdims=True)
 
 def logsumexp(x, axis=None, keepdims=False):
   m = np.amax(x, axis=axis, keepdims=True)
@@ -199,7 +203,12 @@ def compute(flow, f, data):
         keepdims = bool(op.attrs.get("keepdims"))
         v[o[0]] = np.any(v[i[0]], axis, keepdims=keepdims)
     elif op.type == "SoftMax":
-      v[o[0]] = softmax(v[i[0]])
+      axis = op.attrs.get("axis")
+      if axis is None:
+        v[o[0]] = softmax(v[i[0]])
+      else:
+        v[o[0]] = softmax(v[i[0]], axis=int(axis))
+
     elif op.type == "LogSumExp":
       axis = op.attrs.get("axis")
       if axis is None:
