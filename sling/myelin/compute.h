@@ -392,6 +392,10 @@ class Tensor {
   bool dynamic() const { return dynamic_; }
   void set_dynamic(bool dynamic) { dynamic_ = dynamic; }
 
+  // Type-casted tensor.
+  bool cast() const { return cast_; }
+  void set_cast(bool cast) { cast_ = cast; }
+
   // Tensor shape.
   const Shape &shape() const { return shape_; }
   int rank() const { return shape_.rank(); }
@@ -638,6 +642,9 @@ class Tensor {
   // Reference to dynamically sized tensor channel.
   bool dynamic_ = false;
 
+  // Type-casted tensor.
+  bool cast_ = false;
+
   // Tensor shape.
   Shape shape_;
 
@@ -794,6 +801,9 @@ class Step : public Attributes {
 
   // Get type signature for step.
   string Signature() const;
+
+  // Check if step is a cast operation.
+  bool IsCast() const { return type_.compare(0, 4, "Cast") == 0; }
 
  private:
   // Step name from flow operation.

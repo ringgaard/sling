@@ -1625,6 +1625,19 @@ class Assembler : public CodeGenerator {
     vpd(0x50, idst, ymm0, src);
   }
 
+  void vpmovsxbd(YMMRegister dst, const Operand &src) {
+    vinstr(0x21, dst, ymm0, src, k66, k0F38, kWIG);
+  }
+  void vpmovsxbq(YMMRegister dst, const Operand &src) {
+    vinstr(0x22, dst, ymm0, src, k66, k0F38, kWIG);
+  }
+  void vpmovsxwd(YMMRegister dst, const Operand &src) {
+    vinstr(0x23, dst, ymm0, src, k66, k0F38, kWIG);
+  }
+  void vpmovsxwq(YMMRegister dst, const Operand &src) {
+    vinstr(0x24, dst, ymm0, src, k66, k0F38, kWIG);
+  }
+
   void vpmovsxdq(XMMRegister dst, XMMRegister src) {
     vinstr(0x25, dst, xmm0, src, k66, k0F38, kWIG);
   }
@@ -2297,6 +2310,10 @@ class Assembler : public CodeGenerator {
   }
   void vcvtdq2ps(YMMRegister dst, const Operand &src) {
     vinstr(0x5b, dst, ymm0, src, kNone, k0F, kWIG);
+  }
+
+  void vcvtpd2ps(YMMRegister dst, const Operand &src) {
+    vinstr(0x5a, dst, ymm0, src, k66, k0F, kWIG);
   }
 
   void vrcpss(XMMRegister dst, XMMRegister src1, XMMRegister src2) {

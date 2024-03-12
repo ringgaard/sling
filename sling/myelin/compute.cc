@@ -1345,6 +1345,7 @@ bool Network::Compile(const Flow &flow, const Library &library) {
     tensor->constant_ = var->constant();
     tensor->local_ = !var->global();
     tensor->init_ = var->init;
+    tensor->cast_ = var->cast();
     tensor->name_ = var->name;
     for (const string &alias : var->aliases) {
       names_[alias] = tensor;
@@ -2376,6 +2377,7 @@ string Cell::ToString() const {
                     t->offset(),
                     t->space(), t->byte_alignment());
       StringAppendF(&str, " %s", ordername[t->order()]);
+      if (t->cast()) str.append(" cast");
       if (t->ref_placement() != NOWHERE) {
         StringAppendF(&str, " %s ref", placename[t->ref_placement()]);
       }

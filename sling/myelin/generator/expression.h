@@ -234,7 +234,9 @@ class ExpressionGenerator {
   }
 
   // Return operand for accessing memory variable.
-  Operand addr(Express::Var *var) { return index_->addr(var); }
+  Operand addr(Express::Var *var, int disp = 0) {
+    return index_->addr(var, disp);
+  }
 
   // Return pointer to constant data.
   const void *data(Express::Var *var) { return index_->data(var); }

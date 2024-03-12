@@ -41,6 +41,8 @@ class VectorIntAVX256Generator : public ExpressionGenerator {
       Express::ADD, Express::SUB, Express::MUL, Express::DIV,
       Express::MINIMUM, Express::MAXIMUM,
       Express::FLOOR, Express::CEIL, Express::ROUND, Express::TRUNC,
+      Express::SUM, Express::PRODUCT, Express::MIN, Express::MAX,
+      Express::ALL, Express::ANY,
     });
   }
 
@@ -54,6 +56,10 @@ class VectorIntAVX256Generator : public ExpressionGenerator {
     int num_mm_aux = 0;
     if (instructions_.Has(Express::MUL) && type_ == DT_INT8) {
       num_mm_aux = std::max(num_mm_aux, 3);
+    }
+    if (instructions_.Has({Express::SUM, Express::PRODUCT, Express::MIN,
+                           Express::MAX, Express::ALL, Express::ANY})) {
+      num_mm_aux = std::max(num_mm_aux, 1);
     }
     index_->ReserveAuxYMMRegisters(num_mm_aux);
   }
@@ -141,6 +147,14 @@ class VectorIntAVX256Generator : public ExpressionGenerator {
           GenerateYMMVectorIntMove(instr, masm);
         }
         break;
+      case Express::SUM:
+      case Express::PRODUCT:
+      case Express::MIN:
+      case Express::MAX:
+      case Express::ALL:
+      case Express::ANY:
+        GenerateAccumulate(instr, masm);
+        break;
       default:
         LOG(FATAL) << "Unsupported instruction: " << instr->AsInstruction();
     }
@@ -178,6 +192,35 @@ class VectorIntAVX256Generator : public ExpressionGenerator {
     __ vpsrlw(ymmaux(1), ymmaux(1), 8);  // constant 8 times 0x00FF
     __ vpand(ymm(instr->dst), ymm(instr->dst), ymmaux(1));
     __ vpor(ymm(instr->dst), ymm(instr->dst), ymmaux(0));
+  }
+
+  // Generate code for accumulate operation.
+  void GenerateAccumulate(Express::Op *instr, MacroAssembler *masm) {
+    CHECK(instr->acc != -1);
+    if (instr->src != -1) {
+      __ Accumulate(ReduceOp(instr), type_, ymm(instr->acc), ymm(instr->src));
+    } else {
+      __ Accumulate(ReduceOp(instr), type_, ymm(instr->acc),
+                    addr(instr->args[0]));
+    }
+  }
+
+  // Generate code for reduction operation.
+  void GenerateReduce(Express::Op *instr, MacroAssembler *masm) override {
+    __ Reduce(ReduceOp(instr), type_, ymm(instr->acc), ymmaux(0));
+    if (instr->dst != -1) {
+      __ vmovdqa(xmm(instr->dst), xmm(instr->acc));
+    } else {
+      switch (type_) {
+        case DT_INT32:
+          __ vmovd(addr(instr->result), xmm(instr->acc));
+          break;
+        case DT_INT64:
+          __ vmovq(addr(instr->result), xmm(instr->acc));
+          break;
+        default: UNSUPPORTED;
+      }
+    }
   }
 };
 

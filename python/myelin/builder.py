@@ -43,6 +43,15 @@ typemap = {
   "?": DT_BOOL,
 }
 
+castmap = {
+  DT_FLOAT32: "CastFloat",
+  DT_FLOAT64: "CastDouble",
+  DT_INT8: "CastByte",
+  DT_INT16: "CastShort",
+  DT_INT32: "CastInt",
+  DT_INT64: "CastLong",
+}
+
 typecodes = {
   DT_FLOAT32: "f",
   DT_FLOAT64: "d",
@@ -537,6 +546,11 @@ class Builder:
 
   def trunc(self, x, name=None):
     return self.op("Trunc", [x], name)
+
+  def cast(self, x, dt, name=None):
+    result = self.op(castmap[x.type], [x], name)
+    result.type = dt
+    return result
 
   def equal(self, x, y, name=None):
     return self.op("Equal", [x, y], name)

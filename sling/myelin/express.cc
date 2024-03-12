@@ -112,6 +112,13 @@ static std::map<string, Express::OpType> optypes = {
   {"Round", Express::ROUND},
   {"Trunc", Express::TRUNC},
 
+  {"CastFloat", Express::CASTFLOAT},
+  {"CastDouble", Express::CASTDOUBLE},
+  {"CastByte", Express::CASTBYTE},
+  {"CastShort", Express::CASTSHORT},
+  {"CastInt", Express::CASTINT},
+  {"CastLong", Express::CASTLONG},
+
   {"BitAnd", Express::BITAND},
   {"BitOr", Express::BITOR},
   {"BitXor", Express::BITXOR},
@@ -150,6 +157,7 @@ static const string opname[] = {
   "CmpEq", "CmpNe", "CmpLt", "CmpLe", "CmpGt", "CmpGe",
   "And", "Or", "Xor", "AndNot", "Not", "Cond", "Select",
   "Floor", "Ceil", "Round", "Trunc",
+  "CastFloat", "CastDouble", "CastByte", "CastShort", "CastInt", "CastLong",
   "BitAnd", "BitOr", "BitXor", "BitAndNot", "BitEq",
   "CvtFltInt", "CvtIntFlt", "CvtExpInt", "CvtIntExp", "QuadSign",
   "AddInt", "SubInt",

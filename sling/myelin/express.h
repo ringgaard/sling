@@ -164,6 +164,14 @@ class Express {
     ROUND,       // round to nearest
     TRUNC,       // round towards zero
 
+    // Casting.
+    CASTFLOAT,   // cast from 32-bit float
+    CASTDOUBLE,  // cast from 64-bit double
+    CASTBYTE,    // cast from 8-bit byte
+    CASTSHORT,   // cast from 16-bit short
+    CASTINT,     // cast from 32-bit int
+    CASTLONG,    // cast from 64-bit long
+
     // Integer operations.
     BITAND,      // bitwise and
     BITOR,       // bitwise or
@@ -321,6 +329,9 @@ class Express {
 
     // Check if operation is a no-op.
     bool nop() const { return type == MOV && dst != -1 && src == dst; }
+
+    // Check if operation is a cast.
+    bool cast() const { return type >= CASTFLOAT && type <= CASTLONG; }
 
     // Operation is computing result = type(args...).
     OpType type;                  // operation type

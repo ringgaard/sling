@@ -110,6 +110,13 @@ static Express::OpType OpType(const string &op) {
     {"Round", Express::ROUND},
     {"Trunc", Express::TRUNC},
 
+    {"CastFloat", Express::CASTFLOAT},
+    {"CastDouble", Express::CASTDOUBLE},
+    {"CastByte", Express::CASTBYTE},
+    {"CastShort", Express::CASTSHORT},
+    {"CastInt", Express::CASTINT},
+    {"CastLong", Express::CASTLONG},
+
     {"And", Express::AND},
     {"Or", Express::OR},
     {"Xor", Express::XOR},
@@ -139,6 +146,11 @@ static bool IsCalculateOp(Flow::Operation *op) {
 // Check if operation is an assignment op.
 static bool IsAssignmentOp(Flow::Operation *op) {
   return op->type == "Assign";
+}
+
+// Check if operation is a cast op.
+static bool IsCastOp(Flow::Operation *op) {
+  return op->type.compare(0, 4, "Cast") == 0;
 }
 
 // Initialize expression for flow operation.
@@ -649,6 +661,28 @@ class AdditiveTransformer : public Transformer {
   }
 };
 
+// Convert casts to the same type to no-ops. This also marks the inputs as
+// type-casted inputs.
+class CastTransformer : public Transformer {
+ public:
+  string Name() override { return "CastTransformer"; }
+
+  bool Transform(Flow *flow) override {
+    int updates = 0;
+    for (Flow::Operation *op : flow->ops()) {
+      if (!IsCastOp(op)) continue;
+      if (op->indegree() != 1 || op->outdegree() != 1) continue;
+      if (op->inputs[0]->type != op->outputs[0]->type) {
+        op->inputs[0]->set_cast(true);
+      } else {
+        op->type = "Identity";
+        updates++;
+      }
+    }
+    return updates > 0;
+  }
+};
+
 // Combine arithmetic operators into expressions that can be computed by a
 // Calculate kernel.
 class ExpressionTransformer : public Transformer {
@@ -815,12 +849,12 @@ class ExpressionTransformer : public Transformer {
     Type type = prototype->type;
     const Shape &shape = prototype->shape;
     for (auto *input : first->inputs) {
-      if (input->type != type) return false;
+      if (!input->cast() && input->type != type) return false;
       if (!input->shape.defined()) return false;
       if (!input->shape.IsCompatible(shape)) return false;
     }
     for (auto *input : second->inputs) {
-      if (input->type != type) return false;
+      if (!input->cast() && input->type != type) return false;
       if (!input->shape.defined()) return false;
       if (!input->shape.IsCompatible(shape)) return false;
     }
@@ -847,7 +881,7 @@ class ExpressionTransformer : public Transformer {
     string fused_recipe = FuseExpressions(first, second);
     if (fused_recipe.empty()) return false;
 
-    // Fuse the two ops and set expression recipe for the fused op.
+    // Fuse the two ops.
     Flow::Variable *target = assign ? second->inputs[0] : nullptr;
     Flow::Operation *fused = flow->Fuse(first, second,
                                         assign ? "Assign" : "Calculate",
@@ -1058,7 +1092,7 @@ class Calculate : public Kernel {
     Type type = prototype->type();
     const Shape &shape = prototype->shape();
     for (auto *input : step->inputs()) {
-      if (input->type() != type) return false;
+      if (!input->cast() && input->type() != type) return false;
       if (!input->Compatible(prototype)) return false;
     }
     for (auto *output : step->outputs()) {
@@ -1109,7 +1143,9 @@ class Calculate : public Kernel {
 
           // The input and output can be shared if they have the same format and
           // their live ranges do not overlap.
-          if (input->shape() == output->shape() && !ivar->overlaps(ovar)) {
+          if (input->shape() == output->shape() &&
+              input->type() == output->type() &&
+              !ivar->overlaps(ovar)) {
             if (step->AllowInPlace(i, j)) {
               break;
             }
@@ -1235,6 +1271,13 @@ void RegisterArithmeticLibrary(Library *library) {
   library->Register(new Calculate("RoundExpr", "Round", 1));
   library->Register(new Calculate("TruncExpr", "Trunc", 1));
 
+  library->Register(new Calculate("CastFloatExpr", "CastFloat", 1));
+  library->Register(new Calculate("CastDoubleExpr", "CastDouble", 1));
+  library->Register(new Calculate("CastByteExpr", "CastByte", 1));
+  library->Register(new Calculate("CastShortExpr", "CastShort", 1));
+  library->Register(new Calculate("CastIntExpr", "CastInt", 1));
+  library->Register(new Calculate("CastLongExpr", "CastLong", 1));
+
   library->Register(new Calculate("AndExpr", "And", 2));
   library->Register(new Calculate("OrExpr", "Or", 2));
   library->Register(new Calculate("XorExpr", "Xor", 2));
@@ -1260,6 +1303,7 @@ void RegisterArithmeticTransforms(Library *library) {
   library->RegisterTransformer(new AdditiveTransformer());
   library->RegisterTransformer(new PowerTransformer());
   library->RegisterTransformer(new LogicTransformer());
+  library->RegisterTransformer(new CastTransformer());
 }
 
 }  // namespace myelin

@@ -23,6 +23,15 @@ namespace myelin {
 
 using namespace jit;
 
+static int log2(int x) {
+  int n = 0;
+  while (x != 0) {
+    x >>= 1;
+    n++;
+  }
+  return n;
+}
+
 ElementwiseIndexGenerator::ElementwiseIndexGenerator(
     const Step *step, MacroAssembler *masm) : IndexGenerator(masm) {
   // Get size from first output.
@@ -34,7 +43,7 @@ ElementwiseIndexGenerator::ElementwiseIndexGenerator(
   // Allocate locators for all inputs and outputs.
   input_.resize(step->indegree());
   for (int i = 0; i < step->indegree(); ++i) {
-    CHECK(step->input(i)->type() == type_);
+    CHECK(step->input(i)->cast() || step->input(i)->type() == type_);
     input_[i] = GetLocator(step->input(i));
   }
   if (assign_) {
@@ -63,16 +72,17 @@ ElementwiseIndexGenerator::~ElementwiseIndexGenerator() {
 
 ElementwiseIndexGenerator::Iterator *ElementwiseIndexGenerator::GetIterator(
     IteratorType type,
-    size_t size) {
+    size_t size, int scale) {
   // Try to find existing iterator.
+  int scaled = scale < 0 ? size >> -scale : size << scale;
   for (Iterator *it : iterators_) {
-    if (type == it->type && size == it->size) {
+    if (type == it->type && scaled == it->scaled(it->size)) {
       return it;
     }
   }
 
   // Create new iterator.
-  Iterator *it = new Iterator(type, size);
+  Iterator *it = new Iterator(type, size, scale);
   iterators_.push_back(it);
   return it;
 }
@@ -89,12 +99,13 @@ ElementwiseIndexGenerator::Locator *ElementwiseIndexGenerator::GetLocator(
   locators_.push_back(loc);
 
   // Determine iterator type for variable.
+  int scale = log2(var->element_size()) - log2(element_size());
   if (var->elements() == 1) {
     // Variable only has one element; use a scalar/const iterator.
-    loc->iterator = GetIterator(var->constant() ? CONST : SCALAR, 1);
+    loc->iterator = GetIterator(var->constant() ? CONST : SCALAR, 1, scale);
   } else if (var->shape() == shape_) {
     // Variable has same shape as output; use simple iterator.
-    loc->iterator = GetIterator(SIMPLE, shape_.elements());
+    loc->iterator = GetIterator(SIMPLE, shape_.elements(), scale);
   } else if (var->rank() <= shape_.rank()) {
     // Find common suffix between variable and output.
     int n = 1;
@@ -112,17 +123,17 @@ ElementwiseIndexGenerator::Locator *ElementwiseIndexGenerator::GetLocator(
     if (n == var->elements()) {
       if (var->elements() == shape_.elements()) {
         // The variable shape prefix is a one vector so use a simple iterator.
-        loc->iterator = GetIterator(SIMPLE, shape_.elements());
+        loc->iterator = GetIterator(SIMPLE, shape_.elements(), scale);
       } else {
         // Variable shape is a suffix of the output shape; use a repeated
         // iterator.
         DCHECK(shape_.elements() % n == 0);
-        loc->iterator = GetIterator(REPEAT, n);
+        loc->iterator = GetIterator(REPEAT, n, scale);
       }
     } else if (d1 >= 0 && d2 >= 0 && var->dim(d1) == 1 &&
                var->elements() * shape_.dim(d2) == shape_.elements()) {
       // Create broadcast iterator over one (singular) dimension.
-      loc->iterator = GetIterator(n == 1 ? SINGLE : BROADCAST, n);
+      loc->iterator = GetIterator(n == 1 ? SINGLE : BROADCAST, n, scale);
       loc->broadcast = shape_.dim(d2);
     } else {
       LOG(FATAL) << "Unsupported broadcast: " << var->name()
@@ -131,7 +142,7 @@ ElementwiseIndexGenerator::Locator *ElementwiseIndexGenerator::GetLocator(
     }
   } else if (var->shape().outer(shape_.rank()) == 1) {
     // The variable shape prefix is a one vector so use a simple iterator.
-    loc->iterator = GetIterator(SIMPLE, var->elements());
+    loc->iterator = GetIterator(SIMPLE, var->elements(), scale);
   } else {
     LOG(FATAL) << "Unsupported iterator: " << var->name() << " with shape "
                << var->shape().ToString()
@@ -202,7 +213,9 @@ bool ElementwiseIndexGenerator::AllocateRegisters() {
 
   // Allocate registers for iterators.
   for (auto *it : iterators_) {
-    if (it->type == REPEAT || it->type == BROADCAST) {
+    if (it->type == REPEAT ||
+        it->type == BROADCAST ||
+        (it->type == SIMPLE && it->scale != 0)) {
       // Allocate index register.
       it->offset = rr.try_alloc();
       if (!it->offset.is_valid()) return false;
@@ -391,8 +404,8 @@ void ElementwiseIndexGenerator::GenerateLoopEnd() {
     // Update iterators.
     for (Iterator *it : iterators_) {
       if (it->type == REPEAT) {
-        size_t repeat_size = element_size() * it->size;
-        __ addq(it->offset, Immediate(vecsize_));
+        size_t repeat_size = element_size() * it->scaled(it->size);
+        __ addq(it->offset, Immediate(it->scaled(vecsize_)));
         if ((repeat_size & (repeat_size - 1)) == 0) {
           // The repeat block size is a power of two, so the index can be
           // computed using masking.
@@ -447,6 +460,8 @@ void ElementwiseIndexGenerator::GenerateLoopEnd() {
           __ bind(&l2);
         }
         __ bind(&l1);
+      } else if (it->type == SIMPLE && it->scale != 0) {
+        __ addq(it->offset, Immediate(it->scaled(vecsize_)));
       }
     }
 
@@ -483,7 +498,7 @@ bool ElementwiseIndexGenerator::NeedsBroadcast(Express::Var *var) {
   return vecsize_ > element_size() && loc->var->elements() == 1;
 }
 
-Operand ElementwiseIndexGenerator::addr(Express::Var *var) {
+Operand ElementwiseIndexGenerator::addr(Express::Var *var, int disp) {
   if (var->type == Express::NUMBER) {
     // System-defined constant.
     switch (type_) {
@@ -538,29 +553,41 @@ Operand ElementwiseIndexGenerator::addr(Express::Var *var) {
           // Single iteration.
           if (loc->base.is_valid()) {
             // Index single element using base register.
-            return Operand(loc->base);
+            return Operand(loc->base, disp);
           } else {
             // Index single element using offset in instance.
-            return Operand(masm_->instance(), loc->var->offset());
+            return Operand(masm_->instance(), loc->var->offset() + disp);
           }
         } else {
           // Multiple iterations.
           if (loc->base.is_valid()) {
             // Index element using base register and index.
-            return Operand(loc->base, offset_);
+            if (loc->iterator->scale == 0) {
+              if (disp == 0) {
+                return Operand(loc->base, offset_);
+              } else {
+                return Operand(loc->base, offset_, times_1, disp);
+              }
+            } else {
+              if (disp == 0) {
+                return Operand(loc->base, loc->iterator->offset);
+              } else {
+                return Operand(loc->base, loc->iterator->offset, times_1, disp);
+              }
+            }
           } else {
             // Index element using offset in instance and index.
             return Operand(masm_->instance(), offset_, times_1,
-                           loc->var->offset());
+                           loc->var->offset() + disp);
           }
         }
       case SCALAR:
         if (loc->base.is_valid()) {
           // Index scalar using base register.
-          return Operand(loc->base);
+          return Operand(loc->base, disp);
         } else {
           // Index scalar using offset in instance.
-          return Operand(masm_->instance(), loc->var->offset());
+          return Operand(masm_->instance(), loc->var->offset() + disp);
         }
       case CONST: {
         // Scalar constant in code block, vectorized if needed.
@@ -575,28 +602,36 @@ Operand ElementwiseIndexGenerator::addr(Express::Var *var) {
           // Single iteration.
           if (loc->base.is_valid()) {
             // Index single element using base register.
-            return Operand(loc->base);
+            return Operand(loc->base, disp);
           } else {
             // Index single element using offset in instance.
-            return Operand(masm_->instance(), loc->var->offset());
+            return Operand(masm_->instance(), loc->var->offset() + disp);
           }
         } else {
           // Multiple iterations.
           if (loc->base.is_valid()) {
             // Index element using base register and index.
-            return Operand(loc->base, loc->iterator->offset);
+            if (disp == 0) {
+              return Operand(loc->base, loc->iterator->offset);
+            } else {
+              return Operand(loc->base, loc->iterator->offset, times_1, disp);
+            }
           } else {
             // Index element using offset in instance and index.
             return Operand(masm_->instance(), loc->iterator->offset, times_1,
-                           loc->var->offset());
+                           loc->var->offset() + disp);
           }
         }
       case SINGLE:
         // Return block base.
-        return Operand(loc->base);
+        return Operand(loc->base, disp);
       case BROADCAST:
         // Return block base plus block offset.
-        return Operand(loc->base, loc->iterator->offset);
+        if (disp == 0) {
+          return Operand(loc->base, loc->iterator->offset);
+        } else {
+          return Operand(loc->base, loc->iterator->offset, times_1, disp);
+        }
       default:
         LOG(FATAL) << "Unsupported iterator type";
         return Operand(no_reg);

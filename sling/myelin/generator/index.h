@@ -46,7 +46,7 @@ class IndexGenerator {
   virtual bool AllocateRegisters();
 
   // Return operand for accessing memory variable.
-  virtual jit::Operand addr(Express::Var *var) = 0;
+  virtual jit::Operand addr(Express::Var *var, int disp = 0) = 0;
 
   // Check if variable needs to be broadcast to whole vector after loading.
   virtual bool NeedsBroadcast(Express::Var *var) { return false; }

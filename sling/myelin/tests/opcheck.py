@@ -336,6 +336,13 @@ def trunc_test(n):
   y = f.trunc(x)
   check(flow, n)
 
+def cast_test(n, srcdt):
+  flow = myelin.Flow()
+  f = flow.define("cast")
+  x = f.var("x", srcdt, [n])
+  y = f.cast(x, dt)
+  check(flow, n)
+
 def exp_test(n):
   flow = myelin.Flow()
   f = flow.define("exp")
@@ -1053,7 +1060,8 @@ for i in sizes:
   abs_test(i)
   square_test(i)
   relu_test(i)
-  gelu_test(i)
+  if dt == myelin.DT_FLOAT or dt == myelin.DT_DOUBLE:
+    gelu_test(i)
   floor_test(i)
   ceil_test(i)
   round_test(i)

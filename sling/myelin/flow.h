@@ -439,6 +439,7 @@ class Flow {
       ROW        = 64,   // request row-major order
       COL        = 128,  // request column-major order
       NOGRADIENT = 256,  // do not compute gradient for variable
+      CAST       = 512,  // type-casted input variable
     };
 
     // Initialization for learnable parameters.
@@ -492,6 +493,12 @@ class Flow {
     bool unique() const { return is(UNIQUE); }
     Variable *set_unique(bool enable = true) {
       return set(UNIQUE, enable);
+    }
+
+    // Type-cast flag.
+    bool cast() const { return is(CAST); }
+    Variable *set_cast(bool enable = true) {
+      return set(CAST, enable);
     }
 
     // Check if variable is a constant.

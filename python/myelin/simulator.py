@@ -160,6 +160,8 @@ def compute(flow, f, data):
       v[o[0]] = np.round(v[i[0]])
     elif op.type == "Trunc":
       v[o[0]] = np.trunc(v[i[0]])
+    elif op.type.startswith("Cast"):
+      v[o[0]] = v[i[0]].astype(nptypes[o[0].type])
     elif op.type == "Sum":
       axis = op.attrs.get("axis")
       if axis is None:

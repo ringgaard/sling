@@ -667,7 +667,7 @@ class ZigZag : public IndexGenerator {
     return true;
   }
 
-  Operand addr(Express::Var *var) override {
+  Operand addr(Express::Var *var, int disp) override {
     if (var->type == Express::NUMBER) {
       float number = Express::NumericFlt32(var->id);
       int repeat = vecsize_ / sizeof(float);

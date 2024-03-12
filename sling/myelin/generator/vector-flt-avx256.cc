@@ -60,6 +60,8 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
       Express::CVTEXPINT, Express::CVTINTEXP,
       Express::BITEQ, Express::QUADSIGN,
       Express::FLOOR, Express::CEIL, Express::ROUND, Express::TRUNC,
+      Express::CASTFLOAT, Express::CASTDOUBLE, Express::CASTBYTE,
+      Express::CASTSHORT, Express::CASTINT, Express::CASTLONG,
       Express::ADDINT, Express::SUBINT,
       Express::SUM, Express::PRODUCT, Express::MIN, Express::MAX,
       Express::ALL, Express::ANY,
@@ -88,6 +90,9 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
       if (instructions_.Has(Express::CVTFLTINT) && type_ == DT_DOUBLE) {
         num_mm_aux = std::max(num_mm_aux, 1);
       }
+    }
+    if (instructions_.Has(Express::CASTDOUBLE) && type_ == DT_FLOAT) {
+      num_mm_aux = std::max(num_mm_aux, 1);
     }
     if (instructions_.Has({Express::SUM, Express::PRODUCT, Express::MIN,
                            Express::MAX, Express::ALL, Express::ANY})) {
@@ -288,6 +293,18 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
             &Assembler::vroundps, &Assembler::vroundpd,
             round_to_zero, masm);
         break;
+      case Express::CASTBYTE:
+        GenerateCastByte(instr, masm);
+        break;
+      case Express::CASTSHORT:
+        GenerateCastShort(instr, masm);
+        break;
+      case Express::CASTINT:
+        GenerateCastInt(instr, masm);
+        break;
+      case Express::CASTDOUBLE:
+        GenerateCastDouble(instr, masm);
+        break;
       case Express::CVTFLTINT:
         GenerateFltToInt(instr, masm);
         break;
@@ -347,6 +364,78 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
         break;
       default:
         LOG(FATAL) << "Unsupported instruction: " << instr->AsInstruction();
+    }
+  }
+
+  // Generate cast from 8-bit integer.
+  void GenerateCastByte(Express::Op *instr, MacroAssembler *masm) {
+    CHECK(instr->src == -1);
+    CHECK(instr->dst != -1);
+    if (type_ == DT_FLOAT) {
+        if (CPU::Enabled(AVX2)) {
+          __ vpmovsxbd(ymm(instr->dst), addr(instr->args[0]));
+          __ vcvtdq2ps(ymm(instr->dst), ymm(instr->dst));
+        } else {
+          UNSUPPORTED;
+        }
+    } else if (type_ == DT_DOUBLE) {
+        if (CPU::Enabled(AVX2)) {
+          __ vpmovsxbq(ymm(instr->dst), addr(instr->args[0]));
+          __ vcvtdq2pd(ymm(instr->dst), ymm(instr->dst));
+        } else {
+          UNSUPPORTED;
+        }
+    } else {
+      UNSUPPORTED;
+    }
+  }
+
+  // Generate cast from 16-bit integer.
+  void GenerateCastShort(Express::Op *instr, MacroAssembler *masm) {
+    CHECK(instr->src == -1);
+    CHECK(instr->dst != -1);
+    if (type_ == DT_FLOAT) {
+        if (CPU::Enabled(AVX2)) {
+          __ vpmovsxwd(ymm(instr->dst), addr(instr->args[0]));
+          __ vcvtdq2ps(ymm(instr->dst), ymm(instr->dst));
+        } else {
+          UNSUPPORTED;
+        }
+    } else if (type_ == DT_DOUBLE) {
+        if (CPU::Enabled(AVX2)) {
+          __ vpmovsxwq(ymm(instr->dst), addr(instr->args[0]));
+          __ vcvtdq2pd(ymm(instr->dst), ymm(instr->dst));
+        } else {
+          UNSUPPORTED;
+        }
+    } else {
+      UNSUPPORTED;
+    }
+  }
+
+  // Generate cast from 32-bit integer.
+  void GenerateCastInt(Express::Op *instr, MacroAssembler *masm) {
+    CHECK(instr->src == -1);
+    CHECK(instr->dst != -1);
+    if (type_ == DT_FLOAT) {
+      __ vcvtdq2ps(ymm(instr->dst), addr(instr->args[0]));
+    } else if (type_ == DT_DOUBLE) {
+      __ vcvtdq2pd(ymm(instr->dst), addr(instr->args[0]));
+    } else {
+      UNSUPPORTED;
+    }
+  }
+
+  // Generate cast from 64-bit float.
+  void GenerateCastDouble(Express::Op *instr, MacroAssembler *masm) {
+    CHECK(instr->src == -1);
+    CHECK(instr->dst != -1);
+    if (type_ == DT_FLOAT) {
+      __ vcvtpd2ps(ymm(instr->dst), addr(instr->args[0]));
+      __ vcvtpd2ps(ymmaux(0), addr(instr->args[0], YMMRegSize));
+      __ vperm2f128(ymm(instr->dst), ymm(instr->dst), ymmaux(0), 0x20);
+    } else {
+      UNSUPPORTED;
     }
   }
 

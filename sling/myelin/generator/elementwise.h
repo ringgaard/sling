@@ -24,8 +24,9 @@ namespace myelin {
 
 // Index generator for element-wise operations. It supports operations over
 // multiple inputs and outputs. All the outputs must have the same size and
-// type. The inputs must be broadcast compatible with the output. This index
-// generator has optimized versions for different kinds of input:
+// type (with the exception of casts). The inputs must be broadcast compatible
+// with the output. This index generator has optimized versions for different
+// kinds of input:
 //  - SIMPLE (iterator with the same size as the output)
 //  - SCALAR (scalar input broadcast over all the elemements)
 //  - CONST (scalar constant input broadcast over all the elemements)
@@ -48,7 +49,7 @@ class ElementwiseIndexGenerator : public IndexGenerator {
   bool AllocateRegisters() override;
 
   // Return operand for accessing memory variable.
-  jit::Operand addr(Express::Var *var) override;
+  jit::Operand addr(Express::Var *var, int disp = 0) override;
 
   // Check if variable needs to be broadcast to whole vector after loading.
   bool NeedsBroadcast(Express::Var *var) override;
@@ -83,17 +84,21 @@ class ElementwiseIndexGenerator : public IndexGenerator {
   }
 
   // Get iterator for iterating over vector elements.
-  Iterator *GetIterator(IteratorType type, size_t size);
+  Iterator *GetIterator(IteratorType type, size_t size, int scale = 0);
 
   // Get locator for accessing variable.
   Locator *GetLocator(Tensor *var);
 
   // Iterator for looping over (vector) elements in tensor.
   struct Iterator {
-    Iterator(IteratorType type, size_t size) : type(type), size(size) {}
+    Iterator(IteratorType type, size_t size, int scale = 0)
+      : type(type), size(size), scale(scale) {}
+
+    int scaled(int n) { return scale < 0 ? n >> -scale : n << scale; }
 
     IteratorType type;                   // iterator type
     size_t size;                         // number of elements to iterate over
+    int scale;                           // log-scale of element size
     jit::Register offset = jit::no_reg;  // offset from base
   };
 
