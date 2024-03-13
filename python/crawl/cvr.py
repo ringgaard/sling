@@ -83,6 +83,7 @@ while True:
       version = rec["samtId"]
       last_updated = rec["sidstIndlaest"]
       cvrnr = rec.get("cvrNummer")
+      if version is None: version = 0
 
       # Update company record in database. Only update record if the version
       # number is updated.

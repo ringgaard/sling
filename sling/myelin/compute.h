@@ -799,6 +799,9 @@ class Step : public Attributes {
   // case, the biggest input is returned.
   Tensor *GetPrototype() const;
 
+  // Output datatype for step.
+  Type GetDataType() const;
+
   // Get type signature for step.
   string Signature() const;
 

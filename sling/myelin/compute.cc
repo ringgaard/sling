@@ -1022,6 +1022,14 @@ Tensor *Step::GetPrototype() const {
   return prototype;
 }
 
+Type Step::GetDataType() const {
+  if (outdegree() > 0) return output(0)->type();
+  for (Tensor *input : inputs_) {
+    if (!input->cast()) return input->type();
+  }
+  return DT_INVALID;
+}
+
 string Step::Signature() const {
   string str;
   if (!outputs_.empty()) {

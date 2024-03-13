@@ -2312,8 +2312,14 @@ class Assembler : public CodeGenerator {
     vinstr(0x5b, dst, ymm0, src, kNone, k0F, kWIG);
   }
 
+  void vcvtpd2ps(YMMRegister dst, YMMRegister src) {
+    vinstr(0x5a, dst, ymm0, src, k66, k0F, kWIG);
+  }
   void vcvtpd2ps(YMMRegister dst, const Operand &src) {
     vinstr(0x5a, dst, ymm0, src, k66, k0F, kWIG);
+  }
+  void vcvtps2pd(YMMRegister dst, const Operand &src) {
+    vinstr(0x5a, dst, ymm0, src, kNone, k0F, kWIG);
   }
 
   void vrcpss(XMMRegister dst, XMMRegister src1, XMMRegister src2) {

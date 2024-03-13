@@ -37,7 +37,7 @@ ElementwiseIndexGenerator::ElementwiseIndexGenerator(
   // Get size from first output.
   assign_ = step->type() == "Assign";
   Tensor *prototype = step->GetPrototype();
-  type_ = prototype->type();
+  type_ = step->GetDataType();
   shape_ = prototype->shape();
 
   // Allocate locators for all inputs and outputs.

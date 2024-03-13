@@ -41,6 +41,8 @@ class ScalarIntGenerator : public ExpressionGenerator {
       Express::ADD, Express::SUB, Express::MUL, Express::DIV, Express::MOD,
       Express::MINIMUM, Express::MAXIMUM,
       Express::FLOOR, Express::CEIL, Express::ROUND, Express::TRUNC,
+      Express::CASTFLOAT, Express::CASTDOUBLE, Express::CASTBYTE,
+      Express::CASTSHORT, Express::CASTINT, Express::CASTLONG,
     });
   }
 
@@ -130,6 +132,24 @@ class ScalarIntGenerator : public ExpressionGenerator {
         if (instr->dst != instr->src) {
           GenerateScalarIntMove(instr, masm);
         }
+        break;
+      case Express::CASTBYTE:
+        GenerateCastByte(instr, masm);
+        break;
+      case Express::CASTSHORT:
+        GenerateCastShort(instr, masm);
+        break;
+      case Express::CASTINT:
+        GenerateCastInt(instr, masm);
+        break;
+      case Express::CASTLONG:
+        GenerateCastLong(instr, masm);
+        break;
+      case Express::CASTFLOAT:
+        GenerateCastFloat(instr, masm);
+        break;
+      case Express::CASTDOUBLE:
+        GenerateCastDouble(instr, masm);
         break;
       default:
         LOG(FATAL) << "Unsupported instruction: " << instr->AsInstruction();
@@ -446,6 +466,42 @@ class ScalarIntGenerator : public ExpressionGenerator {
     } else {
       __ cmovq(greater, reg(instr->dst), rax);
     }
+  }
+
+  void GenerateCastByte(Express::Op *instr, MacroAssembler *masm) {
+    CHECK(instr->src == -1);
+    CHECK(instr->dst != -1);
+    __ movsxbq(reg(instr->dst), addr(instr->args[0]));
+  }
+
+  void GenerateCastShort(Express::Op *instr, MacroAssembler *masm) {
+    CHECK(instr->src == -1);
+    CHECK(instr->dst != -1);
+    __ movsxwq(reg(instr->dst), addr(instr->args[0]));
+  }
+
+  void GenerateCastInt(Express::Op *instr, MacroAssembler *masm) {
+    CHECK(instr->src == -1);
+    CHECK(instr->dst != -1);
+    __ movsxlq(reg(instr->dst), addr(instr->args[0]));
+  }
+
+  void GenerateCastLong(Express::Op *instr, MacroAssembler *masm) {
+    CHECK(instr->src == -1);
+    CHECK(instr->dst != -1);
+    __ movq(reg(instr->dst), addr(instr->args[0]));
+  }
+
+  void GenerateCastFloat(Express::Op *instr, MacroAssembler *masm) {
+    CHECK(instr->src == -1);
+    CHECK(instr->dst != -1);
+    __ cvttss2siq(reg(instr->dst), addr(instr->args[0]));
+  }
+
+  void GenerateCastDouble(Express::Op *instr, MacroAssembler *masm) {
+    CHECK(instr->src == -1);
+    CHECK(instr->dst != -1);
+    __ cvttsd2siq(reg(instr->dst), addr(instr->args[0]));
   }
 };
 

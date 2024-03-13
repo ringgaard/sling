@@ -937,6 +937,14 @@ Flow::Variable *Flow::Operation::GetPrototype() const {
   return prototype;
 }
 
+Type Flow::Operation::GetDataType() const {
+  if (!outputs.empty()) return outputs[0]->type;
+  for (Variable *input : inputs) {
+    if (!input->cast()) return input->type;
+  }
+  return DT_INVALID;
+}
+
 bool Flow::Operation::Differentiable() const {
   if (is(NOGRADIENT)) return false;
   bool differentiable = false;

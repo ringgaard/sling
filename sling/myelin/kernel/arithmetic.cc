@@ -247,7 +247,7 @@ struct Expression {
       : index(step, masm) {
     // Determine output type and shape from the prototype.
     prototype = step->GetPrototype();
-    Type type = prototype->type();
+    Type type = step->GetDataType();
 
     // Compute the maximum common size between inputs and outputs. Scalars and
     // singular broadcasts are not used for computing the maximum size since
@@ -356,7 +356,7 @@ struct Expression {
   // used for the loop indexing.
   static int SpareRegs(const Step *step, const Options &options) {
     int spare_regs = 0;
-    Type type = step->GetPrototype()->type();
+    Type type = step->GetDataType();
     if (type == DT_FLOAT || type == DT_DOUBLE) {
       // Perform dry-run to estimate the number of SIMD registers needed.
       MacroAssembler masm(nullptr, 0, options);
@@ -846,7 +846,7 @@ class ExpressionTransformer : public Transformer {
     if (second->indegree() < 1) return false;
     if (!assign && second->outdegree() < 1) return false;
     Flow::Variable *prototype = first->GetPrototype();
-    Type type = prototype->type;
+    Type type = first->GetDataType();
     const Shape &shape = prototype->shape;
     for (auto *input : first->inputs) {
       if (!input->cast() && input->type != type) return false;
@@ -1089,7 +1089,7 @@ class Calculate : public Kernel {
     if (step->indegree() < 1) return false;
     if (!assign && step->outdegree() < 1) return false;
     Tensor *prototype = step->GetPrototype();
-    Type type = prototype->type();
+    Type type = step->GetDataType();
     const Shape &shape = prototype->shape();
     for (auto *input : step->inputs()) {
       if (!input->cast() && input->type() != type) return false;

@@ -649,6 +649,9 @@ class Flow {
     // outputs. In that case, the biggest input is returned.
     Variable *GetPrototype() const;
 
+    // Output datatype for operation.
+    Type GetDataType() const;
+
     // Check if operation is differentiable.
     bool Differentiable() const;
 
