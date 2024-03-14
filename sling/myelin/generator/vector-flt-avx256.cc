@@ -486,11 +486,11 @@ class VectorFltAVX256Generator : public ExpressionGenerator {
 
   // Convert 64-bit int to 64-bit float.
   void GenerateLongToDouble(YMMRegister reg, MacroAssembler *masm) {
-      // Only works for inputs in the range [-2^51, 2^51].
-      // see: http://stackoverflow.com/q/41144668
-      auto *m = masm->GetConstant<int64>(4843621399236968448LL, 4);
-      __ vpaddq(reg, reg, m->address());
-      __ vsubpd(reg, reg, m->address());
+    // Only works for inputs in the range [-2^51, 2^51].
+    // see: http://stackoverflow.com/q/41144668
+    auto *m = masm->GetConstant<int64>(4843621399236968448LL, 4);
+    __ vpaddq(reg, reg, m->address());
+    __ vsubpd(reg, reg, m->address());
   }
 
   // Generate float to integer conversion.

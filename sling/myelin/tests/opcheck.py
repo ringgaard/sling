@@ -341,7 +341,7 @@ def cast_test(n, srcdt):
   f = flow.define("cast")
   x = f.var("x", srcdt, [n])
   y = f.cast(x, dt)
-  check(flow, n)
+  check(flow, n, -100.0, 100.0)
 
 def exp_test(n):
   flow = myelin.Flow()

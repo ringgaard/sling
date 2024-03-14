@@ -965,6 +965,41 @@ class Assembler : public CodeGenerator {
     sse4_instr(dst, src, 0x66, 0x0F, 0x38, 0x25);
   }
 
+  void pmovsxbd(XMMRegister dst, XMMRegister src) {
+    sse4_instr(dst, src, 0x66, 0x0F, 0x38, 0x21);
+  }
+  void pmovsxbd(XMMRegister dst, const Operand &src) {
+    sse4_instr(dst, src, 0x66, 0x0F, 0x38, 0x21);
+  }
+
+  void pmovsxwd(XMMRegister dst, XMMRegister src) {
+    sse4_instr(dst, src, 0x66, 0x0F, 0x38, 0x23);
+  }
+  void pmovsxwd(XMMRegister dst, const Operand &src) {
+    sse4_instr(dst, src, 0x66, 0x0F, 0x38, 0x23);
+  }
+
+  void pmovsxwq(XMMRegister dst, XMMRegister src) {
+    sse4_instr(dst, src, 0x66, 0x0F, 0x38, 0x24);
+  }
+  void pmovsxwq(XMMRegister dst, const Operand &src) {
+    sse4_instr(dst, src, 0x66, 0x0F, 0x38, 0x24);
+  }
+
+  void pmovsxbw(XMMRegister dst, XMMRegister src) {
+    sse4_instr(dst, src, 0x66, 0x0F, 0x38, 0x20);
+  }
+  void pmovsxbw(XMMRegister dst, const Operand &src) {
+    sse4_instr(dst, src, 0x66, 0x0F, 0x38, 0x20);
+  }
+
+  void pmovsxbq(XMMRegister dst, XMMRegister src) {
+    sse4_instr(dst, src, 0x66, 0x0F, 0x38, 0x22);
+  }
+  void pmovsxbq(XMMRegister dst, const Operand &src) {
+    sse4_instr(dst, src, 0x66, 0x0F, 0x38, 0x22);
+  }
+
 #define SSE_CMP_P(instr, imm8)                                                \
   void instr##ps(XMMRegister dst, XMMRegister src) {                          \
     cmpps(dst, src, imm8);                                                    \
@@ -1013,6 +1048,10 @@ class Assembler : public CodeGenerator {
   void cvtdq2ps(XMMRegister dst, const Operand &src);
   void cvtdq2pd(XMMRegister dst, XMMRegister src);
   void cvtdq2pd(XMMRegister dst, const Operand &src);
+  void cvtpd2ps(XMMRegister dst, XMMRegister src);
+  void cvtpd2ps(XMMRegister dst, const Operand &src);
+  void cvtps2pd(XMMRegister dst, XMMRegister src);
+  void cvtps2pd(XMMRegister dst, const Operand &src);
 
   // AVX instructions.
 #define DECLARE_SSE2_AVX_INSTRUCTION(instruction, prefix, escape, opcode)    \
@@ -1625,19 +1664,30 @@ class Assembler : public CodeGenerator {
     vpd(0x50, idst, ymm0, src);
   }
 
+  void vpmovsxbd(XMMRegister dst, const Operand &src) {
+    vinstr(0x21, dst, xmm0, src, k66, k0F38, kWIG);
+  }
   void vpmovsxbd(YMMRegister dst, const Operand &src) {
     vinstr(0x21, dst, ymm0, src, k66, k0F38, kWIG);
+  }
+  void vpmovsxbq(XMMRegister dst, const Operand &src) {
+    vinstr(0x22, dst, xmm0, src, k66, k0F38, kWIG);
   }
   void vpmovsxbq(YMMRegister dst, const Operand &src) {
     vinstr(0x22, dst, ymm0, src, k66, k0F38, kWIG);
   }
+  void vpmovsxwd(XMMRegister dst, const Operand &src) {
+    vinstr(0x23, dst, xmm0, src, k66, k0F38, kWIG);
+  }
   void vpmovsxwd(YMMRegister dst, const Operand &src) {
     vinstr(0x23, dst, ymm0, src, k66, k0F38, kWIG);
+  }
+  void vpmovsxwq(XMMRegister dst, const Operand &src) {
+    vinstr(0x24, dst, xmm0, src, k66, k0F38, kWIG);
   }
   void vpmovsxwq(YMMRegister dst, const Operand &src) {
     vinstr(0x24, dst, ymm0, src, k66, k0F38, kWIG);
   }
-
   void vpmovsxdq(XMMRegister dst, XMMRegister src) {
     vinstr(0x25, dst, xmm0, src, k66, k0F38, kWIG);
   }
@@ -2017,6 +2067,9 @@ class Assembler : public CodeGenerator {
     emit(imm8);
   }
 
+  void movlhps(XMMRegister dst, XMMRegister src1, XMMRegister src2) {
+    vinstr(0x16, dst, src1, src2, kNone, k0F, kWIG);
+  }
 
   void vpermq(YMMRegister dst, YMMRegister src, int8_t imm8) {
     vinstr(0x00, dst, ymm0, src, k66, k0F3A, kW1);
@@ -2312,11 +2365,20 @@ class Assembler : public CodeGenerator {
     vinstr(0x5b, dst, ymm0, src, kNone, k0F, kWIG);
   }
 
+  void vcvtpd2ps(XMMRegister dst, XMMRegister src) {
+    vinstr(0x5a, dst, xmm0, src, k66, k0F, kWIG);
+  }
+  void vcvtpd2ps(XMMRegister dst, const Operand &src) {
+    vinstr(0x5a, dst, xmm0, src, k66, k0F, kWIG);
+  }
   void vcvtpd2ps(YMMRegister dst, YMMRegister src) {
     vinstr(0x5a, dst, ymm0, src, k66, k0F, kWIG);
   }
   void vcvtpd2ps(YMMRegister dst, const Operand &src) {
     vinstr(0x5a, dst, ymm0, src, k66, k0F, kWIG);
+  }
+  void vcvtps2pd(XMMRegister dst, const Operand &src) {
+    vinstr(0x5a, dst, xmm0, src, kNone, k0F, kWIG);
   }
   void vcvtps2pd(YMMRegister dst, const Operand &src) {
     vinstr(0x5a, dst, ymm0, src, kNone, k0F, kWIG);

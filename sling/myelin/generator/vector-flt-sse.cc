@@ -51,6 +51,8 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
       Express::BITAND, Express::BITOR, Express::BITXOR, Express::BITANDNOT,
       Express::BITEQ, Express::QUADSIGN,
       Express::FLOOR, Express::CEIL, Express::ROUND, Express::TRUNC,
+      Express::CASTFLOAT, Express::CASTDOUBLE, Express::CASTBYTE,
+      Express::CASTSHORT, Express::CASTINT, Express::CASTLONG,
       Express::CVTFLTINT, Express::CVTINTFLT,
       Express::CVTEXPINT, Express::CVTINTEXP,
       Express::ADDINT, Express::SUBINT,
@@ -77,6 +79,12 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
     }
     if (instructions_.Has(Express::COND)) {
       num_mm_aux = std::max(num_mm_aux, 2);
+    }
+    if (instructions_.Has(Express::CASTDOUBLE) && type_ == DT_FLOAT) {
+      num_mm_aux = std::max(num_mm_aux, 1);
+    }
+    if (instructions_.Has(Express::CASTLONG) && type_ == DT_FLOAT) {
+      num_mm_aux = std::max(num_mm_aux, 1);
     }
     index_->ReserveAuxXMMRegisters(num_mm_aux);
   }
@@ -228,6 +236,24 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
         break;
       case Express::TRUNC:
         GenerateRound(instr, masm, round_to_zero);
+        break;
+      case Express::CASTBYTE:
+        GenerateCastByte(instr, masm);
+        break;
+      case Express::CASTSHORT:
+        GenerateCastShort(instr, masm);
+        break;
+      case Express::CASTINT:
+        GenerateCastInt(instr, masm);
+        break;
+      case Express::CASTLONG:
+        GenerateCastLong(instr, masm);
+        break;
+      case Express::CASTFLOAT:
+        GenerateCastFloat(instr, masm);
+        break;
+      case Express::CASTDOUBLE:
+        GenerateCastDouble(instr, masm);
         break;
       case Express::CVTFLTINT:
         GenerateFltToInt(instr, masm);
@@ -494,6 +520,142 @@ class VectorFltSSEGenerator : public ExpressionGenerator {
     }
   }
 
+  // Generate cast from 8-bit integer.
+  void GenerateCastByte(Express::Op *instr, MacroAssembler *masm) {
+    CHECK(instr->src == -1);
+    CHECK(instr->dst != -1);
+    if (type_ == DT_FLOAT) {
+        if (CPU::Enabled(SSE4_1)) {
+          __ pmovsxbd(xmm(instr->dst), addr(instr->args[0]));
+          __ cvtdq2ps(xmm(instr->dst), xmm(instr->dst));
+        } else {
+          UNSUPPORTED;
+        }
+    } else if (type_ == DT_DOUBLE) {
+        if (CPU::Enabled(SSE4_1)) {
+          __ pmovsxbq(xmm(instr->dst), addr(instr->args[0]));
+          GenerateLongToDouble(xmm(instr->dst), masm);
+        } else {
+          UNSUPPORTED;
+        }
+    } else {
+      UNSUPPORTED;
+    }
+  }
+
+  // Generate cast from 16-bit integer.
+  void GenerateCastShort(Express::Op *instr, MacroAssembler *masm) {
+    CHECK(instr->src == -1);
+    CHECK(instr->dst != -1);
+    if (type_ == DT_FLOAT) {
+        if (CPU::Enabled(SSE4_1)) {
+          __ pmovsxwd(xmm(instr->dst), addr(instr->args[0]));
+          __ cvtdq2ps(xmm(instr->dst), xmm(instr->dst));
+        } else {
+          UNSUPPORTED;
+        }
+    } else if (type_ == DT_DOUBLE) {
+        if (CPU::Enabled(SSE4_1)) {
+          __ pmovsxwq(xmm(instr->dst), addr(instr->args[0]));
+          GenerateLongToDouble(xmm(instr->dst), masm);
+        } else {
+          UNSUPPORTED;
+        }
+    } else {
+      UNSUPPORTED;
+    }
+  }
+
+  // Generate cast from 32-bit integer.
+  void GenerateCastInt(Express::Op *instr, MacroAssembler *masm) {
+    CHECK(instr->src == -1);
+    CHECK(instr->dst != -1);
+    if (type_ == DT_FLOAT) {
+      if (CPU::Enabled(SSE2)) {
+        __ cvtdq2ps(xmm(instr->dst), addr(instr->args[0]));
+      } else {
+        UNSUPPORTED;
+      }
+    } else if (type_ == DT_DOUBLE) {
+      if (CPU::Enabled(SSE2)) {
+        __ cvtdq2pd(xmm(instr->dst), addr(instr->args[0]));
+      } else {
+        UNSUPPORTED;
+      }
+    } else {
+      UNSUPPORTED;
+    }
+  }
+
+  // Generate cast from 64-bit integer.
+  void GenerateCastLong(Express::Op *instr, MacroAssembler *masm) {
+    CHECK(instr->src == -1);
+    CHECK(instr->dst != -1);
+    if (type_ == DT_FLOAT) {
+      // Convert first two int64s to float32.
+      __ movapd(xmm(instr->dst), addr(instr->args[0]));
+      GenerateLongToDouble(xmm(instr->dst), masm);
+      __ cvtpd2ps(xmm(instr->dst), xmm(instr->dst));
+
+      // Convert last two int64s to float32.
+      __ movapd(xmmaux(0), addr(instr->args[0], XMMRegSize));
+      GenerateLongToDouble(xmmaux(0), masm);
+      __ cvtpd2ps(xmmaux(0), xmmaux(0));
+
+      // Combine into 4 floats.
+      __ movlhps(xmm(instr->dst), xmm(instr->dst), xmmaux(0));
+    } else if (type_ == DT_DOUBLE) {
+      __ movapd(xmm(instr->dst), addr(instr->args[0]));
+      GenerateLongToDouble(xmm(instr->dst), masm);
+    } else {
+      UNSUPPORTED;
+    }
+  }
+
+  // Generate cast from 32-bit float.
+  void GenerateCastFloat(Express::Op *instr, MacroAssembler *masm) {
+    CHECK(instr->src == -1);
+    CHECK(instr->dst != -1);
+    if (type_ == DT_DOUBLE) {
+      if (CPU::Enabled(SSE2)) {
+        __ cvtps2pd(xmm(instr->dst), addr(instr->args[0]));
+      } else {
+        UNSUPPORTED;
+      }
+    } else {
+      UNSUPPORTED;
+    }
+  }
+
+  // Generate cast from 64-bit float.
+  void GenerateCastDouble(Express::Op *instr, MacroAssembler *masm) {
+    CHECK(instr->src == -1);
+    CHECK(instr->dst != -1);
+    if (type_ == DT_FLOAT) {
+      if (CPU::Enabled(SSE2)) {
+        __ cvtpd2ps(xmm(instr->dst), addr(instr->args[0]));
+        __ cvtpd2ps(xmmaux(0), addr(instr->args[0], XMMRegSize));
+        __ movlhps(xmm(instr->dst), xmm(instr->dst), xmmaux(0));
+      } else {
+        UNSUPPORTED;
+      }
+    } else {
+      UNSUPPORTED;
+    }
+  }
+
+  // Convert 64-bit int to 64-bit float.
+  void GenerateLongToDouble(XMMRegister reg, MacroAssembler *masm) {
+    if (CPU::Enabled(SSE2)) {
+      // Only works for inputs in the range [-2^51, 2^51].
+      // see: http://stackoverflow.com/q/41144668
+      auto *m = masm->GetConstant<int64>(4843621399236968448LL, 2);
+      __ paddq(reg, m->address());
+      __ subpd(reg, m->address());
+    } else {
+      UNSUPPORTED;
+    }
+  }
   // Generate code for reduction operation.
   void GenerateReduce(Express::Op *instr, MacroAssembler *masm) override {
     auto acc = xmm(instr->acc);
