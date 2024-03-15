@@ -463,21 +463,24 @@ class RecipeParser {
 
 }  // namespace
 
-#define FLT_FROM_INT(x) bit_cast<float>(x)
-#define DBL_FROM_INT(x) bit_cast<double>(x)
+#define FLT_FROM_BITS(x) bit_cast<float>(x)
+#define DBL_FROM_BITS(x) bit_cast<double>(x)
+#define INT_FROM_BITS(x) bit_cast<int64>(x)
 
 // System-defined numeric constants.
-#define FLTCONST(x) {x##f, x}
-#define DBLCONST(a, b) {a##f, b}
-#define INTCONST(a, b) {FLT_FROM_INT(a), DBL_FROM_INT(b)}
+#define FLTCONST(x) {x##f, x, 0}
+#define DBLCONST(a, b) {a##f, b, 0}
+#define BITCONST(a, b) {FLT_FROM_BITS(a), DBL_FROM_BITS(b), INT_FROM_BITS(b)}
+#define NUMCONST(x, n) {x##f, x, n}
+#define FDNCONST(f, d, n) {FLT_FROM_BITS(f), DBL_FROM_BITS(d), INT_FROM_BITS(n)}
 Express::Constant Express::constants[Express::NUM_CONSTANTS] = {
-  FLTCONST(0.0),    // ZERO
-  FLTCONST(1.0),    // ONE
-  FLTCONST(2.0),    // TWO
-  FLTCONST(0.5),    // HALF
-  FLTCONST(-1.0),   // N1
-  FLTCONST(9.0),    // P9
-  FLTCONST(-9.0),   // N9
+  NUMCONST(0.0, 0),    // ZERO
+  NUMCONST(1.0, 1),    // ONE
+  NUMCONST(2.0, 2),    // TWO
+  FLTCONST(0.5),       // HALF
+  NUMCONST(-1.0, -1),  // N1
+  NUMCONST(9.0, 9),    // P9
+  NUMCONST(-9.0, -9),  // N9
 
   FLTCONST(0.6931471805599453),      // LN2
   FLTCONST(-0.6931471805599453),     // NLN2
@@ -489,20 +492,30 @@ Express::Constant Express::constants[Express::NUM_CONSTANTS] = {
   FLTCONST(0.4142135623730950),      // TANPIO8 (tan pi/8)
   FLTCONST(2.414213562373095),       // TAN3PIO8 (tan 3pi/8)
 
-  INTCONST(0x7F800000, 0x7FF0000000000000LL),      // PINF
-  INTCONST(0xFF800000, 0xFFF0000000000000LL),      // NINF
-  INTCONST(0xFFFFFFFF, 0xFFFFFFFFFFFFFFFFLL),      // QNAN
+  BITCONST(0x7F800000, 0x7FF0000000000000LL),      // PINF
+  BITCONST(0xFF800000, 0xFFF0000000000000LL),      // NINF
+  BITCONST(0xFFFFFFFF, 0xFFFFFFFFFFFFFFFFLL),      // QNAN
 
-  INTCONST(0x00800000, 0x0020000000000000LL),      // MIN_NORM_POS
-  INTCONST(~0x7F800000, ~0x7FF0000000000000LL),    // INV_MANT_MASK
-  INTCONST(0x7F, 0x3FFLL),                         // MAX_MANT
+  FDNCONST(0x7F800000,                             // MAXVAL
+           0x7FF0000000000000LL,
+           0x8000000000000000LL),
+  FDNCONST(0xFF800000,                             // MINVAL
+           0xFFF0000000000000LL,
+           0x7FFFFFFFFFFFFFFFLL),
+  FDNCONST(0xFFFFFFFF,                             // ONES
+           0xFFFFFFFFFFFFFFFFLL,
+           -1LL),
 
-  INTCONST(0x80000000, 0x8000000000000000LL),      // SIGN_MASK
-  INTCONST(~0x80000000, ~0x8000000000000000LL),    // INV_SIGN_MASK
-  INTCONST(1, 1LL),                                // I1
-  INTCONST(2, 2LL),                                // I2
-  INTCONST(4, 4LL),                                // I4
-  INTCONST(~1, ~1LL),                              // INV_I1
+  BITCONST(0x00800000, 0x0020000000000000LL),      // MIN_NORM_POS
+  BITCONST(~0x7F800000, ~0x7FF0000000000000LL),    // INV_MANT_MASK
+  BITCONST(0x7F, 0x3FFLL),                         // MAX_MANT
+
+  BITCONST(0x80000000, 0x8000000000000000LL),      // SIGN_MASK
+  BITCONST(~0x80000000, ~0x8000000000000000LL),    // INV_SIGN_MASK
+  BITCONST(1, 1LL),                                // I1
+  BITCONST(2, 2LL),                                // I2
+  BITCONST(4, 4LL),                                // I4
+  BITCONST(~1, ~1LL),                              // INV_I1
 
   // Polynomial coefficients for natural logarithm.
   FLTCONST(0.707106781186547524),  // CEPHES_SQRTHF
@@ -582,9 +595,9 @@ int Express::NeutralValue(OpType type) {
   switch (type) {
     case SUM: return ZERO;
     case PRODUCT: return ONE;
-    case MIN: return PINF;
-    case MAX: return NINF;
-    case ALL: return QNAN;
+    case MIN: return MAXVAL;
+    case MAX: return MINVAL;
+    case ALL: return ONES;
     case ANY: return ZERO;
     default: return ZERO;
   }

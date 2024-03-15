@@ -203,7 +203,8 @@ class Express {
   enum ConstantNumber {
     ZERO, ONE, TWO, HALF, N1, P9, N9, LN2, NLN2, LOG2E,
     PI, PIO2, PIO4, FOPI, TANPIO8, TAN3PIO8,
-    PINF, NINF, QNAN, MIN_NORM_POS, INV_MANT_MASK, MAX_MANT,
+    PINF, NINF, QNAN, MAXVAL, MINVAL, ONES,
+    MIN_NORM_POS, INV_MANT_MASK, MAX_MANT,
     SIGN_MASK, INV_SIGN_MASK, I1, I2, I4, INV_I1,
     CEPHES_SQRTHF,
     CEPHES_LOG_P0, CEPHES_LOG_P1, CEPHES_LOG_P2, CEPHES_LOG_P3, CEPHES_LOG_P4,
@@ -735,6 +736,7 @@ class Express {
   // Return value for system-defined numeric constant.
   static float NumericFlt32(int number) { return constants[number].flt; }
   static double NumericFlt64(int number) { return constants[number].dbl; }
+  static int64 NumericInt(int number) { return constants[number].num; }
 
   // Return system constant number for neutral element for op.
   static int NeutralValue(OpType type);
@@ -809,7 +811,7 @@ class Express {
   bool approx_ = false;
 
   // System-defined numeric constants.
-  struct Constant { float flt; double dbl; };
+  struct Constant { float flt; double dbl; int64 num; };
   static Constant constants[NUM_CONSTANTS];
 };
 

@@ -1024,6 +1024,15 @@ if flags.arg.thorough:
 else:
   sizes = list(range(1, 8)) + [9, 14, 15, 16, 31, 32, 33, 64]
 
+cast_types = [
+  myelin.DT_INT8,
+  myelin.DT_INT16,
+  myelin.DT_INT32,
+  myelin.DT_INT64,
+  myelin.DT_FLOAT32,
+  myelin.DT_FLOAT64,
+]
+
 shifts = {
   myelin.DT_INT8: 7,
   myelin.DT_INT16: 15,
@@ -1168,6 +1177,10 @@ for i in sizes:
 
 if flags.arg.thorough:
   matmul_test(1024, 1024, 1024)
+
+#for i in sizes:
+#  for castdt in cast_types:
+#    cast_test(i, castdt)
 
 # Output test results.
 print("Test results")

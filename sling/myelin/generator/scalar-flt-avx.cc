@@ -62,6 +62,8 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
       Express::CVTFLTINT, Express::CVTINTFLT,
       Express::CVTEXPINT, Express::CVTINTEXP,
       Express::FLOOR, Express::CEIL, Express::ROUND, Express::TRUNC,
+      Express::CASTFLOAT, Express::CASTDOUBLE, Express::CASTBYTE,
+      Express::CASTSHORT, Express::CASTINT, Express::CASTLONG,
       Express::ADDINT, Express::SUBINT,
       Express::SUM, Express::PRODUCT, Express::MIN, Express::MAX,
       Express::ALL, Express::ANY,
@@ -85,7 +87,8 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
         Express::ADDINT, Express::SUBINT, Express::ALL, Express::ANY})) {
       num_mm_aux = std::max(num_mm_aux, 1);
     }
-    if (instructions_.Has({Express::SELECT, Express::COND})) {
+    if (instructions_.Has({Express::SELECT, Express::COND,
+      Express::CASTBYTE, Express::CASTSHORT})) {
       num_rr_aux = std::max(num_rr_aux, 1);
     }
 
@@ -240,6 +243,24 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
         break;
       case Express::TRUNC:
         GenerateRound(instr, masm, round_to_zero);
+        break;
+      case Express::CASTBYTE:
+        GenerateCastByte(instr, masm);
+        break;
+      case Express::CASTSHORT:
+        GenerateCastShort(instr, masm);
+        break;
+      case Express::CASTINT:
+        GenerateCastInt(instr, masm);
+        break;
+      case Express::CASTLONG:
+        GenerateCastLong(instr, masm);
+        break;
+      case Express::CASTFLOAT:
+        GenerateCastFloat(instr, masm);
+        break;
+      case Express::CASTDOUBLE:
+        GenerateCastDouble(instr, masm);
         break;
       case Express::CVTFLTINT:
       case Express::CVTINTFLT:
@@ -654,6 +675,94 @@ class ScalarFltAVXGenerator : public ExpressionGenerator {
         break;
       }
       default: UNSUPPORTED;
+    }
+  }
+
+  // Generate cast from 8-bit integer.
+  void GenerateCastByte(Express::Op *instr, MacroAssembler *masm) {
+    CHECK(instr->src == -1);
+    CHECK(instr->dst != -1);
+    if (type_ == DT_FLOAT) {
+      __ movsxbl(aux(0), addr(instr->args[0]));
+      __ vxorps(xmm(instr->dst), xmm(instr->dst), xmm(instr->dst));
+      __ vcvtsi2ss(xmm(instr->dst), xmm(instr->dst), aux(0));
+    } else if (type_ == DT_DOUBLE) {
+      __ movsxbq(aux(0), addr(instr->args[0]));
+      __ vxorps(xmm(instr->dst), xmm(instr->dst), xmm(instr->dst));
+      __ vcvtsi2sd(xmm(instr->dst), xmm(instr->dst), aux(0));
+    } else {
+      UNSUPPORTED;
+    }
+  }
+
+  // Generate cast from 16-bit integer.
+  void GenerateCastShort(Express::Op *instr, MacroAssembler *masm) {
+    CHECK(instr->src == -1);
+    CHECK(instr->dst != -1);
+    if (type_ == DT_FLOAT) {
+      __ movsxwl(aux(0), addr(instr->args[0]));
+      __ vxorps(xmm(instr->dst), xmm(instr->dst), xmm(instr->dst));
+      __ vcvtsi2ss(xmm(instr->dst), xmm(instr->dst), aux(0));
+    } else if (type_ == DT_DOUBLE) {
+      __ movsxwq(aux(0), addr(instr->args[0]));
+      __ vxorps(xmm(instr->dst), xmm(instr->dst), xmm(instr->dst));
+      __ vcvtsi2sd(xmm(instr->dst), xmm(instr->dst), aux(0));
+    } else {
+      UNSUPPORTED;
+    }
+  }
+
+  // Generate cast from 32-bit integer.
+  void GenerateCastInt(Express::Op *instr, MacroAssembler *masm) {
+    CHECK(instr->src == -1);
+    CHECK(instr->dst != -1);
+    if (type_ == DT_FLOAT) {
+      __ vxorps(xmm(instr->dst), xmm(instr->dst), xmm(instr->dst));
+      __ vcvtsi2ss(xmm(instr->dst), xmm(instr->dst), addr(instr->args[0]));
+    } else if (type_ == DT_DOUBLE) {
+      __ vxorpd(xmm(instr->dst), xmm(instr->dst), xmm(instr->dst));
+      __ vcvtsi2sd(xmm(instr->dst), xmm(instr->dst), addr(instr->args[0]));
+    } else {
+      UNSUPPORTED;
+    }
+  }
+
+  // Generate cast from 64-bit integer.
+  void GenerateCastLong(Express::Op *instr, MacroAssembler *masm) {
+    CHECK(instr->src == -1);
+    CHECK(instr->dst != -1);
+    if (type_ == DT_FLOAT) {
+      __ vxorps(xmm(instr->dst), xmm(instr->dst), xmm(instr->dst));
+      __ vcvtsi2ssq(xmm(instr->dst), xmm(instr->dst), addr(instr->args[0]));
+    } else if (type_ == DT_DOUBLE) {
+      __ vxorpd(xmm(instr->dst), xmm(instr->dst), xmm(instr->dst));
+      __ vcvtsi2sdq(xmm(instr->dst), xmm(instr->dst), addr(instr->args[0]));
+    } else {
+      UNSUPPORTED;
+    }
+  }
+
+  // Generate cast from 32-bit float.
+  void GenerateCastFloat(Express::Op *instr, MacroAssembler *masm) {
+    CHECK(instr->src == -1);
+    CHECK(instr->dst != -1);
+    if (type_ == DT_DOUBLE) {
+      __ vxorpd(xmm(instr->dst), xmm(instr->dst), xmm(instr->dst));
+      __ vcvtss2sd(xmm(instr->dst), xmm(instr->dst), addr(instr->args[0]));
+    } else {
+      UNSUPPORTED;
+    }
+  }
+
+  // Generate cast from 64-bit float.
+  void GenerateCastDouble(Express::Op *instr, MacroAssembler *masm) {
+    CHECK(instr->src == -1);
+    CHECK(instr->dst != -1);
+    if (type_ == DT_FLOAT) {
+      __ vxorps(xmm(instr->dst), xmm(instr->dst), xmm(instr->dst));
+      __ vcvtsd2ss(xmm(instr->dst), xmm(instr->dst), addr(instr->args[0]));
+    } else {
+      UNSUPPORTED;
     }
   }
 

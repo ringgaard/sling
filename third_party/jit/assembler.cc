@@ -3327,6 +3327,60 @@ void Assembler::cvttpd2dq(XMMRegister dst, const Operand &src) {
   emit_sse_operand(dst, src);
 }
 
+void Assembler::cvtsi2ss(XMMRegister dst, Register src) {
+  EnsureSpace ensure_space(this);
+  emit(0xF3);
+  emit_optional_rex_32(dst, src);
+  emit(0x0F);
+  emit(0x2A);
+  emit_sse_operand(dst, src);
+}
+
+void Assembler::cvtsi2ss(XMMRegister dst, const Operand &src) {
+  EnsureSpace ensure_space(this);
+  emit(0xF3);
+  emit_optional_rex_32(dst, src);
+  emit(0x0F);
+  emit(0x2A);
+  emit_sse_operand(dst, src);
+}
+
+void Assembler::cvtsi2ssq(XMMRegister dst, const Operand &src) {
+  EnsureSpace ensure_space(this);
+  emit(0xF3);
+  emit_rex_64(dst, src);
+  emit(0x0F);
+  emit(0x2A);
+  emit_sse_operand(dst, src);
+}
+
+void Assembler::cvtsi2sd(XMMRegister dst, Register src) {
+  EnsureSpace ensure_space(this);
+  emit(0xF2);
+  emit_rex_64(dst, src);
+  emit(0x0F);
+  emit(0x2A);
+  emit_sse_operand(dst, src);
+}
+
+void Assembler::cvtsi2sd(XMMRegister dst, const Operand &src) {
+  EnsureSpace ensure_space(this);
+  emit(0xF2);
+  emit_optional_rex_32(dst, src);
+  emit(0x0F);
+  emit(0x2A);
+  emit_sse_operand(dst, src);
+}
+
+void Assembler::cvtsi2sdq(XMMRegister dst, const Operand &src) {
+  EnsureSpace ensure_space(this);
+  emit(0xF2);
+  emit_rex_64(dst, src);
+  emit(0x0F);
+  emit(0x2A);
+  emit_sse_operand(dst, src);
+}
+
 void Assembler::addsd(XMMRegister dst, XMMRegister src) {
   EnsureSpace ensure_space(this);
   emit(0xF2);

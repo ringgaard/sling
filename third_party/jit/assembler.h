@@ -829,6 +829,13 @@ class Assembler : public CodeGenerator {
   void cvttpd2dq(XMMRegister dst, XMMRegister src);
   void cvttpd2dq(XMMRegister dst, const Operand &src);
 
+  void cvtsi2ss(XMMRegister dst, Register src);
+  void cvtsi2ss(XMMRegister dst, const Operand &src);
+  void cvtsi2ssq(XMMRegister dst, const Operand &src);
+  void cvtsi2sd(XMMRegister dst, Register src);
+  void cvtsi2sd(XMMRegister dst, const Operand &src);
+  void cvtsi2sdq(XMMRegister dst, const Operand &src);
+
   void andps(XMMRegister dst, XMMRegister src);
   void andps(XMMRegister dst, const Operand &src);
   void orps(XMMRegister dst, XMMRegister src);
@@ -1288,6 +1295,40 @@ class Assembler : public CodeGenerator {
   }
   void vcvtss2sd(XMMRegister dst, XMMRegister src1, const Operand &src2) {
     vinstr(0x5a, dst, src1, src2, kF3, k0F, kWIG);
+  }
+
+  void vcvtsi2ss(XMMRegister dst, XMMRegister src1, Register src2) {
+    XMMRegister isrc2 = {src2.code()};
+    vinstr(0x2a, dst, src1, isrc2, kF3, k0F, kW0);
+  }
+  void vcvtsi2ss(XMMRegister dst, XMMRegister src1, XMMRegister src2) {
+    vinstr(0x2a, dst, src1, src2, kF3, k0F, kW0);
+  }
+  void vcvtsi2ss(XMMRegister dst, XMMRegister src1, const Operand &src2) {
+    vinstr(0x2a, dst, src1, src2, kF3, k0F, kW0);
+  }
+  void vcvtsi2ssq(XMMRegister dst, XMMRegister src1, XMMRegister src2) {
+    vinstr(0x2a, dst, src1, src2, kF3, k0F, kW1);
+  }
+  void vcvtsi2ssq(XMMRegister dst, XMMRegister src1, const Operand &src2) {
+    vinstr(0x2a, dst, src1, src2, kF3, k0F, kW1);
+  }
+
+  void vcvtsi2sd(XMMRegister dst, XMMRegister src1, Register src2) {
+    XMMRegister isrc2 = {src2.code()};
+    vinstr(0x2a, dst, src1, isrc2, kF2, k0F, kW0);
+  }
+  void vcvtsi2sd(XMMRegister dst, XMMRegister src1, XMMRegister src2) {
+    vinstr(0x2a, dst, src1, src2, kF2, k0F, kW0);
+  }
+  void vcvtsi2sd(XMMRegister dst, XMMRegister src1, const Operand &src2) {
+    vinstr(0x2a, dst, src1, src2, kF2, k0F, kW0);
+  }
+  void vcvtsi2sdq(XMMRegister dst, XMMRegister src1, XMMRegister src2) {
+    vinstr(0x2a, dst, src1, src2, kF2, k0F, kW1);
+  }
+  void vcvtsi2sdq(XMMRegister dst, XMMRegister src1, const Operand &src2) {
+    vinstr(0x2a, dst, src1, src2, kF2, k0F, kW1);
   }
 
   void vcvtlsi2sd(XMMRegister dst, XMMRegister src1, Register src2) {
