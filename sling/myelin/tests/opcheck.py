@@ -1129,6 +1129,8 @@ for i in sizes:
     count_test(i)
     norm_test(i)
     sign_test(i)
+    for castdt in cast_types:
+      cast_test(i, castdt)
 
     equal_test(i)
     not_equal_test(i)
@@ -1177,10 +1179,6 @@ for i in sizes:
 
 if flags.arg.thorough:
   matmul_test(1024, 1024, 1024)
-
-#for i in sizes:
-#  for castdt in cast_types:
-#    cast_test(i, castdt)
 
 # Output test results.
 print("Test results")
