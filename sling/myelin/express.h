@@ -687,14 +687,13 @@ class Express {
   }
   Var *Gelu(Var *x) {
     if (Supports(GELU)) return Do(GELU, x);
-    if (approx_) {
-      return Mul(Mul(Number(HALF), x), Add(One(),
-             Tanh(Mul(Number(GELU_C2), Add(x,
-             Mul(Number(GELU_C1), Qube(x)))))));
-    } else {
-      return Mul(Mul(Number(HALF), x), Add(One(),
-             Erf(Mul(x, Number(GELU_C3)))));
-    }
+    // Approximation:
+    return Mul(Mul(Number(HALF), x), Add(One(),
+            Tanh(Mul(Number(GELU_C2), Add(x,
+            Mul(Number(GELU_C1), Qube(x)))))));
+    // Accurate:
+    //return Mul(Mul(Number(HALF), x), Add(One(),
+    //       Erf(Mul(x, Number(GELU_C3)))));
   }
   Var *Softsign(Var *x) { return Div(x, Add(Abs(x), One())); }
   Var *Softplus(Var *x) { return Log(Add(Exp(x), One())); }

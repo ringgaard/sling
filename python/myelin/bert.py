@@ -18,14 +18,22 @@
 import numpy as np
 import sling.myelin as myelin
 
-def tensor(shape):
-  return np.random.randn(*shape).astype(np.float32)
+params = {}
+
+def parameters(f, name, shape):
+  data = params.get(name)
+  if data is None:
+    print("Missing parameters for", name)
+    data = np.zeros(shape, dtype=np.float32)
+  elif shape != list(data.shape):
+      print("Parameters shape mismatch", name, data.shape, " expected", shape)
+  return f.array(name, data)
 
 class LayerNorm:
   def __init__(self, f, size, eps=1e-6, name=None):
     self.name = name if name is not None else "LayerNorm"
-    self.scale = f.array(self.name + "/scale", tensor([size]))
-    self.bias = f.array(self.name + "/bias", tensor([size]))
+    self.scale = parameters(f, self.name + "/scale", [size])
+    self.bias = parameters(f, self.name + "/bias", [size])
     self.eps = eps
 
   def __call__(self, f, x):
@@ -38,8 +46,11 @@ class LayerNorm:
 class Linear:
   def __init__(self, f, num_inputs, num_outputs, bias=True, name=None):
     self.name = name if name is not None else "Linear"
-    self.weights = f.array(self.name + "/w", tensor([num_outputs, num_inputs]))
-    self.bias = f.array(self.name + "/b", tensor([num_outputs])) if bias else None
+    self.weights = parameters(f, self.name + "/w", [num_outputs, num_inputs])
+    if bias:
+      self.bias = parameters(f, self.name + "/b", [num_outputs])
+    else:
+      self.bias = None
 
   def __call__(self, f, x):
     x = f.matmul(x, f.transpose(self.weights))
@@ -49,7 +60,7 @@ class Linear:
 class Embedding:
   def __init__(self, f, num_embeddings, embedding_dim, name=None):
     self.name = name if name is not None else "Embedding"
-    self.weights = f.array(name, tensor([num_embeddings, embedding_dim]))
+    self.weights = parameters(f, name, [num_embeddings, embedding_dim])
 
   def __call__(self, f, x):
     return f.gather(self.weights, f.reshape(x, x.shape + [1]))
@@ -103,7 +114,7 @@ class BertAttention:
 
     # Masking.
     if mask is not None:
-      energy = f.cond(mask, energy, -1e20)
+      energy = f.add(energy, mask)
 
     # Normalize the attention scores to probabilities.
     attention = f.softmax(energy, axis=-1)
@@ -180,8 +191,8 @@ class BertEmbeddings:
 
   def __call__(self, f, tokens):
     input_emb = self.wpe_embedding(f, tokens)
-    l = self.seq_length
-    segments = f.const([0] * l, myelin.DT_INT32, [l], "segment_ids")
+    length = self.seq_length
+    segments = f.const([0] * length, myelin.DT_INT32, [length], "segment_ids")
     segment_emb = self.segment_embeddings(f, segments)
 
     # Output: [seq_length, hidden_size]
@@ -199,8 +210,21 @@ class BertModel:
 
   def __call__(self, f, tokens, mask=None):
     if mask is None and self.pad_index != -1:
-      mask = f.cond(f.equal(tokens, self.pad_index), 1.0, 0.0)
+      ct = f.cast(tokens, myelin.DT_FLOAT32)
+      mask = f.cond(f.equal(ct, float(self.pad_index)), -1e20, 0.0)
     x = self.embeddings(f, tokens)
     x = self.encoder(f, x, mask)
+    return x
+
+class BertClassifier:
+  def __init__(self, f, config):
+    num_labels = config["num_labels"]
+    hidden_size = config["hidden_size"]
+    self.bert = BertModel(f, config)
+    self.classifier = Linear(f, hidden_size, num_labels, name="classifier")
+
+  def __call__(self, f, tokens, mask=None):
+    x = self.bert(f, tokens, mask)
+    x = self.classifier(f, x)
     return x
 

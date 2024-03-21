@@ -40,9 +40,10 @@ def erf(x):
   return np.array([math.erf(v) for v in x])
 
 def gelu(x):
-  return 0.5 * x * (1 + erf(x / np.sqrt(2)))
   # Faster approximation:
-  #return 0.5 * x * (1 + np.tanh(np.sqrt(2 / np.pi) * (x + 0.044715 * x ** 3)))
+  return 0.5 * x * (1 + np.tanh(np.sqrt(2 / np.pi) * (x + 0.044715 * x ** 3)))
+  # Accurate:
+  #return 0.5 * x * (1 + erf(x / np.sqrt(2)))
 
 def gather(d, i):
   if len(i.shape) == 0: return np.take(d, i, axis=0)
