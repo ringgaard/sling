@@ -1170,6 +1170,16 @@ char *PyBuffers::GetData(PyObject *obj, Type type, size_t *size) {
     return data;
   }
 
+  // Try to get buffer from string.
+  if (PyUnicode_Check(obj)) {
+    Py_ssize_t length;
+    char *data = PyUnicode_AsUTF8AndSize(obj, &length);
+    Py_INCREF(obj);
+    refs_.push_back(obj);
+    *size = length;
+    return data;
+  }
+
   // Determine type.
   if (type == DT_INVALID) {
     if (PyFloat_Check(obj)) {
