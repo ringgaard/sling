@@ -367,7 +367,10 @@ let xrefs = [
     pattern: /^https?:\/\/denstoredanske\.lex\.dk\/(.+)/,
     property: frame("P8313"),
   },
-
+  {
+    pattern: /^https?:\/\/www\.indexxx\.com\/m\/(.+)/,
+    property: frame("PIDXX"),
+  },
 ];
 
 export function match_link(url) {

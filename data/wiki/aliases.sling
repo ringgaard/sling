@@ -303,5 +303,10 @@
   Q43845: {
     "American businessman": blacklist
   }
+
+  ; Maty Noyes
+  Q24045410: {
+    "Porn Star": blacklist
+  }
 }
 
