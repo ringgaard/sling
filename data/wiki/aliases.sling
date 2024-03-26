@@ -2,6 +2,7 @@
 
 {=/w/aliases
   /lang/en: /w/aliases/en
+  /lang/xx: /w/aliases/en
 }
 
 {=/w/aliases/en
