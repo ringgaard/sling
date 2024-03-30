@@ -63,6 +63,9 @@ class WikidataWorkflow:
     revision of the latest update."""
     return self.wf.resource("latest", dir=corpora.wikidir(), format="text")
 
+  def wikidata_deleted(self):
+    return self.wf.resource("deleted.txt", dir=corpora.wikidir(), format="text")
+
   def wikidata_convert(self, input, name=None):
     """Convert Wikidata JSON to SLING items and properties."""
     task = self.wf.task("wikidata-importer", name=name)
@@ -101,8 +104,10 @@ class WikidataWorkflow:
     with self.wf.namespace("wikidata"):
       input = self.wikidata_input(dump)
       items, properties = self.wikidata_convert(input)
+      filtered = self.wf.filter([items, properties], "filter",
+                                auxin={"discard": self.wikidata_deleted()})
       db = self.wikidatadb()
-      self.wf.write([items, properties], db, name="db-writer",
+      self.wf.write(filtered, db, name="db-writer",
                     params={"db_write_mode": 3})
       return db
 

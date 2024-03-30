@@ -651,6 +651,19 @@ class Workflow(object):
     self.connect(input, workers)
     return self.channel(workers, format=format_of(input))
 
+  def filter(self, input, type=None, params=None, auxin=None, name=None):
+    """Map input through filter."""
+    # Create filter task.
+    filter = self.task(type, name=name)
+    filter.add_params(params)
+    if auxin != None:
+      for name, resource in auxin.items():
+        filter.attach_input(name, resource)
+    self.connect(input, filter)
+    output = self.channel(filter, format=format_of(input))
+
+    return output
+
   def map(self, input, type=None, format=None, params=None, auxin=None,
           name=None):
     """Map input through processor."""

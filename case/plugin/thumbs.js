@@ -32,6 +32,10 @@ export default class ThumbsPlugin {
     } else if (url.match(/^https\:\/\/t(\d+)\.pixhost\.to\//)) {
       let m = url.match(/^https\:\/\/t(\d+)\.pixhost\.to\/thumbs\/(.*)/);
       photo = `!https://img${m[1]}.pixhost.to/images/${m[2]}`;
+    } else if (url.match(/^https\:\/\/pbs\.twimg\.com\/media\//)) {
+      let m = url.match(
+        /^(https\:\/\/pbs\.twimg\.com\/media\/[A-Za-z0-9_-]+)\?format=jpg/);
+      if (m) photo = m[1] + ".jpg";
     }
 
     if (photo) {

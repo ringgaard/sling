@@ -272,6 +272,7 @@ var plugins = [
     /^https:\/\/thumbs\d+\.imagebam\.com\//,
     /^https:\/\/thumbs\d+\.imgbox\.com\//,
     /^https\:\/\/t(\d+)\.pixhost\.to\/thumbs\//,
+    /^https\:\/\/pbs\.twimg\.com\/media\//,
   ],
 },
 

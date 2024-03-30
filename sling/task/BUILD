@@ -343,6 +343,17 @@ cc_library(
 )
 
 cc_library(
+  name = "filter",
+  srcs = ["filter.cc"],
+  deps = [
+    ":task",
+    "//sling/base",
+    "//sling/file:textmap",
+  ],
+  alwayslink = 1,
+)
+
+cc_library(
   name = "accumulator",
   srcs = ["accumulator.cc"],
   hdrs = ["accumulator.h"],
