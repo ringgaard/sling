@@ -105,13 +105,10 @@ class AliasExtractor : public task::FrameProcessor {
       // Do not extract aliases from non-entity items.
       if (property == n_instance_of_) {
         // Discard alias for non-entity items.
-        if (wikitypes_.IsNonEntity(value)) {
+        if (wikitypes_.IsNonEntity(value) || wikitypes_.IsBiographic(value)) {
           num_non_entity_items_->Increment();
-          return;
+          skip = true;
         }
-
-        // Check if all aliases for this item should be skipped.
-        if (wikitypes_.IsBiographic(value)) skip = true;
       }
 
       if (!store->IsString(value)) continue;
