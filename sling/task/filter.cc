@@ -31,13 +31,14 @@ class FilterTask : public Processor {
     CHECK(output_ != nullptr) << "Output channel missing";
 
     // Read filter list(s).
-    TextMapInput filters(task->GetInputFiles("filter"));
+    TextMapInput filters(task->GetInputFiles("discard"));
     while (filters.Next()) {
       discard_.insert(filters.key());
     }
 
     // Statistics.
     num_discarded_ = task->GetCounter("messages_discarded");
+    LOG(INFO) << discard_.size() << " filtered keys";
   }
 
   void Receive(Channel *channel, Message *message) override {
