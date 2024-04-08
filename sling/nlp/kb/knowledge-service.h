@@ -16,6 +16,7 @@
 #define NLP_KB_KNOWLEDGE_SERVICE_H_
 
 #include <string>
+#include <regex>
 
 #include "sling/base/types.h"
 #include "sling/db/dbclient.h"
@@ -36,6 +37,27 @@
 
 namespace sling {
 namespace nlp {
+
+class URLFormatter {
+ public:
+  void SetDefault(const string &url);
+  void AddVariant(Text regex, const string &url);
+
+  string Format(const string &ident) const;
+  bool empty() const { return variants_.empty() && url_.empty(); };
+
+ private:
+  struct Variant {
+    // TODO: set flags for regex.
+    Variant(Text re, std::regex::flag_type flags, const string &url)
+      : regex(re.data(), re.size(), flags), url(url) {}
+    std::regex regex;
+    string url;
+  };
+
+  string url_;
+  std::vector<Variant> variants_;
+};
 
 class KnowledgeService {
  public:
@@ -149,7 +171,7 @@ class KnowledgeService {
     Handle id;
     Handle name;
     Handle datatype;
-    string url;
+    URLFormatter url_formatter;
     bool image;
     bool origin;
     int order = kint32max;
@@ -249,6 +271,7 @@ class KnowledgeService {
   Name n_lang_{names_, "lang"};
   Name n_nsfw_{names_, "nsfw"};
   Name n_age_{names_, "age"};
+  Name n_rank_{names_, "rank"};
 
   Name n_xref_type_{names_, "/w/xref"};
   Name n_item_type_{names_, "/w/item"};

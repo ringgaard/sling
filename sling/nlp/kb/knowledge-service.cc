@@ -159,6 +159,39 @@ static void AddMeta(HTTPResponse *response,
   response->Append("\" />\n");
 }
 
+void URLFormatter::SetDefault(const string &url) {
+  if (url_.empty()) url_ = url;
+}
+
+void URLFormatter::AddVariant(Text regex, const string &url) {
+  std::regex::flag_type flags = std::regex_constants::ECMAScript;
+  if (regex.starts_with("(?i)")) {
+    regex.remove_prefix(4);
+    flags |= std::regex_constants::icase;
+  }
+  if (regex.find("(") == -1) {
+    // Handle regex pattern with no capture group.
+    variants_.emplace_back("^(" + regex.str() + ")$", flags, url);
+  } else {
+    variants_.emplace_back(regex, flags, url);
+  }
+}
+
+string URLFormatter::Format(const string &ident) const {
+  for (const auto &v : variants_) {
+    if (std::regex_match(ident, v.regex)) {
+      return std::regex_replace(ident, v.regex, v.url);
+    }
+  }
+
+  int pos = url_.find("$1");
+  string url = url_;
+  if (pos != -1) {
+    url.replace(pos, 2, ident.data(), ident.size());
+  }
+  return url;
+}
+
 void KnowledgeService::Load(Store *kb, const string &name_table) {
   // Bind names.
   kb_ = kb;
@@ -190,21 +223,27 @@ void KnowledgeService::Load(Store *kb, const string &name_table) {
 
     p.image = false;
     for (const Slot &ps : property) {
-      // Get URL formatter for property.
-      if (ps.name == n_formatter_url_ && p.url.empty()) {
+      // Add URL formatter for property.
+      if (ps.name == n_formatter_url_) {
         Handle formatter = ps.value;
-        bool ignore = false;
         if (kb->IsFrame(formatter)) {
           // Resolve qualified formatter url.
           Frame fq(kb, formatter);
           formatter = fq.GetHandle(Handle::is());
-
-          // Skip deprecated and special services.
-          if (fq.Has(n_reason_for_deprecation_)) ignore = true;
-          if (fq.Has(n_applies_if_regex_matches_)) ignore = true;
-        }
-        if (!ignore && kb->IsString(formatter)) {
-          p.url = String(kb, formatter).value();
+          int rank = fq.GetInt(n_rank_, 1);
+          if (rank > 0 && !fq.Has(n_reason_for_deprecation_)) {
+            string url = fq.GetString(Handle::is());
+            Handle pattern = fq.GetHandle(n_applies_if_regex_matches_);
+            if (pattern.IsNil()) {
+              p.url_formatter.SetDefault(url);
+            } else if (rank > 0) {
+              string regex = String(kb, pattern).value();
+              p.url_formatter.AddVariant(regex, url);
+            }
+          }
+        } else if (kb->IsString(formatter)) {
+          string url = String(kb, formatter).value();
+          p.url_formatter.SetDefault(url);
         }
       }
 
@@ -812,14 +851,9 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
       }
 
       // Add URL if property has URL formatter.
-      if (!property->url.empty() && store->IsString(value)) {
+      if (!property->url_formatter.empty() && store->IsString(value)) {
         String identifier(store, value);
-        string url = property->url;
-        int pos = url.find("$1");
-        if (pos != -1) {
-          Text replacement = identifier.text();
-          url.replace(pos, 2, replacement.data(), replacement.size());
-        }
+        string url = property->url_formatter.Format(identifier.value());
         if (!url.empty()) v.Add(n_url_, url);
       }
 
