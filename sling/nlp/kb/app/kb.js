@@ -86,9 +86,9 @@ class KbApp extends MdApp {
       }
       let item = await r.json();
       if (initial) {
-        history.replaceState(item, "");
+        history.replaceState(item, "", "/kb/" + item.ref);
       } else {
-        history.pushState(item, "");
+        history.pushState(item, "", "/kb/" + item.ref);
       }
       this.display(item);
       this.find("md-content").scrollTop = 0;

@@ -248,7 +248,9 @@ void KnowledgeService::Load(Store *kb, const string &name_table) {
       }
 
       // Check if property is a representative image for the item.
-      if (ps.name == n_instance_of_ && ps.value == n_representative_image_) {
+      if (ps.name == n_instance_of_ &&
+          ps.value == n_representative_image_ &&
+          p.id != n_signature_) {
         p.image = true;
       }
 

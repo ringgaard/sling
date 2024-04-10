@@ -309,5 +309,10 @@
   Q24045410: {
     "Porn Star": blacklist
   }
+
+  ; art model
+  Q1630100: {
+    "Adult model": blacklist
+  }
 }
 
