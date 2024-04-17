@@ -98,6 +98,7 @@ class IOBuffer {
   void Write(const string &str) { Write(str.data(), str.size()); }
   void Write(const Slice &slice) { Write(slice.data(), slice.size()); }
   void Write(char ch) { Write(&ch, 1); }
+  void Write(unsigned char ch) { Write(&ch, 1); }
 
   // Copy data from another buffer.
   void Copy(IOBuffer *buffer, size_t size) {

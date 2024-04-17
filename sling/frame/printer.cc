@@ -341,7 +341,7 @@ int Printer::WriteUTF8(const unsigned char *str, const unsigned char *end) {
     if (c == 0xf4) return -1;
     n = 4;
   } else {
-    return false;
+    return -1;
   }
 
   // Check boundaries.

@@ -32,7 +32,7 @@ class JSON {
   class Array;
 
   // JSON value types.
-  enum Type {NIL, INT, FLOAT, BOOL, STRING, OBJECT, ARRAY};
+  enum Type {NIL, INT, FLOAT, BOOL, STRING, OBJECT, ARRAY, ERROR};
 
   // JSON object with set of key/value pairs.
   class Object {
@@ -65,6 +65,9 @@ class JSON {
     void Add(const string &key, Array *value) {
       items_.emplace_back(key, JSON(value));
     }
+    void Add(const string &key, JSON &value) {
+      items_.emplace_back(key, std::move(value));
+    }
 
     // Add new object with key to object.
     Object *AddObject(const string &key);
@@ -74,6 +77,13 @@ class JSON {
 
     // Write object as JSON to output.
     void Write(IOBuffer *buffer) const;
+
+    // Get object size.
+    int size() const { return items_.size(); }
+
+    // Look up value.
+    const JSON &operator [](const string &key) const;
+    const JSON &operator [](const char *key) const;
 
    private:
     // Key/value pairs for object.
@@ -111,6 +121,9 @@ class JSON {
     void Add(Array *value) {
       elements_.emplace_back(JSON(value));
     }
+    void Add(JSON &value) {
+      elements_.emplace_back(std::move(value));
+    }
 
     // Add new object element to array.
     Object *AddObject();
@@ -121,27 +134,85 @@ class JSON {
     // Write array as JSON to output.
     void Write(IOBuffer *buffer) const;
 
+    // Get array size.
+    int size() const { return elements_.size(); }
+
+    // Get element value.
+    const JSON &operator [](int i) const { return elements_[i]; }
+
    private:
     // Array elements.
     std::vector<JSON> elements_;
   };
 
+  // JSON parser.
+  class Parser {
+   public:
+    Parser(IOBuffer *input) : input_(input) { next(); }
+
+    // Read next character from input.
+    void next() {
+      current_ = input_->empty() ? -1 : *input_->consume<unsigned char>(1);
+      if (current_ == '\n') line_++;
+    }
+
+    // Parse JSON element from input.
+    JSON Parse();
+
+    // Current line number.
+    int line() const { return line_; }
+   private:
+    // Skip whitespace.
+    void SkipWhitespace();
+
+    // Parse object.
+    JSON ParseObject();
+
+    // Parse array.
+    JSON ParseArray();
+
+    // Parse string.
+    JSON ParseString();
+
+    // Parse number.
+    JSON ParseNumber();
+
+    // Parse 4-digit hex escape.
+    int ParseHex();
+
+    // Input buffer.
+    IOBuffer *input_;
+
+    // Current input character or -1 if end of input has been reached.
+    int current_;
+
+    // Current line number.
+    int line_ = 1;
+
+    // Buffer for current token.
+    string token_;
+
+  };
+
   // Default constructor.
-  JSON() : type_(NIL), i_(0) {}
+  JSON() : i_(0), type_(ERROR) {}
 
   // Move constructor.
-  JSON(JSON &&other) : type_(other.type_), i_(other.i_) { other.type_ = NIL; }
+  JSON(JSON &&other) : i_(other.i_), type_(other.type_)  {
+    other.type_ = ERROR;
+  }
 
   // Initialize JSON value. Takes ownership of arrays and objects.
-  JSON(int64 value) : type_(INT), i_(value) {}
-  JSON(uint64 value) : type_(INT), i_(value) {}
-  JSON(int value) : type_(INT), i_(value) {}
-  JSON(double value) : type_(FLOAT), f_(value) {}
-  JSON(bool value) : type_(BOOL), b_(value) {}
-  JSON(const string &value) : type_(STRING), s_(new string(value)) {}
-  JSON(const char *value) : type_(STRING), s_(new string(value)) {}
-  JSON(Object *value) : type_(OBJECT), o_(value) {}
-  JSON(Array *value) : type_(ARRAY), a_(value) {}
+  JSON(Type t) : i_(0), type_(t) {}
+  JSON(int64 value) : i_(value), type_(INT) {}
+  JSON(uint64 value) : i_(value), type_(INT) {}
+  JSON(int value) : i_(value), type_(INT) {}
+  JSON(double value) : f_(value), type_(FLOAT) {}
+  JSON(bool value) : i_(value), type_(BOOL) {}
+  JSON(const string &value) : s_(new string(value)), type_(STRING) {}
+  JSON(const char *value) : s_(new string(value)), type_(STRING)  {}
+  JSON(Object *value) : o_(value), type_(OBJECT) {}
+  JSON(Array *value) : a_(value), type_(ARRAY) {}
 
   // Delete JSON value.
   ~JSON();
@@ -149,22 +220,68 @@ class JSON {
   // Write value in JSON format to output buffer.
   void Write(IOBuffer *output) const;
 
+  // Return value in JSON format.
+  string AsString() const;
+
+  // Read value in JSON format from input buffer.
+  static JSON Read(IOBuffer *input);
+  static JSON Read(const string &json);
+
+  // Get JSON value type.
+  Type type() const { return type_; }
+
+  // Get JSON value.
+  int64 i(int64 defval = 0) const { return type_ == INT ? i_ : defval; }
+  int64 b(bool defval = false) const { return type_ == BOOL ? i_ : defval; }
+  double f(double defval = 0.0) const { return type_ == FLOAT ? f_ : defval; }
+  const string &s() const { return type_ == STRING ? *s_ : EMPTY_STRING; }
+  Object *o() const { return type_ == OBJECT ? o_ : nullptr; }
+  Array *a() const { return type_ == ARRAY ? a_ : nullptr; }
+
+  // Object/array lookup.
+  const JSON &operator [](const string &key) const {
+    return type_ == OBJECT ? (*o_)[key] : ERROR_VALUE;
+  }
+  const JSON &operator [](const char *key) const {
+    return type_ == OBJECT ? (*o_)[key] : ERROR_VALUE;
+  }
+  const JSON &operator [](int i) const {
+    return type_ == ARRAY ? (*a_)[i] : ERROR_VALUE;
+  }
+
+  // Cast operators.
+  operator int() const { return i(); }
+  operator int64() const { return i(); }
+  operator bool() const { return b(); }
+  operator double() const { return f(); }
+  operator float() const { return f(); }
+  operator const string &() const { return s(); }
+  operator Object &() const { return *o(); }
+  operator const Object &() const { return *o(); }
+  operator Array &() const { return *a(); }
+  operator const Array &() const { return *a(); }
+
+  // Check for errors.
+  bool valid() const { return type_ != ERROR; }
+
  private:
+  // JSON value.
+  union {
+   int64 i_;        // INTEGER/BOOL
+   double f_;       // FLOAT
+   string *s_;      // STRING
+   Object *o_;      // OBJECT
+   Array *a_;       // ARRAY
+  };
+
+  static string EMPTY_STRING;
+  static JSON ERROR_VALUE;
+
   // JSON type.
   Type type_;
 
-  // JSON value.
-  union {
-   uint64 i_;   // INTEGER
-   double f_;   // FLOAT
-   bool b_;     // BOOL
-   string *s_;  // STRING
-   Object *o_;  // OBJECT
-   Array *a_;   // ARRAY
-  };
-
   // No copy or assign.
-  JSON& operator=(const JSON &) = delete;
+  JSON &operator=(const JSON &) = delete;
   JSON(const JSON &) = delete;
 };
 
