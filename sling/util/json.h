@@ -81,6 +81,10 @@ class JSON {
     // Get object size.
     int size() const { return items_.size(); }
 
+    // Get keys and values.
+    const string &key(int index) const { return items_[index].first; }
+    const JSON &value(int index) const { return items_[index].second; }
+
     // Look up value.
     const JSON &operator [](const string &key) const;
     const JSON &operator [](const char *key) const;
@@ -172,7 +176,7 @@ class JSON {
     JSON ParseArray();
 
     // Parse string.
-    JSON ParseString();
+    bool ParseString();
 
     // Parse number.
     JSON ParseNumber();
@@ -232,7 +236,7 @@ class JSON {
 
   // Get JSON value.
   int64 i(int64 defval = 0) const { return type_ == INT ? i_ : defval; }
-  int64 b(bool defval = false) const { return type_ == BOOL ? i_ : defval; }
+  bool b(bool defval = false) const { return type_ == BOOL ? i_ : defval; }
   double f(double defval = 0.0) const { return type_ == FLOAT ? f_ : defval; }
   const string &s() const { return type_ == STRING ? *s_ : EMPTY_STRING; }
   Object *o() const { return type_ == OBJECT ? o_ : nullptr; }

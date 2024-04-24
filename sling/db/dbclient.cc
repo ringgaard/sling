@@ -69,7 +69,7 @@ Status DBClient::Connect(const string &database, const string &agent) {
   int err = getaddrinfo(hostname.c_str(), portname.c_str(), &hints, &addrs);
   if (err != 0) return Status(err, gai_strerror(err), hostname);
 
-  for(struct addrinfo *addr = addrs; addr != nullptr; addr = addr->ai_next) {
+  for (struct addrinfo *addr = addrs; addr != nullptr; addr = addr->ai_next) {
     // Create socket.
     sock_ = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
     if (sock_ == -1) {

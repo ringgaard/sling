@@ -213,7 +213,11 @@ JSON JSON::Parser::Parse() {
   } else if (current_ == '[') {
     return ParseArray();
   } else if (current_ == '"') {
-    return ParseString();
+    if (ParseString()) {
+      return JSON(token_);
+    } else {
+      return JSON(ERROR);
+    }
   } if (is_digit(current_) || current_ == '-') {
     return ParseNumber();
   }
@@ -239,6 +243,7 @@ JSON JSON::Parser::ParseObject() {
 
   // Read items.
   Object *obj = new Object();
+  string key;
   for (;;) {
     // Check for end of object.
     SkipWhitespace();
@@ -252,11 +257,11 @@ JSON JSON::Parser::ParseObject() {
     }
 
     // Read key.
-    JSON key = ParseString();
-    if (!key.valid()) {
+    if (!ParseString()) {
       delete obj;
       return JSON(ERROR);
     }
+    key = token_;
 
     // Expect colon.
     SkipWhitespace();
@@ -274,7 +279,7 @@ JSON JSON::Parser::ParseObject() {
     }
 
     // Add item to object.
-    obj->Add(*key.s_, value);
+    obj->Add(key, value);
 
     // Skip comma.
     SkipWhitespace();
@@ -320,14 +325,14 @@ JSON JSON::Parser::ParseArray() {
   return JSON(array);
 }
 
-JSON JSON::Parser::ParseString() {
+bool JSON::Parser::ParseString() {
   // Skip start quotes.
   next();
 
   // Read until end quote.
   token_.clear();
   while (current_ != '"') {
-    if (current_ == -1) return JSON(ERROR);
+    if (current_ == -1) return false;
     if (current_ == '\\') {
       next();
       switch (current_) {
@@ -345,9 +350,9 @@ JSON JSON::Parser::ParseString() {
           int code = 0;
           for (int i = 0; i < 4; ++i) {
             char digit = hex_to_digit(current_);
-            if (digit < 0) return JSON(ERROR);
+            if (digit < 0) return false;
             code = (code << 4) + digit;
-            if (code > 0x10ffff) return JSON(ERROR);
+            if (code > 0x10ffff) return false;
             next();
           }
 
@@ -373,7 +378,7 @@ JSON JSON::Parser::ParseString() {
           }
           break;
         }
-        default: return JSON(ERROR);
+        default: return false;
       }
     } else {
       token_.push_back(current_);
@@ -381,7 +386,7 @@ JSON JSON::Parser::ParseString() {
     }
   }
   next();
-  return JSON(token_);
+  return true;
 }
 
 JSON JSON::Parser::ParseNumber() {

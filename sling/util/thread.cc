@@ -51,7 +51,7 @@ void Thread::Join() {
 
 void Thread::SetJoinable(bool joinable) {
   CHECK(!running_) << "Can't SetJoinable() on a running thread";
-  joinable_ = true;
+  joinable_ = joinable;
 }
 
 bool Thread::IsSelf() const {
