@@ -606,6 +606,7 @@ class SettingsDialog extends material.MdDialog {
   onopen() {
     this.find("#authorid").value = settings.authorid;
     this.find("#picturesize").value = settings.picturesize;
+    this.find("#fontsize").value = settings.fontsize;
     this.find("#kbservice").value = settings.kbservice;
     this.find("#collaburl").value = settings.collaburl;
     this.find("#analyzer").value = settings.analyzer;
@@ -624,6 +625,7 @@ class SettingsDialog extends material.MdDialog {
   submit() {
     settings.authorid = this.find("#authorid").value;
     settings.picturesize = this.find("#picturesize").value;
+    settings.fontsize = this.find("#fontsize").value;
     settings.kbservice = this.find("#kbservice").value;
     settings.collaburl = this.find("#collaburl").value;
     settings.analyzer = this.find("#analyzer").value;
@@ -665,6 +667,10 @@ class SettingsDialog extends material.MdDialog {
         <md-text-field
           id="picturesize"
           label="Profile picture size">
+        </md-text-field>
+        <md-text-field
+          id="fontsize"
+          label="Document font size">
         </md-text-field>
         <md-radio-button
           id="localdb"

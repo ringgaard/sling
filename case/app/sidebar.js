@@ -50,6 +50,7 @@ class SideBar extends Component {
   onrendered() {
     if (!this.state) return;
     this.editor = this.find("document-editor");
+    if (settings.fontsize) this.editor.style.fontSize = settings.fontsize;
     this.attach(this.onmenu, "select", "md-menu");
     this.attach(this.onnavigate, "click", "#titlebox");
     this.update_title();
