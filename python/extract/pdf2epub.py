@@ -307,7 +307,7 @@ class PDFChapter:
     self.filename = "chapter-%03d.html" % index
     self.ref = "item%03d" % index
 
-  def generate(self, h1, h2):
+  def generate(self, h1, h2, dropcap):
     s = []
     s.append('<?xml version="1.0" encoding="UTF-8"?>\n')
     s.append('<html xmlns="http://www.w3.org/1999/xhtml">\n')
@@ -321,9 +321,9 @@ class PDFChapter:
     for p in self.pages:
       for l in p.lines:
         next = level
-        if l.fontsize > h1:
+        if l.fontsize > h1 and l.fontsize < dropcap:
           next = LEVEL_HEADING
-        elif l.fontsize > h2:
+        elif l.fontsize > h2 and l.fontsize < dropcap:
           next = LEVEL_SUBHEADING
         elif l.para:
           next = LEVEL_PARA
@@ -602,8 +602,9 @@ class PDFBook:
     # Write chapters.
     h1 = self.param("h1", 32.0)
     h2 = self.param("h2", 24.0)
+    dropcap = self.param("dropcap", 100.0)
     for chapter in book.spine:
-      zip.writestr(chapter.filename, chapter.generate(h1, h2))
+      zip.writestr(chapter.filename, chapter.generate(h1, h2, dropcap))
 
     zip.close()
 

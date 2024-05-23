@@ -1361,6 +1361,7 @@ class FactValue extends FactField {
       $ {
         display: block;
         min-height: 1.25em;
+        min-width: 1px;
       }
       $.encoded {
         color: #0000dd;
