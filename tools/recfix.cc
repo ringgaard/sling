@@ -77,7 +77,7 @@ int main(int argc, char *argv[]) {
   // Truncate file at first corrupted record if requested.
   if (corrupt) {
     LOG(ERROR) << "Corrupt record at position " << position << ", "
-               << (reader.size() - position) << " bytes lost";
+               << (size - position) << " bytes lost";
 
     if (FLAGS_truncate) {
       File *file = File::OpenOrDie(FLAGS_file, "r+");

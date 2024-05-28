@@ -501,9 +501,9 @@ Status Database::ReadRecord(uint64 recid, Record *record, bool novalue) {
     st = reader->ReadKey(record);
   } else {
     st = reader->Read(record);
-    inc(RECREAD);
     add(BYTEREAD, record->value.size());
   }
+  inc(RECREAD);
   if (!st) return st;
 
   return Status::OK;
@@ -623,6 +623,10 @@ Status Database::Recover(uint64 capacity) {
   uint64 start_pos = Position(idx.epoch());
 
   // Replay all records from the data shards to restore the index.
+  uint64 num_recs = 0;
+  uint64 num_added = 0;
+  uint64 num_deleted = 0;
+  uint64 num_updated = 0;
   Record record;
   for (int shard = start_shard; shard < readers_.size(); ++shard) {
     LOG(INFO) << "Recover shard " << shard << " of db " << dbdir_;
@@ -648,8 +652,9 @@ Status Database::Recover(uint64 capacity) {
         std::swap(idx, newidx);
       }
 
-      // Read next record key.
-      st = reader.ReadKey(&record);
+      // Read next record. Only the key is needed, but we read the whole record
+      // to stay in read-ahead mode.
+      st = reader.Read(&record);
       if (!st.ok()) return st;
       uint64 fp = Fingerprint(record.key.data(), record.key.size());
       uint64 recid = RecordID(shard, record.position);
@@ -657,6 +662,7 @@ Status Database::Recover(uint64 capacity) {
       // Empty record indicates deletion.
       if (record.value.empty()) {
         idx.Delete(fp, recid);
+        num_deleted++;
       } else {
         // Try to locate exising record for key in index.
         uint64 val = DatabaseIndex::NVAL;
@@ -668,7 +674,7 @@ Status Database::Recover(uint64 capacity) {
 
           // Read existing record key from data file.
           Record existing;
-          st = ReadRecord(val, &existing, false);
+          st = ReadRecord(val, &existing, true);
           if (!st.ok()) return st;
 
           // Check if key matches.
@@ -679,9 +685,17 @@ Status Database::Recover(uint64 capacity) {
         // entry, otherwise add a new entry.
         if (val == DatabaseIndex::NVAL) {
           idx.Add(fp, recid);
+          num_added++;
         } else {
           idx.Update(fp, val, recid);
+          num_updated++;
         }
+      }
+      if (++num_recs % 1000000 == 0) {
+        LOG(INFO) << reader.Tell() << ": "
+                  << num_added << " added, "
+                  << num_deleted << " deleted, "
+                  << num_updated << " updated";
       }
     }
   }

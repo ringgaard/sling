@@ -332,7 +332,9 @@ Status RecordReader::Read(Record *record) {
       buffer_.Clear();
       snappy::ByteArraySource source(input_.Consume(value_size), value_size);
       BufferSink sink(&buffer_);
-      CHECK(snappy::Uncompress(&source, &sink));
+      if (!snappy::Uncompress(&source, &sink)) {
+        return Status(EINVAL, "Uncompress failed");
+      }
       record->value = buffer_.data();
     } else if (info_.compression == UNCOMPRESSED) {
       record->value = Slice(input_.Consume(value_size), value_size);
