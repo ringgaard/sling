@@ -68,7 +68,7 @@ export default class FamousBirthdaysPlugin {
     let stats = main.querySelectorAll("div.bio-module__person-attributes p");
 
     let bday = stats[0].innerText.trim();
-    let m = bday.match(/^(Happy )?Birthday!?\s+([A-Z][a-z]+)\w* (\d+), (\d+)/);
+    let m = bday.match(/^(Happy )?Birthday!?\s+([A-Z][a-z]+)\w*\s+(\d+),\s+(\d+)/);
     let results = new Array();
     date_parser(`${m[2]} ${m[3]}, ${m[4]}`, results);
     let dob = results[0].value
