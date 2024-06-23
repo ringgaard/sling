@@ -76,6 +76,7 @@ fi
 #   praw (reddit)
 #   urllib3 (proxy)
 #   pillow (photo dedup)
+#   requests-oauthlib (OAuth)
 #   torch (bert analyzer)
 #   transformers (bert analyzer)
 

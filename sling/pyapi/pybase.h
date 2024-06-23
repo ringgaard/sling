@@ -15,6 +15,8 @@
 #ifndef SLING_PYAPI_PYBASE_H_
 #define SLING_PYAPI_PYBASE_H_
 
+#define PY_SSIZE_T_CLEAN
+
 #if PYVER==35
 #include <python3.5/Python.h>
 #include <python3.5/structmember.h>

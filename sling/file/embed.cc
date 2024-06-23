@@ -304,7 +304,7 @@ class InternalFileSystem : public FileSystem {
     string filename;
     if (pattern.find('*') != -1 || pattern.find('?') != -1) {
       // Find files matching pattern.
-      for (const auto it : files_) {
+      for (const auto &it : files_) {
         if (fnmatch(pattern.c_str(), it.first.c_str(), 0) == 0) {
           filename = "/intern/";
           filename.append(it.first);

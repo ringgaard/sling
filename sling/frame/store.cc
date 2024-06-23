@@ -141,7 +141,7 @@ Store::Store(const Options *options) : options_(options) {
 
   // Allocate standard heap objects.
   LockGC();
-  Datum *begin = heap->add(sizeof(kInitialHeap) / sizeof(Datum));
+  Datum *begin = heap->add(sizeof(kInitialHeap) / (2 * sizeof(Word)));
   Datum *end = heap->end();
   memcpy(begin, kInitialHeap, sizeof(kInitialHeap));
 

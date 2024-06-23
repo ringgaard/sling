@@ -105,6 +105,7 @@ export class PhotoGallery extends MdModal {
     this.attach(this.onfullscreen, "click", "#fullscreen");
     this.attach(this.onzoomin, "click", "#zoomin");
     this.attach(this.onzoomout, "click", "#zoomout");
+    this.attach(this.onrefresh, "click", "#refresh");
     this.attach(this.oncopyurl, "click", "#copyurl");
     this.attach(this.close, "click", "#close");
     this.attach(this.onsource, "click", ".domain");
@@ -147,6 +148,8 @@ export class PhotoGallery extends MdModal {
       this.onfullsize(e);
     } else if (e.keyCode == 83) {
       this.onselect(e);
+    } else if (e.keyCode == 82) {
+      this.onrefresh(e);
     } else if (e.keyCode == 71) {
       this.ongallery(e);
     }
@@ -238,6 +241,12 @@ export class PhotoGallery extends MdModal {
     this.find(".photo").classList.add("full");
     if (this.zoom >= 0.5) this.zoom -= 0.25;
     this.display(this.current);
+  }
+
+  onrefresh(e) {
+    e.stopPropagation();
+    let photo = this.photos[this.current];
+    photo.image.src = imageurl(photo.url, false);
   }
 
   oncopyurl(e) {
@@ -411,6 +420,8 @@ export class PhotoGallery extends MdModal {
         <md-icon-button id="zoomout" icon="zoom_out">
         </md-icon-button>
         <md-icon-button id="zoomin" icon="zoom_in">
+        </md-icon-button>
+        <md-icon-button id="refresh" icon="refresh">
         </md-icon-button>
         <md-icon-button id="open" icon="open_in_new">
         </md-icon-button>

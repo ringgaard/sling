@@ -89,7 +89,7 @@ cc_library(
   copts = [
     "-Wno-write-strings",
     "-Wno-invalid-offsetof",
-    "-DPYVER=36"
+    "-DPYVER=310"
   ],
   alwayslink = 1,
 )
