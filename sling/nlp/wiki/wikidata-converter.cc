@@ -454,6 +454,8 @@ Handle WikidataConverter::ConvertEntity(const Frame &value) {
     return Sense(value.store(), value.GetText(s_id_));
   } else if (type.equals("property")) {
     return Property(value.store(), id.AsInt());
+  } else if (type.equals("entity-schema")) {
+    return EntitySchema(value.store(), value.GetText(s_id_));
   } else {
     LOG(FATAL) << "Unknown entity type: " << ToText(value);
     return Handle::nil();
