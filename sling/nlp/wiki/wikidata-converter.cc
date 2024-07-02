@@ -66,6 +66,7 @@ WikidataConverter::WikidataConverter(Store *commons, const string &language) {
   AddTypeMapping(s_tabular_data_.name(), "/w/table");
   AddTypeMapping(s_geo_shape_.name(), "/w/shape");
   AddTypeMapping(s_musical_notation_.name(), "/w/music");
+  AddTypeMapping(s_entity_schema_.name(), "/w/schema");
 
   // Get primary language.
   primary_language_name_ = language;
