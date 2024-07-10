@@ -386,6 +386,11 @@ export class DocumentEditor extends Component {
         e.preventDefault();
         e.stopPropagation();
         this.execute("clear");
+      } else if ((e.ctrlKey || e.metaKey) && e.code === "KeyK") {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log("aside");
+        this.execute("aside");
       } else if ((e.ctrlKey || e.metaKey) && e.code === "KeyS") {
         if (this.dirty) {
           e.preventDefault();
@@ -577,6 +582,9 @@ export class DocumentEditor extends Component {
     } else if (cmd == "outdent") {
       // Unindent text.
       document.execCommand("outdent");
+    } else if (cmd == "aside") {
+      // Turn text into aside box.
+      document.execCommand("formatBlock", true, "aside");
     } else if (cmd == "clear") {
       let mention = selected_mention();
       if (mention) {
@@ -808,6 +816,12 @@ export class DocumentEditor extends Component {
       }
       $ .footer {
         height: 64px;
+      }
+      $ span.page-break::before {
+        float: right;
+        font-size: 10px;
+        color: grey;
+        content: attr(page);
       }
       $ md-find-box {
         position: absolute;

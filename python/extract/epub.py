@@ -80,6 +80,7 @@ n_body = commons["body"]
 n_title = commons["title"]
 n_class = commons["class"]
 n_role = commons["role"]
+n_page = commons["page"]
 n_epubtype = commons["epub:type"]
 
 languages = {
@@ -102,6 +103,7 @@ NOTAG      = 3
 BREAK      = 4
 PARA       = 5
 CAPITALIZE = 6
+PAGE       = 7
 
 tags = {
   commons["body"]: NOTAG,
@@ -144,6 +146,7 @@ tags = {
     "doc-pagebreak": SKIP,
     "smallcapssan": CAPITALIZE,
     "italic": "em",
+    "page-break": PAGE,
   },
   commons["hr"]: {
     None: KEEP,
@@ -182,6 +185,7 @@ tags = {
   commons["href"]: SKIP,
   commons["valign"]: SKIP,
   commons["hidden"]: SKIP,
+  commons["page"]: SKIP,
   commons["xmlU0003Alang"]: SKIP,
 }
 
@@ -353,7 +357,7 @@ class EPUBBook:
 
     return title, text
 
-  def extract_text(self,  tag, content):
+  def extract_text(self, tag, content):
     text = ""
     tagname = tag.id
     action = tags.get(tag)
@@ -373,6 +377,8 @@ class EPUBBook:
 
     if action == SKIP: return ""
     if action == BREAK: return "<br>"
+    if action == PAGE:
+      return '<span class="page-break" page="%s"></span>' % content[n_page]
     if type(action) is str: tagname = action
 
     if content is None:

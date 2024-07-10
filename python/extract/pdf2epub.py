@@ -319,6 +319,7 @@ class PDFChapter:
 
     level = LEVEL_START
     for p in self.pages:
+      pagenum = p.pageno
       for l in p.lines:
         next = level
         if l.fontsize > h1 and l.fontsize < dropcap:
@@ -333,6 +334,10 @@ class PDFChapter:
           if l.vbreak: s.append("\n")
           s.append(level_start[next])
           level = next
+
+        if pagenum:
+          s.append('<span class="page-break" page="%d"></span>' % pagenum)
+          pagenum = None
 
         s.append(escape(l.text))
         if not l.hyphen: s.append(' ')
@@ -471,11 +476,15 @@ class PDFBook:
           if in_header:
             p.lines[lineno] = None
             pnumber = best_pageno
-            if flags.arg.bprdebug: print("remove header:", l.text)
+            if flags.arg.bprdebug:
+              print("remove header: '%s' [%d-%d]" %
+                    (l.text, int(l.y0), int(l.y1)))
           elif in_footer:
             p.lines[lineno] = None
             pnumber = best_pageno
-            if flags.arg.bprdebug: print("remove footer:", l.text)
+            if flags.arg.bprdebug:
+              print("remove footer: '%s' [%d-%d]" %
+                    (l.text, int(l.y0), int(l.y1)))
           elif flags.arg.bprdebug:
             if best_pageno and abs(best_pageno - pageno) <= 1:
               print("page number in text: %d '%s' [%d-%d]" %
@@ -604,7 +613,8 @@ class PDFBook:
     h2 = self.param("h2", 24.0)
     dropcap = self.param("dropcap", 100.0)
     for chapter in book.spine:
-      zip.writestr(chapter.filename, chapter.generate(h1, h2, dropcap))
+      content = chapter.generate(h1, h2, dropcap)
+      zip.writestr(chapter.filename, content)
 
     zip.close()
 

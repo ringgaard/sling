@@ -79,6 +79,7 @@ fi
 #   requests-oauthlib (OAuth)
 #   torch (bert analyzer)
 #   transformers (bert analyzer)
+#   pymupdf (epub2pdf)
 
 # Done.
 echo
