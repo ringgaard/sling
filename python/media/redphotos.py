@@ -399,6 +399,9 @@ for key, value in postings:
         itemid = lookup_name(prefix)
         query = prefix
 
+  # Do not match names marked as ambiguous (*).
+  ambiguous = itemid == "*"
+
   # Add posting to report.
   subreddit = report["subreddits"].get(sr)
   if subreddit is None:
@@ -498,7 +501,7 @@ for key, value in postings:
   p["duplicates"] = dups
   num_dups += dups
 
-  if itemid is None:
+  if itemid is None or ambiguous:
     if selfie(title):
       print(sr, key, "SELFIE", title, "NSFW" if nsfw else "", url)
       num_selfies += 1
@@ -506,6 +509,7 @@ for key, value in postings:
       matches = aliases.query(query)
       p["query"] = query
       p["matches"] = len(matches)
+      if ambiguous: p["ambiguous"] = True
       if len(matches) == 1: p["match"] = matches[0].id()
       subreddit["unmatched"].append(p)
       num_unknown += 1

@@ -415,6 +415,9 @@ class RedditPosting extends Component {
         let kburl = `https://ringgaard.com/kb/${item.itemid}`;
         match += `<a href="${kburl}" target="knolbase">${item.itemid}</a>`;
       }
+      if (item.ambiguous) {
+        match += ' <md-icon class="warning" icon="warning"></md-icon>';
+      }
     } else if (item.matches == 0) {
       match = `No matches for <em>${item.query}</em>`
     } else if (item.matches == 1) {
@@ -425,6 +428,9 @@ class RedditPosting extends Component {
        `;
     } else {
       match = `${item.matches} matches for <b>${item.query}</b>`
+      if (item.ambiguous) {
+        match += ' <md-icon class="warning" icon="warning"></md-icon>';
+      }
     }
 
     let skip = photos == duplicates;
@@ -441,10 +447,7 @@ class RedditPosting extends Component {
           ${xpost}
           <span class="dups">${photomsg}</span>
         </div>
-        <div class="match">
-          <div>${match}</div>
-          ${add}
-        </div>
+        <div class="match">${match} ${add}</div>
       </div>
     `;
   }
@@ -493,6 +496,10 @@ class RedditPosting extends Component {
         align-items: center;
         font-size: 16px;
         min-height: 40px;
+        gap: 4px;
+      }
+      $ md-icon.warning {
+        color: orange;
       }
       $ .nsfw {
         border-radius: 3px;
@@ -731,7 +738,7 @@ def add_media(request):
   more = r.get("more");
 
   print("***", r)
-  if id is None or id == "" or " " in id: return 400
+  if id is None or id == "*" or id == "" or " " in id: return 400
   if url is None or url == "": return 400
 
   # Add media to profile.

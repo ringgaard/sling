@@ -124,6 +124,7 @@
     P6424: text,      ; affiliation string
     P463: item,       ; member of
     P1344: item,      ; participant of
+    PFEIN: item,      ; featured in
 
     ; Author names creates to many matches for articles
     ;P50: item,        ; author
