@@ -16,13 +16,12 @@
 
 import email.utils
 import time
-import hashlib
 import requests
 import sys
 import traceback
 
 import sling
-import sling.media.photo
+import sling.media.photo as photo
 import sling.flags as flags
 
 flags.define("--kb",
@@ -51,12 +50,7 @@ flags.define("--auto_blacklist",
 flags.parse()
 
 wiki_base_url = "https://upload.wikimedia.org/wikipedia/"
-commons_base_url = "https://upload.wikimedia.org/wikipedia/commons"
 commons_redirect = "https://commons.wikimedia.org/wiki/Special:Redirect/file/"
-user_agent = "SLING/1.0 bot (https://github.com/ringgaard/sling)"
-
-# Session for fetching image data.
-session = sling.media.photo.session
 
 # Read list of urls.
 def read_urls(filename):
@@ -69,12 +63,6 @@ def read_urls(filename):
         if tab != -1: url = url[:tab]
         list.add(url);
   return list
-
-# Compute MD5 hash for string.
-def md5hash(s):
-  md5 = hashlib.md5()
-  md5.update(s.encode("utf8"))
-  return md5.hexdigest()
 
 # Find media files in knowledge base.
 def get_media_files():
@@ -102,12 +90,7 @@ def get_media_files():
         # Add Wikimedia Commons url.
         v = kb.resolve(v)
         if type(v) == str:
-          fn = v.replace(' ', '_')
-          md5 = md5hash(fn)
-          fn = fn.replace("?", "%3F")
-          fn = fn.replace("+", "%2B")
-          fn = fn.replace("&", "%26")
-          url = "%s/%s/%s/%s" % (commons_base_url, md5[0], md5[0:2], fn)
+          url = photo.commons_media(v)
           media.append(url)
         else:
           print("Bad media file name:", item.id, v)
@@ -134,7 +117,7 @@ print(len(whitelist), "whitelisted media files")
 fblack = open(flags.arg.blacklist, "a") if flags.arg.auto_blacklist else None
 
 # Connect to media database.
-mediadb = sling.Database(flags.arg.mediadb, "mediaload")
+photo.mediadb = sling.Database(flags.arg.mediadb, "mediaload")
 
 # Fetch all missing media files.
 num_urls = 0
@@ -157,45 +140,31 @@ for url in media:
     continue
 
   # Check if url is already in media database.
-  if url in mediadb:
+  if url in photo.mediadb:
     num_known += 1
     continue
 
   # Download image.
   try:
-    r = session.get(url,
-                    headers={"User-Agent": user_agent},
-                    allow_redirects=False,
-                    timeout=60)
-    if r.status_code == 404 and url.startswith(wiki_base_url):
+    r = photo.retrieve_image(url)
+    if r == None:
+      print("removed", url)
+      num_missing += 1
+      continue
+    elif r.status == 404 and url.startswith(wiki_base_url):
       # Try to get image through the Special:Redirect service.
       slash = url.rfind('/')
       if slash != -1:
         redir = commons_redirect + url[slash + 1:]
-        r = session.get(redir, headers={"User-Agent": user_agent}, timeout=60)
-        if r.ok: print("redirect", url, "->", r.url)
-    if r.status_code == 301:
-      redirect = r.headers['Location']
-      if redirect.endswith("/removed.png"):
-        print("removed", url)
-        continue
-
-      # Get redirected image.
-      r = session.get(redirect,
-                      headers={"User-Agent": user_agent},
-                      allow_redirects=False,
-                      timeout=60)
-      if r.status_code != 200:
-        print("missing", url, r.status_code)
-        continue
-    if not r.ok:
+        r = photo.retrieve_image(redir)
+        if r == None: continue
+        if r.status == 200:
+          print("redirect", url, "->", r.url)
+        else:
+          continue
+    elif r.status != 200:
       num_errors += 1
-      print("error", r.status_code, url)
-      continue
-    if r.status_code == 302:
-      # Imgur returns redirect to removed.png for missing images.
-      num_missing += 1
-      print("missing", url)
+      print("error", r.status, url)
       continue
   except Exception as e:
     print("fail", e, url)
@@ -215,7 +184,7 @@ for url in media:
     last_modified = int(time.time())
 
   # Check if image is too big.
-  image = r.content
+  image = r.data
   if len(image) > flags.arg.max_media_size:
     print("too big", len(image), url)
     num_toobig += 1
@@ -240,7 +209,7 @@ for url in media:
     continue
 
   # Save image in media database.
-  mediadb.put(url, image, version=last_modified, mode=sling.DBNEWER)
+  photo.mediadb.put(url, image, version=last_modified, mode=sling.DBNEWER)
 
   num_retrieved += 1
   num_bytes += len(image)

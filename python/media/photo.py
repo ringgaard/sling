@@ -19,7 +19,6 @@ import json
 import os
 import io
 import re
-import requests
 import ssl
 import time
 import urllib.parse
@@ -100,20 +99,6 @@ mediadb = None
 
 # Photo fingerprint database.
 fpdb = None
-
-# Session for fetching image data. Disable SSL checking.
-class TLSAdapter(requests.adapters.HTTPAdapter):
-  def init_poolmanager(self, *args, **kwargs):
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
-    ctx.set_ciphers('DEFAULT@SECLEVEL=1')
-    kwargs['ssl_context'] = ctx
-    return super(TLSAdapter, self).init_poolmanager(*args, **kwargs)
-
-session = requests.Session()
-session.verify = False
-session.mount('https://', TLSAdapter())
 
 urllib3.disable_warnings()
 pool =  urllib3.PoolManager(cert_reqs=ssl.CERT_NONE)
@@ -242,6 +227,14 @@ class Photo:
 
 photo_cache = {}
 
+def retrieve_image(url):
+  headers = {"User-agent": "SLING Bot 1.0"}
+  r = pool.request("GET", url, headers=headers, timeout=60)
+  for h in r.retries.history:
+    if h.redirect_location.endswith("/removed.png"): return None
+    if h.redirect_location.endswith("/no_image.jpg"): return None
+  return r
+
 def fetch_image(url):
   # Try to get image from media database.
   global mediadb
@@ -254,14 +247,15 @@ def fetch_image(url):
   # Fetch image from source if it is not in the media database.
   try:
     print("fetch", url)
-    headers = {"User-agent": "SLING Bot 1.0"}
-    r = pool.request("GET", url, headers=headers, timeout=60)
-    for h in r.retries.history:
-      if h.redirect_location.endswith("/removed.png"): return None
-      if h.redirect_location.endswith("/no_image.jpg"): return None
+    r = retrieve_image(url)
+    if r is None:
+      print("missing", url)
+      return None
+
     if r.status != 200:
       print("error", r.status, url)
       return None
+
     return r.data
   except Exception as e:
     print("fail", e, url)
@@ -461,23 +455,23 @@ class Profile:
 
     # Check if photo exists.
     if flags.arg.check:
-      r = session.head(url)
-      if r.status_code // 100 == 3:
+      r = pool.request("HEAD", url)
+      if r.status // 100 == 3:
         redirect = r.headers['Location']
         if redirect.endswith("/removed.png"):
-          print("Skip removed photo:", url, r.status_code)
+          print("Skip removed photo:", url, r.status)
           return 0
 
         # Check if redirect exists.
-        r = session.head(redirect)
-        if r.status_code != 200:
-          print("Skip missing redirect:", url, r.status_code)
+        r = pool.request("HEAD", redirect)
+        if r.status != 200:
+          print("Skip missing redirect:", url, r.status)
           return 0
 
         # Use redirected url.
         url = redirect
-      elif r.status_code != 200:
-        print("Skip missing photo:", url, r.status_code)
+      elif r.status != 200:
+        print("Skip missing photo:", url, r.status)
         return 0
 
       # Check content length.
@@ -520,15 +514,19 @@ class Profile:
   def add_imgur_album(self, albumid, caption, nsfw_override=None):
     print("Imgur album", albumid)
     auth = {'Authorization': "Client-ID " + imgurkeys["clientid"]}
-    r = session.get("https://api.imgur.com/3/album/" + albumid, headers=auth)
-    if r.status_code == 404:
+    url = "https://api.imgur.com/3/album/" + albumid
+    r = pool.request("GET", url, headers=auth)
+    if r.status == 404:
       print("Skipping missing album", albumid)
       return 0
-    if r.status_code == 403:
+    if r.status == 403:
       print("Skipping unaccessible album", albumid)
       return 0
-    r.raise_for_status()
-    reply = r.json()["data"]
+    if r.status != 200:
+      print("HTTP error", r.status, url)
+      return 0
+
+    reply = json.loads(r.data)["data"]
     #print(json.dumps(reply, indent=2))
 
     serial = 1
@@ -580,12 +578,16 @@ class Profile:
   def add_imgur_image(self, imageid, caption=None, nsfw_override=None):
     print("Imgur image", imageid)
     auth = {'Authorization': "Client-ID " + imgurkeys["clientid"]}
-    r = session.get("https://api.imgur.com/3/image/" + imageid, headers=auth)
-    if r.status_code == 404:
+    url = "https://api.imgur.com/3/image/" + imageid
+    r = pool.request("GET", url, headers=auth)
+    if r.status == 404:
       print("Skipping missing image", imageid)
       return 0
-    r.raise_for_status()
-    reply = r.json()["data"]
+    if r.status != 200:
+      print("HTTP error", r.status, url)
+      return 0
+
+    reply = json.loads(r.data)["data"]
     #print(json.dumps(reply, indent=2))
 
     # Photo URL.
@@ -616,17 +618,19 @@ class Profile:
   def add_reddit_gallery(self, galleryid, caption, nsfw_override=None):
     print("Redit posting", galleryid)
     while True:
-      r = requests.get("https://www.reddit.com/comments/%s.json" % galleryid,
-                       headers = {"User-agent": "SLING Bot 1.0"})
-      if r.status_code != 429: break
+      url = "https://www.reddit.com/comments/%s.json" % galleryid
+      r = pool.request("GET", url, headers = {"User-agent": "SLING Bot 1.0"})
+      if r.status != 429: break
       reset = int(r.headers.get("x-ratelimit-reset", 60))
       print("gallery rate limit", reset, "secs")
       time.sleep(reset)
 
-    if r.status_code == 403: return 0
-    r.raise_for_status()
+    if r.status == 403: return 0
+    if r.status != 200:
+      print("HTTP error", r.status, url)
+      return 0
 
-    children = r.json()[0]["data"]["children"]
+    children = json.loads(r.data)[0]["data"]["children"]
     if len(children) == 0:
       print("Skipping empty post", galleryid);
       return 0
@@ -718,15 +722,19 @@ class Profile:
   def add_imgchest_album(self, albumid, caption, nsfw_override=None):
     print("Image chest album", albumid)
     auth = {"Authorization": "Bearer " + imgchestkeys["token"]}
-    r = session.get("https://api.imgchest.com/v1/post/" + albumid, headers=auth)
-    if r.status_code == 404:
+    url = "https://api.imgchest.com/v1/post/" + albumid
+    r = pool.request("GET", url, headers=auth)
+    if r.status == 404:
       print("Skipping missing album", albumid)
       return 0
-    if r.status_code == 403:
+    if r.status == 403:
       print("Skipping unaccessible album", albumid)
       return 0
-    r.raise_for_status()
-    reply = r.json()["data"]
+    if r.status != 200:
+      print("HTTP error fetching album", albumid, r.status)
+      return 0
+
+    reply = json.loads(r.data)["data"]
     #print(json.dumps(reply, indent=2))
 
     total = len(reply["images"])
@@ -891,14 +899,17 @@ class Profile:
   def add_albums_in_comments(self, url, nsfw=None):
     print("Redit albums in commens", url)
     while True:
-      r = requests.get(url + ".json",
+      r = pool.request("GET", url + ".json",
                        headers = {"User-agent": "SLING Bot 1.0"})
-      if r.status_code != 429: break
+      if r.status != 429: break
       reset = int(r.headers.get("x-ratelimit-reset", 60))
       print("album rate limit", reset, "secs")
       time.sleep(reset)
-    r.raise_for_status()
-    comments = r.json()[1]["data"]["children"]
+    if r.status != 200:
+      print("HTTP error", r.status)
+      return 0
+
+    comments = json.loads(r.data)[1]["data"]["children"]
     count = 0
     for comment in comments:
       comment = comment["data"]
