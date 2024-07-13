@@ -20,11 +20,10 @@ import requests
 import sling
 import sling.flags as flags
 import sling.log as log
-import sling.media.photo
+import sling.media.photo as photo
 
 user_agent = "SLING/1.0 bot (https://github.com/ringgaard/sling)"
 mediadb = None
-session = sling.media.photo.session
 
 def cache_images(media):
   # Connect to media database.
@@ -49,42 +48,22 @@ def cache_images(media):
 
     # Download image.
     try:
-      r = session.get(url,
-                      headers={"User-Agent": user_agent},
-                      allow_redirects=False,
-                      timeout=60)
-      if r.status_code == 301:
-        redirect = r.headers['Location']
-        if redirect.endswith("/removed.png"):
-          num_missing += 1
-          log.info("removed", url)
-          continue
-
-        # Get redirected image.
-        r = session.get(redirect,
-                        headers={"User-Agent": user_agent},
-                        allow_redirects=False,
-                        timeout=60)
-        if r.status_code != 200:
-          log.info("missing", url, r.status_code)
-          num_missing += 1
-          continue
-      if not r.ok:
-        num_errors += 1
-        log.info("error", r.status_code, url)
-        continue
-      if r.status_code == 302:
-        # Imgur returns redirect to removed.png for missing images.
+      r = photo.retrieve_image(url)
+      if r == None:
+        print("removed", url)
         num_missing += 1
-        log.info("missing", url)
+        continue
+      elif r.status != 200:
+        num_errors += 1
+        print("error", r.status, url)
         continue
     except Exception as e:
-      log.info("fail", e, url)
+      print("fail", e, url)
       num_errors += 1
       continue
 
     # Check if image is empty.
-    image = r.content
+    image = r.data
     if len(image) == 0:
       log.info("empty", url)
       num_missing += 1
