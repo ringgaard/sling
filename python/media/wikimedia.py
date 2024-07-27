@@ -55,6 +55,7 @@ default_images = set([
   "Replace this image male.svg",
   "Replace this image female.svg",
   "Image manquante.svg",
+  "Silhouette-personne.jpg",
 ])
 
 # Compute MD5 hash for string.

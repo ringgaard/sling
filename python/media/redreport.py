@@ -163,6 +163,7 @@ class PhotoDialog extends MdDialog {
       aic: this.find("#aic").checked,
       captions: this.find("#captions").checked,
       dedup: this.find("#dedup").checked,
+      ambigous: this.find("#ambigous").checked,
       more: this.state.more && this.find("#more").checked,
     });
   }
@@ -201,6 +202,8 @@ class PhotoDialog extends MdDialog {
           <md-checkbox id="captions" label="captions">
           </md-checkbox>
           <md-checkbox id="dedup" label="dedup">
+          </md-checkbox>
+          <md-checkbox id="ambigous" label="ambigous">
           </md-checkbox>
           ${more}
         </div>
@@ -310,6 +313,7 @@ class RedditPosting extends Component {
         aic: options.aic,
         captions: options.captions,
         dedup: options.dedup,
+        ambigous: options.ambigous,
         more: options.more ? this.state.more : null,
       }),
     })
@@ -735,7 +739,8 @@ def add_media(request):
   aic = r.get("aic")
   captions = r.get("captions")
   dedup = r.get("dedup")
-  more = r.get("more");
+  ambigous = r.get("ambigous")
+  more = r.get("more")
 
   print("***", r)
   if id is None or id == "*" or id == "" or " " in id: return 400
@@ -760,7 +765,10 @@ def add_media(request):
   if n > 0: profile.write()
 
   # Add name mapping to celeb map.
-  add_celeb(name, id)
+  if ambigous:
+    add_celeb(name, "*")
+  else:
+    add_celeb(name, id)
 
   sys.stdout.flush()
   return {"images": n - dups, "dups": dups}

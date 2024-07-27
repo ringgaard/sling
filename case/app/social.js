@@ -371,6 +371,14 @@ let xrefs = [
     pattern: /^https?:\/\/www\.indexxx\.com\/m\/(.+)/,
     property: frame("PIDXX"),
   },
+  {
+    pattern: /^https:\/\/www\.iafd\.com\/person\.rme\/id=([0-9a-f-]+)/,
+    property: frame("P12776"),
+  },
+  {
+    pattern: /^https:\/\/fansly\.com\/(.+)/,
+    property: frame("P12039"),
+  },
 ];
 
 export function match_link(url) {
