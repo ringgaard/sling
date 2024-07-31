@@ -182,7 +182,7 @@ for b in range(num_bins):
   if profile_bins[b] != 0:
     acc_profiles += profile_bins[b]
     acc_photos += photo_bins[b]
-    print("%5d %5d %6.2f%% %6d %6.2f%%" % (
+    print("%5d %6d %6.2f%% %6d %6.2f%%" % (
           (b + 1) * bin_size,
           profile_bins[b],
           acc_profiles / num_profiles * 100,

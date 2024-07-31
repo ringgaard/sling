@@ -150,6 +150,7 @@ apis = [
   ("case proxy",           re.compile(r"^\/case/proxy\?")),
   ("case plugin",          re.compile(r"^\/case/plugin\/")),
   ("case xrefs",           re.compile(r"^\/case/xrefs$")),
+  ("case user",            re.compile(r"^\/case\/user/")),
   ("image caching",        re.compile(r"^\/case/cacheimg$")),
   ("schema",               re.compile(r"^\/schema(.+)$")),
   ("collaboration",        re.compile(r"^\/collab\/")),
@@ -168,6 +169,7 @@ apis = [
 sources = [
   ("KB app",               re.compile(r"^\/kb/app/")),
   ("Case app",             re.compile(r"^\/(case|c)\/app\/(.+)$")),
+  ("Case app",             re.compile(r"^\/c\/(.+).js$")),
   ("Home app",             re.compile(r"^\/home\/app\/")),
   ("Witex app",            re.compile(r"^\/witex\/witex.js")),
   ("Home fonts",           re.compile(r"^\/home\/font\/")),
@@ -648,6 +650,7 @@ print_table("VISITS PER DAY", "date", visits_per_day, chron=True)
 print_table("BROWSERS", "browser", browser_hits)
 print_table("PLATFORMS", "platform", platform_hits)
 print_table("DOWNLOADS", "file", download_hits)
+#print_table("IP ADDRESSES", "hits", ip_hits)
 if flags.arg.v:
   print_table("MEDIA", "file", media_hits)
   print_table("ITEMS", "item", item_hits)

@@ -9,6 +9,9 @@ import {date_parser, ItemCollector} from "/common/lib/datatype.js";
 import {SocialTopic} from "/case/app/social.js";
 import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 
+const item_label_tag = "span.ipc-metadata-list-item__label";
+const item_value_tag = "div.ipc-metadata-list-item__content-container";
+
 const n_name = frame("name");
 const n_birth_name = frame("P1477");
 const n_nickname = frame("P1449");
@@ -212,7 +215,7 @@ export default class IMDBPlugin {
   async populate(context, topic, imdbid) {
     // Retrieve IMDB biography.
     let url = `https://www.imdb.com/name/${imdbid}/bio`;
-    let r = await fetch(context.proxy(url));
+    let r = await context.fetch(url);
     let html = await r.text();
 
     // Parse HTML.
@@ -239,8 +242,8 @@ export default class IMDBPlugin {
     if (overview) {
       let list = overview.querySelector("ul");
       for (let row of list.querySelectorAll("li").values()) {
-        let span = row.querySelector("span");
-        let div = row.querySelector("div");
+        let span = row.querySelector(item_label_tag);
+        let div = row.querySelector(item_value_tag);
         if (!span || !div) continue;
         let label = span.innerText;
         let value = trim(div.innerText);
@@ -276,8 +279,8 @@ export default class IMDBPlugin {
     if (verified) {
       let list = verified.querySelector("ul");
       for (let row of list.querySelectorAll("li").values()) {
-        let span = row.querySelector("span");
-        let div = row.querySelector("div");
+        let span = row.querySelector(item_label_tag);
+        let div = row.querySelector(item_value_tag);
         if (!span || !div) continue;
         let label = span.innerText;
         let value = trim(div.innerText);
@@ -340,8 +343,8 @@ export default class IMDBPlugin {
     if (family) {
       let list = family.querySelector("ul");
       for (let row of list.querySelectorAll("li").values()) {
-        let span = row.querySelector("span");
-        let div = row.querySelector("div");
+        let span = row.querySelector(item_label_tag);
+        let div = row.querySelector(item_value_tag);
         if (!span || !div) continue;
 
         // Get kinship from label.
@@ -493,7 +496,7 @@ export default class IMDBPlugin {
 
     // Get social links.
     let url = `https://www.imdb.com/name/${imdbid}/externalsites`;
-    let r = await fetch(context.proxy(url));
+    let r = await context.fetch(url);
     let html = await r.text();
 
     // Parse HTML.
