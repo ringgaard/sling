@@ -568,6 +568,7 @@ class CaseEditor extends MdApp {
     this.topics = this.casefile.get(n_topics);
     this.folders = this.casefile.get(n_folders);
     this.folder = this.folders.value(0);
+    this.work = null;
     this.scraps = [];
     this.readonly = this.casefile.get(n_link);
 
@@ -795,7 +796,7 @@ class CaseEditor extends MdApp {
     if (folder != this.folder) {
       this.folder = folder;
       await this.update_folders();
-      await this.find("topic-list").refresh(this.folder);
+      await this.refresh_topics();
       if (folder.length > 0) {
         await this.navigate_to(folder[0]);
       }
@@ -1757,10 +1758,47 @@ class CaseEditor extends MdApp {
     inform("Error communicating with collaboration server");
   }
 
+  async toggle_work_folder() {
+    let current = this.folder;
+    if (this.work) {
+      if (this.work == this.folder) current = this.folders.value(0);
+      this.work = null;
+    } else {
+      this.work = new Array();
+      current = this.work;
+    }
+    await this.update_folders();
+    await this.show_folder(current);
+  }
+
+  async add_folderless_topics() {
+    let folder_topics = new Set();
+    for (let [n, f] of this.folders) {
+      for (let t of f) folder_topics.add(t);
+    }
+    for (let t of this.work) folder_topics.add(t);
+    if (this.scaps) {
+      for (let t of this.scaps) folder_topics.add(t);
+    }
+
+    for (let t of this.topics) {
+      if (!folder_topics.has(t)) this.work.push(t);
+    }
+
+    await this.refresh_topics();
+  }
+
+  async clear_work_folder() {
+    if (!this.work || this.folder != this.work) return;
+    this.work = new Array();
+    await this.show_folder(this.work);
+  }
+
   async update_folders() {
     await this.find("drawer-panel").update({
       folders: this.folders,
       current: this.folder,
+      work: this.work,
       scraps: this.scraps,
       readonly: this.readonly
     });
@@ -1790,10 +1828,20 @@ class CaseEditor extends MdApp {
           break;
         }
       }
+      if (!folder && this.work?.includes(topic)) {
+        folder = this.work;
+      }
       if (!folder && this.scraps.includes(topic)) {
         folder = this.scraps;
       }
-      if (folder)  {
+      if (!folder) {
+        if (!this.work) {
+          this.work = new Array();
+          await this.show_folder(this.work);
+        }
+        this.work.push(topic);
+        await this.refresh_topics();
+      } else {
         await this.show_folder(folder);
       }
     }

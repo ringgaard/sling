@@ -45,7 +45,7 @@ class SearchEngine {
     void Reset(const SearchEngine *search);
 
     // Return search matches.
-    const Hits hits() const { return hits_; }
+    const Hits &hits() const { return hits_; }
 
     // Score result against query.
     int Score(Text text, int base) const;

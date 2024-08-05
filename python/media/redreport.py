@@ -461,6 +461,7 @@ class RedditPosting extends Component {
       $ {
         display: flex;
         font-family: verdana, arial, helvetica;
+        overflow-x: hidden;
       }
       $ a {
         text-decoration: none;

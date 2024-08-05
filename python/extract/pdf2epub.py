@@ -307,7 +307,7 @@ class PDFChapter:
     self.filename = "chapter-%03d.html" % index
     self.ref = "item%03d" % index
 
-  def generate(self, h1, h2, dropcap):
+  def generate(self, h1, h2, dropcap, pagebreaks):
     s = []
     s.append('<?xml version="1.0" encoding="UTF-8"?>\n')
     s.append('<html xmlns="http://www.w3.org/1999/xhtml">\n')
@@ -335,7 +335,7 @@ class PDFChapter:
           s.append(level_start[next])
           level = next
 
-        if pagenum:
+        if pagebreaks and pagenum:
           s.append('<span class="page-break" page="%d"></span>' % pagenum)
           pagenum = None
 
@@ -543,6 +543,8 @@ class PDFBook:
         prev = p.lines[-1]
 
   def generate(self, epubfn):
+    pagebreaks = self.param("pagebreaks", False)
+
     zip = zipfile.ZipFile(epubfn, "w")
     zip.writestr("mimetype", "application/epub+zip")
 
@@ -613,7 +615,7 @@ class PDFBook:
     h2 = self.param("h2", 24.0)
     dropcap = self.param("dropcap", 100.0)
     for chapter in book.spine:
-      content = chapter.generate(h1, h2, dropcap)
+      content = chapter.generate(h1, h2, dropcap, pagebreaks)
       zip.writestr(chapter.filename, content)
 
     zip.close()

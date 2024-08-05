@@ -13,6 +13,7 @@ class DrawerPanel extends Component {
     if (!this.state) return;
     this.editor = this.match("#editor");
     this.attach(this.onnewfolder, "click", "#newfolder");
+    this.attach(this.onworkfolder, "click", "#workfolder");
     if (this.index) this.attach(this.onclose, "click", "#close");
   }
 
@@ -52,6 +53,10 @@ class DrawerPanel extends Component {
     }
   }
 
+  async onworkfolder(e) {
+    await this.editor.toggle_work_folder();
+  }
+
   render() {
     if (!this.state) return;
     let h = new Array();
@@ -60,6 +65,12 @@ class DrawerPanel extends Component {
     h.push(`
       <div class="top">Folders
         <md-spacer></md-spacer>
+        <md-icon-button
+          id="workfolder"
+          icon="snippet_folder"
+          tooltip="Show work folder"
+          tooltip-align="right">
+        </md-icon-button>
         <md-icon-button
           id="newfolder"
           icon="create_new_folder"
@@ -106,9 +117,8 @@ class DrawerPanel extends Component {
         align-items: center;
         font-size: 16px;
         font-weight: bold;
-        margin-left: 6px;
+        margin: 4px 0 6px 4px;
         border-bottom: thin solid #808080;
-        margin-bottom: 6px;
         min-height: 40px;
       }
       $ #content {
@@ -129,11 +139,15 @@ class FolderList extends Component {
     let folders = this.state.folders;
     let current = this.state.current;
     let scraps = this.state.scraps;
-    let readonly = this.state.readonly
+    let readonly = this.state.readonly;
+    let work = this.state.work;
     let h = [];
     for (let [name, folder] of folders) {
       let marked = folder == current;
       h.push(new CaseFolder({name, folder, readonly, marked}));
+    }
+    if (work) {
+      h.push(new WorkFolder({folder: work, marked: work == current}));
     }
     if (scraps.length > 0) {
       h.push(new ScrapsFolder({folder: scraps, marked: scraps == current}));
@@ -250,6 +264,41 @@ class CaseFolder extends Component {
 }
 
 Component.register(CaseFolder);
+
+class WorkFolder extends CaseFolder {
+  onconnected() {
+    this.bind(null, "click", e => this.onclick(e));
+    this.bind("#clear", "select", e => this.onclear(e));
+    this.bind("#add", "select", e => this.onadd(e));
+  }
+
+  async onclear(e) {
+    let editor = this.match("#editor");
+    await editor.clear_work_folder();
+  }
+
+  async onadd(e) {
+    let editor = this.match("#editor");
+    await editor.add_folderless_topics();
+  }
+
+  render() {
+    return `
+      <md-icon icon="snippet_folder"></md-icon>
+      <div ${this.state.marked ? 'class="current"' : ''}>Work</div>
+      <md-menu>
+        <md-menu-item id="clear">
+         <md-icon icon="clear_all"></md-icon>Clear
+         </md-menu-item>
+        <md-menu-item id="add">
+          <md-icon icon="playlist_add"></md-icon>Add remaining
+        </md-menu-item>
+      </md-menu>
+    `;
+  }
+}
+
+Component.register(WorkFolder);
 
 class ScrapsFolder extends CaseFolder {
   onconnected() {
