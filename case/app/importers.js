@@ -3,6 +3,8 @@
 
 // SLING import plug-ins.
 
+import {inform, StdDialog} from "/common/lib/material.js";
+
 // Data importer plug-ins.
 var importers = {
   "sling" : {
@@ -43,13 +45,16 @@ var importers = {
 
 
 export class Context {
-  constructor(casefile, editor) {
+  constructor(casefile, editor, folderless) {
     this.casefile = casefile;
     this.editor = editor;
+    this.folderless = folderless;
+    this.num_topics = 0;
   }
 
   async new_topic(topic) {
-    return await this.editor.new_topic(topic);
+    this.num_topics++;
+    return await this.editor.new_topic(topic, undefined, this.folderless);
   }
 };
 
@@ -86,8 +91,19 @@ export async function import_data(casefile, editor) {
     }
   }
 
+
+  // Ask about folder-less import.
+  let folderless = false;
+  if (editor.lazyload) {
+    folderless = await StdDialog.ask("Import",
+                                     "Import folder-less topics?");
+  }
+
   // Call importer to import data from file.
-  let context = new Context(casefile, editor);
+  let context = new Context(casefile, editor, folderless);
   await importer.instance.process(file, context);
+  if (context.num_topics) {
+    inform(`${context.num_topics} imported`);
+  }
 }
 

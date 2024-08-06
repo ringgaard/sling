@@ -111,13 +111,14 @@ class DrawerPanel extends Component {
       }
       $ md-icon-button {
         color: #808080;
+        margin-left: -10px;
       }
       $ .top {
         display: flex;
         align-items: center;
         font-size: 16px;
         font-weight: bold;
-        margin: 4px 0 6px 4px;
+        margin: 4px 0 4px 6px;
         border-bottom: thin solid #808080;
         min-height: 40px;
       }
@@ -165,6 +166,7 @@ class CaseFolder extends Component {
       this.bind("#rename", "select", e => this.onrename(e));
       this.bind("#moveup", "select", e => this.onmoveup(e));
       this.bind("#movedown", "select", e => this.onmovedown(e));
+      this.bind("#movework", "select", e => this.onmovework(e));
       this.bind("#delete", "select", e => this.ondelete(e));
     }
   }
@@ -193,6 +195,10 @@ class CaseFolder extends Component {
     this.match("#editor").delete_folder(this.state.folder);
   }
 
+  onmovework(e) {
+    this.match("#editor").move_folder_to_work(this.state.folder);
+  }
+
   render() {
     let menu = `
       <md-menu>
@@ -204,6 +210,9 @@ class CaseFolder extends Component {
         </md-menu-item>
         <md-menu-item id="movedown">
           <md-icon icon="move_down"></md-icon>Move down
+        </md-menu-item>
+        <md-menu-item id="movework">
+          <md-icon icon="drive_file_move"></md-icon>Move to work folder
         </md-menu-item>
         <md-menu-item id="delete">
          <md-icon icon="delete"></md-icon>Delete

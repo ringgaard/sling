@@ -872,6 +872,16 @@ class CaseEditor extends MdApp {
     }
   }
 
+  async move_folder_to_work(folder) {
+    if (this.readonly) return;
+    if (!this.work) this.work = new Array();
+    for (let topic of folder) this.work.push(topic);
+    folder.length = 0;
+    this.delete_folder(folder);
+    await this.refresh_topics();
+    await this.show_folder(this.work);
+  }
+
   delete_folder(folder) {
     if (this.readonly) return;
     if (folder.length != 0) {
@@ -919,7 +929,7 @@ class CaseEditor extends MdApp {
     this.mark_dirty();
   }
 
-  async new_topic(topic, position) {
+  async new_topic(topic, position, folderless) {
     // Create frame for new topic.
     if (this.readonly) return;
     let topicno = await this.next_topic();
@@ -931,7 +941,14 @@ class CaseEditor extends MdApp {
     }
 
     // Add topic to current folder.
-    this.add_topic(topic, position);
+    if (folderless) {
+      this.topic_updated(topic);
+      if (!this.topics.includes(topic)) {
+        this.topics.push(topic);
+      }
+    } else {
+      this.add_topic(topic, position);
+    }
 
     return topic;
   }
