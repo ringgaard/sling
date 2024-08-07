@@ -96,6 +96,7 @@ Name n_main(names, "main");
 Name n_topics(names, "topics");
 Name n_folders(names, "folders");
 Name n_modified(names, "modified");
+Name n_lazyload(names, "lazyload");
 Name n_next(names, "next");
 Name n_author(names, "P50");
 Name n_participant(names, "P710");
@@ -216,6 +217,7 @@ class CollabCase {
     folders_ = casefile_.GetFrame(n_folders);
     if (!topics_.valid() || !folders_.valid()) return false;
 
+    lazyload_ = main.GetBool(n_lazyload);
     dirty_ = true;
     return true;
   }
@@ -223,7 +225,7 @@ class CollabCase {
   // Encode case to output packet.
   void EncodeCase(CollabWriter *writer) {
     Encoder encoder(&store_, writer->output(), false);
-    Serialize(&encoder);
+    Serialize(&encoder, lazyload_);
   }
 
   // Return case id.
@@ -463,6 +465,7 @@ class CollabCase {
     topics_ = casefile_.Get(n_topics).AsArray();
     folders_ = casefile_.GetFrame(n_folders);
 
+    lazyload_ = casefile_.GetBool(n_lazyload);
     dirty_ = false;
     return true;
   }
@@ -558,11 +561,23 @@ class CollabCase {
   }
 
   // Serialize collaboration case.
-  void Serialize(Encoder *encoder) {
-    Array topics = casefile_.Get(n_topics).AsArray();
-    if (topics.valid()) {
-      for (int i = 0; i < topics.length(); ++i) {
-        encoder->Encode(topics.get(i));
+  void Serialize(Encoder *encoder, bool lazy = false) {
+    if (lazy) {
+      // Only serialize topics in folders in lazy mode.
+      HandleSet seen;
+      for (int i = 0; i < folders_.size(); ++i) {
+        Slot &s = folders_.slot(i);
+        Array topics(&store_, s.value);
+        for (int j = 0; j < topics.length(); ++j) {
+          Handle topic = topics.get(j);
+          if (seen.has(topic)) continue;
+          encoder->Encode(topic);
+          seen.add(topic);
+        }
+      }
+    } else {
+      for (int i = 0; i < topics_.length(); ++i) {
+        encoder->Encode(topics_.get(i));
       }
     }
     encoder->Encode(casefile_);
@@ -585,6 +600,9 @@ class CollabCase {
 
   // Case folders.
   Frame folders_;
+
+  // Folder-less topics are sent on demand to the client.
+  bool lazyload_ = false;
 
   // Whether there are changes that have not been written to disk.
   bool dirty_ = false;

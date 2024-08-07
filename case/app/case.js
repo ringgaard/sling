@@ -42,6 +42,7 @@ const n_credentials = frame("credentials");
 const n_created = frame("created");
 const n_modified = frame("modified");
 const n_shared = frame("shared");
+const n_lazyload = frame("lazyload");
 const n_media = frame("media");
 const n_case_file = frame("Q108673968");
 const n_instance_of = frame("P31");
@@ -456,29 +457,35 @@ class CaseEditor extends MdApp {
     }
 
     let dialog = new CollaborateDialog(settings.collaburl);
-    let url = await dialog.show();
-    if (url) {
-      // Connect to collaboration server and create new collaboration.
-      let collab = new Collaboration();
-      await collab.connect(url);
-      let credentials = await collab.create(this.casefile);
-      collab.close();
+    let result = await dialog.show();
+    if (result) {
+      try {
+        // Connect to collaboration server and create new collaboration.
+        this.casefile.set(n_lazyload, result.lazyload);
+        let collab = new Collaboration();
+        await collab.connect(result.url);
+        let credentials = await collab.create(this.casefile, result.lazyload);
+        collab.close();
 
-      // Add collaboration to case.
-      this.casefile.set(n_collaborate, true);
-      this.casefile.set(n_collab, url);
-      this.casefile.set(n_userid, this.main.get(n_author).id);
-      this.casefile.set(n_credentials, credentials);
-      this.casefile.remove(n_topics);
-      this.casefile.remove(n_folders);
-      this.casefile.remove(n_next);
+        // Add collaboration to case.
+        this.casefile.set(n_collaborate, true);
+        this.casefile.set(n_collab, result.url);
+        this.casefile.set(n_userid, this.main.get(n_author).id);
+        this.casefile.set(n_credentials, credentials);
+        this.casefile.remove(n_topics);
+        this.casefile.remove(n_folders);
+        this.casefile.remove(n_next);
 
-      // Save and reload.
-      this.match("#app").save_case(this.casefile);
-      await this.update(this.casefile);
+        // Save and reload.
+        this.match("#app").save_case(this.casefile);
+        await this.update(this.casefile);
 
-      inform("Case has been turned into a collaboration. "+
-             "You can now invite participants to join.");
+        inform("Case has been turned into a collaboration. "+
+               "You can now invite participants to join.");
+      } catch (e) {
+        console.log("Collaboration error", e);
+        StdDialog.error(`Error ${e} connecting to collaboration`);
+      }
     }
   }
 
@@ -549,6 +556,7 @@ class CaseEditor extends MdApp {
       let credentials = this.casefile.get(n_credentials);
       this.localcase = this.casefile;
       this.casefile = await this.collab.login(caseid, userid, credentials);
+      this.lazyload = this.casefile.get(n_lazyload);
 
       // Listen on remote collaboration case updates.
       this.collab.listener = this;
@@ -561,6 +569,7 @@ class CaseEditor extends MdApp {
     } else {
       this.collab = undefined;
       this.localcase = undefined;
+      this.lazyload = false;
     }
 
     // Initialize case editor for new case.
@@ -1574,6 +1583,7 @@ class CaseEditor extends MdApp {
   onstats(e) {
     // Tally up case statistics.
     let num_topics = 0;
+    let num_unloaded_topics = 0;
     let num_facts = 0;
     let num_folders = this.folders.length;
     let num_topics_in_folder = this.folder.length;
@@ -1585,6 +1595,7 @@ class CaseEditor extends MdApp {
     let num_redirs = 0;
     for (let t of this.topics) {
       num_topics += 1;
+      if (t.isproxy() || t.isstub()) num_unloaded_topics++;
       let has_picture = false;
       for (let [name, value] of t) {
         if (name == n_name || name == n_alias) {
@@ -1621,6 +1632,7 @@ class CaseEditor extends MdApp {
       ${number(num_topics - num_redirs, "new topic")}
       ${number(num_with_pictures, "topic")} with pictures
       ${number(num_topics_in_folder, "topic")} in folder
+      ${number(num_unloaded_topics, "unloaded topic")}
       ${number(num_facts, "fact")}
       ${number(num_folders, "folder")}
       ${number(num_names, "name")}
@@ -2175,7 +2187,10 @@ Component.register(UploadDialog);
 
 export class CollaborateDialog extends MdDialog {
   submit() {
-    this.close(this.find("#url").value.trim());
+    this.close({
+      url: this.find("#url").value.trim(),
+      lazyload: this.find("#lazyload").checked
+    });
   }
 
   render() {
@@ -2193,6 +2208,10 @@ export class CollaborateDialog extends MdDialog {
           value="${Component.escape(this.state)}"
           label="Collaboration server URL">
         </md-text-field>
+        <md-checkbox
+          id="lazyload"
+          label="Load folder-less topics from server on-demand">
+        </md-checkbox>
       </div>
       <md-dialog-bottom>
         <button id="cancel">Cancel</button>
@@ -2289,6 +2308,7 @@ export class InviteDialog extends MdDialog {
           Case #: ${editor.caseid()}<br/>
           Created: ${editor.casefile.get(n_modified)}<br/>
           Your participant id: ${userid}<br/>
+          ${editor.lazyload ? "Load topics on-demand<br/>" : ""}
         </div>
       </div>
       <md-dialog-bottom>

@@ -518,7 +518,7 @@ export class Frame {
   // Assign id to frame.
   assign(id) {
     this.slots.unshift(this.store.id, id);
-    this.store.register(id, this);;
+    this.store.register(id, this);
   }
 }
 
