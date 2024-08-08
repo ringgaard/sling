@@ -52,6 +52,21 @@ export class Context {
     this.num_topics = 0;
   }
 
+  collab() {
+    return editor.collab;
+  }
+
+  folder() {
+    if (this.folderless) return;
+    return this.editor.folder_name(this.editor.folder);
+  }
+
+  async bulkimport(data) {
+    let folder = this.folder();
+    let bytes = new Uint8Array(data);
+    this.num_topics = await this.collab().bulkimport(folder, bytes);
+  }
+
   async new_topic(topic) {
     this.num_topics++;
     return await this.editor.new_topic(topic, undefined, this.folderless);

@@ -563,8 +563,9 @@ class Array : public Object {
   // Check if element is in array.
   bool Contains(Handle value) const;
 
-  // Append element to array.
+  // Append element(s) to array.
   void Append(Handle value);
+  void Append(const Handles &values);
 
   // Erase element from array. Return false if element is not found.
   bool Erase(Handle value);
@@ -1155,6 +1156,7 @@ class Builder : public External {
 
   // Update existing frame with new slots.
   void Update();
+  void Update(Handle handle);
 
   // Clears all the slots.
   Builder &Reset();

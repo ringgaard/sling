@@ -1024,6 +1024,14 @@ export class Encoder {
       this.write_varint(tag | (arg << 3));
     }
   }
+
+  // Write binary blob to output.
+  write_blob(data) {
+    let len = data.byteLength;
+    this.ensure(len);
+    this.buffer.subarray(this.pos, this.pos + len).set(data);
+    this.pos += len;
+  }
 }
 
 // Keywords.

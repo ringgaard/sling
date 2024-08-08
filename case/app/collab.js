@@ -15,6 +15,7 @@ const COLLAB_LOGIN   = 5;
 const COLLAB_NEWID   = 6;
 const COLLAB_UPDATE  = 7;
 const COLLAB_FLUSH   = 8;
+const COLLAB_IMPORT  = 9;
 const COLLAB_ERROR   = 127;
 
 const CCU_TOPIC   = 1;
@@ -173,6 +174,15 @@ export class Collaboration {
         }
         break;
       }
+      case COLLAB_IMPORT: {
+        let num_topics = decoder.read_varint32();
+        this.onfail = null;
+        if (this.onimport) {
+          this.onimport(num_topics);
+          this.onimport = null;
+        }
+        break;
+      }
       case COLLAB_ERROR: {
         let message = decoder.read_varstring();
         if (this.onfail) {
@@ -282,6 +292,22 @@ export class Collaboration {
       let encoder = new Encoder(store, false);
       encoder.write_varint(COLLAB_FLUSH);
       let packet = encoder.output();
+      this.send(packet);
+    });
+  }
+
+  // Import topics on server.
+  async bulkimport(folder, data) {
+    return new Promise((resolve, reject) => {
+      this.onimport = num_topics => resolve(num_topics);
+      this.onfail = e => reject(e);
+
+      let encoder = new Encoder(store, false);
+      encoder.write_varint(COLLAB_IMPORT);
+      encoder.write_varstring(folder || "");
+      encoder.write_blob(data);
+      let packet = encoder.output();
+
       this.send(packet);
     });
   }

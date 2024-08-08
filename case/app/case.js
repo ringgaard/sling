@@ -1705,7 +1705,7 @@ class CaseEditor extends MdApp {
   }
 
   folder_updated(folder) {
-    if (this.collab && folder != this.scraps) {
+    if (this.collab && folder != this.scraps && folder != this.work) {
       this.collab.folder_updated(this.folder_name(folder), folder);
     }
   }
@@ -1722,10 +1722,20 @@ class CaseEditor extends MdApp {
     }
   }
 
-  remote_topic_update(topic) {
-    console.log("received topic update", topic.id);
-    if (!this.topics.includes(topic)) this.topics.push(topic);
-    this.update_topic(topic);
+  remote_topic_update(update) {
+    if (update instanceof Frame) {
+      // Single topic update.
+      console.log("received topic update", update.id);
+      if (!this.topics.includes(update)) this.topics.push(update);
+      this.update_topic(update);
+    } else {
+      // Multi-topic update.
+      console.log("received", update.length, "topic updates");
+      for (let topic of update) {
+        if (!this.topics.includes(topic)) this.topics.push(topic);
+        this.update_topic(topic);
+      }
+    }
   }
 
   remote_folder_update(name, topics) {

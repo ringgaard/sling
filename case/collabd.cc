@@ -28,11 +28,14 @@
 #include "sling/frame/store.h"
 #include "sling/frame/decoder.h"
 #include "sling/frame/encoder.h"
+#include "sling/frame/reader.h"
+#include "sling/frame/wire.h"
 #include "sling/net/http-server.h"
 #include "sling/net/web-sockets.h"
 #include "sling/stream/input.h"
 #include "sling/stream/file.h"
 #include "sling/stream/memory.h"
+#include "sling/string/strcat.h"
 #include "sling/util/mutex.h"
 #include "sling/util/queue.h"
 #include "sling/util/thread.h"
@@ -57,6 +60,7 @@ enum CollabOpcode {
   COLLAB_NEWID   = 6,    // new topic id
   COLLAB_UPDATE  = 7,    // update collaboration case
   COLLAB_FLUSH   = 8,    // flush changes to disk
+  COLLAB_IMPORT  = 9,    // bulk import topics
 
   COLLAB_ERROR   = 127,  // error message
 };
@@ -139,6 +143,36 @@ class CollabReader {
     return decoder.DecodeAll();
   }
 
+  // Parse SLING objects from packet.
+  bool ParseObjects(Store *store, Handles *result) {
+    if (input_.Peek() == WIRE_BINARY_MARKER) {
+      Decoder decoder(store, &input_);
+      while (!decoder.done()) {
+        Object obj = decoder.Decode();
+        if (obj.IsError()) return false;
+        if (obj.IsArray()) {
+          Array list = obj.AsArray();
+          for (int i = 0; i < list.length(); ++i) result->add(list.get(i));
+        } else {
+          result->add(obj.handle());
+        }
+      }
+    } else {
+      Reader reader(store, &input_);
+      while (!reader.done()) {
+        Object obj = reader.Read();
+        if (obj.IsError()) return false;
+        if (obj.IsArray()) {
+          Array list = obj.AsArray();
+          for (int i = 0; i < list.length(); ++i) result->add(list.get(i));
+        } else {
+          result->add(obj.handle());
+        }
+      }
+    }
+    return true;
+  }
+
   // Original packet.
   const Slice &packet() const { return packet_; }
 
@@ -181,7 +215,10 @@ class CollabWriter {
   }
 
   Output *output() { return &output_; }
-  Slice packet() { return stream_.data(); }
+  Slice packet() {
+    output_.Flush();
+    return stream_.data();
+  }
 
  private:
   // Packet output stream.
@@ -431,6 +468,9 @@ class CollabCase {
 
     return true;
   }
+
+  // Import topics into collaboration.
+  int Import(CollabReader *reader);
 
   // Broadcast packet to clients. Do not send packet to source.
   void Broadcast(CollabClient *source, const Slice &packet);
@@ -817,6 +857,7 @@ class CollabClient : public WebSocket {
       case COLLAB_NEWID: NewId(&reader); break;
       case COLLAB_UPDATE: Update(&reader); break;
       case COLLAB_FLUSH: Flush(&reader); break;
+      case COLLAB_IMPORT: Import(&reader); break;
       default:
         LOG(ERROR) << "Invalid collab op: " << op;
     }
@@ -1029,6 +1070,26 @@ class CollabClient : public WebSocket {
     }
   }
 
+  // Bulk import topics into collaboration.
+  void Import(CollabReader *reader) {
+    // Make sure client is logged into case.
+    if (collab_ == nullptr) {
+      Error("user not logged in");
+      return;
+    }
+
+    // Import topics.
+    int num_topics = collab_->Import(reader);
+    if (num_topics == -1) {
+      Error("error importing topics");
+      return;
+    }
+    CollabWriter writer;
+    writer.WriteInt(COLLAB_IMPORT);
+    writer.WriteInt(num_topics);
+    writer.Send(this);
+  }
+
   // Return error message to client.
   void Error(const char *message) {
     CollabWriter writer;
@@ -1072,6 +1133,61 @@ void CollabCase::SendKeepAlivePings() {
       client->Ping("keep-alive", 10);
     }
   }
+}
+
+int CollabCase::Import(CollabReader *reader) {
+  string folder = reader->ReadString();
+  Handles topics(&store_);
+  if (!reader->ParseObjects(&store_, &topics)) return -1;
+
+  // Assign topic ids to imported topic.
+  for (Handle t : topics) {
+    int id =   NewTopicId();
+    string topicid = StrCat("t/", caseid_, "/", id);
+    Builder b(&store_);
+    b.AddId(topicid);
+    b.AddFrom(t);
+    b.Update(t);
+  }
+
+  // Add topics to case.
+  topics_.Append(topics);
+
+  // Broadcast new topics to all paritcipants.
+  CollabWriter writer;
+  writer.WriteInt(COLLAB_UPDATE);
+  writer.WriteInt(CCU_TOPIC);
+  Encoder encoder(&store_, writer.output(), false);
+  for (Handle t : topics) encoder.Encode(t);
+  encoder.Encode(Array(&store_, topics));
+  collabd->Notify(this, nullptr, writer.packet());
+
+  // Add imported topics to folder (optional).
+  if (!folder.empty()) {
+    for (int i = 0; i < folders_.size(); ++i) {
+      Slot &s = folders_.slot(i);
+      if (String(&store_, s.name).equals(folder)) {
+        // Add new topics to folder.
+        Array folder_topics(&store_, s.value);
+        folder_topics.Append(topics);
+
+        // Broadcast folder update.
+        CollabWriter writer;
+        writer.WriteInt(COLLAB_UPDATE);
+        writer.WriteInt(CCU_FOLDER);
+        writer.WriteString(folder);
+        Encoder encoder(&store_, writer.output(), false);
+        encoder.Encode(folder_topics);
+        collabd->Notify(this, nullptr, writer.packet());
+        break;
+      }
+    }
+  }
+
+  LOG(INFO) << "Imported " << topics.size()
+            << " topics into case #" << caseid_;
+  dirty_ = true;
+  return topics.size();
 }
 
 // Termination handler.

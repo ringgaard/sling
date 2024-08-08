@@ -956,6 +956,12 @@ void Array::Append(Handle value) {
   *array()->at(len) = value;
 }
 
+void Array::Append(const Handles &values) {
+  int len = length();
+  store()->ResizeArray(handle(), len + values.size());
+  memcpy(array()->at(len), values.data(), values.size() * sizeof(Handle));
+}
+
 bool Array::Erase(Handle value) {
   // Find element.
   ArrayDatum *datum = array();
@@ -1754,6 +1760,10 @@ Frame Builder::Create() {
 
 void Builder::Update() {
   handle_ = store_->AllocateFrame(slots_.base(), slots_.end(), handle_);
+}
+
+void Builder::Update(Handle handle) {
+  handle_ = store_->AllocateFrame(slots_.base(), slots_.end(), handle);
 }
 
 Builder &Builder::Reset() {
