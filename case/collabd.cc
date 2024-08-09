@@ -235,35 +235,10 @@ class CollabCase {
   CollabCase(int caseid) : store_(commons), caseid_(caseid) {}
 
   // Read case file from input packet.
-  bool Parse(CollabReader *reader) {
-    casefile_ = reader->ReadObjects(&store_).AsFrame();
-    if (casefile_.IsNil()) return false;
-
-    // Get case id.
-    caseid_ = casefile_.GetInt(n_caseid);
-    if (caseid_ == 0) return false;
-
-    // Get main author for case.
-    Frame main = casefile_.GetFrame(n_main);
-    if (!main.valid()) return false;
-    author_ = main.GetHandle(n_author);
-    if (author_.IsNil()) return false;
-
-    // Get topics and folders.
-    topics_ = casefile_.Get(n_topics).AsArray();
-    folders_ = casefile_.GetFrame(n_folders);
-    if (!topics_.valid() || !folders_.valid()) return false;
-
-    lazyload_ = main.GetBool(n_lazyload);
-    dirty_ = true;
-    return true;
-  }
+  bool Parse(CollabReader *reader);
 
   // Encode case to output packet.
-  void EncodeCase(CollabWriter *writer) {
-    Encoder encoder(&store_, writer->output(), false);
-    Serialize(&encoder, lazyload_);
-  }
+  void EncodeCase(CollabWriter *writer);
 
   // Return case id.
   int caseid() const { return caseid_; }
@@ -277,197 +252,27 @@ class CollabCase {
   }
 
   // Add participant.
-  void AddParticipant(const string &id, const string &credentials) {
-    participants_.emplace_back(id, credentials);
-  }
+  void AddParticipant(const string &id, const string &credentials);
 
   // Login user.
   bool Login(CollabClient *client,
              const string &id,
-             const string &credentials) {
-    // Check user access.
-    bool valid = false;
-    for (const User &user : participants_) {
-      if (user.id == id && user.credentials == credentials) {
-        valid = true;
-        break;
-      }
-    }
-    if (!valid) return false;
-
-    // Check that user is still a participant.
-    if (!IsParticipant(id)) return false;
-
-    // Add client as listener.
-    clients_.push_back(client);
-    return true;
-  }
+             const string &credentials);
 
   // Logout user.
-  void Logout(CollabClient *client) {
-    auto it = std::find(clients_.begin(), clients_.end(), client);
-    if (it != clients_.end()) {
-      clients_.erase(it);
-    }
-  }
+  void Logout(CollabClient *client);
 
   // Invite participant and return invite key.
-  string Invite(const string &id) {
-    // Check that user is a participant.
-    if (!IsParticipant(id)) return "";
-
-    // Generate new invite key.
-    string key = RandomKey();
-    invites_.emplace_back(id, key);
-    return key;
-  }
+  string Invite(const string &id);
 
   // Join collaboration using invite key.
-  string Join(const string &id, const string &key) {
-    // Check that user is a participant.
-    if (!IsParticipant(id)) return "";
-
-    // Check that user has been invited.
-    bool valid = false;
-    for (auto it = invites_.begin(); it != invites_.end(); ++it) {
-      if (it->id == id && it->credentials == key) {
-        valid = true;
-        if (FLAGS_onetime_invite) {
-          // Remove invite so it cannot be used again.
-          invites_.erase(it);
-        }
-        break;
-      }
-    }
-    if (!valid) return "";
-
-    // Check for existing credentials.
-    for (const User &user : participants_) {
-      if (user.id == id) {
-        return user.credentials;
-      }
-    }
-
-    // Generate new credentials.
-    string credentials = RandomKey();
-    participants_.emplace_back(id, credentials);
-    return credentials;
-  }
+  string Join(const string &id, const string &key);
 
   // Return new topic id.
-  int NewTopicId() {
-    int next = casefile_.GetInt(n_next);
-    casefile_.Set(n_next, Handle::Integer(next + 1));
-    return next;
-  }
+  int NewTopicId();
 
   // Update collaboration.
-  bool Update(CollabReader *reader) {
-    int type = reader->ReadInt();
-    switch (type) {
-      case CCU_TOPIC: {
-        // Get new topic.
-        Frame topic = reader->ReadObjects(&store_).AsFrame();
-        if (!topic.valid()) return false;
-
-        // Check for new topic.
-        if (!topics_.Contains(topic.handle())) {
-          topics_.Append(topic.handle());
-          LOG(INFO) << "Case #" << caseid_ << " topic new " << topic.Id();
-        } else {
-          LOG(INFO) << "Case #" << caseid_ << " topic update " << topic.Id();
-        }
-        dirty_ = true;
-        break;
-      }
-
-      case CCU_FOLDER: {
-        // Get folder name and topic list.
-        string folder = reader->ReadString();
-        Array topcis = reader->ReadObjects(&store_).AsArray();
-
-        // Update topic list for folder.
-        for (int i = 0; i < folders_.size(); ++i) {
-          Slot &s = folders_.slot(i);
-          if (String(&store_, s.name).equals(folder)) {
-            s.value = topcis.handle();
-            LOG(INFO) << "Case #" << caseid_
-                      << " folder " << folder << " updated";
-            break;
-          }
-        }
-        dirty_ = true;
-        break;
-      }
-
-      case CCU_FOLDERS: {
-        // Get folder list.
-        Array folders = reader->ReadObjects(&store_).AsArray();
-
-        // Make map of existing folders.
-        std::unordered_map<string, Handle> folder_map;
-        for (const Slot &s : folders_) {
-          String name(&store_, s.name);
-          folder_map[name.value()] = s.value;
-        }
-
-        // Build new folder list.
-        Builder builder(folders_);
-        builder.Reset();
-        for (int i = 0; i < folders.length(); ++i) {
-          String name(&store_, folders.get(i));
-          auto f = folder_map.find(name.value());
-          if (f != folder_map.end()) {
-            builder.Add(name, f->second);
-          } else {
-            builder.Add(name, store_.AllocateArray(0));
-          }
-        }
-        builder.Update();
-        LOG(INFO) << "Case #" << caseid_ << " folders updated";
-        dirty_ = true;
-        break;
-      }
-
-      case CCU_DELETE: {
-        // Get topic id.
-        string topicid = reader->ReadString();
-        Handle topic = store_.LookupExisting(topicid);
-        if (topic.IsNil() || !topics_.Erase(topic)) {
-          LOG(ERROR) << "Case #" << caseid_ << " unknown topic " << topicid;
-        } else {
-          LOG(INFO) << "Case #" << caseid_
-                    << " topic " << topicid << " deleted";
-          dirty_ = true;
-        }
-        break;
-      }
-
-      case CCU_RENAME: {
-        // Get old and new folder names.
-        string oldname = reader->ReadString();
-        string newname = reader->ReadString();
-
-        // Rename folder.
-        for (int i = 0; i < folders_.size(); ++i) {
-          String name(&store_, folders_.name(i));
-          if (name.value() == oldname) {
-            folders_.slot(i).name = String(&store_, newname).handle();
-            dirty_ = true;
-            LOG(INFO) << "Case #" << caseid_ << " folder " << oldname
-                      << " renamed to " << newname;
-            break;
-          }
-        }
-        break;
-      }
-
-      default:
-        LOG(ERROR) << "Invalid case update type " << type;
-    }
-
-    return true;
-  }
+  bool Update(CollabReader *reader);
 
   // Import topics into collaboration.
   int Import(CollabReader *reader);
@@ -479,88 +284,16 @@ class CollabCase {
   void SendKeepAlivePings();
 
   // Read case from file.
-  bool ReadCase() {
-    // Open case file.
-    File *f;
-    Status st = File::Open(CaseFileName(caseid_), "r", &f);
-    if (!st.ok()) {
-      LOG(ERROR) << "Error opening case# " << caseid() << ": " << st;
-      return false;
-    }
-
-    // Decode case.
-    FileInputStream stream(f);
-    Input input(&stream);
-    Decoder decoder(&store_, &input);
-    casefile_ = decoder.DecodeAll().AsFrame();
-    if (casefile_.IsNil() || casefile_.IsError()) return false;
-
-    // Get main author for case.
-    Frame main = casefile_.GetFrame(n_main);
-    if (!main.valid()) return false;
-    author_ = main.GetHandle(n_author);
-    if (author_.IsNil()) return false;
-
-    // Get topics and folders.
-    topics_ = casefile_.Get(n_topics).AsArray();
-    folders_ = casefile_.GetFrame(n_folders);
-
-    lazyload_ = casefile_.GetBool(n_lazyload);
-    dirty_ = false;
-    return true;
-  }
+  bool ReadCase();
 
   // Read participants from file.
-  bool ReadParticipants() {
-    // Read user file.
-    string content;
-    Status st = File::ReadContents(UserFileName(caseid_), &content);
-    if (!st) return false;
-
-    // Parse users.
-    participants_.clear();
-    for (Text &line : Text(content).split('\n')) {
-      auto fields = line.split(' ');
-      CHECK_EQ(fields.size(), 2);
-      auto id = fields[0].trim();
-      auto credentials = fields[1].trim();
-      participants_.emplace_back(id.str(), credentials.str());
-    }
-
-    return true;
-  }
+  bool ReadParticipants();
 
   // Write participants to file.
-  void WriteParticipants() {
-    File *f = File::OpenOrDie(UserFileName(caseid_), "w");
-    for (const User &user : participants_) {
-      f->WriteLine(user.id + " " + user.credentials);
-    }
-    f->Close();
-  }
+  void WriteParticipants();
 
   // Flush changes to disk.
-  bool Flush(string *timestamp) {
-    if (!dirty_) {
-      if (timestamp) *timestamp = casefile_.GetString(n_modified);
-      return false;
-    }
-
-    // Update modification timestamp in case.
-    time_t now = time(nullptr);
-    char modtime[128];
-    struct tm tm;
-    gmtime_r(&now, &tm);
-    strftime(modtime, sizeof modtime, "%Y-%m-%dT%H:%M:%SZ", &tm);
-    casefile_.Set(n_modified, modtime);
-
-    // Write case to file.
-    LOG(INFO) << "Save case #" << caseid_;
-    WriteCase();
-    dirty_ = false;
-    if (timestamp) *timestamp = modtime;
-    return true;
-  }
+  bool Flush(string *timestamp);
 
   // Check for existing case.
   static bool Exists(int caseid) {
@@ -579,49 +312,13 @@ class CollabCase {
   }
 
   // Check if user is a participant.
-  bool IsParticipant(const string &id) {
-    Handle user = store_.LookupExisting(id);
-    if (user.IsNil()) return false;
-    Frame main = casefile_.GetFrame(n_main);
-    if (!main.valid()) return false;
-    for (const Slot &s : main) {
-      if (s.name == n_participant || s.name == n_author) {
-        if (s.value == user) return true;
-      }
-    }
-    return false;
-  }
+  bool IsParticipant(const string &id);
 
   // Write case to file.
-  void WriteCase() {
-    FileOutputStream stream(CaseFileName(caseid_));
-    Output output(&stream);
-    Encoder encoder(&store_, &output);
-    Serialize(&encoder);
-  }
+  void WriteCase();
 
   // Serialize collaboration case.
-  void Serialize(Encoder *encoder, bool lazy = false) {
-    if (lazy) {
-      // Only serialize topics in folders in lazy mode.
-      HandleSet seen;
-      for (int i = 0; i < folders_.size(); ++i) {
-        Slot &s = folders_.slot(i);
-        Array topics(&store_, s.value);
-        for (int j = 0; j < topics.length(); ++j) {
-          Handle topic = topics.get(j);
-          if (seen.has(topic)) continue;
-          encoder->Encode(topic);
-          seen.add(topic);
-        }
-      }
-    } else {
-      for (int i = 0; i < topics_.length(); ++i) {
-        encoder->Encode(topics_.get(i));
-      }
-    }
-    encoder->Encode(casefile_);
-  }
+  void Serialize(Encoder *encoder, bool lazy = false);
 
   // Case store for collaboration.
   Store store_;
@@ -665,6 +362,71 @@ class CollabCase {
   std::vector<User> invites_;
 };
 
+// A collaboration client is a participant in a collaboration.
+class CollabClient : public WebSocket {
+ public:
+  CollabClient(CollabService *service, SocketConnection *conn)
+    : WebSocket(conn),
+      service_(service) {}
+
+  ~CollabClient() {
+    if (collab_) {
+      LOG(INFO) << "Logout user " << userid_
+                << " from case #" << collab_->caseid();
+      MutexLock lock(&mu);
+      collab_->Logout(this);
+    }
+  }
+
+  void Lock() override {
+    mu.Lock();
+  }
+
+  void Unlock() override {
+    mu.Unlock();
+  }
+
+  // Receive packets from web socket.
+  void Receive(const uint8 *data, uint64 size, bool binary) override;
+
+  // Create new collaboration.
+  void Create(CollabReader *reader);
+
+  // Invite participant to collaborate.
+  void Invite(CollabReader *reader);
+
+  // Join collaboration.
+  void Join(CollabReader *reader);
+
+  // Log-in user to collaboration.
+  void Login(CollabReader *reader);
+
+  // Get new topic id.
+  void NewId(CollabReader *reader);
+
+  // Update collaboration.
+  void Update(CollabReader *reader);
+
+  // Flush collaboration to disk.
+  void Flush(CollabReader *reader);
+
+  // Bulk import topics into collaboration.
+  void Import(CollabReader *reader);
+
+  // Send error message to client.
+  void Error(const char *message);
+
+ private:
+  // Collaboration service.
+  CollabService *service_;
+
+  // Current collaboration for client.
+  CollabCase *collab_ = nullptr;
+
+  // Collaboration user id.
+  string userid_;
+};
+
 // A collaboration service manages a number of collaboration cases with
 // clients updating and monitoring live changes.
 class CollabService {
@@ -694,101 +456,25 @@ class CollabService {
   void Process(HTTPRequest *request, HTTPResponse *response);
 
   // Add case to collaboration.
-  void Add(CollabCase *collab) {
-    collaborations_.push_back(collab);
-  }
+  void Add(CollabCase *collab);
 
   // Send notification to other participants.
   void Notify(CollabCase *collab,
               CollabClient *source,
-              const Slice &packet) {
-    notifications_.put(new Message(collab, source, packet));
-  }
+              const Slice &packet);
 
   // Find case.
-  CollabCase *FindCase(int caseid) {
-    // Try to find case that has already been loaded.
-    for (auto *collab : collaborations_) {
-      if (collab->caseid() == caseid) return collab;
-    }
-
-    // Try to load case from file.
-    LOG(INFO) << "Loading case #" << caseid;
-    CollabCase *collab = new CollabCase(caseid);
-    if (!collab->ReadCase() || !collab->ReadParticipants()) {
-      delete collab;
-      return nullptr;
-    }
-
-    // Add collaboration.
-    collaborations_.push_back(collab);
-    return collab;
-  }
+  CollabCase *FindCase(int caseid);
 
   // Re-read data from disk.
-  void Refresh() {
-    LOG(INFO) << "Refresh collaborations from disk";
-    MutexLock lock(&mu);
-    for (auto *collab : collaborations_) {
-      if (!collab->ReadCase() || !collab->ReadParticipants()) {
-        LOG(ERROR) << "Unable to refresh case #" << collab->caseid();
-      }
-    }
-  }
+  void Refresh();
 
  private:
-  void Monitor() {
-    time_t last_flush = time(nullptr);
-    time_t last_ping = time(nullptr);
-    for (;;) {
-      // Wait for next update.
-      Message *msg = notifications_.get(1000);
-      if (terminate_) return;
+  void Monitor();
 
-      // Broadcast notification to participants.
-      if (msg) {
-        MutexLock lock(&mu);
-        msg->collab->Broadcast(msg->source, msg->packet());
-        delete msg;
-      }
+  void Flush(bool notify);
 
-      // Flush changes to disk.
-      time_t now = time(nullptr);
-      if (now - last_flush >= FLAGS_flush) {
-        Flush(true);
-        last_flush = now;
-      }
-
-      // Send keep-alive pings to clients.
-      if (now - last_ping >= FLAGS_ping) {
-        SendKeepAlivePings();
-        last_ping = now;
-      }
-    }
-  }
-
-  void Flush(bool notify) {
-    // Flush changes to disk.
-    MutexLock lock(&mu);
-    string timestamp;
-    for (CollabCase *collab : collaborations_) {
-      if (collab->Flush(&timestamp) && notify) {
-        // Broadcast save.
-        CollabWriter writer;
-        writer.WriteInt(COLLAB_UPDATE);
-        writer.WriteInt(CCU_SAVE);
-        writer.WriteString(timestamp);
-        Notify(collab, nullptr, writer.packet());
-      }
-    }
-  }
-
-  void SendKeepAlivePings() {
-    MutexLock lock(&mu);
-    for (CollabCase *collab : collaborations_) {
-      collab->SendKeepAlivePings();
-    }
-  }
+  void SendKeepAlivePings();
 
   // Active collaboration cases.
   std::vector<CollabCase *> collaborations_;
@@ -822,308 +508,219 @@ class CollabService {
   bool terminate_ = false;
 };
 
-// A collaboration client is a participant in a collaboration.
-class CollabClient : public WebSocket {
- public:
-  CollabClient(CollabService *service, SocketConnection *conn)
-    : WebSocket(conn),
-      service_(service) {}
+bool CollabCase::Parse(CollabReader *reader) {
+  casefile_ = reader->ReadObjects(&store_).AsFrame();
+  if (casefile_.IsNil()) return false;
 
-  ~CollabClient() {
-    if (collab_) {
-      LOG(INFO) << "Logout user " << userid_
-                << " from case #" << collab_->caseid();
-      MutexLock lock(&mu);
-      collab_->Logout(this);
+  // Get case id.
+  caseid_ = casefile_.GetInt(n_caseid);
+  if (caseid_ == 0) return false;
+
+  // Get main author for case.
+  Frame main = casefile_.GetFrame(n_main);
+  if (!main.valid()) return false;
+  author_ = main.GetHandle(n_author);
+  if (author_.IsNil()) return false;
+
+  // Get topics and folders.
+  topics_ = casefile_.Get(n_topics).AsArray();
+  folders_ = casefile_.GetFrame(n_folders);
+  if (!topics_.valid() || !folders_.valid()) return false;
+
+  lazyload_ = main.GetBool(n_lazyload);
+  dirty_ = true;
+  return true;
+}
+
+void CollabCase::EncodeCase(CollabWriter *writer) {
+  Encoder encoder(&store_, writer->output(), false);
+  Serialize(&encoder, lazyload_);
+}
+
+void CollabCase::AddParticipant(const string &id, const string &credentials) {
+  participants_.emplace_back(id, credentials);
+}
+
+bool CollabCase::Login(CollabClient *client,
+                       const string &id,
+                       const string &credentials) {
+  // Check user access.
+  bool valid = false;
+  for (const User &user : participants_) {
+    if (user.id == id && user.credentials == credentials) {
+      valid = true;
+      break;
     }
   }
+  if (!valid) return false;
 
-  void Lock() override {
-    mu.Lock();
-  }
+  // Check that user is still a participant.
+  if (!IsParticipant(id)) return false;
 
-  void Unlock() override {
-    mu.Unlock();
-  }
+  // Add client as listener.
+  clients_.push_back(client);
+  return true;
+}
 
-  void Receive(const uint8 *data, uint64 size, bool binary) override {
-    CollabReader reader(data, size);
-    int op = reader.ReadInt();
-    switch (op) {
-      case COLLAB_CREATE: Create(&reader); break;
-      case COLLAB_INVITE: Invite(&reader); break;
-      case COLLAB_JOIN: Join(&reader); break;
-      case COLLAB_LOGIN: Login(&reader); break;
-      case COLLAB_NEWID: NewId(&reader); break;
-      case COLLAB_UPDATE: Update(&reader); break;
-      case COLLAB_FLUSH: Flush(&reader); break;
-      case COLLAB_IMPORT: Import(&reader); break;
-      default:
-        LOG(ERROR) << "Invalid collab op: " << op;
-    }
-  }
-
-  // Create new collaboration.
-  void Create(CollabReader *reader) {
-    // Make sure client is not already connected to collaboration.
-    if (collab_ != nullptr) {
-      Error("already connected to a collaboration");
-      return;
-    }
-
-    // Receive initial case for collaboration.
-    CollabCase *collab = new CollabCase();
-    if (!collab->Parse(reader)) {
-      Error("invalid case format");
-      delete collab;
-      return;
-    }
-
-    // Make sure case is not already registered.
-    if (CollabCase::Exists(collab->caseid())) {
-      Error("case is already registered as a collaboration");
-      delete collab;
-      return;
-    }
-
-    // Add user as participant in collaboration.
-    string userid = collab->Author().str();
-    if (userid.find(' ') != -1) {
-      Error("invalid user id");
-      delete collab;
-      return;
-    }
-    string credentials = RandomKey();
-    collab->AddParticipant(userid, credentials);
-
-    // Add collaboration to service.
-    service_->Add(collab);
-
-    // Flush to disk.
-    collab->WriteParticipants();
-    collab->Flush(nullptr);
-
-    // Return reply which signals to the client that the collaboration server
-    // has taken ownership of the case.
-    CollabWriter writer;
-    writer.WriteInt(COLLAB_CREATE);
-    writer.WriteString(credentials);
-    writer.Send(this);
-
-    LOG(INFO) << "Created new collaboration for case #" << collab->caseid()
-              << " author " << collab->Author();
-  }
-
-  // Invite participant to collaborate.
-  void Invite(CollabReader *reader) {
-    // Make sure client is logged into case.
-    if (collab_ == nullptr) {
-      Error("user not logged in");
-      return;
-    }
-
-    // Receive <user>.
-    string userid = reader->ReadString();
-    LOG(INFO) << "Invite " << userid << " to case #" << collab_->caseid();
-
-    // Generate invite key for new participant.
-    string key = collab_->Invite(userid);
-    if (key.empty()) {
-      Error("user is not a collaboration participant");
-      return;
-    }
-
-    // Return new invite key.
-    CollabWriter writer;
-    writer.WriteInt(COLLAB_INVITE);
-    writer.WriteString(key);
-    writer.Send(this);
-  }
-
-  // Join collaboration.
-  void Join(CollabReader *reader) {
-    // Receive <caseid> <user> <invite key>.
-    int caseid = reader->ReadInt();
-    string userid = reader->ReadString();
-    string key = reader->ReadString();
-    LOG(INFO) << "User " << userid << " joining case #" << caseid;
-
-    // Find case.
-    CollabCase *collab = service_->FindCase(caseid);
-    if (collab == nullptr) {
-      Error("unknown collaboration");
-      return;
-    }
-
-    // Join collaboration.
-    string credentials = collab->Join(userid, key);
-    if (credentials.empty()) {
-      LOG(WARNING) << "Joining case #" << caseid << " denied for " << userid;
-      Error("user not invited to collaborate");
-      return;
-    }
-    collab->WriteParticipants();
-
-    // Return credentials for logging into collaboration.
-    CollabWriter writer;
-    writer.WriteInt(COLLAB_JOIN);
-    writer.WriteString(credentials);
-    writer.Send(this);
-  }
-
-  // Log-in user to collaboration.
-  void Login(CollabReader *reader) {
-    // Make sure client is not already connected to collaboration.
-    if (collab_ != nullptr) {
-      Error("already connected to a collaboration");
-      return;
-    }
-
-    // Receive <caseid> <user> <credentials>.
-    int caseid = reader->ReadInt();
-    string userid = reader->ReadString();
-    string credentials = reader->ReadString();
-    LOG(INFO) << "Login " << userid << " to case #" << caseid;
-
-    // Get case.
-    collab_ = service_->FindCase(caseid);
-    if (collab_ == nullptr) {
-      Error("unknown collaboration");
-      return;
-    }
-
-    // Log into collaboration to send and receive updates.
-    if (!collab_->Login(this, userid, credentials)) {
-      LOG(WARNING) << "Access to case #" << caseid << " denied for " << userid;
-      Error("access denied");
-      collab_ = nullptr;
-      return;
-    }
-    userid_ = userid;
-
-    // Return case.
-    CollabWriter writer;
-    writer.WriteInt(COLLAB_LOGIN);
-    collab_->EncodeCase(&writer);
-    writer.Send(this);
-  }
-
-  // Get new topic id.
-  void NewId(CollabReader *reader) {
-    // Make sure client is logged into case.
-    if (collab_ == nullptr) {
-      Error("user not logged in");
-      return;
-    }
-
-    // Return new topic id.
-    int next = collab_->NewTopicId();
-    CollabWriter writer;
-    writer.WriteInt(COLLAB_NEWID);
-    writer.WriteInt(next);
-    writer.Send(this);
-  }
-
-  // Update collaboration.
-  void Update(CollabReader *reader) {
-    // Make sure client is logged into case.
-    if (collab_ == nullptr) {
-      Error("user not logged in");
-      return;
-    }
-
-    // Update collaboration.
-    if (!collab_->Update(reader)) {
-      Error("invalid update");
-      return;
-    }
-
-    // Broadcast update to all other participants.
-    service_->Notify(collab_, this, reader->packet());
-  }
-
-  // Flush collaboration to disk.
-  void Flush(CollabReader *reader) {
-    // Make sure client is logged into case.
-    if (collab_ == nullptr) {
-      Error("user not logged in");
-      return;
-    }
-
-    // Flush collaboration.
-    string modtime;
-    bool saved = collab_->Flush(&modtime);
-
-    // Return latest modification time.
-    CollabWriter writer;
-    writer.WriteInt(COLLAB_FLUSH);
-    writer.WriteString(modtime);
-    writer.Send(this);
-
-    // Broadcast save.
-    if (saved) {
-      CollabWriter writer;
-      writer.WriteInt(COLLAB_UPDATE);
-      writer.WriteInt(CCU_SAVE);
-      writer.WriteString(modtime);
-      service_->Notify(collab_, this, writer.packet());
-    }
-  }
-
-  // Bulk import topics into collaboration.
-  void Import(CollabReader *reader) {
-    // Make sure client is logged into case.
-    if (collab_ == nullptr) {
-      Error("user not logged in");
-      return;
-    }
-
-    // Import topics.
-    int num_topics = collab_->Import(reader);
-    if (num_topics == -1) {
-      Error("error importing topics");
-      return;
-    }
-    CollabWriter writer;
-    writer.WriteInt(COLLAB_IMPORT);
-    writer.WriteInt(num_topics);
-    writer.Send(this);
-  }
-
-  // Return error message to client.
-  void Error(const char *message) {
-    CollabWriter writer;
-    writer.WriteInt(COLLAB_ERROR);
-    writer.WriteString(message);
-    writer.Send(this);
-  }
-
- private:
-  // Collaboration service.
-  CollabService *service_;
-
-  // Current collaboration for client.
-  CollabCase *collab_ = nullptr;
-
-  // Collaboration user id.
-  string userid_;
-};
-
-void CollabService::Process(HTTPRequest *request, HTTPResponse *response) {
-  CollabClient *client = new CollabClient(this, request->conn());
-  if (!WebSocket::Upgrade(client, request, response)) {
-    delete client;
-    response->SendError(404);
-    return;
+void CollabCase::Logout(CollabClient *client) {
+  auto it = std::find(clients_.begin(), clients_.end(), client);
+  if (it != clients_.end()) {
+    clients_.erase(it);
   }
 }
 
-void CollabCase::Broadcast(CollabClient *source, const Slice &packet) {
-  for (CollabClient *client : clients_) {
-    if (client != source) {
-      client->Send(packet);
+string CollabCase::Invite(const string &id) {
+  // Check that user is a participant.
+  if (!IsParticipant(id)) return "";
+
+  // Generate new invite key.
+  string key = RandomKey();
+  invites_.emplace_back(id, key);
+  return key;
+}
+
+string CollabCase::Join(const string &id, const string &key) {
+  // Check that user is a participant.
+  if (!IsParticipant(id)) return "";
+
+  // Check that user has been invited.
+  bool valid = false;
+  for (auto it = invites_.begin(); it != invites_.end(); ++it) {
+    if (it->id == id && it->credentials == key) {
+      valid = true;
+      if (FLAGS_onetime_invite) {
+        // Remove invite so it cannot be used again.
+        invites_.erase(it);
+      }
+      break;
     }
   }
+  if (!valid) return "";
+
+  // Check for existing credentials.
+  for (const User &user : participants_) {
+    if (user.id == id) {
+      return user.credentials;
+    }
+  }
+
+  // Generate new credentials.
+  string credentials = RandomKey();
+  participants_.emplace_back(id, credentials);
+  return credentials;
+}
+
+int CollabCase::NewTopicId() {
+  int next = casefile_.GetInt(n_next);
+  casefile_.Set(n_next, Handle::Integer(next + 1));
+  return next;
+}
+
+bool CollabCase::Update(CollabReader *reader) {
+  int type = reader->ReadInt();
+  switch (type) {
+    case CCU_TOPIC: {
+      // Get new topic.
+      Frame topic = reader->ReadObjects(&store_).AsFrame();
+      if (!topic.valid()) return false;
+
+      // Check for new topic.
+      if (!topics_.Contains(topic.handle())) {
+        topics_.Append(topic.handle());
+        LOG(INFO) << "Case #" << caseid_ << " topic new " << topic.Id();
+      } else {
+        LOG(INFO) << "Case #" << caseid_ << " topic update " << topic.Id();
+      }
+      dirty_ = true;
+      break;
+    }
+
+    case CCU_FOLDER: {
+      // Get folder name and topic list.
+      string folder = reader->ReadString();
+      Array topcis = reader->ReadObjects(&store_).AsArray();
+
+      // Update topic list for folder.
+      for (int i = 0; i < folders_.size(); ++i) {
+        Slot &s = folders_.slot(i);
+        if (String(&store_, s.name).equals(folder)) {
+          s.value = topcis.handle();
+          LOG(INFO) << "Case #" << caseid_
+                    << " folder " << folder << " updated";
+          break;
+        }
+      }
+      dirty_ = true;
+      break;
+    }
+
+    case CCU_FOLDERS: {
+      // Get folder list.
+      Array folders = reader->ReadObjects(&store_).AsArray();
+
+      // Make map of existing folders.
+      std::unordered_map<string, Handle> folder_map;
+      for (const Slot &s : folders_) {
+        String name(&store_, s.name);
+        folder_map[name.value()] = s.value;
+      }
+
+      // Build new folder list.
+      Builder builder(folders_);
+      builder.Reset();
+      for (int i = 0; i < folders.length(); ++i) {
+        String name(&store_, folders.get(i));
+        auto f = folder_map.find(name.value());
+        if (f != folder_map.end()) {
+          builder.Add(name, f->second);
+        } else {
+          builder.Add(name, store_.AllocateArray(0));
+        }
+      }
+      builder.Update();
+      LOG(INFO) << "Case #" << caseid_ << " folders updated";
+      dirty_ = true;
+      break;
+    }
+
+    case CCU_DELETE: {
+      // Get topic id.
+      string topicid = reader->ReadString();
+      Handle topic = store_.LookupExisting(topicid);
+      if (topic.IsNil() || !topics_.Erase(topic)) {
+        LOG(ERROR) << "Case #" << caseid_ << " unknown topic " << topicid;
+      } else {
+        LOG(INFO) << "Case #" << caseid_
+                  << " topic " << topicid << " deleted";
+        dirty_ = true;
+      }
+      break;
+    }
+
+    case CCU_RENAME: {
+      // Get old and new folder names.
+      string oldname = reader->ReadString();
+      string newname = reader->ReadString();
+
+      // Rename folder.
+      for (int i = 0; i < folders_.size(); ++i) {
+        String name(&store_, folders_.name(i));
+        if (name.value() == oldname) {
+          folders_.slot(i).name = String(&store_, newname).handle();
+          dirty_ = true;
+          LOG(INFO) << "Case #" << caseid_ << " folder " << oldname
+                    << " renamed to " << newname;
+          break;
+        }
+      }
+      break;
+    }
+
+    default:
+      LOG(ERROR) << "Invalid case update type " << type;
+  }
+
+  return true;
 }
 
 void CollabCase::SendKeepAlivePings() {
@@ -1131,6 +728,14 @@ void CollabCase::SendKeepAlivePings() {
   for (CollabClient *client : clients_) {
     if (now - client->last() > FLAGS_ping) {
       client->Ping("keep-alive", 10);
+    }
+  }
+}
+
+void CollabCase::Broadcast(CollabClient *source, const Slice &packet) {
+  for (CollabClient *client : clients_) {
+    if (client != source) {
+      client->Send(packet);
     }
   }
 }
@@ -1188,6 +793,472 @@ int CollabCase::Import(CollabReader *reader) {
             << " topics into case #" << caseid_;
   dirty_ = true;
   return topics.size();
+}
+
+bool CollabCase::ReadCase() {
+  // Open case file.
+  File *f;
+  Status st = File::Open(CaseFileName(caseid_), "r", &f);
+  if (!st.ok()) {
+    LOG(ERROR) << "Error opening case# " << caseid() << ": " << st;
+    return false;
+  }
+
+  // Decode case.
+  FileInputStream stream(f);
+  Input input(&stream);
+  Decoder decoder(&store_, &input);
+  casefile_ = decoder.DecodeAll().AsFrame();
+  if (casefile_.IsNil() || casefile_.IsError()) return false;
+
+  // Get main author for case.
+  Frame main = casefile_.GetFrame(n_main);
+  if (!main.valid()) return false;
+  author_ = main.GetHandle(n_author);
+  if (author_.IsNil()) return false;
+
+  // Get topics and folders.
+  topics_ = casefile_.Get(n_topics).AsArray();
+  folders_ = casefile_.GetFrame(n_folders);
+
+  lazyload_ = casefile_.GetBool(n_lazyload);
+  dirty_ = false;
+  return true;
+}
+
+bool CollabCase::ReadParticipants() {
+  // Read user file.
+  string content;
+  Status st = File::ReadContents(UserFileName(caseid_), &content);
+  if (!st) return false;
+
+  // Parse users.
+  participants_.clear();
+  for (Text &line : Text(content).split('\n')) {
+    auto fields = line.split(' ');
+    CHECK_EQ(fields.size(), 2);
+    auto id = fields[0].trim();
+    auto credentials = fields[1].trim();
+    participants_.emplace_back(id.str(), credentials.str());
+  }
+
+  return true;
+}
+
+void CollabCase::WriteParticipants() {
+  File *f = File::OpenOrDie(UserFileName(caseid_), "w");
+  for (const User &user : participants_) {
+    f->WriteLine(user.id + " " + user.credentials);
+  }
+  f->Close();
+}
+
+bool CollabCase::Flush(string *timestamp) {
+  if (!dirty_) {
+    if (timestamp) *timestamp = casefile_.GetString(n_modified);
+    return false;
+  }
+
+  // Update modification timestamp in case.
+  time_t now = time(nullptr);
+  char modtime[128];
+  struct tm tm;
+  gmtime_r(&now, &tm);
+  strftime(modtime, sizeof modtime, "%Y-%m-%dT%H:%M:%SZ", &tm);
+  casefile_.Set(n_modified, modtime);
+
+  // Write case to file.
+  LOG(INFO) << "Save case #" << caseid_;
+  WriteCase();
+  dirty_ = false;
+  if (timestamp) *timestamp = modtime;
+  return true;
+}
+
+bool CollabCase::IsParticipant(const string &id) {
+  Handle user = store_.LookupExisting(id);
+  if (user.IsNil()) return false;
+  Frame main = casefile_.GetFrame(n_main);
+  if (!main.valid()) return false;
+  for (const Slot &s : main) {
+    if (s.name == n_participant || s.name == n_author) {
+      if (s.value == user) return true;
+    }
+  }
+  return false;
+}
+
+void CollabCase::WriteCase() {
+  FileOutputStream stream(CaseFileName(caseid_));
+  Output output(&stream);
+  Encoder encoder(&store_, &output);
+  Serialize(&encoder);
+}
+
+void CollabCase::Serialize(Encoder *encoder, bool lazy) {
+  if (lazy) {
+    // Only serialize topics in folders in lazy mode.
+    HandleSet seen;
+    for (int i = 0; i < folders_.size(); ++i) {
+      Slot &s = folders_.slot(i);
+      Array topics(&store_, s.value);
+      for (int j = 0; j < topics.length(); ++j) {
+        Handle topic = topics.get(j);
+        if (seen.has(topic)) continue;
+        encoder->Encode(topic);
+        seen.add(topic);
+      }
+    }
+  } else {
+    for (int i = 0; i < topics_.length(); ++i) {
+      encoder->Encode(topics_.get(i));
+    }
+  }
+  encoder->Encode(casefile_);
+}
+
+void CollabClient::Receive(const uint8 *data, uint64 size, bool binary) {
+  CollabReader reader(data, size);
+  int op = reader.ReadInt();
+  switch (op) {
+    case COLLAB_CREATE: Create(&reader); break;
+    case COLLAB_INVITE: Invite(&reader); break;
+    case COLLAB_JOIN: Join(&reader); break;
+    case COLLAB_LOGIN: Login(&reader); break;
+    case COLLAB_NEWID: NewId(&reader); break;
+    case COLLAB_UPDATE: Update(&reader); break;
+    case COLLAB_FLUSH: Flush(&reader); break;
+    case COLLAB_IMPORT: Import(&reader); break;
+    default:
+      LOG(ERROR) << "Invalid collab op: " << op;
+  }
+}
+
+void CollabClient::Create(CollabReader *reader) {
+  // Make sure client is not already connected to collaboration.
+  if (collab_ != nullptr) {
+    Error("already connected to a collaboration");
+    return;
+  }
+
+  // Receive initial case for collaboration.
+  CollabCase *collab = new CollabCase();
+  if (!collab->Parse(reader)) {
+    Error("invalid case format");
+    delete collab;
+    return;
+  }
+
+  // Make sure case is not already registered.
+  if (CollabCase::Exists(collab->caseid())) {
+    Error("case is already registered as a collaboration");
+    delete collab;
+    return;
+  }
+
+  // Add user as participant in collaboration.
+  string userid = collab->Author().str();
+  if (userid.find(' ') != -1) {
+    Error("invalid user id");
+    delete collab;
+    return;
+  }
+  string credentials = RandomKey();
+  collab->AddParticipant(userid, credentials);
+
+  // Add collaboration to service.
+  service_->Add(collab);
+
+  // Flush to disk.
+  collab->WriteParticipants();
+  collab->Flush(nullptr);
+
+  // Return reply which signals to the client that the collaboration server
+  // has taken ownership of the case.
+  CollabWriter writer;
+  writer.WriteInt(COLLAB_CREATE);
+  writer.WriteString(credentials);
+  writer.Send(this);
+
+  LOG(INFO) << "Created new collaboration for case #" << collab->caseid()
+            << " author " << collab->Author();
+}
+
+void CollabClient::Invite(CollabReader *reader) {
+  // Make sure client is logged into case.
+  if (collab_ == nullptr) {
+    Error("user not logged in");
+    return;
+  }
+
+  // Receive <user>.
+  string userid = reader->ReadString();
+  LOG(INFO) << "Invite " << userid << " to case #" << collab_->caseid();
+
+  // Generate invite key for new participant.
+  string key = collab_->Invite(userid);
+  if (key.empty()) {
+    Error("user is not a collaboration participant");
+    return;
+  }
+
+  // Return new invite key.
+  CollabWriter writer;
+  writer.WriteInt(COLLAB_INVITE);
+  writer.WriteString(key);
+  writer.Send(this);
+}
+
+void CollabClient::Join(CollabReader *reader) {
+  // Receive <caseid> <user> <invite key>.
+  int caseid = reader->ReadInt();
+  string userid = reader->ReadString();
+  string key = reader->ReadString();
+  LOG(INFO) << "User " << userid << " joining case #" << caseid;
+
+  // Find case.
+  CollabCase *collab = service_->FindCase(caseid);
+  if (collab == nullptr) {
+    Error("unknown collaboration");
+    return;
+  }
+
+  // Join collaboration.
+  string credentials = collab->Join(userid, key);
+  if (credentials.empty()) {
+    LOG(WARNING) << "Joining case #" << caseid << " denied for " << userid;
+    Error("user not invited to collaborate");
+    return;
+  }
+  collab->WriteParticipants();
+
+  // Return credentials for logging into collaboration.
+  CollabWriter writer;
+  writer.WriteInt(COLLAB_JOIN);
+  writer.WriteString(credentials);
+  writer.Send(this);
+}
+
+void CollabClient::Login(CollabReader *reader) {
+  // Make sure client is not already connected to collaboration.
+  if (collab_ != nullptr) {
+    Error("already connected to a collaboration");
+    return;
+  }
+
+  // Receive <caseid> <user> <credentials>.
+  int caseid = reader->ReadInt();
+  string userid = reader->ReadString();
+  string credentials = reader->ReadString();
+  LOG(INFO) << "Login " << userid << " to case #" << caseid;
+
+  // Get case.
+  collab_ = service_->FindCase(caseid);
+  if (collab_ == nullptr) {
+    Error("unknown collaboration");
+    return;
+  }
+
+  // Log into collaboration to send and receive updates.
+  if (!collab_->Login(this, userid, credentials)) {
+    LOG(WARNING) << "Access to case #" << caseid << " denied for " << userid;
+    Error("access denied");
+    collab_ = nullptr;
+    return;
+  }
+  userid_ = userid;
+
+  // Return case.
+  CollabWriter writer;
+  writer.WriteInt(COLLAB_LOGIN);
+  collab_->EncodeCase(&writer);
+  writer.Send(this);
+}
+
+void CollabClient::NewId(CollabReader *reader) {
+  // Make sure client is logged into case.
+  if (collab_ == nullptr) {
+    Error("user not logged in");
+    return;
+  }
+
+  // Return new topic id.
+  int next = collab_->NewTopicId();
+  CollabWriter writer;
+  writer.WriteInt(COLLAB_NEWID);
+  writer.WriteInt(next);
+  writer.Send(this);
+}
+
+void CollabClient::Update(CollabReader *reader) {
+  // Make sure client is logged into case.
+  if (collab_ == nullptr) {
+    Error("user not logged in");
+    return;
+  }
+
+  // Update collaboration.
+  if (!collab_->Update(reader)) {
+    Error("invalid update");
+    return;
+  }
+
+  // Broadcast update to all other participants.
+  service_->Notify(collab_, this, reader->packet());
+}
+
+void CollabClient::Flush(CollabReader *reader) {
+  // Make sure client is logged into case.
+  if (collab_ == nullptr) {
+    Error("user not logged in");
+    return;
+  }
+
+  // Flush collaboration.
+  string modtime;
+  bool saved = collab_->Flush(&modtime);
+
+  // Return latest modification time.
+  CollabWriter writer;
+  writer.WriteInt(COLLAB_FLUSH);
+  writer.WriteString(modtime);
+  writer.Send(this);
+
+  // Broadcast save.
+  if (saved) {
+    CollabWriter writer;
+    writer.WriteInt(COLLAB_UPDATE);
+    writer.WriteInt(CCU_SAVE);
+    writer.WriteString(modtime);
+    service_->Notify(collab_, this, writer.packet());
+  }
+}
+
+void CollabClient::Import(CollabReader *reader) {
+  // Make sure client is logged into case.
+  if (collab_ == nullptr) {
+    Error("user not logged in");
+    return;
+  }
+
+  // Import topics.
+  int num_topics = collab_->Import(reader);
+  if (num_topics == -1) {
+    Error("error importing topics");
+    return;
+  }
+  CollabWriter writer;
+  writer.WriteInt(COLLAB_IMPORT);
+  writer.WriteInt(num_topics);
+  writer.Send(this);
+}
+
+void CollabClient::Error(const char *message) {
+  CollabWriter writer;
+  writer.WriteInt(COLLAB_ERROR);
+  writer.WriteString(message);
+  writer.Send(this);
+}
+
+void CollabService::Process(HTTPRequest *request, HTTPResponse *response) {
+  CollabClient *client = new CollabClient(this, request->conn());
+  if (!WebSocket::Upgrade(client, request, response)) {
+    delete client;
+    response->SendError(404);
+    return;
+  }
+}
+
+void CollabService::Add(CollabCase *collab) {
+  collaborations_.push_back(collab);
+}
+
+void CollabService::Notify(CollabCase *collab,
+                           CollabClient *source,
+                           const Slice &packet) {
+  notifications_.put(new Message(collab, source, packet));
+}
+
+CollabCase *CollabService::FindCase(int caseid) {
+  // Try to find case that has already been loaded.
+  for (auto *collab : collaborations_) {
+    if (collab->caseid() == caseid) return collab;
+  }
+
+  // Try to load case from file.
+  LOG(INFO) << "Loading case #" << caseid;
+  CollabCase *collab = new CollabCase(caseid);
+  if (!collab->ReadCase() || !collab->ReadParticipants()) {
+    delete collab;
+    return nullptr;
+  }
+
+  // Add collaboration.
+  collaborations_.push_back(collab);
+  return collab;
+}
+
+void CollabService::Refresh() {
+  LOG(INFO) << "Refresh collaborations from disk";
+  MutexLock lock(&mu);
+  for (auto *collab : collaborations_) {
+    if (!collab->ReadCase() || !collab->ReadParticipants()) {
+      LOG(ERROR) << "Unable to refresh case #" << collab->caseid();
+    }
+  }
+}
+
+void CollabService::Monitor() {
+  time_t last_flush = time(nullptr);
+  time_t last_ping = time(nullptr);
+  for (;;) {
+    // Wait for next update.
+    Message *msg = notifications_.get(1000);
+    if (terminate_) return;
+
+    // Broadcast notification to participants.
+    if (msg) {
+      MutexLock lock(&mu);
+      msg->collab->Broadcast(msg->source, msg->packet());
+      delete msg;
+    }
+
+    // Flush changes to disk.
+    time_t now = time(nullptr);
+    if (now - last_flush >= FLAGS_flush) {
+      Flush(true);
+      last_flush = now;
+    }
+
+    // Send keep-alive pings to clients.
+    if (now - last_ping >= FLAGS_ping) {
+      SendKeepAlivePings();
+      last_ping = now;
+    }
+  }
+}
+
+void CollabService::Flush(bool notify) {
+  // Flush changes to disk.
+  MutexLock lock(&mu);
+  string timestamp;
+  for (CollabCase *collab : collaborations_) {
+    if (collab->Flush(&timestamp) && notify) {
+      // Broadcast save.
+      CollabWriter writer;
+      writer.WriteInt(COLLAB_UPDATE);
+      writer.WriteInt(CCU_SAVE);
+      writer.WriteString(timestamp);
+      Notify(collab, nullptr, writer.packet());
+    }
+  }
+}
+
+void CollabService::SendKeepAlivePings() {
+  MutexLock lock(&mu);
+  for (CollabCase *collab : collaborations_) {
+    collab->SendKeepAlivePings();
+  }
 }
 
 // Termination handler.
