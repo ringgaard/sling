@@ -1147,6 +1147,7 @@ void CollabClient::Import(CollabReader *reader) {
     Error("error importing topics");
     return;
   }
+
   CollabWriter writer;
   writer.WriteInt(COLLAB_IMPORT);
   writer.WriteInt(num_topics);

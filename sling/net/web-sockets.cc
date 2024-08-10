@@ -128,13 +128,34 @@ WebSocket::Continuation WebSocket::Process(SocketConnection *conn) {
   }
 
   // Call handlers for different frame types.
+  bool fin = hdr[0] & 0x80;
   switch (hdr[0] & 0x0F) {
     case WS_OP_TEXT:
       Receive(data, datalen, false);
       break;
 
     case WS_OP_BIN:
-      Receive(data, datalen, true);
+      if (fin) {
+        // Unfragmented frame.
+        Receive(data, datalen, true);
+      } else {
+        // First frame fragment.
+        fragments_.Reset(datalen);
+        fragments_.Write(data, datalen);
+      }
+      break;
+
+    case WS_OP_CONT:
+      if (fin) {
+        // Last frame fragment.
+        fragments_.Write(data, datalen);
+        const uint8 *buffer = reinterpret_cast<uint8 *>(fragments_.begin());
+        Receive(buffer, fragments_.available(), true);
+        fragments_.Reset(0);
+      } else {
+        // Frame fragment.
+        fragments_.Write(data, datalen);
+      }
       break;
 
     case WS_OP_CLOSE:

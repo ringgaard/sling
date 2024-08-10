@@ -69,6 +69,9 @@ class WebSocket : public SocketSession {
  private:
   // Socket connection to client.
   SocketConnection *conn_;
+
+  // Received fragment.
+  IOBuffer fragments_;
 };
 
 }  // namespace sling
