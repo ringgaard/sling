@@ -20,6 +20,7 @@ cc_binary(
     "//sling/util:mutex",
     "//sling/util:queue",
     "//sling/util:thread",
+    "//sling/util:unicode",
   ],
 )
 

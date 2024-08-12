@@ -43,6 +43,7 @@ const n_created = frame("created");
 const n_modified = frame("modified");
 const n_shared = frame("shared");
 const n_lazyload = frame("lazyload");
+const n_ref = frame("ref");
 const n_media = frame("media");
 const n_case_file = frame("Q108673968");
 const n_instance_of = frame("P31");
@@ -314,6 +315,23 @@ class CaseEditor extends MdApp {
           description: topic.get(n_description),
           topic: topic,
           casefile: link,
+        });
+      }
+    }
+
+    // Search topics in collaboration.
+    if (this.collab && this.lazyload) {
+      let flags = 0;
+      if (options.full) flags |= 1;
+      if (options.keyword) flags |= 2;
+      let matches = await this.collab.search(query, 50, flags);
+      for (let match of matches) {
+        let name = match.get(n_name);
+        results.push({
+          ref: match.get(n_ref),
+          name: name,
+          title: name + " ★",
+          description: match.get(n_description),
         });
       }
     }

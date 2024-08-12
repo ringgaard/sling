@@ -39,6 +39,7 @@
 #include "sling/util/mutex.h"
 #include "sling/util/queue.h"
 #include "sling/util/thread.h"
+#include "sling/util/unicode.h"
 
 using namespace sling;
 
@@ -61,6 +62,7 @@ enum CollabOpcode {
   COLLAB_UPDATE  = 7,    // update collaboration case
   COLLAB_FLUSH   = 8,    // flush changes to disk
   COLLAB_IMPORT  = 9,    // bulk import topics
+  COLLAB_SEARCH  = 10,   // search for matching topics
 
   COLLAB_ERROR   = 127,  // error message
 };
@@ -73,6 +75,12 @@ enum CollabUpdate {
   CCU_DELETE  = 4,    // topic deleted
   CCU_RENAME  = 5,    // folder renamed
   CCU_SAVE    = 6,    // case saved
+};
+
+// Collaboration search flags.
+enum CollabSearchFlags {
+  CS_FULL      = 1,    // full match
+  CS_KEYWORD   = 2,    // keyword match
 };
 
 // Credential key size.
@@ -104,6 +112,10 @@ Name n_lazyload(names, "lazyload");
 Name n_next(names, "next");
 Name n_author(names, "P50");
 Name n_participant(names, "P710");
+Name n_name(names, "name");
+Name n_alias(names, "alias");
+Name n_description(names, "description");
+Name n_ref(names, "ref");
 
 // Return random key encoded as hex digits.
 string RandomKey() {
@@ -116,6 +128,38 @@ string RandomKey() {
   }
   return str;
 }
+
+// Topic name index.
+class TopicNameIndex {
+ public:
+  TopicNameIndex(Store *store);
+  ~TopicNameIndex();
+
+  // Add/update names for topic.
+  void Update(const Frame &topic);
+
+  // Search for topics with matching names.
+  void Search(const string &query, int limit, int flags, Handles *matches);
+
+ private:
+  // Rebuild search index.
+  void Rebuild();
+
+  struct TopicName {
+    char *name;
+    Handle topic;
+    TopicName *next;
+  };
+
+  // Store for topics.
+  Store *store_;
+
+  // Topics with linked list of aliases.
+  HandleMap<TopicName *> topics_;
+
+  // Names sorted by normalized name.
+  std::vector<TopicName *> names_;
+};
 
 // Collaboration protocol packet reader.
 class CollabReader {
@@ -231,14 +275,17 @@ class CollabWriter {
 // A collaboration case is a shared case managed by the collaboration server.
 class CollabCase {
  public:
-  CollabCase() : store_(commons) {}
-  CollabCase(int caseid) : store_(commons), caseid_(caseid) {}
+  CollabCase() : store_(commons), index_(&store_) {}
+  CollabCase(int caseid) : store_(commons), index_(&store_), caseid_(caseid) {}
 
   // Read case file from input packet.
   bool Parse(CollabReader *reader);
 
   // Encode case to output packet.
   void EncodeCase(CollabWriter *writer);
+
+  // Encode result to output packet.
+  void EncodeResult(CollabWriter *writer, const Object &obj);
 
   // Return case id.
   int caseid() const { return caseid_; }
@@ -276,6 +323,9 @@ class CollabCase {
 
   // Import topics into collaboration.
   int Import(CollabReader *reader);
+
+  // Search for matching topics in collaboration.
+  Array Search(CollabReader *reader);
 
   // Broadcast packet to clients. Do not send packet to source.
   void Broadcast(CollabClient *source, const Slice &packet);
@@ -322,6 +372,9 @@ class CollabCase {
 
   // Case store for collaboration.
   Store store_;
+
+  // Topic name search index.
+  TopicNameIndex index_;
 
   // Case file.
   Frame casefile_;
@@ -412,6 +465,9 @@ class CollabClient : public WebSocket {
 
   // Bulk import topics into collaboration.
   void Import(CollabReader *reader);
+
+  // Search for matching topics in collaboration.
+  void Search(CollabReader *reader);
 
   // Send error message to client.
   void Error(const char *message);
@@ -508,6 +564,115 @@ class CollabService {
   bool terminate_ = false;
 };
 
+TopicNameIndex::TopicNameIndex(Store *store) {
+  store_ = store;
+}
+
+TopicNameIndex::~TopicNameIndex() {
+  for (auto &it : topics_) {
+    TopicName *t = it.second;
+    while (t != nullptr) {
+      TopicName *next = t->next;
+      free(t->name);
+      free(t);
+      t = next;
+    }
+  }
+}
+
+void TopicNameIndex::Update(const Frame &topic) {
+  // Delete exsting names for topic.
+  TopicName *t = topics_[topic.handle()];
+  while (t != nullptr) {
+    TopicName *next = t->next;
+    free(t->name);
+    free(t);
+    t = next;
+  }
+
+  // Add new names for topic.
+  string normalized;
+  for (const Slot &s : topic) {
+    if (s.name == n_name || s.name == n_alias) {
+      String str(store_, s.value);
+      if (!str.valid()) continue;
+      Text name = str.text();
+      UTF8::Normalize(name.data(), name.size(), NORMALIZE_DEFAULT, &normalized);
+      TopicName *tn = new TopicName();
+      tn->name = strdup(normalized.c_str());
+      tn->topic = topic.handle();
+      tn->next = t;
+      t = tn;
+    }
+  }
+  topics_[topic.handle()] = t;
+
+  // Clear search index, so it will be rebuild for the next seach.
+  names_.clear();
+}
+
+void TopicNameIndex::Rebuild() {
+  names_.clear();
+  for (auto &it : topics_) {
+    TopicName *t = it.second;
+    while (t != nullptr) {
+      names_.push_back(t);
+      t = t->next;
+    }
+  }
+
+  // Sort names.
+  std::sort(names_.begin(), names_.end(),
+    [](const TopicName *a, const TopicName *b) {
+      return strcmp(a->name, b->name) < 0;
+    });
+}
+
+void TopicNameIndex::Search(const string &query, int limit, int flags,
+                            Handles *matches) {
+  // Rebuild seach index if needed.
+  if (names_.empty()) Rebuild();
+
+  // Normalize query.
+  string normalized;
+  UTF8::Normalize(query.data(), query.size(), NORMALIZE_DEFAULT, &normalized);
+  Text normalized_query(normalized);
+
+  // Find first name that is greater than or equal to the query.
+  int lo = 0;
+  int hi = names_.size() - 1;
+  while (lo < hi) {
+    int mid = (lo + hi) / 2;
+    const TopicName *tn = names_[mid];
+    if (tn->name < normalized_query) {
+      lo = mid + 1;
+    } else {
+      hi = mid;
+    }
+  }
+
+  // Find all names matching the prefix. Stop if we hit the limit.
+  int index = lo;
+  while (index < names_.size()) {
+    // Check if we have reached the limit.
+    if (matches->size() > limit) break;
+
+    // Stop if the current name does not match.
+    const TopicName *tn = names_[index];
+    Text name(tn->name);
+    if (flags & CS_FULL) {
+      if (name != normalized_query) break;
+    } else {
+      if (!name.starts_with(normalized_query)) break;
+    }
+
+    // Add match.
+    matches->push_back(tn->topic);
+
+    index++;
+  }
+}
+
 bool CollabCase::Parse(CollabReader *reader) {
   casefile_ = reader->ReadObjects(&store_).AsFrame();
   if (casefile_.IsNil()) return false;
@@ -526,8 +691,16 @@ bool CollabCase::Parse(CollabReader *reader) {
   topics_ = casefile_.Get(n_topics).AsArray();
   folders_ = casefile_.GetFrame(n_folders);
   if (!topics_.valid() || !folders_.valid()) return false;
-
   lazyload_ = main.GetBool(n_lazyload);
+
+  if (lazyload_) {
+    // Add topic names to seach index.
+    for (int i = 0; i < topics_.length(); ++i) {
+      Frame topic(&store_, topics_.get(i));
+      index_.Update(topic);
+    }
+  }
+
   dirty_ = true;
   return true;
 }
@@ -535,6 +708,11 @@ bool CollabCase::Parse(CollabReader *reader) {
 void CollabCase::EncodeCase(CollabWriter *writer) {
   Encoder encoder(&store_, writer->output(), false);
   Serialize(&encoder, lazyload_);
+}
+
+void CollabCase::EncodeResult(CollabWriter *writer, const Object &obj) {
+  Encoder encoder(&store_, writer->output(), false);
+  encoder.Encode(obj);
 }
 
 void CollabCase::AddParticipant(const string &id, const string &credentials) {
@@ -630,6 +808,9 @@ bool CollabCase::Update(CollabReader *reader) {
         LOG(INFO) << "Case #" << caseid_ << " topic new " << topic.Id();
       } else {
         LOG(INFO) << "Case #" << caseid_ << " topic update " << topic.Id();
+      }
+      if (lazyload_) {
+        index_.Update(topic);
       }
       dirty_ = true;
       break;
@@ -795,6 +976,32 @@ int CollabCase::Import(CollabReader *reader) {
   return topics.size();
 }
 
+Array CollabCase::Search(CollabReader *reader) {
+  string query = reader->ReadString();
+  int limit = reader->ReadInt();
+  int flags = reader->ReadInt();
+  Handles hits(&store_);
+  Handle idmatch = store_.LookupExisting(query);
+  if (!idmatch.IsNil()) hits.push_back(idmatch);
+  index_.Search(query, limit, flags, &hits);
+
+  Handles matches(&store_);
+  for (Handle h : hits) {
+    Frame hit(&store_, h);
+    if (!hit.valid()) continue;
+    Text id = hit.Id();
+    Text name = hit.GetText(n_name);
+    Text description = hit.GetText(n_description);
+    Builder match(&store_);
+    if (!id.empty()) match.Add(n_ref, id);
+    if (!name.empty()) match.Add(n_name, name);
+    if (!description.empty()) match.Add(n_description, description);
+    matches.add(match.Create().handle());
+  }
+
+  return Array(&store_, matches);
+}
+
 bool CollabCase::ReadCase() {
   // Open case file.
   File *f;
@@ -820,8 +1027,16 @@ bool CollabCase::ReadCase() {
   // Get topics and folders.
   topics_ = casefile_.Get(n_topics).AsArray();
   folders_ = casefile_.GetFrame(n_folders);
-
   lazyload_ = casefile_.GetBool(n_lazyload);
+
+  if (lazyload_) {
+    // Add topic names to seach index.
+    for (int i = 0; i < topics_.length(); ++i) {
+      Frame topic(&store_, topics_.get(i));
+      index_.Update(topic);
+    }
+  }
+
   dirty_ = false;
   return true;
 }
@@ -929,6 +1144,7 @@ void CollabClient::Receive(const uint8 *data, uint64 size, bool binary) {
     case COLLAB_UPDATE: Update(&reader); break;
     case COLLAB_FLUSH: Flush(&reader); break;
     case COLLAB_IMPORT: Import(&reader); break;
+    case COLLAB_SEARCH: Search(&reader); break;
     default:
       LOG(ERROR) << "Invalid collab op: " << op;
   }
@@ -1151,6 +1367,22 @@ void CollabClient::Import(CollabReader *reader) {
   CollabWriter writer;
   writer.WriteInt(COLLAB_IMPORT);
   writer.WriteInt(num_topics);
+  writer.Send(this);
+}
+
+void CollabClient::Search(CollabReader *reader) {
+  // Make sure client is logged into case.
+  if (collab_ == nullptr) {
+    Error("user not logged in");
+    return;
+  }
+
+  // Search for matching topics in collaboration.
+  Array hits = collab_->Search(reader);
+
+  CollabWriter writer;
+  writer.WriteInt(COLLAB_SEARCH);
+  collab_->EncodeResult(&writer, hits);
   writer.Send(this);
 }
 

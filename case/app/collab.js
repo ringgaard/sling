@@ -16,6 +16,7 @@ const COLLAB_NEWID   = 6;
 const COLLAB_UPDATE  = 7;
 const COLLAB_FLUSH   = 8;
 const COLLAB_IMPORT  = 9;
+const COLLAB_SEARCH  = 10;
 const COLLAB_ERROR   = 127;
 
 const CCU_TOPIC   = 1;
@@ -183,6 +184,15 @@ export class Collaboration {
         }
         break;
       }
+      case COLLAB_SEARCH: {
+        let result = decoder.readall();
+        this.onfail = null;
+        if (this.onsearch) {
+          this.onsearch(result);
+          this.onsearch = null;
+        }
+        break;
+      }
       case COLLAB_ERROR: {
         let message = decoder.read_varstring();
         if (this.onfail) {
@@ -306,6 +316,23 @@ export class Collaboration {
       encoder.write_varint(COLLAB_IMPORT);
       encoder.write_varstring(folder || "");
       encoder.write_blob(data);
+      let packet = encoder.output();
+
+      this.send(packet);
+    });
+  }
+
+  // Topic search.
+  async search(query, limit, flags) {
+    return new Promise((resolve, reject) => {
+      this.onsearch = hits => resolve(hits);
+      this.onfail = e => reject(e);
+
+      let encoder = new Encoder(store, false);
+      encoder.write_varint(COLLAB_SEARCH);
+      encoder.write_varstring(query);
+      encoder.write_varint(limit);
+      encoder.write_varint(flags);
       let packet = encoder.output();
 
       this.send(packet);
