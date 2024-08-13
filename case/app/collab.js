@@ -6,6 +6,8 @@ import {Encoder, Decoder} from "/common/lib/frame.js";
 import {store, frame} from "/common/lib/global.js";
 
 const n_topics = frame("topics");
+const n_topic = frame("topic");
+const n_name = frame("name");
 
 const COLLAB_CREATE  = 1;
 const COLLAB_DELETE  = 2;
@@ -17,6 +19,8 @@ const COLLAB_UPDATE  = 7;
 const COLLAB_FLUSH   = 8;
 const COLLAB_IMPORT  = 9;
 const COLLAB_SEARCH  = 10;
+const COLLAB_TOPICS  = 12;
+const COLLAB_LABELS  = 13;
 const COLLAB_ERROR   = 127;
 
 const CCU_TOPIC   = 1;
@@ -54,6 +58,16 @@ export class Collaboration {
       console.log("Collab closed", e);
       if (this.listener) this.listener.remote_closed(this);
     }
+  }
+
+  // Return topic collector for collaboration.
+  topic_collector() {
+    return () => new CollabTopicCollector(this);
+  }
+
+  // Return topic label collector for collaboration.
+  label_collector() {
+    return () => new CollabLabelCollector(this);
   }
 
   // Close connection to collaboration server.
@@ -193,6 +207,24 @@ export class Collaboration {
         }
         break;
       }
+      case COLLAB_TOPICS: {
+        let result = decoder.readall();
+        this.onfail = null;
+        if (this.ontopics) {
+          this.ontopics();
+          this.ontopics = null;
+        }
+        break;
+      }
+      case COLLAB_LABELS: {
+        let result = decoder.readall();
+        this.onfail = null;
+        if (this.onlabels) {
+          this.onlabels(result);
+          this.onlabels = null;
+        }
+        break;
+      }
       case COLLAB_ERROR: {
         let message = decoder.read_varstring();
         if (this.onfail) {
@@ -236,6 +268,7 @@ export class Collaboration {
 
   // Log in to collaboration to send and receive updates.
   async login(caseid, userid, credentials) {
+    this.caseid = caseid;
     return new Promise((resolve, reject) => {
       this.onlogin = casefile => resolve(casefile);
       this.onfail = e => reject(e);
@@ -266,6 +299,7 @@ export class Collaboration {
 
   // Join collaboration.
   async join(caseid, userid, key) {
+    this.caseid = caseid;
     return new Promise((resolve, reject) => {
       this.onjoin = key => resolve(key);
       this.onfail = e => reject(e);
@@ -339,6 +373,46 @@ export class Collaboration {
     });
   }
 
+  // Collect topics from collaboration.
+  async collect_topics(topics) {
+    return new Promise((resolve, reject) => {
+      this.ontopics = () => resolve();
+      this.onfail = e => reject(e);
+
+      let encoder = new Encoder(store, false);
+      encoder.write_varint(COLLAB_TOPICS);
+      encoder.encode(topics);
+      let packet = encoder.output();
+
+      this.send(packet);
+    });
+  }
+
+  // Collect topic labels from collaboration.
+  async collect_labels(topics) {
+    return new Promise((resolve, reject) => {
+      this.onlabels = stubs => {
+        for (let stub of stubs) {
+          let topic = stub.get(n_topic);
+          if (topic.isproxy()) {
+            let name = stub.get(n_name);
+            if (name) topic.add(n_name, name);
+            topic.markstub();
+          }
+        }
+        resolve();
+      }
+      this.onfail = e => reject(e);
+
+      let encoder = new Encoder(store, false);
+      encoder.write_varint(COLLAB_LABELS);
+      encoder.encode(topics);
+      let packet = encoder.output();
+
+      this.send(packet);
+    });
+  }
+
   // Send topic update.
   topic_updated(topic) {
     console.log("send topic update", topic.id);
@@ -399,6 +473,48 @@ export class Collaboration {
     encoder.encode(folder_names);
     let packet = encoder.output();
     this.send(packet);
+  }
+};
+
+class CollabTopicCollector {
+  constructor(collab) {
+    this.collab =  collab;
+    this.items = new Set();
+  }
+
+  prefix() {
+    return `t/${this.collab.caseid}/`;
+  }
+
+  collect(item) {
+    this.items.add(item);
+  }
+
+  async retrieve() {
+    if (this.items.size > 0) {
+      await this.collab.collect_topics(Array.from(this.items));
+    }
+  }
+};
+
+class CollabLabelCollector {
+  constructor(collab) {
+    this.collab =  collab;
+    this.items = new Set();
+  }
+
+  prefix() {
+    return `t/${this.collab.caseid}/`;
+  }
+
+  collect(item) {
+    this.items.add(item);
+  }
+
+  async retrieve() {
+    if (this.items.size > 0) {
+      await this.collab.collect_labels(Array.from(this.items));
+    }
   }
 };
 

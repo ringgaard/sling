@@ -6,8 +6,8 @@ import {MdApp, MdDialog, StdDialog, MdIcon, MdSearchResult, inform}
        from "/common/lib/material.js";
 import {Store, Frame, Encoder, Printer, Reader} from "/common/lib/frame.js";
 import {store, frame, settings} from "/common/lib/global.js";
-import {LabelCollector, ItemCollector} from "/common/lib/datatype.js";
-
+import {LabelCollector, ItemCollector, aux_collectors}
+  from "/common/lib/datatype.js";
 import * as plugins from "./plugins.js";
 import * as importers from "./importers.js";
 import {Drive} from "./drive.js";
@@ -498,7 +498,7 @@ class CaseEditor extends MdApp {
         this.match("#app").save_case(this.casefile);
         await this.update(this.casefile);
 
-        inform("Case has been turned into a collaboration. "+
+        inform("Case has been turned into a collaboration. " +
                "You can now invite participants to join.");
       } catch (e) {
         console.log("Collaboration error", e);
@@ -560,6 +560,8 @@ class CaseEditor extends MdApp {
     this.index = null;
     this.linksindex = new Map();
     this.casefile = this.state;
+    aux_collectors.items = null;
+    aux_collectors.labels = null;
 
     // Connect to collaboration server for collaboration case.
     let collab_url = this.casefile.get(n_collab)
@@ -584,6 +586,10 @@ class CaseEditor extends MdApp {
         this.localcase.set(prop, this.casefile.get(prop));
       }
       this.match("#app").save_case(this.localcase);
+      if (this.lazyload) {
+        aux_collectors.items = this.collab.topic_collector();
+        aux_collectors.labels = this.collab.label_collector();
+      }
     } else {
       this.collab = undefined;
       this.localcase = undefined;

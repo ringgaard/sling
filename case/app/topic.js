@@ -12,7 +12,8 @@ import {
 import {Frame, QString, Printer} from "/common/lib/frame.js";
 import {store, frame, settings} from "/common/lib/global.js";
 import {imageurl} from "/common/lib/gallery.js";
-import {LabelCollector, value_parser} from "/common/lib/datatype.js";
+import {LabelCollector, ItemCollector, value_parser}
+  from "/common/lib/datatype.js";
 import {Document} from "/common/lib/document.js";
 
 import {get_schema, inverse_property} from "./schema.js";
@@ -68,7 +69,13 @@ class TopicList extends Component {
       // Wait until schema loaded.
       await get_schema();
 
-      let labels = new LabelCollector(store)
+      let items = new ItemCollector(store);
+      for (let topic of topics) {
+        items.add(topic);
+      }
+      await items.retrieve();
+
+      let labels = new LabelCollector(store);
       for (let topic of topics) {
         labels.add(topic);
       }

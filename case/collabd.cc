@@ -63,6 +63,8 @@ enum CollabOpcode {
   COLLAB_FLUSH   = 8,    // flush changes to disk
   COLLAB_IMPORT  = 9,    // bulk import topics
   COLLAB_SEARCH  = 10,   // search for matching topics
+  COLLAB_TOPICS  = 12,   // retrieve tropics
+  COLLAB_LABELS  = 13,   // retrieve labels for topics
 
   COLLAB_ERROR   = 127,  // error message
 };
@@ -116,6 +118,7 @@ Name n_name(names, "name");
 Name n_alias(names, "alias");
 Name n_description(names, "description");
 Name n_ref(names, "ref");
+Name n_topic(names, "topic");
 
 // Return random key encoded as hex digits.
 string RandomKey() {
@@ -284,9 +287,6 @@ class CollabCase {
   // Encode case to output packet.
   void EncodeCase(CollabWriter *writer);
 
-  // Encode result to output packet.
-  void EncodeResult(CollabWriter *writer, const Object &obj);
-
   // Return case id.
   int caseid() const { return caseid_; }
 
@@ -349,6 +349,9 @@ class CollabCase {
   static bool Exists(int caseid) {
     return File::Exists(CaseFileName(caseid));
   }
+
+  // Collaboration store.
+  Store *store() { return &store_; }
 
  private:
   // Return case filename.
@@ -468,6 +471,12 @@ class CollabClient : public WebSocket {
 
   // Search for matching topics in collaboration.
   void Search(CollabReader *reader);
+
+  // Retrieve topics from collaboration.
+  void Topics(CollabReader *reader);
+
+  // Retrieve topic labels from collaboration.
+  void Labels(CollabReader *reader);
 
   // Send error message to client.
   void Error(const char *message);
@@ -708,11 +717,6 @@ bool CollabCase::Parse(CollabReader *reader) {
 void CollabCase::EncodeCase(CollabWriter *writer) {
   Encoder encoder(&store_, writer->output(), false);
   Serialize(&encoder, lazyload_);
-}
-
-void CollabCase::EncodeResult(CollabWriter *writer, const Object &obj) {
-  Encoder encoder(&store_, writer->output(), false);
-  encoder.Encode(obj);
 }
 
 void CollabCase::AddParticipant(const string &id, const string &credentials) {
@@ -1145,6 +1149,8 @@ void CollabClient::Receive(const uint8 *data, uint64 size, bool binary) {
     case COLLAB_FLUSH: Flush(&reader); break;
     case COLLAB_IMPORT: Import(&reader); break;
     case COLLAB_SEARCH: Search(&reader); break;
+    case COLLAB_TOPICS: Topics(&reader); break;
+    case COLLAB_LABELS: Labels(&reader); break;
     default:
       LOG(ERROR) << "Invalid collab op: " << op;
   }
@@ -1382,7 +1388,66 @@ void CollabClient::Search(CollabReader *reader) {
 
   CollabWriter writer;
   writer.WriteInt(COLLAB_SEARCH);
-  collab_->EncodeResult(&writer, hits);
+  Encoder encoder(collab_->store(), writer.output(), false);
+  encoder.Encode(hits);
+  writer.Send(this);
+}
+
+void CollabClient::Topics(CollabReader *reader) {
+  // Make sure client is logged into case.
+  if (collab_ == nullptr) {
+    Error("user not logged in");
+    return;
+  }
+
+  // Reading array with proxies will resolve them.
+  Array topics = reader->ReadObjects(collab_->store()).AsArray();
+  if (!topics.valid()) {
+    Error("invalid topic request");
+    return;
+  }
+
+  // Return resolved topics.
+  CollabWriter writer;
+  writer.WriteInt(COLLAB_TOPICS);
+  Encoder encoder(collab_->store(), writer.output(), false);
+  for (int i = 0; i < topics.length(); ++i) {
+    encoder.Encode(topics.get(i));
+  }
+  writer.Send(this);
+}
+
+void CollabClient::Labels(CollabReader *reader) {
+  // Make sure client is logged into case.
+  if (collab_ == nullptr) {
+    Error("user not logged in");
+    return;
+  }
+
+  // Reading array with proxies will resolve them.
+  Store *store = collab_->store();
+  Array topics = reader->ReadObjects(store).AsArray();
+  if (!topics.valid()) {
+    Error("invalid topic request");
+    return;
+  }
+
+  // Return stubs for topics.
+  CollabWriter writer;
+  writer.WriteInt(COLLAB_LABELS);
+  Handles stubs(store);
+  Encoder encoder(collab_->store(), writer.output(), false);
+  for (int i = 0; i < topics.length(); ++i) {
+    Frame topic(store, topics.get(i));
+    if (!topic.valid()) continue;
+    Text name = topic.GetText(n_name);
+    Builder match(store);
+    match.Add(n_topic, topic);
+    if (!name.empty()) match.Add(n_name, name);
+    stubs.add(match.Create().handle());
+  }
+  Array results(store, stubs);
+  encoder.Encode(results.handle());
   writer.Send(this);
 }
 

@@ -422,37 +422,57 @@ export class Time {
   }
 }
 
+export var aux_collectors = {
+  labels: null,
+  items: null,
+}
+
 export class LabelCollector {
   constructor(store) {
     this.store = store;
     this.items = new Set();
+    this.aux = aux_collectors.labels && aux_collectors.labels();
+    this.auxprefix = this.aux && this.aux.prefix();
+  }
+
+  collect(item) {
+    if (this.aux && item.id.startsWith(this.auxprefix)) {
+      this.aux.collect(item);
+    } else {
+      this.items.add(item);
+    }
   }
 
   add(item) {
     // Add all missing values to collector.
     for (let [name, value] of item) {
       if (name instanceof Frame) {
-        if (name.isproxy()) this.items.add(name);
+        if (name.isproxy()) this.collect(name);
       }
       if (value instanceof Frame) {
         if (value.isanonymous()) {
           this.add(value);
         } else if (value.isproxy()) {
-          this.items.add(value);
+          this.collect(value);
         }
       } else if (value instanceof QString) {
-        if (value.qual) this.items.add(value.qual);
+        if (value.qual) this.collect(value.qual);
       }
     }
   }
 
   add_item(item) {
     if ((item instanceof Frame) && item.isproxy()) {
-      this.items.add(item);
+      this.collect(item);
     }
   }
 
   async retrieve() {
+    // Retrieve labels from aux collector.
+    if (this.aux) {
+      await this.aux.retrieve();
+    }
+
     // Skip if all labels has already been resolved.
     if (this.items.size == 0) return null;
 
@@ -479,10 +499,20 @@ export class ItemCollector {
   constructor(store) {
     this.store = store;
     this.items = new Set();
+    this.aux = aux_collectors.items && aux_collectors.items();
+    this.auxprefix = this.aux && this.aux.prefix();
+  }
+
+  collect(item) {
+    if (this.aux && item.id.startsWith(this.auxprefix)) {
+      this.aux.collect(item);
+    } else {
+      this.items.add(item);
+    }
   }
 
   add(item) {
-    if (item && (item.isproxy() || item.isstub())) this.items.add(item);
+    if (item && (item.isproxy() || item.isstub())) this.collect(item);
   }
 
   add_links(item) {
@@ -492,6 +522,11 @@ export class ItemCollector {
   }
 
   async retrieve() {
+    // Retrieve items from aux collector.
+    if (this.aux) {
+      await this.aux.retrieve();
+    }
+
     // Skip if all items has already been fetched.
     if (this.items.size == 0) return null;
 
