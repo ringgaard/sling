@@ -146,6 +146,7 @@ corporate_roles = {
   "FORSIKRINGER": None,
   "HVIDVASK": None,
   "REPRÆSENTANTER": None,
+  "BÆREDYGTIGHEDSREVISION": None,
 }
 
 corporate_functions = {
