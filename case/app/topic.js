@@ -173,7 +173,22 @@ class TopicList extends Component {
   }
 
   async delete_selected() {
-    this.match("#editor").delete_topics(this.selection());
+    let editor = this.match("#editor");
+    let selection = this.selection();
+    if (editor.collab) {
+      if (selection.length > 1) {
+        if (!await StdDialog.confirm(
+        "Delete topics",
+        `Delete ${selection.length} topics?`,
+        "Delete")) return;
+      } else if (editor.refcount(selection[0]) < 2) {
+        if (!await StdDialog.confirm(
+        "Delete topic",
+        `Delete ${selection[0].get(n_name) || selection[0].id}?`,
+        "Delete")) return;
+      }
+    }
+    this.match("#editor").delete_topics(selection);
   }
 
   async navigate_to(topic) {

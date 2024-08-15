@@ -767,32 +767,36 @@ class CaseEditor extends MdApp {
   }
 
   redirect(source, target) {
-    let topics = this.topics;
-    if (this.scraps.length > 0) topics = topics.concat(this.scraps);
-    for (let topic of topics) {
-      if (topic === target) continue;
-      let updated = false;
-      for (let n = 0; n < topic.length; ++n) {
-        let name = topic.value(n);
-        let value = topic.value(n);
-        if (source == value) {
-          topic.set_value(n, target);
-          updated = true;
-        } else if (name == n_is && value == source.id) {
-          topic.set_value(n, target.id);
-          updated = true;
-        } else if (value instanceof Frame) {
-          if (value.isanonymous() && value.has(n_is)) {
-            for (let m = 0; m < value.length; ++m) {
-              if (source == value.value(m)) {
-                value.set_value(m, target);
-               updated = true;
+    if (this.collab) {
+      this.collab.topic_redirect(source, target);
+    } else {
+      let topics = this.topics;
+      if (this.scraps.length > 0) topics = topics.concat(this.scraps);
+      for (let topic of topics) {
+        if (topic === target) continue;
+        let updated = false;
+        for (let n = 0; n < topic.length; ++n) {
+          let name = topic.value(n);
+          let value = topic.value(n);
+          if (source == value) {
+            topic.set_value(n, target);
+            updated = true;
+          } else if (name == n_is && value == source.id) {
+            topic.set_value(n, target.id);
+            updated = true;
+          } else if (value instanceof Frame) {
+            if (value.isanonymous() && value.has(n_is)) {
+              for (let m = 0; m < value.length; ++m) {
+                if (source == value.value(m)) {
+                  value.set_value(m, target);
+                 updated = true;
+                }
               }
             }
           }
         }
+        if (updated && !this.scraps.includes(topic)) this.topic_updated(topic);
       }
-      if (updated && !this.scraps.includes(topic)) this.topic_updated(topic);
     }
 
     if (this.sidebar) {
@@ -1043,7 +1047,7 @@ class CaseEditor extends MdApp {
     let scraps_before = this.scraps.length > 0;
     for (let topic of topics) {
       // Do not delete main topic.
-      if (topic == this.casefile.get(n_main)) return;
+      if (topic == this.main) return;
 
       // Delete topic from current folder.
       let is_scrap = this.scraps.includes(topic);
@@ -1058,15 +1062,14 @@ class CaseEditor extends MdApp {
           // Delete draft topic from case and redirect all references to it.
           console.log("purge topic", topic.id);
           this.purge_topic(topic);
-        } else {
-          // Move topic to scraps.
+        } else if (this.collab) {
           let pos = this.topics.indexOf(topic);
           if (pos != -1) {
             this.topics.splice(pos, 1);
           } else {
             console.log("topic not found", topic.id);
           }
-          this.scraps.push(topic);
+          if (!this.collab) this.scraps.push(topic);
           this.topic_deleted(topic);
         }
       }
@@ -1091,7 +1094,7 @@ class CaseEditor extends MdApp {
     return this.delete_topics([topic]);
   }
 
-  async purge_topic(topic) {
+  purge_topic(topic) {
     let target = topic.link();
     if (!target) target = topic.get(n_name);
     if (!target) target = topic.id;
@@ -1316,6 +1319,8 @@ class CaseEditor extends MdApp {
   async onmerge(e) {
     // Get selected topics.
     if (this.readonly) return;
+    if (this.folder == this.scraps) return;
+
     let selected = this.selection();
     if (selected.length == 1) {
       let focus = selected[0];
@@ -1353,7 +1358,7 @@ class CaseEditor extends MdApp {
         target.put(name, value);
       }
 
-      // Redirect references to topic to target.
+      // Redirect references from topic to target.
       this.redirect(topic, target);
 
       // Replace source with target in all folders. Delete it if target is in
@@ -1367,6 +1372,16 @@ class CaseEditor extends MdApp {
             f[pos] = target;
           }
           updated_folders.add(f);
+        }
+      }
+      if (this.work) {
+        let pos = this.work.indexOf(topic);
+        if (pos != -1) {
+          if (this.work.includes(target)) {
+            this.work.splice(pos, 1);
+          } else {
+            this.work[pos] = target;
+          }
         }
       }
     }

@@ -53,18 +53,19 @@ DEFINE_string(datadir, ".", "Data directory for collaborations");
 
 // Collaboration protocol opcodes.
 enum CollabOpcode {
-  COLLAB_CREATE  = 1,    // create new collaboration
-  COLLAB_DELETE  = 2,    // delete collaboration
-  COLLAB_INVITE  = 3,    // invite participant to join collaboration
-  COLLAB_JOIN    = 4,    // add user as participant in collaboration
-  COLLAB_LOGIN   = 5,    // log-in to collaboration to send and receive updates
-  COLLAB_NEWID   = 6,    // new topic id
-  COLLAB_UPDATE  = 7,    // update collaboration case
-  COLLAB_FLUSH   = 8,    // flush changes to disk
-  COLLAB_IMPORT  = 9,    // bulk import topics
-  COLLAB_SEARCH  = 10,   // search for matching topics
-  COLLAB_TOPICS  = 12,   // retrieve tropics
-  COLLAB_LABELS  = 13,   // retrieve labels for topics
+  COLLAB_CREATE   = 1,    // create new collaboration
+  COLLAB_DELETE   = 2,    // delete collaboration
+  COLLAB_INVITE   = 3,    // invite participant to join collaboration
+  COLLAB_JOIN     = 4,    // add user as participant in collaboration
+  COLLAB_LOGIN    = 5,    // log-in to collaboration to send and receive updates
+  COLLAB_NEWID    = 6,    // new topic id
+  COLLAB_UPDATE   = 7,    // update collaboration case
+  COLLAB_FLUSH    = 8,    // flush changes to disk
+  COLLAB_IMPORT   = 9,    // bulk import topics
+  COLLAB_SEARCH   = 10,   // search for matching topics
+  COLLAB_TOPICS   = 12,   // retrieve tropics
+  COLLAB_LABELS   = 13,   // retrieve labels for topics
+  COLLAB_REDIRECT = 14,   // redirect all reference to topic to another
 
   COLLAB_ERROR   = 127,  // error message
 };
@@ -140,6 +141,9 @@ class TopicNameIndex {
 
   // Add/update names for topic.
   void Update(const Frame &topic);
+
+  // Delete names for topic.
+  void Delete(const Frame &topic);
 
   // Search for topics with matching names.
   void Search(const string &query, int limit, int flags, Handles *matches);
@@ -324,6 +328,9 @@ class CollabCase {
   // Import topics into collaboration.
   int Import(CollabReader *reader);
 
+  // Redirect all reference for topic to another.
+  void Redirect(CollabReader *reader);
+
   // Search for matching topics in collaboration.
   Array Search(CollabReader *reader);
 
@@ -478,6 +485,9 @@ class CollabClient : public WebSocket {
   // Retrieve topic labels from collaboration.
   void Labels(CollabReader *reader);
 
+  // Redirect references from one topic to another.
+  void Redirect(CollabReader *reader);
+
   // Send error message to client.
   void Error(const char *message);
 
@@ -615,6 +625,23 @@ void TopicNameIndex::Update(const Frame &topic) {
     }
   }
   topics_[topic.handle()] = t;
+
+  // Clear search index, so it will be rebuild for the next seach.
+  names_.clear();
+}
+
+void TopicNameIndex::Delete(const Frame &topic) {
+  // Delete exsting names for topic.
+  TopicName *t = topics_[topic.handle()];
+  while (t != nullptr) {
+    TopicName *next = t->next;
+    free(t->name);
+    free(t);
+    t = next;
+  }
+
+  // Remove topic.
+  topics_.erase(topic.handle());
 
   // Clear search index, so it will be rebuild for the next seach.
   names_.clear();
@@ -813,9 +840,7 @@ bool CollabCase::Update(CollabReader *reader) {
       } else {
         LOG(INFO) << "Case #" << caseid_ << " topic update " << topic.Id();
       }
-      if (lazyload_) {
-        index_.Update(topic);
-      }
+      if (lazyload_) index_.Update(topic);
       dirty_ = true;
       break;
     }
@@ -875,6 +900,7 @@ bool CollabCase::Update(CollabReader *reader) {
       if (topic.IsNil() || !topics_.Erase(topic)) {
         LOG(ERROR) << "Case #" << caseid_ << " unknown topic " << topicid;
       } else {
+        if (lazyload_) index_.Delete(Frame(&store_, topic));
         LOG(INFO) << "Case #" << caseid_
                   << " topic " << topicid << " deleted";
         dirty_ = true;
@@ -980,6 +1006,63 @@ int CollabCase::Import(CollabReader *reader) {
   return topics.size();
 }
 
+void CollabCase::Redirect(CollabReader *reader) {
+  // Reading source and target topics ids.
+  string sourceid = reader->ReadString();
+  string targetid = reader->ReadString();
+  LOG(INFO) << "Case #" << caseid_ << " redirect "
+            << sourceid << " to " << targetid;
+
+  Handle source = store_.LookupExisting(sourceid);
+  if (source.IsNil()) return;
+  Handle target = store_.LookupExisting(targetid);
+  if (target.IsNil()) return;
+
+  // Redirect source to target.
+  Handles updates(&store_);
+  for (int i = 0; i < topics_.length(); ++i) {
+    Handle t = topics_.get(i);
+    if (t == target) continue;
+    FrameDatum *topic = store_.GetFrame(t);
+    bool updated = false;
+    for (Slot *s = topic->begin(); s < topic->end(); ++s) {
+      if (s->value == source) {
+        s->value = target;
+        updated = true;
+      } else if (s->name == Handle::is()) {
+        if (store_.IsString(s->value)) {
+          StringDatum *redirect = store_.GetString(s->value);
+          if (redirect->equals(sourceid)) {
+            s->value = store_.AllocateString(targetid);
+            updated = true;
+          }
+        }
+      } else if (store_.IsFrame(s->value) && store_.IsAnonymous(s->value)) {
+        FrameDatum *qualifer = store_.GetFrame(s->value);
+        for (Slot *qs = qualifer->begin(); qs < qualifer->end(); ++qs) {
+          if (qs->value == source) {
+            qs->value = target;
+            updated = true;
+          }
+        }
+      }
+    }
+    if (updated) updates.push_back(t);
+  }
+
+  // Broadcast topic updates to all paritcipants.
+  if (!updates.empty()) {
+    CollabWriter writer;
+    writer.WriteInt(COLLAB_UPDATE);
+    writer.WriteInt(CCU_TOPIC);
+    Encoder encoder(&store_, writer.output(), false);
+    for (Handle t : updates) encoder.Encode(t);
+    encoder.Encode(Array(&store_, updates));
+    collabd->Notify(this, nullptr, writer.packet());
+    dirty_ = true;
+  }
+}
+
 Array CollabCase::Search(CollabReader *reader) {
   string query = reader->ReadString();
   int limit = reader->ReadInt();
@@ -1002,6 +1085,9 @@ Array CollabCase::Search(CollabReader *reader) {
     if (!description.empty()) match.Add(n_description, description);
     matches.add(match.Create().handle());
   }
+
+  LOG(INFO) << "Case #" << caseid_ << " search for '" << query << "', "
+            << matches.size() << " hits";
 
   return Array(&store_, matches);
 }
@@ -1151,6 +1237,7 @@ void CollabClient::Receive(const uint8 *data, uint64 size, bool binary) {
     case COLLAB_SEARCH: Search(&reader); break;
     case COLLAB_TOPICS: Topics(&reader); break;
     case COLLAB_LABELS: Labels(&reader); break;
+    case COLLAB_REDIRECT: Redirect(&reader); break;
     default:
       LOG(ERROR) << "Invalid collab op: " << op;
   }
@@ -1449,6 +1536,16 @@ void CollabClient::Labels(CollabReader *reader) {
   Array results(store, stubs);
   encoder.Encode(results.handle());
   writer.Send(this);
+}
+
+void CollabClient::Redirect(CollabReader *reader) {
+  // Make sure client is logged into case.
+  if (collab_ == nullptr) {
+    Error("user not logged in");
+    return;
+  }
+
+  collab_->Redirect(reader);
 }
 
 void CollabClient::Error(const char *message) {

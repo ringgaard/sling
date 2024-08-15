@@ -143,14 +143,17 @@ export class SearchIndex {
       }
 
       // Add topic names, aliases, and xrefs to index.
-      for (let [prop, value] of topic) {
-        if (prop == n_name || prop == n_birth_name || prop == n_alias) {
-          let alias = prop == n_alias;
-          this.names.push({name: normalized(value), topic, alias});
-        } else if (prop && prop.get && prop.get(n_target) == n_xref_type) {
-          let xref = store.resolve(value);
-          let identifier = `${prop.id}/${xref}`;
-          if (!this.ids.has(identifier)) this.ids.set(identifier, topic);
+      if (!topic.isproxy()) {
+        for (let [prop, value] of topic) {
+          if (prop == n_name || prop == n_birth_name || prop == n_alias) {
+            let alias = prop == n_alias;
+            let name = normalized(value);
+            this.names.push({name, topic, alias});
+          } else if (prop && prop.get && prop.get(n_target) == n_xref_type) {
+            let xref = store.resolve(value);
+            let identifier = `${prop.id}/${xref}`;
+            if (!this.ids.has(identifier)) this.ids.set(identifier, topic);
+          }
         }
       }
     }
@@ -170,7 +173,7 @@ export class SearchIndex {
 
       // Add matching id.
       let topic = ids.get(query);
-      if (topic) yield {topic, full: true};
+      if (topic && !topic.isproxy()) yield {topic, full: true};
 
       // Find first name that is greater than or equal to the query.
       let lo = 0;

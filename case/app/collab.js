@@ -9,19 +9,21 @@ const n_topics = frame("topics");
 const n_topic = frame("topic");
 const n_name = frame("name");
 
-const COLLAB_CREATE  = 1;
-const COLLAB_DELETE  = 2;
-const COLLAB_INVITE  = 3;
-const COLLAB_JOIN    = 4;
-const COLLAB_LOGIN   = 5;
-const COLLAB_NEWID   = 6;
-const COLLAB_UPDATE  = 7;
-const COLLAB_FLUSH   = 8;
-const COLLAB_IMPORT  = 9;
-const COLLAB_SEARCH  = 10;
-const COLLAB_TOPICS  = 12;
-const COLLAB_LABELS  = 13;
-const COLLAB_ERROR   = 127;
+const COLLAB_CREATE   = 1;
+const COLLAB_DELETE   = 2;
+const COLLAB_INVITE   = 3;
+const COLLAB_JOIN     = 4;
+const COLLAB_LOGIN    = 5;
+const COLLAB_NEWID    = 6;
+const COLLAB_UPDATE   = 7;
+const COLLAB_FLUSH    = 8;
+const COLLAB_IMPORT   = 9;
+const COLLAB_SEARCH   = 10;
+const COLLAB_TOPICS   = 12;
+const COLLAB_LABELS   = 13;
+const COLLAB_REDIRECT = 14;
+
+const COLLAB_ERROR    = 127;
 
 const CCU_TOPIC   = 1;
 const CCU_FOLDER  = 2;
@@ -432,6 +434,17 @@ export class Collaboration {
     encoder.write_varint(COLLAB_UPDATE);
     encoder.write_varint(CCU_DELETE);
     encoder.write_varstring(topic.id);
+    let packet = encoder.output();
+    this.send(packet);
+  }
+
+  // Send topic redirect.
+  topic_redirect(source, target) {
+    console.log("send topic redirect", source.id, target.id);
+    let encoder = new Encoder(store, false);
+    encoder.write_varint(COLLAB_REDIRECT);
+    encoder.write_varstring(source.id);
+    encoder.write_varstring(target.id);
     let packet = encoder.output();
     this.send(packet);
   }

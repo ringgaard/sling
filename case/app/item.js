@@ -5,7 +5,8 @@ import {Component} from "/common/lib/component.js";
 import {inform} from "/common/lib/material.js";
 import {Frame, QString} from "/common/lib/frame.js";
 import {store, frame, settings} from "/common/lib/global.js";
-import {Time, LabelCollector, latlong} from "/common/lib/datatype.js";
+import {Time, ItemCollector, LabelCollector, latlong}
+  from "/common/lib/datatype.js";
 import {Document} from "/common/lib/document.js";
 import {
   PhotoGallery,
@@ -728,15 +729,19 @@ class TopicExpander extends Component {
 
     // Retrieve item if needed.
     if (!item.ispublic()) {
-      let url = `${settings.kbservice}/kb/topic?id=${item.id}`;
-      let response = await fetch(url);
-      if (response.status == 200) {
-        item = await store.parse(response);
-      } else if (response.status == 404 && item.id.match(/Q\d+/)) {
-        window.open(`https://www.wikidata.org/wiki/${item.id}`, "_blank",
-                    "noopener,noreferrer");
-        return;
-      } else {
+      let collector = new ItemCollector(store)
+      collector.add(item);
+      await collector.retrieve();
+
+      if (!item.ispublic()) {
+        if (item.id.match(/Q\d+/)) {
+          window.open(`https://www.wikidata.org/wiki/${item.id}`, "_blank",
+                      "noopener,noreferrer");
+          return;
+        }
+      }
+      if (!item.ispublic()) {
+        console.log("item error", item.id);
         inform("Error fetching item", item.id);
         return;
       }
