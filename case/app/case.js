@@ -195,6 +195,9 @@ class CaseEditor extends MdApp {
     if (topic) {
       // Navigate to existing topic.
       this.navigate_to(topic);
+    } else if (this.lazyload && ref.startsWith(`t/${this.caseid()}/`)) {
+      // Lazy-load topic.
+      this.navigate_to(frame(ref));
     } else if (e.detail.event.ctrlKey) {
       // Add new linked topic and navigate to it.
       let item = frame(ref);
@@ -332,6 +335,7 @@ class CaseEditor extends MdApp {
           name: name,
           title: name + " ★",
           description: match.get(n_description),
+          lazy: true,
         });
       }
     }
@@ -369,6 +373,9 @@ class CaseEditor extends MdApp {
       }
     } else if (item.caserec) {
       this.add_case_link(item.caserec);
+    } else if (item.lazy) {
+      let topic = frame(item.ref);
+      this.navigate_to(topic);
     } else {
       let topic = this.get_index().ids.get(item.ref);
       if (topic) {
@@ -568,7 +575,14 @@ class CaseEditor extends MdApp {
     if (this.casefile.get(n_collab)) {
       // Connect to collaboration server.
       this.collab = new Collaboration();
-      await this.collab.connect(collab_url);
+
+      try {
+        await this.collab.connect(collab_url);
+      } catch (e) {
+        inform("Collaboration error: " + e.toString());
+        console.log(e);
+        return;
+      }
 
       // Login to collaboration.
       let caseid = this.casefile.get(n_caseid);

@@ -298,9 +298,7 @@ class CollabCase {
   Handle author() const { return author_; }
 
   // Get main author id for case.
-  Text Author() const {
-    return store_.FrameId(author_);
-  }
+  Text Author() const { return store_.FrameId(author_); }
 
   // Add participant.
   void AddParticipant(const string &id, const string &credentials);
@@ -674,38 +672,49 @@ void TopicNameIndex::Search(const string &query, int limit, int flags,
   UTF8::Normalize(query.data(), query.size(), NORMALIZE_DEFAULT, &normalized);
   Text normalized_query(normalized);
 
-  // Find first name that is greater than or equal to the query.
-  int lo = 0;
-  int hi = names_.size() - 1;
-  while (lo < hi) {
-    int mid = (lo + hi) / 2;
-    const TopicName *tn = names_[mid];
-    if (tn->name < normalized_query) {
-      lo = mid + 1;
-    } else {
-      hi = mid;
+  if (flags & CS_KEYWORD) {
+    // Find substring matches.
+    LOG(INFO) << "find submatch: " << normalized << " in " << names_.size() << " names";
+    for (TopicName *tn : names_) {
+      if (matches->size() > limit) break;
+      if (strstr(tn->name, normalized.c_str())) {
+        matches->push_back(tn->topic);
+      }
     }
-  }
-
-  // Find all names matching the prefix. Stop if we hit the limit.
-  int index = lo;
-  while (index < names_.size()) {
-    // Check if we have reached the limit.
-    if (matches->size() > limit) break;
-
-    // Stop if the current name does not match.
-    const TopicName *tn = names_[index];
-    Text name(tn->name);
-    if (flags & CS_FULL) {
-      if (name != normalized_query) break;
-    } else {
-      if (!name.starts_with(normalized_query)) break;
+  } else {
+    // Find first name that is greater than or equal to the query.
+    int lo = 0;
+    int hi = names_.size() - 1;
+    while (lo < hi) {
+      int mid = (lo + hi) / 2;
+      const TopicName *tn = names_[mid];
+      if (tn->name < normalized_query) {
+        lo = mid + 1;
+      } else {
+        hi = mid;
+      }
     }
 
-    // Add match.
-    matches->push_back(tn->topic);
+    // Find all names matching the prefix. Stop if we hit the limit.
+    int index = lo;
+    while (index < names_.size()) {
+      // Check if we have reached the limit.
+      if (matches->size() > limit) break;
 
-    index++;
+      // Stop if the current name does not match.
+      const TopicName *tn = names_[index];
+      Text name(tn->name);
+      if (flags & CS_FULL) {
+        if (name != normalized_query) break;
+      } else {
+        if (!name.starts_with(normalized_query)) break;
+      }
+
+      // Add match.
+      matches->push_back(tn->topic);
+
+      index++;
+    }
   }
 }
 
@@ -1068,11 +1077,16 @@ Array CollabCase::Search(CollabReader *reader) {
   int limit = reader->ReadInt();
   int flags = reader->ReadInt();
   Handles hits(&store_);
-  Handle idmatch = store_.LookupExisting(query);
-  if (!idmatch.IsNil()) hits.push_back(idmatch);
-  index_.Search(query, limit, flags, &hits);
 
+  // Check for matching topic id.
+  Handle idmatch = store_.LookupExisting(query);
+  if (!idmatch.IsNil() && topics_.Contains(idmatch)) hits.push_back(idmatch);
+
+  // Search topic names and aliases for  matches.
+  index_.Search(query, limit, flags, &hits);
   Handles matches(&store_);
+
+  // Return matches.
   for (Handle h : hits) {
     Frame hit(&store_, h);
     if (!hit.valid()) continue;
@@ -1173,10 +1187,11 @@ bool CollabCase::Flush(string *timestamp) {
   casefile_.Set(n_modified, modtime);
 
   // Write case to file.
-  LOG(INFO) << "Save case #" << caseid_;
   WriteCase();
   dirty_ = false;
   if (timestamp) *timestamp = modtime;
+  int secs = time(nullptr) - now;
+  LOG(INFO) << "Saved case #" << caseid_ << " (" << secs << " secs)";
   return true;
 }
 

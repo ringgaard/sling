@@ -181,7 +181,8 @@ class TopicList extends Component {
         "Delete topics",
         `Delete ${selection.length} topics?`,
         "Delete")) return;
-      } else if (editor.refcount(selection[0]) < 2) {
+      } else if (editor.folder != editor.work &&
+                 editor.refcount(selection[0]) < 2) {
         if (!await StdDialog.confirm(
         "Delete topic",
         `Delete ${selection[0].get(n_name) || selection[0].id}?`,

@@ -136,6 +136,8 @@ export class SearchIndex {
     this.ids = new Map();
     this.names = new Array();
     for (let topic of topics) {
+      if (topic.isproxy()) continue;
+
       // Add topic ids to id index.
       this.ids.set(topic.id, topic);
       for (let link of topic.links()) {
@@ -143,17 +145,15 @@ export class SearchIndex {
       }
 
       // Add topic names, aliases, and xrefs to index.
-      if (!topic.isproxy()) {
-        for (let [prop, value] of topic) {
-          if (prop == n_name || prop == n_birth_name || prop == n_alias) {
-            let alias = prop == n_alias;
-            let name = normalized(value);
-            this.names.push({name, topic, alias});
-          } else if (prop && prop.get && prop.get(n_target) == n_xref_type) {
-            let xref = store.resolve(value);
-            let identifier = `${prop.id}/${xref}`;
-            if (!this.ids.has(identifier)) this.ids.set(identifier, topic);
-          }
+      for (let [prop, value] of topic) {
+        if (prop == n_name || prop == n_birth_name || prop == n_alias) {
+          let alias = prop == n_alias;
+          let name = normalized(value);
+          this.names.push({name, topic, alias});
+        } else if (prop && prop.get && prop.get(n_target) == n_xref_type) {
+          let xref = store.resolve(value);
+          let identifier = `${prop.id}/${xref}`;
+          if (!this.ids.has(identifier)) this.ids.set(identifier, topic);
         }
       }
     }
