@@ -451,7 +451,7 @@ export class Collaboration {
 
   // Send folder update.
   folder_updated(name, content) {
-    console.log("send folder update", name, content);
+    console.log("send folder update", name);
     let encoder = new Encoder(store, false);
     encoder.write_varint(COLLAB_UPDATE);
     encoder.write_varint(CCU_FOLDER);

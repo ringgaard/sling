@@ -1025,7 +1025,6 @@ void CollabCase::Redirect(CollabReader *reader) {
   Handle source = store_.LookupExisting(sourceid);
   if (source.IsNil()) return;
   Handle target = store_.LookupExisting(targetid);
-  if (target.IsNil()) return;
 
   // Redirect source to target.
   Handles updates(&store_);
@@ -1036,7 +1035,11 @@ void CollabCase::Redirect(CollabReader *reader) {
     bool updated = false;
     for (Slot *s = topic->begin(); s < topic->end(); ++s) {
       if (s->value == source) {
-        s->value = target;
+        if (target.IsNil()) {
+          s->value = store_.AllocateString(targetid);
+        } else {
+          s->value = target;
+        }
         updated = true;
       } else if (s->name == Handle::is()) {
         if (store_.IsString(s->value)) {
@@ -1050,7 +1053,11 @@ void CollabCase::Redirect(CollabReader *reader) {
         FrameDatum *qualifer = store_.GetFrame(s->value);
         for (Slot *qs = qualifer->begin(); qs < qualifer->end(); ++qs) {
           if (qs->value == source) {
-            qs->value = target;
+            if (target.IsNil()) {
+              qs->value = store_.AllocateString(targetid);
+            } else {
+              qs->value = target;
+            }
             updated = true;
           }
         }

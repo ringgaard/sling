@@ -72,3 +72,19 @@ class DupsService:
 
     return {"dups": dups, "missing": missing}
 
+class ProfileService:
+  def handle(self, request):
+    r = json.loads(request.body)
+    itemid = r.get("itemid")
+    images = r["images"]
+    num_added = 0
+    profile = photolib.Profile(itemid)
+    for image in images:
+      nsfw = False
+      if image.startswith("!"):
+        nsfw = True
+        image = image[1:]
+      num_added += profile.add_photo(image, nsfw=nsfw)
+    profile.write()
+    return {"images": num_added}
+

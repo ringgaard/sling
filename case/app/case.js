@@ -1049,7 +1049,7 @@ class CaseEditor extends MdApp {
     return link;
   }
 
-  async delete_topics(topics) {
+  async delete_topics(topics, preserve) {
     if (this.readonly || topics.length == 0) return;
 
     // Focus should move to first topic after selection.
@@ -1064,7 +1064,6 @@ class CaseEditor extends MdApp {
       if (topic == this.main) return;
 
       // Delete topic from current folder.
-      let is_scrap = this.scraps.includes(topic);
       let pos = this.folder.indexOf(topic);
       if (pos != -1) {
         this.folder.splice(pos, 1);
@@ -1072,18 +1071,23 @@ class CaseEditor extends MdApp {
 
       // Delete topic from case.
       if (this.refcount(topic) == 0) {
+        let is_scrap = this.scraps.includes(topic);
         if (is_scrap) {
           // Delete draft topic from case and redirect all references to it.
           console.log("purge topic", topic.id);
           this.purge_topic(topic);
-        } else if (this.collab) {
+        } else {
+          // Delete topic.
           let pos = this.topics.indexOf(topic);
           if (pos != -1) {
             this.topics.splice(pos, 1);
           } else {
             console.log("topic not found", topic.id);
           }
-          if (!this.collab) this.scraps.push(topic);
+
+          // Move topic to scraps.
+          if (preserve || !this.collab) this.scraps.push(topic);
+
           this.topic_deleted(topic);
         }
       }
@@ -1181,7 +1185,7 @@ class CaseEditor extends MdApp {
     await write_to_clipboard(selected);
 
     // Delete selected topics.
-    this.delete_topics(selected);
+    this.delete_topics(selected, true);
   }
 
   async oncopy(e) {

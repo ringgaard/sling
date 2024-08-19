@@ -35,6 +35,7 @@ services = {
   "article": Service("article", "ArticleService"),
   "biz": Service("biz", "BizService", True),
   "dups": Service("photodups", "DupsService"),
+  "profile": Service("photodups", "ProfileService"),
   "newssite": Service("newssite", "NewsSiteService"),
   "opencorp": Service("opencorp", "OpenCorpService", True),
   "rdf": Service("rdf", "RDFService", True),

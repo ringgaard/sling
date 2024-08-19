@@ -405,6 +405,7 @@ class TopicToolbox extends MdToolbox {
             <md-menu-item id="newdoc">Add document</md-menu-item>
             <md-menu-item id="extract">Extract text</md-menu-item>
             <md-menu-item id="mentions">Find mentions</md-menu-item>
+            <md-menu-item id="toprofile">Move photos to profile</md-menu-item>
           </md-menu>
    `;
  }
@@ -455,6 +456,8 @@ class TopicCard extends Component {
         this.onextract(e);
       } else if (action == "mentions") {
         this.onmentions(e);
+      } else if (action == "toprofile") {
+        this.ontoprofile(e);
       }
     });
 
@@ -1073,6 +1076,27 @@ class TopicCard extends Component {
         open: true,
       });
     }
+  }
+
+  async ontoprofile() {
+    // Get list of images.
+    let topic = this.state;
+    let images = [];
+    for (let m of topic.all(n_media)) images.push(m);
+    if (images.length == 0) return;
+
+    // Get item id.
+    let itemid = (topic.link() || topic).id;
+
+    // Add topic images to photo profile.
+    this.style.cursor = "wait";
+    let r = await fetch("/case/service/profile", {
+      method: "POST",
+      body: JSON.stringify({itemid, images}),
+    });
+    this.style.cursor = "";
+    let response = await r.json();
+    inform(plural(response.images, "photo") + " added to profile");
   }
 
   ondown(e) {
