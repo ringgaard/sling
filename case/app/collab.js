@@ -22,6 +22,7 @@ const COLLAB_SEARCH   = 10;
 const COLLAB_TOPICS   = 12;
 const COLLAB_LABELS   = 13;
 const COLLAB_REDIRECT = 14;
+const COLLAB_SHARE    = 15;
 
 const COLLAB_ERROR    = 127;
 
@@ -227,6 +228,15 @@ export class Collaboration {
         }
         break;
       }
+      case COLLAB_SHARE: {
+        let modtime = decoder.read_varstring();
+        this.onfail = null;
+        if (this.onshare) {
+          this.onshare(modtime);
+          this.onshare = null;
+        }
+        break;
+      }
       case COLLAB_ERROR: {
         let message = decoder.read_varstring();
         if (this.onfail) {
@@ -356,6 +366,30 @@ export class Collaboration {
 
       this.send(packet);
     });
+  }
+
+  // Update sharing of collaboration.
+  async share(share, publish) {
+    console.log("share collaboration", share, publish);
+    return new Promise((resolve, reject) => {
+      this.onshare = modtime => resolve(modtime);
+      this.onfail = e => reject(e);
+
+      let encoder = new Encoder(store, false);
+      encoder.write_varint(COLLAB_SHARE);
+      encoder.write_varint(share);
+      encoder.write_varint(publish);
+      let packet = encoder.output();
+
+      this.send(packet);
+    });
+
+    let encoder = new Encoder(store, false);
+    encoder.write_varint(COLLAB_SHARE);
+    encoder.write_varint(share);
+    encoder.write_varint(publish);
+    let packet = encoder.output();
+    this.send(packet);
   }
 
   // Topic search.

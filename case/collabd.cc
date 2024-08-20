@@ -30,6 +30,7 @@
 #include "sling/frame/encoder.h"
 #include "sling/frame/reader.h"
 #include "sling/frame/wire.h"
+#include "sling/db/dbclient.h"
 #include "sling/net/http-server.h"
 #include "sling/net/web-sockets.h"
 #include "sling/stream/input.h"
@@ -50,6 +51,7 @@ DEFINE_int32(flush, 30, "Number of seconds before writing changes to disk");
 DEFINE_int32(ping, 30, "Number of seconds between keep-alive pings");
 DEFINE_int32(onetime_invite, false, "Invalidate invite when joining");
 DEFINE_string(datadir, ".", "Data directory for collaborations");
+DEFINE_string(pubdb, "", "Case publishing database");
 
 // Collaboration protocol opcodes.
 enum CollabOpcode {
@@ -66,6 +68,7 @@ enum CollabOpcode {
   COLLAB_TOPICS   = 12,   // retrieve tropics
   COLLAB_LABELS   = 13,   // retrieve labels for topics
   COLLAB_REDIRECT = 14,   // redirect all reference to topic to another
+  COLLAB_SHARE    = 15,   // share/publish collaboration case
 
   COLLAB_ERROR   = 127,  // error message
 };
@@ -103,6 +106,9 @@ HTTPServer *httpd = nullptr;
 // Collaboration server.
 CollabService *collabd = nullptr;
 
+// Case publishing database.
+DBClient pubdb;
+
 // Commons store with global symbols.
 Store *commons;
 Names names;
@@ -111,6 +117,9 @@ Name n_main(names, "main");
 Name n_topics(names, "topics");
 Name n_folders(names, "folders");
 Name n_modified(names, "modified");
+Name n_shared(names, "shared");
+Name n_share(names, "share");
+Name n_publish(names, "publish");
 Name n_lazyload(names, "lazyload");
 Name n_next(names, "next");
 Name n_author(names, "P50");
@@ -332,6 +341,9 @@ class CollabCase {
   // Search for matching topics in collaboration.
   Array Search(CollabReader *reader);
 
+  // Share/publish collaboration case.
+  bool Share(bool share, bool publish, string *timestamp);
+
   // Broadcast packet to clients. Do not send packet to source.
   void Broadcast(CollabClient *source, const Slice &packet);
 
@@ -348,7 +360,7 @@ class CollabCase {
   void WriteParticipants();
 
   // Flush changes to disk.
-  bool Flush(string *timestamp);
+  bool Flush(bool share, string *timestamp);
 
   // Check for existing case.
   static bool Exists(int caseid) {
@@ -470,6 +482,9 @@ class CollabClient : public WebSocket {
 
   // Flush collaboration to disk.
   void Flush(CollabReader *reader);
+
+  // Share/publish collaboration.
+  void Share(CollabReader *reader);
 
   // Bulk import topics into collaboration.
   void Import(CollabReader *reader);
@@ -1113,6 +1128,61 @@ Array CollabCase::Search(CollabReader *reader) {
   return Array(&store_, matches);
 }
 
+bool CollabCase::Share(bool share, bool publish, string *timestamp) {
+  // Connect to case database if not already done.
+  if (!pubdb.connected()) {
+    if (FLAGS_pubdb.empty()) {
+      LOG(WARNING) << "No case database for case sharing";
+      return false;
+    }
+    Status st = pubdb.Connect(FLAGS_pubdb, "collabd");
+    if (!st.ok()) {
+      LOG(ERROR) << "Error connecting to case database: " << st;
+      return false;
+    }
+  }
+
+  if (share || publish) {
+    // Flush changes to disk.
+    casefile_.Set(n_share, share);
+    casefile_.Set(n_publish, publish);
+    Flush(true, timestamp);
+
+    // Serialize case.
+    ArrayOutputStream stream;
+    Output output(&stream);
+    Encoder encoder(&store_, &output);
+    Serialize(&encoder, false);
+    output.Flush();
+
+    // Write case to case database.
+    string key = StrCat(caseid_);
+    DBRecord record;
+    record.key = key;
+    record.version = time(nullptr);
+    record.value = stream.data();
+
+    Status st = pubdb.Put(&record);
+    if (!st.ok()) {
+      LOG(ERROR) << "Error writing to case database: " << st;
+      return false;
+    }
+
+    LOG(INFO) << (publish ? "Published" : "Shared") << " case #" << caseid_;
+  } else {
+    LOG(INFO) << "Unshare case #" << caseid_;
+    timestamp->clear();
+    string key = StrCat(caseid_);
+    Status st = pubdb.Delete(key);
+    if (!st.ok()) {
+      LOG(ERROR) << "Error deleting case from database: " << st;
+      return false;
+    }
+  }
+
+  return true;
+}
+
 bool CollabCase::ReadCase() {
   // Open case file.
   File *f;
@@ -1179,8 +1249,8 @@ void CollabCase::WriteParticipants() {
   f->Close();
 }
 
-bool CollabCase::Flush(string *timestamp) {
-  if (!dirty_) {
+bool CollabCase::Flush(bool share, string *timestamp) {
+  if (!share && !dirty_) {
     if (timestamp) *timestamp = casefile_.GetString(n_modified);
     return false;
   }
@@ -1192,6 +1262,7 @@ bool CollabCase::Flush(string *timestamp) {
   gmtime_r(&now, &tm);
   strftime(modtime, sizeof modtime, "%Y-%m-%dT%H:%M:%SZ", &tm);
   casefile_.Set(n_modified, modtime);
+  if (share) casefile_.Set(n_shared, modtime);
 
   // Write case to file.
   WriteCase();
@@ -1260,6 +1331,7 @@ void CollabClient::Receive(const uint8 *data, uint64 size, bool binary) {
     case COLLAB_TOPICS: Topics(&reader); break;
     case COLLAB_LABELS: Labels(&reader); break;
     case COLLAB_REDIRECT: Redirect(&reader); break;
+    case COLLAB_SHARE: Share(&reader); break;
     default:
       LOG(ERROR) << "Invalid collab op: " << op;
   }
@@ -1302,7 +1374,7 @@ void CollabClient::Create(CollabReader *reader) {
 
   // Flush to disk.
   collab->WriteParticipants();
-  collab->Flush(nullptr);
+  collab->Flush(false, nullptr);
 
   // Return reply which signals to the client that the collaboration server
   // has taken ownership of the case.
@@ -1447,7 +1519,7 @@ void CollabClient::Flush(CollabReader *reader) {
 
   // Flush collaboration.
   string modtime;
-  bool saved = collab_->Flush(&modtime);
+  bool saved = collab_->Flush(false, &modtime);
 
   // Return latest modification time.
   CollabWriter writer;
@@ -1500,6 +1572,37 @@ void CollabClient::Search(CollabReader *reader) {
   Encoder encoder(collab_->store(), writer.output(), false);
   encoder.Encode(hits);
   writer.Send(this);
+}
+
+void CollabClient::Share(CollabReader *reader) {
+  // Make sure client is logged into case.
+  if (collab_ == nullptr) {
+    Error("user not logged in");
+    return;
+  }
+  bool share = reader->ReadInt();
+  bool publish = reader->ReadInt();
+
+  // Share collaboration.
+  string modtime;
+  bool ok = collab_->Share(share, publish, &modtime);
+  if (!ok) {
+    Error("error sharing collaboration");
+    return;
+  }
+
+  // Return modification/sharing time.
+  CollabWriter writer;
+  writer.WriteInt(COLLAB_SHARE);
+  writer.WriteString(modtime);
+  writer.Send(this);
+
+  // Broadcast modification time.
+  CollabWriter broadcast;
+  broadcast.WriteInt(COLLAB_UPDATE);
+  broadcast.WriteInt(CCU_SAVE);
+  broadcast.WriteString(modtime);
+  service_->Notify(collab_, this, broadcast.packet());
 }
 
 void CollabClient::Topics(CollabReader *reader) {
@@ -1660,7 +1763,7 @@ void CollabService::Flush(bool notify) {
   MutexLock lock(&mu);
   string timestamp;
   for (CollabCase *collab : collaborations_) {
-    if (collab->Flush(&timestamp) && notify) {
+    if (collab->Flush(false, &timestamp) && notify) {
       // Broadcast save.
       CollabWriter writer;
       writer.WriteInt(COLLAB_UPDATE);

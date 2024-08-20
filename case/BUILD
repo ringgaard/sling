@@ -11,6 +11,7 @@ cc_binary(
     "//sling/frame:encoder",
     "//sling/frame:reader",
     "//sling/frame:wire",
+    "//sling/db:dbclient",
     "//sling/net:http-server",
     "//sling/net:web-sockets",
     "//sling/stream:input",

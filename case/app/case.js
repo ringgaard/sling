@@ -413,62 +413,67 @@ class CaseEditor extends MdApp {
     let share = casefile.get(n_share);
     let publish = casefile.get(n_publish);
     let secret = casefile.get(n_secret);
-    let dialog = new SharingDialog({share, publish, secret});
+    let collab = !!this.collab;
+    let dialog = new SharingDialog({share, publish, secret, collab});
     let result = await dialog.show();
     if (result) {
       // Update sharing information.
       casefile.set(n_share, result.share);
       casefile.set(n_publish, result.publish);
       casefile.set(n_secret, result.secret);
+
       if (this.collab) {
+        // Let collaboration server share case.
+        let modtime = await this.collab.share(result.share, result.publish);
         this.casefile.set(n_share, result.share);
         this.casefile.set(n_publish, result.publish);
-        this.casefile.set(n_secret, result.secret);
-      }
-
-      // Update modification and sharing time.
-      let ts = new Date().toJSON();
-      if (this.collab) ts = await this.collab.flush();
-      casefile.set(n_modified, ts);
-      if (result.share) {
-        casefile.set(n_shared, ts);
+        this.casefile.set(n_secret, null);
+        this.casefile.set(n_shared, modtime);
+        this.localcase.set(n_shared, modtime || null);
       } else {
-        casefile.set(n_shared, null);
-      }
+        // Update modification and sharing time.
+        let ts = new Date().toJSON();
+        casefile.set(n_modified, ts);
+        if (result.share) {
+          casefile.set(n_shared, ts);
+        } else {
+          casefile.set(n_shared, null);
+        }
 
-      // Save case before sharing.
-      this.purge_scraps();
-      this.mark_clean();
-      await this.match("#app").save_case(casefile);
+        // Save case before sharing.
+        this.purge_scraps();
+        this.mark_clean();
+        await this.match("#app").save_case(casefile);
 
-      // Encode case file.
-      var data;
-      if (result.secret) {
-        // Share encrypted case.
-        let encrypted = await encrypt(this.casefile);
-        data = encrypted.encode();
-      } else if (result.share) {
-        // Encode case for sharing.
-        data = this.encoded();
-      } else {
-        // Do not send case content when unsharing.
-        let unshare = store.frame();
-        unshare.add(n_caseid, this.caseid());
-        unshare.add(n_share, false);
-        data = unshare.encode();
-      }
+        // Encode case file.
+        var data;
+        if (result.secret) {
+          // Share encrypted case.
+          let encrypted = await encrypt(this.casefile);
+          data = encrypted.encode();
+        } else if (result.share) {
+          // Encode case for sharing.
+          data = this.encoded();
+        } else {
+          // Do not send case content when unsharing.
+          let unshare = store.frame();
+          unshare.add(n_caseid, this.caseid());
+          unshare.add(n_share, false);
+          data = unshare.encode();
+        }
 
-      // Send case to server.
-      let r = await fetch("/case/share", {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/sling'
-        },
-        body: data
-      });
-      if (!r.ok) {
-        console.log("Sharing error", r);
-        StdDialog.error(`Error ${r.status} sharing case: ${r.statusText}`);
+        // Send case to server.
+        let r = await fetch("/case/share", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/sling'
+          },
+          body: data
+        });
+        if (!r.ok) {
+          console.log("Sharing error", r);
+          StdDialog.error(`Error ${r.status} sharing case: ${r.statusText}`);
+        }
       }
     }
   }
@@ -571,9 +576,9 @@ class CaseEditor extends MdApp {
     aux_collectors.labels = null;
 
     // Connect to collaboration server for collaboration case.
-    let collab_url = this.casefile.get(n_collab)
     if (this.casefile.get(n_collab)) {
       // Connect to collaboration server.
+      let collab_url = this.casefile.get(n_collab);
       this.collab = new Collaboration();
 
       try {
@@ -596,7 +601,7 @@ class CaseEditor extends MdApp {
       this.collab.listener = this;
 
       // Update local case.
-      for (let prop of [n_created, n_modified, n_main]) {
+      for (let prop of [n_created, n_modified, n_shared, n_main]) {
         this.localcase.set(prop, this.casefile.get(prop));
       }
       this.match("#app").save_case(this.localcase);
@@ -2082,13 +2087,15 @@ class SharingDialog extends MdDialog {
     this.url = window.location.href;
     this.find("#sharingurl").update(this.sharingurl());
 
-    for (let checkbox of ["#private", "#share", "#restrict", "#publish"]) {
-      this.attach(this.onchange, "change", checkbox);
-    }
+
+    this.attach(this.onchange, "change", "#private");
+    this.attach(this.onchange, "change", "#share");
+    if (!this.state.collab) this.attach(this.onchange, "change", "#restrict");
+    this.attach(this.onchange, "change", "#publish");
   }
 
   onchange(e) {
-    if (this.find("#restrict").checked) {
+    if (this.find("#restrict")?.checked) {
       this.secret = generate_key();
     } else {
       this.secret = undefined;
@@ -2099,7 +2106,7 @@ class SharingDialog extends MdDialog {
   sharingurl() {
     if (this.find("#private").checked) {
       return "";
-    } else if (this.find("#restrict").checked) {
+    } else if (this.find("#restrict")?.checked) {
       return this.url + "#k=" + this.secret;
     } else {
       return this.url;
@@ -2114,9 +2121,35 @@ class SharingDialog extends MdDialog {
   }
 
   render() {
-    return `
-      <md-dialog-top>Share case</md-dialog-top>
-      <div id="content">
+    let h = new Array();
+    h.push('<md-dialog-top>Share case</md-dialog-top>');
+    h.push('<div id="content">');
+    if (this.state.collab) {
+      h.push(`
+        <md-radio-button
+          id="private"
+          name="sharing"
+          value="0"
+          label="Private (only accessible to participants)">
+        </md-radio-button>
+        <md-radio-button
+          id="share"
+          name="sharing"
+          value="1"
+          label="Share (public so other users can view it)">
+        </md-radio-button>
+        <md-radio-button
+          id="publish"
+          name="sharing"
+          value="3"
+          label="Publish (case topics in public knowledge base)">
+        </md-radio-button>
+        <div>
+          Sharing URL:
+          <md-copyable-text id="sharingurl"></md-copyable-text>
+        </div>`);
+    } else {
+      h.push(`
         <md-radio-button
           id="private"
           name="sharing"
@@ -2144,13 +2177,18 @@ class SharingDialog extends MdDialog {
         <div>
           Sharing URL:
           <md-copyable-text id="sharingurl"></md-copyable-text>
-        </div>
-      </div>
+        </div>`);
+    }
+    h.push("</div>");
+
+    h.push(`
       <md-dialog-bottom>
         <button id="cancel">Cancel</button>
         <button id="submit">Share</button>
       </md-dialog-bottom>
-    `;
+    `);
+
+    return h.join("");
   }
 
   static stylesheet() {
