@@ -393,7 +393,11 @@ class CaseEditor extends MdApp {
   async onsave(e) {
     if (this.readonly) return;
     this.sidebar.commit();
-    if (this.dirty) {
+    if (this.collab) {
+      let ts = await this.collab.flush();
+      this.casefile.set(n_modified, ts);
+      await this.save();
+    } else if (this.dirty) {
       // Update modification time.
       let ts = new Date().toJSON();
       this.casefile.set(n_modified, ts);
@@ -402,7 +406,7 @@ class CaseEditor extends MdApp {
       this.purge_scraps();
 
       // Save case to local database.
-      await this.match("#app").save_case(this.casefile);
+      await this.save();
       this.mark_clean();
     }
   }
@@ -425,11 +429,15 @@ class CaseEditor extends MdApp {
       if (this.collab) {
         // Let collaboration server share case.
         let modtime = await this.collab.share(result.share, result.publish);
+        if (!modtime) modtime = null;
         this.casefile.set(n_share, result.share);
         this.casefile.set(n_publish, result.publish);
         this.casefile.set(n_secret, null);
         this.casefile.set(n_shared, modtime);
-        this.localcase.set(n_shared, modtime || null);
+        this.casefile.set(n_modified, modtime);
+        this.localcase.set(n_shared, modtime);
+        this.localcase.set(n_modified, modtime);
+        await this.save();
       } else {
         // Update modification and sharing time.
         let ts = new Date().toJSON();
@@ -443,7 +451,7 @@ class CaseEditor extends MdApp {
         // Save case before sharing.
         this.purge_scraps();
         this.mark_clean();
-        await this.match("#app").save_case(casefile);
+        await this.save();
 
         // Encode case file.
         var data;
@@ -507,7 +515,7 @@ class CaseEditor extends MdApp {
         this.casefile.remove(n_next);
 
         // Save and reload.
-        this.match("#app").save_case(this.casefile);
+        await this.save();
         await this.update(this.casefile);
 
         inform("Case has been turned into a collaboration. " +
@@ -604,7 +612,7 @@ class CaseEditor extends MdApp {
       for (let prop of [n_created, n_modified, n_shared, n_main]) {
         this.localcase.set(prop, this.casefile.get(prop));
       }
-      this.match("#app").save_case(this.localcase);
+      await this.save();
       if (this.lazyload) {
         aux_collectors.items = this.collab.topic_collector();
         aux_collectors.labels = this.collab.label_collector();
@@ -710,7 +718,11 @@ class CaseEditor extends MdApp {
     this.find("#save").enable();
   }
 
-  close() {
+  async save() {
+    await this.match("#app").save_case(this.localcase || this.casefile);
+  }
+
+  async close() {
     sidebar.update();
     if (this.collab) {
       this.collab.close();
@@ -724,17 +736,15 @@ class CaseEditor extends MdApp {
         "Cancel": "cancel",
         "Save": "save",
       }
-      StdDialog.choose("Discard changes?", msg, buttons)
-      .then(result => {
-        if (result == "save") {
-          this.match("#app").save_case(this.casefile);
-          this.mark_clean();
-          app.show_manager();
-        } else if (result == "close") {
-          this.mark_clean();
-          app.show_manager();
-        }
-      });
+      let result = await StdDialog.choose("Discard changes?", msg, buttons);
+      if (result == "save") {
+        await this.save();
+        this.mark_clean();
+        app.show_manager();
+      } else if (result == "close") {
+        this.mark_clean();
+        app.show_manager();
+      }
     } else {
       app.show_manager();
     }
@@ -1846,6 +1856,10 @@ class CaseEditor extends MdApp {
   remote_save(modtime) {
     console.log("received save", modtime);
     this.casefile.set(n_modified, modtime);
+    if (this.localcase) {
+      this.localcase.set(n_modified, modtime);
+      this.save();
+    }
   }
 
   async remote_closed(collab) {

@@ -1171,7 +1171,9 @@ bool CollabCase::Share(bool share, bool publish, string *timestamp) {
     LOG(INFO) << (publish ? "Published" : "Shared") << " case #" << caseid_;
   } else {
     LOG(INFO) << "Unshare case #" << caseid_;
-    timestamp->clear();
+    casefile_.Set(n_share, false);
+    casefile_.Set(n_publish, false);
+    Flush(true, nullptr);
     string key = StrCat(caseid_);
     Status st = pubdb.Delete(key);
     if (!st.ok()) {
