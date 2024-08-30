@@ -107,6 +107,7 @@ export class PhotoGallery extends MdModal {
     this.attach(this.onzoomout, "click", "#zoomout");
     this.attach(this.onrefresh, "click", "#refresh");
     this.attach(this.oncopyurl, "click", "#copyurl");
+    this.attach(this.onsearch, "click", "#search");
     this.attach(this.close, "click", "#close");
     this.attach(this.onsource, "click", ".domain");
     this.attach(this.onkeypress, "keydown");
@@ -175,6 +176,12 @@ export class PhotoGallery extends MdModal {
   onopennew(e) {
     let url = imageurl(this.photos[this.current].url, false);
     window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+  onsearch(e) {
+    let url = this.photos[this.current].url
+    window.open(`https://lens.google.com/uploadbyurl?url=${url}`,
+                 "_blank", "noopener,noreferrer");
   }
 
   onsource(e) {
@@ -430,6 +437,8 @@ export class PhotoGallery extends MdModal {
         <md-icon-button id="fullscreen" icon="fullscreen">
         </md-icon-button>
         <md-icon-button id="copyurl" icon="content_copy">
+        </md-icon-button>
+        <md-icon-button id="search" icon="image_search">
         </md-icon-button>
         <md-icon-button id="close" icon="close">
         </md-icon-button>
