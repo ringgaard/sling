@@ -347,6 +347,7 @@ spammers = set([
   "thegreensociety.net",
   "trade365.org",
   "workona.com",
+  "15.152.65.160",
 ])
 
 total_hits = 0
@@ -421,6 +422,10 @@ for logfn in flags.arg.logfiles:
         num_monitor += 1
       else:
         num_internal += 1
+      continue
+    if ipaddr in spammers:
+      spam_hits[ipaddr] += 1
+      num_spammers += 1
       continue
 
     # Bots.
@@ -655,7 +660,6 @@ if flags.arg.v:
   print_table("MEDIA", "file", media_hits)
   print_table("ITEMS", "item", item_hits)
   print_table("QUERIES", "query", query_hits)
-  print_table("COLD HITS", "user agent", cold_agents)
 print_table("REFFERING DOMAINS", "domain", referring_domains)
 print_table("REFERRERS", "referrer", referrers)
 

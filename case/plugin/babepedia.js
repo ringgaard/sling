@@ -137,11 +137,11 @@ export default class BabepediaPlugin {
       let value = m[2].trim();
       if (field == "Born") {
         let m = value.match(/\w+ (\d+)\w+ of (\w+) (\d+)/);
-        let date = new Date(m[1] + " " + m[2] + " " + m[3]);
-        topic.put(n_date_of_birth, date2sling(date));
+          let date = new Date(m ? m[1] + " " + m[2] + " " + m[3] : value);
+          topic.put(n_date_of_birth, date2sling(date));
       } else if (field == "Died") {
         let m = value.match(/\w+ (\d+)\w+ of (\w+) (\d+)/);
-        let date = new Date(m[1] + " " + m[2] + " " + m[3]);
+        let date = new Date(m ? m[1] + " " + m[2] + " " + m[3] : value);
         topic.put(n_date_of_death, date2sling(date));
       } else if (field == "Birthplace") {
         let location = value.split(/, /);
