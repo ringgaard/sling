@@ -145,11 +145,11 @@ string RandomKey() {
 // Topic name index.
 class TopicNameIndex {
  public:
-  TopicNameIndex(Store *store);
+  TopicNameIndex(Store *store, bool normalize);
   ~TopicNameIndex();
 
   // Add/update names for topic.
-  void Update(const Frame &topic);
+  void Update(const Frame &topic, bool ids);
 
   // Delete names for topic.
   void Delete(const Frame &topic);
@@ -167,8 +167,19 @@ class TopicNameIndex {
     TopicName *next;
   };
 
+  static TopicName *AddName(TopicName *t, Handle topic, const string &name) {
+    TopicName *tn = new TopicName();
+    tn->name = strdup(name.c_str());
+    tn->topic = topic;
+    tn->next = t;
+    return tn;
+  }
+
   // Store for topics.
   Store *store_;
+
+  // Normalization of names.
+  bool normalize_;
 
   // Topics with linked list of aliases.
   HandleMap<TopicName *> topics_;
@@ -291,8 +302,15 @@ class CollabWriter {
 // A collaboration case is a shared case managed by the collaboration server.
 class CollabCase {
  public:
-  CollabCase() : store_(commons), index_(&store_) {}
-  CollabCase(int caseid) : store_(commons), index_(&store_), caseid_(caseid) {}
+  CollabCase()
+    : store_(commons),
+      index_(&store_, true),
+      idindex_(&store_, false) {}
+  CollabCase(int caseid)
+    : store_(commons),
+      index_(&store_, true),
+      idindex_(&store_, false),
+      caseid_(caseid) {}
 
   // Read case file from input packet.
   bool Parse(CollabReader *reader);
@@ -395,6 +413,9 @@ class CollabCase {
 
   // Topic name search index.
   TopicNameIndex index_;
+
+  // Redirected topic id search index.
+  TopicNameIndex idindex_;
 
   // Case file.
   Frame casefile_;
@@ -596,8 +617,9 @@ class CollabService {
   bool terminate_ = false;
 };
 
-TopicNameIndex::TopicNameIndex(Store *store) {
+TopicNameIndex::TopicNameIndex(Store *store, bool normalize) {
   store_ = store;
+  normalize_ = normalize;
 }
 
 TopicNameIndex::~TopicNameIndex() {
@@ -612,7 +634,7 @@ TopicNameIndex::~TopicNameIndex() {
   }
 }
 
-void TopicNameIndex::Update(const Frame &topic) {
+void TopicNameIndex::Update(const Frame &topic, bool ids) {
   // Delete exsting names for topic.
   TopicName *t = topics_[topic.handle()];
   while (t != nullptr) {
@@ -622,19 +644,37 @@ void TopicNameIndex::Update(const Frame &topic) {
     t = next;
   }
 
-  // Add new names for topic.
-  string normalized;
-  for (const Slot &s : topic) {
-    if (s.name == n_name || s.name == n_alias) {
-      String str(store_, s.value);
-      if (!str.valid()) continue;
-      Text name = str.text();
-      UTF8::Normalize(name.data(), name.size(), NORMALIZE_DEFAULT, &normalized);
-      TopicName *tn = new TopicName();
-      tn->name = strdup(normalized.c_str());
-      tn->topic = topic.handle();
-      tn->next = t;
-      t = tn;
+  if (ids) {
+    // Add id aliases for topic.
+    for (const Slot &s : topic) {
+      if (s.name == Handle::is()) {
+        if (store_->IsString(s.value)) {
+          String str(store_, s.value);
+          if (!str.valid()) continue;
+          string id = str.text().str();
+          t = AddName(t, topic.handle(), id);
+        } else if (store_->IsPublic(s.name)) {
+          string id = store_->FrameId(s.name).str();
+          t = AddName(t, topic.handle(), id);
+        }
+      }
+    }
+  } else {
+    // Add new names and aliases for topic.
+    string normalized;
+    for (const Slot &s : topic) {
+      if (s.name == n_name || s.name == n_alias) {
+        String str(store_, s.value);
+        if (!str.valid()) continue;
+        Text name = str.text();
+        if (normalize_) {
+          UTF8::Normalize(name.data(), name.size(), NORMALIZE_DEFAULT,
+                          &normalized);
+        } else {
+          normalized = name.str();
+        }
+        t = AddName(t, topic.handle(), normalized);
+      }
     }
   }
   topics_[topic.handle()] = t;
@@ -684,12 +724,15 @@ void TopicNameIndex::Search(const string &query, int limit, int flags,
 
   // Normalize query.
   string normalized;
-  UTF8::Normalize(query.data(), query.size(), NORMALIZE_DEFAULT, &normalized);
+  if (normalize_) {
+    UTF8::Normalize(query.data(), query.size(), NORMALIZE_DEFAULT, &normalized);
+  } else {
+    normalized = query;
+  }
   Text normalized_query(normalized);
 
   if (flags & CS_KEYWORD) {
     // Find substring matches.
-    LOG(INFO) << "find submatch: " << normalized << " in " << names_.size() << " names";
     for (TopicName *tn : names_) {
       if (matches->size() > limit) break;
       if (strstr(tn->name, normalized.c_str())) {
@@ -757,7 +800,8 @@ bool CollabCase::Parse(CollabReader *reader) {
     // Add topic names to seach index.
     for (int i = 0; i < topics_.length(); ++i) {
       Frame topic(&store_, topics_.get(i));
-      index_.Update(topic);
+      index_.Update(topic, false);
+      idindex_.Update(topic, true);
     }
   }
 
@@ -864,7 +908,10 @@ bool CollabCase::Update(CollabReader *reader) {
       } else {
         LOG(INFO) << "Case #" << caseid_ << " topic update " << topic.Id();
       }
-      if (lazyload_) index_.Update(topic);
+      if (lazyload_) {
+        index_.Update(topic, false);
+        idindex_.Update(topic, true);
+      }
       dirty_ = true;
       break;
     }
@@ -924,7 +971,11 @@ bool CollabCase::Update(CollabReader *reader) {
       if (topic.IsNil() || !topics_.Erase(topic)) {
         LOG(ERROR) << "Case #" << caseid_ << " unknown topic " << topicid;
       } else {
-        if (lazyload_) index_.Delete(Frame(&store_, topic));
+        if (lazyload_) {
+         Frame f(&store_, topic);
+          index_.Delete(f);
+          idindex_.Delete(f);
+        }
         LOG(INFO) << "Case #" << caseid_
                   << " topic " << topicid << " deleted";
         dirty_ = true;
@@ -1104,6 +1155,11 @@ Array CollabCase::Search(CollabReader *reader) {
   Handle idmatch = store_.LookupExisting(query);
   if (!idmatch.IsNil() && topics_.Contains(idmatch)) hits.push_back(idmatch);
 
+  // Check for matching redirects.
+  if (lazyload_) {
+    idindex_.Search(query, limit, CS_FULL, &hits);
+  }
+
   // Search topic names and aliases for  matches.
   index_.Search(query, limit, flags, &hits);
   Handles matches(&store_);
@@ -1216,7 +1272,8 @@ bool CollabCase::ReadCase() {
     // Add topic names to seach index.
     for (int i = 0; i < topics_.length(); ++i) {
       Frame topic(&store_, topics_.get(i));
-      index_.Update(topic);
+      index_.Update(topic, false);
+      idindex_.Update(topic, true);
     }
   }
 
