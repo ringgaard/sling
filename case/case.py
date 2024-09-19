@@ -166,6 +166,11 @@ def fetch_case(request):
   rec, ts  = casedb.get(str(caseid))
   if rec is None: return 404;
 
+  # Check if case is shared (not just published).
+  store = sling.Store(commons)
+  casefile = request.frame(store);
+  if not casefile[n_share]: return 403
+
   # Return case file.
   return CaseFile(rec, ts)
 

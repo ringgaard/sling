@@ -2090,22 +2090,23 @@ class SharingDialog extends MdDialog {
     if (this.state.publish) {
       this.find("#publish").update(true);
     } else if (this.state.secret) {
-      this.find("#restrict").update(true);
+      this.find("#restrict")?.update(true);
     } else if (this.state.share) {
       this.find("#share").update(true);
     } else {
-      this.find("#private").update(true);
+      this.find("#private")?.update(true);
     }
 
     this.secret = this.state.secret;
     this.url = window.location.href;
     this.find("#sharingurl").update(this.sharingurl());
 
-
-    this.attach(this.onchange, "change", "#private");
     this.attach(this.onchange, "change", "#share");
-    if (!this.state.collab) this.attach(this.onchange, "change", "#restrict");
     this.attach(this.onchange, "change", "#publish");
+    if (!this.state.collab)  {
+      this.attach(this.onchange, "change", "#private");
+      this.attach(this.onchange, "change", "#restrict");
+    }
   }
 
   onchange(e) {
@@ -2118,7 +2119,7 @@ class SharingDialog extends MdDialog {
   }
 
   sharingurl() {
-    if (this.find("#private").checked) {
+    if (this.find("#private")?.checked) {
       return "";
     } else if (this.find("#restrict")?.checked) {
       return this.url + "#k=" + this.secret;
@@ -2128,10 +2129,17 @@ class SharingDialog extends MdDialog {
   }
 
   submit() {
-    let share = !this.find("#private").checked;
-    let publish = this.find("#publish").checked;
-    let secret = this.secret;
-    this.close({share, publish, secret});
+    if (this.state.collab) {
+      let share = this.find("#share").checked;
+      let publish = this.find("#publish").checked;
+      let secret = null;
+      this.close({share, publish, secret});
+    } else {
+      let share = !this.find("#private").checked;
+      let publish = this.find("#publish").checked;
+      let secret = this.secret;
+      this.close({share, publish, secret});
+    }
   }
 
   render() {
@@ -2140,24 +2148,14 @@ class SharingDialog extends MdDialog {
     h.push('<div id="content">');
     if (this.state.collab) {
       h.push(`
-        <md-radio-button
-          id="private"
-          name="sharing"
-          value="0"
-          label="Private (only accessible to participants)">
-        </md-radio-button>
-        <md-radio-button
+        <md-checkbox
           id="share"
-          name="sharing"
-          value="1"
-          label="Share (public so other users can view it)">
-        </md-radio-button>
-        <md-radio-button
+          label="Share (public so other users can view case)">
+        </md-checkbox>
+        <md-checkbox
           id="publish"
-          name="sharing"
-          value="3"
           label="Publish (case topics in public knowledge base)">
-        </md-radio-button>
+        </md-checkbox>
         <div>
           Sharing URL:
           <md-copyable-text id="sharingurl"></md-copyable-text>
