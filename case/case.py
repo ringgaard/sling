@@ -164,11 +164,11 @@ def fetch_case(request):
 
   # Fetch case file from database.
   rec, ts  = casedb.get(str(caseid))
-  if rec is None: return 404;
+  if rec is None: return 404
 
   # Check if case is shared (not just published).
   store = sling.Store(commons)
-  casefile = request.frame(store);
+  casefile = store.parse(rec)
   if not casefile[n_share]: return 403
 
   # Return case file.
@@ -179,14 +179,14 @@ def share_case(request):
   # Get shared case.
   client = request["X-Forwarded-For"]
   store = sling.Store(commons)
-  casefile = request.frame(store);
+  casefile = request.frame(store)
 
   # Get case id.
   caseid = casefile[n_caseid]
-  if caseid is None: return 400;
+  if caseid is None: return 400
 
   # Get modification time.
-  modified = casefile[n_modified];
+  modified = casefile[n_modified]
   ts = iso2ts(modified)
 
   # Share or unshare.
