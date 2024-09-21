@@ -427,7 +427,7 @@ class CaseList extends material.MdCard {
           icon = '<md-icon icon="share" outlined></md-icon>';
         }
       }
-      if (rec.share) {
+      if (rec.share || rec.publish) {
         if (rec.shared && rec.shared < rec.modified) {
           icon += "*";
         }
