@@ -76,8 +76,15 @@ WikidataConverter::WikidataConverter(Store *commons, const string &language) {
   primary_language_ = commons->Lookup(primary_language_name_);
 
   // Initialize per-language information.
-  const char **lang = Wiki::language_priority;
   int priority = 1;
+  LanguageInfo mulinfo;
+  mulinfo.priority = priority++;
+  mulinfo.language = Handle::nil();
+  mulinfo.wikisite = Handle::nil();
+  languages_[commons->Lookup("mul")] = mulinfo;
+  language_map_["mul"] = n_lang_mul_.handle();
+
+  const char **lang = Wiki::language_priority;
   while (*lang != nullptr) {
     LanguageInfo info;
     info.priority = priority++;
@@ -88,7 +95,6 @@ WikidataConverter::WikidataConverter(Store *commons, const string &language) {
     lang++;
   }
   languages_[primary_language_].priority = 0;
-  language_map_["mul"] = n_lang_mul_.handle();
   language_map_["zxx"] = n_lang_none_.handle();
 
   language_order_.resize(priority + 1);
@@ -179,12 +185,28 @@ Frame WikidataConverter::Convert(const Frame &item,
     Slot &s = names[i];
     if (!s.name.IsNil()) {
       Handle name = Frame(store, s.name).GetHandle(s_value_);
-      builder.Add(n_name_, name, language_order_[i]);
+      Handle lang = language_order_[i];
+      if (lang.IsNil()) {
+        builder.Add(n_name_, name);
+      } else {
+        builder.Add(n_name_, name, lang);
+      }
       name_found = true;
 
       if (!s.value.IsNil()) {
         Handle description = Frame(store, s.value).GetHandle(s_value_);
-        builder.Add(n_description_, description, language_order_[i]);
+        builder.Add(n_description_, description, lang);
+      } else if (lang.IsNil()) {
+        // Add description for multi-language names.
+        for (int j = 0; j < num_languages; ++j) {
+          Slot &sj = names[j];
+          if (sj.name.IsNil() && !sj.value.IsNil()) {
+            Handle description = Frame(store, sj.value).GetHandle(s_value_);
+            Handle lang = language_order_[j];
+            builder.Add(n_description_, description, lang);
+            break;
+          }
+        }
       }
     }
 
@@ -220,7 +242,11 @@ Frame WikidataConverter::Convert(const Frame &item,
       if (alias_list.valid()) {
         for (int i = 0; i < alias_list.length(); ++i) {
           Handle name = Frame(store, alias_list.get(i)).GetHandle(s_value_);
-          builder.Add(n_alias_, name, lang);
+          if (lang.IsNil()) {
+            builder.Add(n_alias_, name);
+          } else {
+            builder.Add(n_alias_, name, lang);
+          }
         }
       }
     }

@@ -226,10 +226,6 @@ let xrefs = [
     property: frame("PVEF"),
   },
   {
-    pattern: /^http:\/\/(?:www\.)?vintage-erotica-forum\.com\/showpost\.php\?p=(\d+)/,
-    property: frame("PVEFP"),
-  },
-  {
     pattern: /^https?:\/\/(?:www\.)?models\.com\/models\/(.+)/,
     property: frame("P2471"),
   },
