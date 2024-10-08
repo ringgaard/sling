@@ -1,6 +1,8 @@
-#!/bin/sh
+#!/bin/bash
 
-bazel build -c opt $* \
+PYVER=$(python3 -c 'import sys; v=sys.version_info; ver=v.major * 100 + v.minor; print(36 if ver < 309 else 39);')
+
+bazel build -c opt --cxxopt=-DPYVER=${PYVER} $* \
   sling/base:* \
   sling/db:* \
   sling/file:* \
