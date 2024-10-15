@@ -304,7 +304,7 @@ class SideBar extends Component {
   }
 
   async onreconcile(e) {
-    if (this.editor.readonly()) return;
+    if (this.cased.readonly) return;
     let mention = e.detail.mention;
     let query = mention.text(true);
 
@@ -423,6 +423,14 @@ class SideBar extends Component {
       this.state = newdoc;
       this.editor.update(newdoc);
     });
+  }
+
+  topic_refreshed(topic) {
+    let index = this.state.context.index;
+    let source = topic.value(topic.slot(n_lex, index));
+    let context = {topic, index, readonly: this.cased.readonly};
+    let newdoc = new Document(store, source, context);
+    this.refresh(newdoc);
   }
 
   async goto(doc) {

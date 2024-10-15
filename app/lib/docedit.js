@@ -673,12 +673,14 @@ export class DocumentEditor extends Component {
       // Save and restore scroll position and selection in edit mode.
       let s = window.getSelection();
       let scroll = this.docbox().scrollTop;
-      let position = s.getRangeAt(0);
+      let position = s.rangeCount ? s.getRangeAt(0) : null;
       let ret = await scope();
       this.docbox().scrollTop = scroll;
       this.docbox().focus();
-      s.removeAllRanges();
-      s.addRange(position);
+      if (position) {
+        s.removeAllRanges();
+        s.addRange(position);
+      }
       return ret;
     }
   }
@@ -831,6 +833,7 @@ export class DocumentEditor extends Component {
         font-family: Roboto,Helvetica,sans-serif;
       }
       $ #editbox {
+        opacity: 0;
         display: flex;
         position: absolute;
         bottom: 8px;
@@ -838,6 +841,9 @@ export class DocumentEditor extends Component {
         right: 0;
         justify-content: center;
         padding-bottom: 16px;
+      }
+      $ #editbox:hover {
+        opacity: 1;
       }
       $ #editbar {
         display: flex;

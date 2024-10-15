@@ -45,6 +45,7 @@ const n_shared = frame("shared");
 const n_lazyload = frame("lazyload");
 const n_ref = frame("ref");
 const n_media = frame("media");
+const n_lex = frame("lex");
 const n_case_file = frame("Q108673968");
 const n_instance_of = frame("P31");
 const n_author = frame("P50");
@@ -1799,13 +1800,13 @@ class CaseEditor extends MdApp {
       // Single topic update.
       console.log("received topic update", update.id);
       if (!this.topics.includes(update)) this.topics.push(update);
-      this.update_topic(update);
+      this.update_topic(update, true);
     } else {
       // Multi-topic update.
       console.log("received", update.length, "topic updates");
       for (let topic of update) {
         if (!this.topics.includes(topic)) this.topics.push(topic);
-        this.update_topic(topic);
+        this.update_topic(topic, true);
       }
     }
   }
@@ -1927,10 +1928,14 @@ class CaseEditor extends MdApp {
     await this.find("topic-list").refresh(this.folder);
   }
 
-  async update_topic(topic) {
+  async update_topic(topic, remote) {
     let list = this.find("topic-list");
     let card = list.card(topic);
     if (card) await card.refresh();
+    if (remote && sidebar.state?.context?.topic == topic) {
+      // Update document in sidebar.
+      sidebar.topic_refreshed(topic);
+    }
   }
 
   async navigate_to(topic) {

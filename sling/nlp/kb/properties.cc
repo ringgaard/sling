@@ -83,6 +83,85 @@ const char *property_order[] = {
   "P937",       // work location
   "P27",        // country of citizenship
 
+  // Family.
+  "P53",        // family
+  "P22",        // father
+  "P25",        // mother
+  "P3448",      // stepparent
+  "P3373",      // sibling
+  "P451",       // unmarried partner
+  "P26",        // spouse
+  "P1971",      // number of children
+  "P40",        // child
+  "P1038",      // relative
+  "P1290",      // godparent
+
+  "PLOV",       // lover
+  "PFRND",      // friend
+  "PACQ",       // acquaintance
+  "P3342",      // significant person
+
+  // Career.
+  "P69",        // educated at
+  "P101",       // field of work
+  "P106",       // occupation
+  "P5021",      // test taken
+  "P803",       // professorship
+  "P512",       // academic degree
+  "P812",       // academic major
+  "P811",       // academic minor
+  "P1026",      // doctoral thesis
+  "P184",       // doctoral advisor
+  "P1066",      // student of
+  "P802",       // student
+  "P185",       // doctoral student
+  "P108",       // employer
+  "P1416",      // affiliation
+  "P6424",      // affiliation string
+  "P39",        // position held
+  "P3602",      // candidacy in election
+  "P463",       // member of
+  "P1344",      // participant of
+  "P2868",      // subject has role
+
+  "Q65994327",  // producer of
+  "Q65971570",  // director of
+  "Q65971578",  // wrote script of
+  "Q66318312",  // cast member of
+  "Q78522641",  // creator of
+  "Q66796038",  // award received by
+  "Q101072499", // award conferred
+
+  "P1595",      // charge
+  "P1399",      // convicted of
+  "P2632",      // place of detention
+
+  "P241",       // military branch
+  "P410",       // military rank
+  "P598",       // commander of
+  "P607",       // conflict
+
+  "P2031",      // work period (start)
+  "P2032",      // work period (end)
+  "P1317",      // floruit
+
+  "P800",       // notable work
+  "P1411",      // nominated for
+  "P2650",      // interested in
+
+  // Ideology
+  "P102",       // member of political party
+  "P1387",      // political alignment
+  "P1142",      // political ideology
+  "P737",       // influenced by
+  "P140",       // religion
+
+  // Publicity.
+  "P166",       // award received
+  "P2522",      // victory
+  "P1441",      // present in work
+  "PFEIN",      // featured in
+
   // Organization.
   "P122",       // basic form of government
   "P1454",      // legal form
@@ -200,80 +279,6 @@ const char *property_order[] = {
   "P1398",      // structure replaces
   "P167",       // structure replaced by
 
-  // Family.
-  "P53",        // family
-  "P22",        // father
-  "P25",        // mother
-  "P3448",      // stepparent
-  "P3373",      // sibling
-  "P451",       // unmarried partner
-  "P26",        // spouse
-  "P1971",      // number of children
-  "P40",        // child
-  "P1038",      // relative
-  "P1290",      // godparent
-
-  "PLOV",       // lover
-  "PFRND",      // friend
-  "PACQ",       // acquaintance
-  "P3342",      // significant person
-
-
-  // Career.
-  "P69",        // educated at
-  "P101",       // field of work
-  "P106",       // occupation
-  "P5021",      // test taken
-  "P803",       // professorship
-  "P512",       // academic degree
-  "P812",       // academic major
-  "P811",       // academic minor
-  "P1026",      // doctoral thesis
-  "P184",       // doctoral advisor
-  "P1066",      // student of
-  "P802",       // student
-  "P185",       // doctoral student
-  "P108",       // employer
-  "P1416",      // affiliation
-  "P6424",      // affiliation string
-  "P39",        // position held
-  "P3602",      // candidacy in election
-  "P463",       // member of
-  "P1344",      // participant of
-  "P2868",      // subject has role
-
-  "Q65994327",  // producer of
-  "Q65971570",  // director of
-  "Q65971578",  // wrote script of
-  "Q66318312",  // cast member of
-  "Q78522641",  // creator of
-  "Q66796038",  // award received by
-  "Q101072499", // award conferred
-
-  "P1595",      // charge
-  "P1399",      // convicted of
-  "P2632",      // place of detention
-
-  "P241",       // military branch
-  "P410",       // military rank
-  "P598",       // commander of
-  "P607",       // conflict
-
-  "P2031",      // work period (start)
-  "P2032",      // work period (end)
-  "P1317",      // floruit
-
-  "P800",       // notable work
-  "P1411",      // nominated for
-  "P2650",      // interested in
-
-  // Ideology
-  "P102",       // member of political party
-  "P1387",      // political alignment
-  "P1142",      // political ideology
-  "P737",       // influenced by
-  "P140",       // religion
-
   // Sports.
   "P641",       // sport
   "P2094",      // competition class
@@ -299,12 +304,6 @@ const char *property_order[] = {
   "P1356",      // number of losses
   "P1363",      // points/goal scored by
   "P1352",      // ranking
-
-  // Publicity.
-  "P166",       // award received
-  "P2522",      // victory
-  "P1441",      // present in work
-  "PFEIN",      // featured in
 
   // Proportions.
   "P2043",      // length

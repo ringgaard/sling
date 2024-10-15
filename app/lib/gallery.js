@@ -123,6 +123,7 @@ export class PhotoGallery extends MdModal {
         nsfw: image.nsfw,
         image: null,
         selected: false,
+        loaded: false,
       });
     }
 
@@ -158,14 +159,15 @@ export class PhotoGallery extends MdModal {
 
   onload(e) {
     let image = e.target;
-    image.style.cursor = null;
     let photo = image.photo;
     photo.width = image.naturalWidth;
     photo.height = image.naturalHeight;
+    photo.loaded = true;
     if (photo == this.photos[this.current]) {
       let w = photo.width;
       let h = photo.height;
       this.find(".size").update(w && h ? `${w} x ${h}`: null);
+      this.find(".photo").style.cursor = "";
     }
     if (this.first) {
       this.first = false;
@@ -324,6 +326,7 @@ export class PhotoGallery extends MdModal {
       caption = caption.toString().replace(/\[\[|\]\]/g, "");
     }
     this.find(".image").replaceWith(photo.image);
+    this.find(".photo").style.cursor = photo.loaded ? "" : "wait";
     this.find(".caption").update(caption);
     let counter = `${this.current + 1} / ${this.photos.length}`;
     this.find(".counter").update(counter);
@@ -384,10 +387,11 @@ export class PhotoGallery extends MdModal {
   }
 
   preload(position, direction) {
-    let lookahead = this.first ? 1 : 5;
+    let lookahead = this.first ? 1 : 3;
     for (var i = 0; i < lookahead; ++i) {
       let n = mod(position + i * direction, this.photos.length);
-      if (this.photos[n].image == null) {
+      let photo = this.photos[n];
+      if (photo.image == null) {
         let url = this.photos[n].url;
         let type = mediatype(url);
         var viewer;
@@ -400,7 +404,6 @@ export class PhotoGallery extends MdModal {
           viewer.classList.add("doc");
         } else {
           viewer = new Image();
-          viewer.style.cursor = "wait";
           if (type == GRAPHICS) {
             viewer.style.background = "white";
             viewer.style.padding = "10px";
@@ -410,8 +413,8 @@ export class PhotoGallery extends MdModal {
         viewer.classList.add("image");
         viewer.referrerPolicy = "no-referrer";
         viewer.addEventListener("load", e => this.onload(e));
-        this.photos[n].image = viewer;
-        viewer.photo = this.photos[n];
+        photo.image = viewer;
+        viewer.photo = photo;
       }
     }
   }
