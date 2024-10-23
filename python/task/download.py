@@ -224,6 +224,7 @@ datasets = {
   "popularity": "wiki/popularity.rec",
 
   "kb": "kb/kb.sling",
+  "kbsnap": "kb/kb.sling.snap",
   "items": "kb/items@10.rec",
   "xrefs": "kb/xrefs.sling",
 
@@ -312,4 +313,3 @@ def fetch():
       if name == "kb": wf.snapshot(res)
 
   run(wf.wf)
-
