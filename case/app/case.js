@@ -260,8 +260,12 @@ class CaseEditor extends MdApp {
     this.navigate_to(topic);
   }
 
+  topiclist() {
+    return this.find("topic-list");
+  }
+
   editing() {
-    return this.find("topic-list").editing();
+    return this.topiclist().editing();
   }
 
   onkeydown(e) {
@@ -785,7 +789,7 @@ class CaseEditor extends MdApp {
   }
 
   selection() {
-    let list = this.find("topic-list");
+    let list = this.topiclist();
     if (!list) return;
     return list.selection();
   }
@@ -1248,7 +1252,7 @@ class CaseEditor extends MdApp {
     if (clip instanceof Array) {
       let first = null;
       let last = null;
-      let position = this.find("topic-list").selection_start() + 1;
+      let position = this.topiclist().selection_start() + 1;
       if (position === undefined) position = this.folder.length;
       let scraps_before = this.scraps.length > 0;
       let import_mapping = new Map();
@@ -1306,7 +1310,7 @@ class CaseEditor extends MdApp {
       if (scraps_before != scraps_after) await this.update_folders();
       await this.update_topics();
       if (first && last) {
-        let list = this.find("topic-list");
+        let list = this.topiclist();
         list.select_range(first, last);
         list.card(last).focus();
       }
@@ -1315,7 +1319,7 @@ class CaseEditor extends MdApp {
     }
 
     // Let the plug-ins process the clipboard content.
-    let list = this.find("topic-list");
+    let list = this.topiclist();
     let topic = list.active();
     clip = await navigator.clipboard.readText();
     if (clip) {
@@ -1431,7 +1435,7 @@ class CaseEditor extends MdApp {
     // Update target topic.
     this.topic_updated(target);
     this.mark_dirty();
-    let list = this.find("topic-list");
+    let list = this.topiclist();
     let card = list.card(target);
     if (card) {
       await card.refresh(target);
@@ -1921,15 +1925,15 @@ class CaseEditor extends MdApp {
   }
 
   async update_topics() {
-    await this.find("topic-list").update(this.folder);
+    await this.topiclist().update(this.folder);
   }
 
   async refresh_topics() {
-    await this.find("topic-list").refresh(this.folder);
+    await this.topiclist().refresh(this.folder);
   }
 
   async update_topic(topic, remote) {
-    let list = this.find("topic-list");
+    let list = this.topiclist();
     let card = list.card(topic);
     if (card) await card.refresh();
     if (remote && sidebar.state?.context?.topic == topic) {
@@ -1955,19 +1959,19 @@ class CaseEditor extends MdApp {
         folder = this.scraps;
       }
       if (!folder) {
-        if (!this.work) {
-          this.work = new Array();
-          await this.show_folder(this.work);
-        }
+        if (!this.work) this.work = new Array();
         this.work.push(topic);
-        await this.refresh_topics();
-      } else {
-        await this.show_folder(folder);
+        folder = this.work;
+        if (folder == this.folder) {
+          await this.update_topics(this.folder);
+        }
       }
+
+      await this.show_folder(folder);
     }
 
     // Scroll to topic in folder.
-    return await this.find("topic-list").navigate_to(topic);
+    return await this.topiclist().navigate_to(topic);
   }
 
   prerender() {
@@ -2490,4 +2494,3 @@ MdIcon.custom("wikidata", `
            M 720,45 V 545 h 90 V 45 H 720 z"/>
 </svg>
 `);
-

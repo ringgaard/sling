@@ -17,6 +17,18 @@ let xrefs = [
     property: frame("is"),
   },
   {
+    pattern: /^https?:\/\/lex\.dk\/(.+)/,
+    property: frame("P8313"),
+  },
+  {
+    pattern: /^https?:\/\/denstoredanske\.lex\.dk\/(.+)/,
+    property: frame("P8313"),
+  },
+  {
+    pattern: /^https?:\/\/biografiskleksikon\.lex\.dk\/(.+)/,
+    property: frame("P8341"),
+  },
+  {
     pattern: /^https?:\/\/(?:www\.)?twitter\.com\/([A-Za-z0-9_]+)\/?(\?.*)?$/i,
     property: frame("P2002"),
   },
@@ -364,10 +376,6 @@ let xrefs = [
     property: frame("PMYPP"),
   },
   {
-    pattern: /^https?:\/\/denstoredanske\.lex\.dk\/(.+)/,
-    property: frame("P8313"),
-  },
-  {
     pattern: /^https?:\/\/www\.indexxx\.com\/m\/(.+)/,
     property: frame("PIDXX"),
   },
@@ -450,4 +458,3 @@ const emojis = /([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\u
 export function strip_emojis(s) {
   return s.replace(emojis, "").trim();
 }
-
