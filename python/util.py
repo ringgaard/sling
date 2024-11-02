@@ -46,7 +46,9 @@ class FrameBuilder:
   # Write frame with slots to output.
   def write(self, out):
     frame = self.create()
-    out.write(frame.id, frame.data(binary=True))
+    if out is not None:
+      out.write(frame.id, frame.data(binary=True))
+    return frame
 
 # Class for keeping track of database checkpoint in file
 class Checkpoint:
@@ -66,4 +68,3 @@ class Checkpoint:
       f.write(str(checkpoint))
       f.close()
       print("write checkpoint", self.checkpoint, "to", self.filename)
-

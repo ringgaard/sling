@@ -123,6 +123,13 @@ class KnowledgeBaseWorkflow:
                             format="records/frame",
                             serial=540)
 
+  def cpr(self):
+    """Resource for CPR items (from Statstidende)."""
+    return self.wf.resource("cpr.rec",
+                            dir=corpora.workdir("org"),
+                            format="records/frame",
+                            serial=550)
+
   def factgrid(self):
     """Resources for FactGrid items and properties."""
     return [
@@ -161,6 +168,7 @@ class KnowledgeBaseWorkflow:
   #  520 dknace
   #  530 gleif
   #  540 cvr
+  #  550 cpr
   #  600 factgrid properties
   #  610 factgrid items
   # 1000 case topics
@@ -181,6 +189,7 @@ class KnowledgeBaseWorkflow:
       self.dknace(),
       self.gleif(),
       self.cvr(),
+      self.cpr(),
       self.factgrid())
 
   def collect_xrefs(self):
@@ -195,6 +204,7 @@ class KnowledgeBaseWorkflow:
       self.dknace(),
       self.gleif(),
       self.cvr(),
+      self.cpr(),
       self.factgrid())
 
     with self.wf.namespace("xrefs"):
@@ -311,4 +321,3 @@ def property_usage():
   wf = KnowledgeBaseWorkflow("property-usage")
   wf.property_usage()
   run(wf.wf)
-

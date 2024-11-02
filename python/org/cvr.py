@@ -91,7 +91,7 @@ n_association = kb["Q48204"]
 n_human = kb["Q5"]
 n_family_name = kb["Q101352"]
 
-n_denmark = kb["Q35"]
+n_denmark = kb["Q756617"] # Kingdom of Denmark (Q35 is just Denmark)
 n_danish = kb["/lang/da"]
 n_copenhagen = kb["Q1748"]
 n_frederiksberg = kb["Q30096"]
@@ -1198,4 +1198,3 @@ print(len(mergers), "mergers")
 
 recout.close()
 cvrdb.close()
-
