@@ -53,6 +53,8 @@ n_denmark = store["Q756617"]
 n_spouse = store["P26"]
 n_ownerof = store["P1830"]
 n_cpr = store["PCPR"]
+n_described_by_source = store["P1343"]
+n_statstidende = store["Q7604468"]
 
 def get_group(msg, name):
   for group in msg["fieldGroups"]:
@@ -165,6 +167,7 @@ def build_person(fields, builder):
 
   builder.add(n_residence, store.frame([(n_is, residence), (n_address, address)]))
   builder.add(n_country, n_denmark)
+  builder.add(n_described_by_source, n_statstidende)
 
 num_messages = 0
 num_persons = 0
@@ -191,6 +194,7 @@ for key, _, rec in db:
     if scpr:
       sbuilder = sling.util.FrameBuilder(store)
       build_person(sfields, sbuilder)
+      sbuilder.add(n_cpr, cpr)
       sbuilder.add(n_spouse, store.frame("PCPR/" + cpr))
       builder.add(n_spouse, store.frame("PCPR/" + scpr))
       sf = sbuilder.write(recout)
