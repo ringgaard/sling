@@ -57,12 +57,14 @@ n_described_by_source = store["P1343"]
 n_statstidende = store["Q7604468"]
 
 def get_group(msg, name):
-  for group in msg["fieldGroups"]:
+  groups = msg.get("fieldGroups")
+  if groups is None: groups = msg.get("fieldgroups")
+  for group in groups:
     if group["name"] == name: return group
 
 def get_field(fields, name):
   for field in fields:
-    if field["name"] == name: return field["value"]
+    if field.get("name") == name: return field["value"]
 
 def remove_trailing_zeros(s):
   while True:
@@ -107,12 +109,29 @@ def build_person(fields, builder):
   postnr = get_field(fields, "Postnr")
   by = get_field(fields, "By")
 
+  # Construct name, postnr, and address for legacy records.
+  legacy = False
+  if navn is None:
+    field_list = []
+    for f in fields:
+      if f["type"] == 1: field_list.append(f["value"])
+    navn = field_list[0]
+    vej = ", ".join(field_list[1:])
+    postnr = field_list[-1].split(" ")[0]
+    legacy = True
+
+  # Trim name.
+  paren = navn.find("(")
+  if paren != -1:
+    print("trim", cpr, navn)
+    navn = navn[:paren - 1].strip()
+
   # Residence.
   address = remove_trailing_zeros(vej)
   if husnr: address += " " + husnr
   if etage: address += " " + etage
   if side: address += " " + side
-  if postnr: address += ", " + postnr
+  if postnr and not legacy: address += ", " + postnr
   if by: address += " " + by
   address = address.strip()
   if len(address) == 0: address = None
@@ -141,12 +160,18 @@ def build_person(fields, builder):
 
   died = None
   if doed:
-    died = doed[0:4]
+    if "-" in doed:
+      died = doed[0:4]
+    else:
+      died = doed[6:10]
 
   dob = int(born + cpr[2:4] + cpr[0:2])
   dod = None
   if doed:
-    dod = int(doed.replace("-", ""))
+    if "-" in doed:
+      dod = int(doed.replace("-", ""))
+    else:
+      dod = int(doed[6:10] + doed[3:5] + doed[0:2])
 
   builder.add(n_id, "PCPR/" + cpr)
   builder.add(n_name, navn)
@@ -165,7 +190,10 @@ def build_person(fields, builder):
     location = postalcodes.get(int(postnr))
     if location is not None: residence = location
 
-  builder.add(n_residence, store.frame([(n_is, residence), (n_address, address)]))
+  builder.add(n_residence, store.frame([
+    (n_is, residence),
+    (n_address, address)
+  ]))
   builder.add(n_country, n_denmark)
   builder.add(n_described_by_source, n_statstidende)
 
@@ -191,10 +219,11 @@ for key, _, rec in db:
   if spouse:
     sfields = spouse["fields"]
     scpr = get_field(sfields, "CPR-nr.")
-    if scpr:
+    sname = get_field(sfields, "Navn")
+    if scpr and sname:
       sbuilder = sling.util.FrameBuilder(store)
       build_person(sfields, sbuilder)
-      sbuilder.add(n_cpr, cpr)
+      sbuilder.add(n_cpr, scpr)
       sbuilder.add(n_spouse, store.frame("PCPR/" + cpr))
       builder.add(n_spouse, store.frame("PCPR/" + scpr))
       sf = sbuilder.write(recout)

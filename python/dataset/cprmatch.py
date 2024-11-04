@@ -29,6 +29,11 @@ flags.define("--output",
              default=None,
              metavar="FILE")
 
+flags.define("--checkpoint",
+             help="file with latest checkpoint for scanning statstidende",
+             default=None,
+             metavar="FILE")
+
 flags.parse()
 
 def get_group(msg, name):
@@ -56,13 +61,14 @@ cal = sling.Calendar(kb)
 aliases = sling.PhraseTable(kb, "data/e/kb/da/phrase-table.repo")
 
 db = sling.Database(flags.arg.db)
+chkpt = sling.util.Checkpoint(flags.arg.checkpoint)
 recout = None
 if flags.arg.output:
   recout = sling.RecordWriter(flags.arg.output)
 
 # Collect CPR numbers from proclamations.
 cprnumbers = []
-for key, _, rec in db:
+for key, _, rec in db(begin=chkpt.checkpoint):
   proklama = json.loads(rec.decode())
   msgid = proklama["messageNumber"]
   deceased = get_group(proklama, "Afdøde")
@@ -75,19 +81,21 @@ for key, _, rec in db:
     sfields = spouse["fields"]
     scpr = get_field(sfields, "CPR-nr.")
     if scpr: cprnumbers.append(scpr)
+chkpt.commit(db.epoch())
+db.close()
 
 # Match persons.
 for cprnr in cprnumbers:
   itemid = "PCPR/" + cprnr
   if itemid not in kb:
-    print(cprnr, "not found")
+    print(";", cprnr, "not found")
     continue
 
   item = kb[itemid]
   name = item[n_name]
   born = item[n_birthdate]
   if name is None:
-    print("No name:", item)
+    print("; No name:", item)
     continue
 
   for m in aliases.lookup(name):
@@ -107,4 +115,3 @@ for cprnr in cprnumbers:
       print('{name:"%s" +%s P1830: %s}' % (name, itemid, business.id))
 
 if recout: recout.close()
-db.close()
