@@ -64,7 +64,10 @@ def get_group(msg, name):
 
 def get_field(fields, name):
   for field in fields:
-    if field.get("name") == name: return field["value"]
+    if field.get("name") == name:
+      value = field["value"]
+      if type(value) is str: value = value.strip()
+      return value
 
 def remove_trailing_zeros(s):
   while True:

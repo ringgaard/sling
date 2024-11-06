@@ -329,20 +329,8 @@ Handle Store::AllocateFrame(Slot *begin, Slot *end, Handle original) {
     // Make sure that the replaced handle is owned by this store.
     CHECK(Owned(handle));
 
-    // Unbind existing object and replace it with the new frame.
-    FrameDatum *existing = GetFrame(handle);
-    CHECK(existing->IsFrame());
-    for (Slot *slot = existing->begin(); slot < existing->end(); ++slot) {
-      if (slot->name.IsId()) {
-        // Unbind symbol from the existing frame.
-        DCHECK(slot->value.IsRef());
-        Datum *id = Deref(slot->value);
-        DCHECK(id->IsSymbol());
-        SymbolDatum *symbol = id->AsSymbol();
-        DCHECK_EQ(symbol->value.raw(), handle.raw());
-        symbol->value = Handle::nil();
-      }
-    }
+    // Unbind existing frame and replace it with the new frame.
+    Unbind(handle);
     Replace(handle, frame);
   }
 
@@ -427,7 +415,7 @@ void Store::UpdateFrame(Handle handle, Slot *begin, Slot *end) {
       DCHECK(id->IsSymbol());
       SymbolDatum *symbol = id->AsSymbol();
 
-      // Make sure the symbol is not already bound to another frame.
+      // Check if symbol is already bound to another frame.
       if (options_->symbol_rebinding) {
         CHECK(!symbol->marked()) << "no rebinding of frozen symbols";
       } else {
@@ -486,6 +474,22 @@ void Store::ResizeArray(Handle array, Word length) {
 
   // Replace array.
   Replace(array, replacement);
+}
+
+void Store::Unbind(Handle handle) {
+  FrameDatum *frame = GetFrame(handle);
+  CHECK(frame->IsFrame());
+  for (Slot *slot = frame->begin(); slot < frame->end(); ++slot) {
+    if (slot->name.IsId()) {
+      // Unbind symbol from the frame.
+      DCHECK(slot->value.IsRef());
+      Datum *id = Deref(slot->value);
+      DCHECK(id->IsSymbol());
+      SymbolDatum *symbol = id->AsSymbol();
+      DCHECK_EQ(symbol->value.raw(), handle.raw());
+      symbol->value = Handle::nil();
+    }
+  }
 }
 
 void Store::Set(Handle frame, Handle name, Handle value) {
@@ -1712,4 +1716,3 @@ void Store::GetMemoryUsage(MemoryUsage *usage, bool quick) const {
 }
 
 }  // namespace sling
-

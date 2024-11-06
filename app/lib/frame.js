@@ -408,6 +408,20 @@ export class Frame {
     }
   }
 
+  // Replace slot values.
+  replace(name, from, to) {
+    let count = 0;
+    if (this.slots) {
+      for (let n = 0; n < this.slots.length; n += 2) {
+        if (this.slots[n] === name && this.slots[n + 1] == from) {
+          this.slots[n + 1] = to;
+          count += 1
+        }
+      }
+    }
+    return count;
+  }
+
   // Apply function to all slots in frame.
   apply(func) {
     let slots = this.slots;
@@ -1561,4 +1575,3 @@ export class Printer {
     return out;
   }
 }
-

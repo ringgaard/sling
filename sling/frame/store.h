@@ -1021,7 +1021,7 @@ class Store {
       map_buckets = 1024;
       string_buckets = 1 << 20;
       expansion_free_fraction = 20;
-      symbol_rebinding = false;
+      symbol_rebinding = true;
       local = this;
     }
 
@@ -1043,7 +1043,7 @@ class Store {
     // Minimum fraction of free memory after GC to skip expansion.
     int expansion_free_fraction;
 
-    // Allow symbols to be bound.
+    // Allow symbols to be rebound.
     bool symbol_rebinding;
 
     // Options for local store.
@@ -1426,6 +1426,9 @@ class Store {
     object->self = handle;
   }
 
+  // Unbind frame by unbinding it from the symbol table.
+  void Unbind(Handle handle);
+
   // Computes the hash value for a string and returns it as an integer handle.
   static Handle Hash(Text str);
 
@@ -1576,4 +1579,3 @@ inline void Root::InitRoot(Store *store, Handle handle) {
 }  // namespace sling
 
 #endif  // SLING_FRAME_STORE_H_
-
