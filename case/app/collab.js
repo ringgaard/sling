@@ -32,6 +32,7 @@ const CCU_FOLDERS = 3;
 const CCU_DELETE  = 4;
 const CCU_RENAME  = 5;
 const CCU_SAVE    = 6;
+const CCU_TOPICS  = 7;
 
 export class Collaboration {
   // Connect to collaboration server.
@@ -455,8 +456,25 @@ export class Collaboration {
     let encoder = new Encoder(store, false);
     encoder.write_varint(COLLAB_UPDATE);
     encoder.write_varint(CCU_TOPIC);
+    // Encode link to allow frame overwrite in collab server.
     encoder.encode_link(topic);
     encoder.encode(topic);
+    let packet = encoder.output();
+    this.send(packet);
+  }
+
+  // Send topics update.
+  topics_updated(topics) {
+    console.log("send topics update", topics.length);
+    let encoder = new Encoder(store, false);
+    encoder.write_varint(COLLAB_UPDATE);
+    encoder.write_varint(CCU_TOPICS);
+    for (let topic of topics) {
+      // Encode link to allow frame overwrite in collab server.
+      encoder.encode_link(topic);
+      encoder.encode(topic);
+    }
+    encoder.encode(Array.from(topics));
     let packet = encoder.output();
     this.send(packet);
   }
@@ -564,4 +582,3 @@ class CollabLabelCollector {
     }
   }
 };
-

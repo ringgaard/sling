@@ -81,6 +81,7 @@ enum CollabUpdate {
   CCU_DELETE  = 4,    // topic deleted
   CCU_RENAME  = 5,    // folder renamed
   CCU_SAVE    = 6,    // case saved
+  CCU_TOPICS  = 7,    // topics updated
 };
 
 // Collaboration search flags.
@@ -911,6 +912,31 @@ bool CollabCase::Update(CollabReader *reader) {
       if (lazyload_) {
         index_.Update(topic, false);
         idindex_.Update(topic, true);
+      }
+      dirty_ = true;
+      break;
+    }
+
+    case CCU_TOPICS: {
+      // Get new/updated topics.
+      Array topics = reader->ReadObjects(&store_).AsArray();
+      if (!topics.valid()) return false;
+
+      for (int i = 0; i < topics.length(); ++i) {
+        Frame topic(&store_, topics.get(i));
+        if (topic.invalid()) return false;
+
+        // Check for new topic.
+        if (!topics_.Contains(topic.handle())) {
+          topics_.Append(topic.handle());
+          LOG(INFO) << "Case #" << caseid_ << " topic new " << topic.Id();
+        } else {
+          LOG(INFO) << "Case #" << caseid_ << " topic update " << topic.Id();
+        }
+        if (lazyload_) {
+          index_.Update(topic, false);
+          idindex_.Update(topic, true);
+        }
       }
       dirty_ = true;
       break;
@@ -1890,4 +1916,3 @@ int main(int argc, char *argv[]) {
   LOG(INFO) << "Done";
   return 0;
 }
-

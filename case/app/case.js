@@ -1451,11 +1451,18 @@ class CaseEditor extends MdApp {
     if (script) {
       // Execute script.
       try {
-        if (await script.call(this, store, frame, this.print.bind(this))) {
+        let print = this.print.bind(this);
+        let result = await script.call(this, store, frame, print);
+        if (result) {
           // Update editor.
           this.mark_dirty();
           await this.update_folders();
           await this.refresh_topics();
+          if (result instanceof Frame) {
+            this.topic_updated(result);
+          } else if (result[Symbol.iterator]) {
+            this.topics_updated(result);
+          }
         }
       } catch(e) {
         console.log("Script error", e);
@@ -1772,6 +1779,12 @@ class CaseEditor extends MdApp {
   topic_updated(topic) {
     if (this.collab) {
       this.collab.topic_updated(topic);
+    }
+  }
+
+  topics_updated(topics) {
+    if (this.collab) {
+      this.collab.topics_updated(topics);
     }
   }
 
