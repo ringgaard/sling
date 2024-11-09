@@ -117,7 +117,8 @@ def build_person(fields, builder):
   if navn is None:
     field_list = []
     for f in fields:
-      if f["type"] == 1: field_list.append(f["value"])
+      if f.get("type") == 1: field_list.append(f["value"])
+    if len(field_list) == 0: return False
     navn = field_list[0]
     vej = ", ".join(field_list[1:])
     postnr = field_list[-1].split(" ")[0]
@@ -199,6 +200,7 @@ def build_person(fields, builder):
   ]))
   builder.add(n_country, n_denmark)
   builder.add(n_described_by_source, n_statstidende)
+  return True
 
 num_messages = 0
 num_persons = 0
@@ -222,16 +224,15 @@ for key, _, rec in db:
   if spouse:
     sfields = spouse["fields"]
     scpr = get_field(sfields, "CPR-nr.")
-    sname = get_field(sfields, "Navn")
-    if scpr and sname:
+    if scpr:
       sbuilder = sling.util.FrameBuilder(store)
-      build_person(sfields, sbuilder)
-      sbuilder.add(n_cpr, scpr)
-      sbuilder.add(n_spouse, store.frame("PCPR/" + cpr))
-      builder.add(n_spouse, store.frame("PCPR/" + scpr))
-      sf = sbuilder.write(recout)
-      if recout is None: print(sf)
-      num_persons += 1
+      if build_person(sfields, sbuilder):
+        sbuilder.add(n_cpr, scpr)
+        sbuilder.add(n_spouse, store.frame("PCPR/" + cpr))
+        builder.add(n_spouse, store.frame("PCPR/" + scpr))
+        sf = sbuilder.write(recout)
+        if recout is None: print(sf)
+        num_persons += 1
 
   # Deceased's business.
   business = get_group(proklama, "Afdødes forretning")
