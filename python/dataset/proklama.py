@@ -239,7 +239,7 @@ for key, _, rec in db:
   if business:
     bfields = business["fields"]
     cvr = get_field(bfields, "CVR-nr.")
-    if cvr:
+    if cvr and cvr != "Intet CVR-nr":
       builder.add(n_ownerof, store.frame("P1059/" + cvr))
 
   builder.add(n_cpr, cpr)
