@@ -496,8 +496,10 @@ int mm_to_pixels(int mm) {
 int scanner_para() {
   char parameters[256];
   int rc;
-  int width, height;
-  int left, top;
+  int width = 0;
+  int height = 0;
+  int left = 0;
+  int top = 0;
 
   if (paper_size == A4) {
     width = mm_to_pixels(A4_WIDTH - MARGIN_LEFT - MARGIN_RIGHT);
@@ -664,4 +666,3 @@ error:
   if (f) fclose(f);
   return -1;
 }
-

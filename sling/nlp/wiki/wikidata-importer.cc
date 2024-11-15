@@ -87,9 +87,9 @@ class WikidataImporter : public task::Processor {
     Reader reader(&store, &input);
     reader.set_json(true);
     Object obj = reader.Read();
-    delete message;
     CHECK(obj.valid());
     CHECK(obj.IsFrame()) << message->value();
+    delete message;
 
     // Create SLING frame for item.
     uint64 revision = 0;
@@ -479,4 +479,3 @@ REGISTER_TASK_PROCESSOR("wikidata-pruner", WikidataPruner);
 
 }  // namespace nlp
 }  // namespace sling
-

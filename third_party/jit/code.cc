@@ -62,6 +62,9 @@ CodeGenerator::CodeGenerator(void *buffer, int buffer_size) {
   pc_ = buffer_;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuse-after-free"
+
 void CodeGenerator::GrowBuffer() {
   DCHECK(buffer_overflow());
   if (!own_buffer_) LOG(FATAL) << "external code buffer is too small";
@@ -69,7 +72,7 @@ void CodeGenerator::GrowBuffer() {
   // Expand code buffer.
   byte *old_buffer = buffer_;
   buffer_size_ *= 2;
-  buffer_ = static_cast<byte*>(realloc(buffer_, buffer_size_));
+  buffer_ = static_cast<byte *>(realloc(buffer_, buffer_size_));
   intptr_t pc_delta = buffer_ - old_buffer;
   pc_ += pc_delta;
 
@@ -81,6 +84,8 @@ void CodeGenerator::GrowBuffer() {
 
   DCHECK(!buffer_overflow());
 }
+
+#pragma GCC diagnostic pop
 
 CodeGenerator::~CodeGenerator() {
   if (own_buffer_) free(buffer_);
@@ -198,4 +203,3 @@ void Code::Allocate(void *code, int size) {
 
 }  // namespace jit
 }  // namespace sling
-

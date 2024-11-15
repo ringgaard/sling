@@ -347,7 +347,7 @@ class Shape {
   string ToString() const;
 
   // Return dimensions.
-  const std::vector<int> dims() const { return dims_; }
+  const std::vector<int> &dims() const { return dims_; }
 
  private:
   // Size of each dimension.
@@ -978,4 +978,3 @@ string PrimalVarName(const string &name);
 }  // namespace sling
 
 #endif  // SLING_MYELIN_FLOW_H_
-
