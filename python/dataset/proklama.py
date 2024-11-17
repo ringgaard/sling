@@ -211,9 +211,13 @@ for key, _, rec in db:
   num_messages += 1
 
   deceased = get_group(proklama, "Afdøde")
+  if deceased is None:
+    print("missing deceased:", msgid)
+    continue
 
   # Deceased person.
-  fields = deceased["fields"]
+  fields = deceased.get("fields")
+
   cpr = get_field(fields, "CPR-nr.")
   builder = sling.util.FrameBuilder(store)
   build_person(fields, builder)
