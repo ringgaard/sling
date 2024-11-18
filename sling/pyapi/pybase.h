@@ -35,6 +35,9 @@
 #elif PYVER==310
 #include <python3.10/Python.h>
 #include <python3.10/structmember.h>
+#elif PYVER==312
+#include <python3.12/Python.h>
+#include <python3.12/structmember.h>
 #else
 #include <Python.h>
 #include <structmember.h>
@@ -174,4 +177,3 @@ struct PyBase : public PyVarObject {
 }  // namespace sling
 
 #endif  // SLING_PYAPI_PYBASE_H_
-

@@ -65,6 +65,7 @@ for key, _, rec in db(begin=chkpt.checkpoint):
   proklama = json.loads(rec.decode())
   msgid = proklama["messageNumber"]
   deceased = get_group(proklama, "Afdøde")
+  if deceased is None: continue
   fields = deceased["fields"]
   cpr = get_field(fields, "CPR-nr.")
   cprnumbers.append(cpr)
