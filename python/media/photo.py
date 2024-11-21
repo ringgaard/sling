@@ -191,7 +191,7 @@ def average_hasher(image):
     img = Image.open(io.BytesIO(image))
 
     # Simplify image by reducing its size and colors.
-    pixels = img.convert("L").resize((8, 8), Image.ANTIALIAS).getdata()
+    pixels = img.convert("L").resize((8, 8), Image.LANCZOS).getdata()
 
     # Get the average pixel value.
     sum = 0.0
@@ -1010,4 +1010,3 @@ class Profile:
           len(missing), "missing")
 
     return len(duplicates) + len(missing)
-
