@@ -132,7 +132,7 @@ def thumb(request):
           image = image.transpose(method)
 
     # Convert to thumbnail.
-    image.thumbnail((size, size), Image.ANTIALIAS)
+    image.thumbnail((size, size), Image.LANCZOS)
     request.measure("process")
 
     # Return scaled image.
@@ -146,4 +146,3 @@ def thumb(request):
 log.info("running")
 app.run()
 log.info("stopped")
-

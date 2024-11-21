@@ -10,7 +10,7 @@ echo "========================================================================="
 # Install packages.
 echo
 echo "=== Install SLING dependencies"
-PYVER=3.6
+PYVER=3.12
 PYPKGS="python${PYVER} python${PYVER}-dev python3-pip"
 CLIBS="lbzip2 libcurl4-openssl-dev"
 PKGS="g++ ${CLIBS} ${PYPKGS} unzip"
@@ -84,4 +84,3 @@ fi
 # Done.
 echo
 echo "=== SLING is now set up."
-
