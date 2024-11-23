@@ -20,8 +20,8 @@ import os
 import sys
 import time
 import urllib3
-import asyncore
-import smtpd
+import asyncio
+import aiosmtpd.controller
 import email
 import email.policy
 import traceback
@@ -466,45 +466,54 @@ def on_handler(request):
 next_inbox_id = 0
 
 # SMTP server for receiveing alert messages.
-class AlertServer(smtpd.SMTPServer):
-  def process_message(self, peer, mailfrom, rcpttos, data, **kwargs):
-    try:
-      global next_inbox_id;
-      log.info("message received from", mailfrom)
-      mail = email.message_from_bytes(data, policy=email.policy.default)
-      now = time.asctime(time.gmtime(time.time()))
-      mail.set_unixfrom("From %s %s" % (mailfrom, now))
+class AlertServer:
+  async def handle_RCPT(self, server, session, envelope, address, rcpt_options):
+    envelope.rcpt_tos.append(address)
+    return '250 OK'
 
-      # Write message to mail box.
-      mbox = open(flags.arg.mbox, "ab")
-      mbox.write(mail.as_bytes(unixfrom=True))
-      mbox.write(b"\n\n")
-      mbox.close()
+  async def handle_DATA(self, server, session, envelope):
+    global next_inbox_id;
+    mailfrom = envelope.mail_from
+    log.info("message received from", mailfrom)
+    mail = email.message_from_bytes(envelope.content,
+                                    policy=email.policy.default)
+    now = time.asctime(time.gmtime(time.time()))
+    mail.set_unixfrom("From %s %s" % (mailfrom, now))
 
-      # Add message to inbox.
-      inbox.append({
-        "mail": mail,
-        "time": time.time(),
-        "from": mailfrom,
-        "msgid": str(next_inbox_id),
-        "ack": False,
-      })
-      next_inbox_id += 1
+    # Write message to mail box.
+    mbox = open(flags.arg.mbox, "ab")
+    mbox.write(mail.as_bytes(unixfrom=True))
+    mbox.write(b"\n\n")
+    mbox.close()
 
-      # Send notifications.
-      notify(mail["Subject"], mail.get_payload())
+    # Add message to inbox.
+    inbox.append({
+      "mail": mail,
+      "time": time.time(),
+      "from": mailfrom,
+      "msgid": str(next_inbox_id),
+      "ack": False,
+    })
+    next_inbox_id += 1
 
-    except Exception as e:
-      log.error("Error receiving message:", e)
-      traceback.print_exc()
+    # Send notifications.
+    notify(mail["Subject"], mail.get_payload())
 
-smtpsrv = AlertServer(("0.0.0.0", flags.arg.smtpport), None)
+
+    return '250 Message accepted for delivery'
+
+if flags.arg.smtpport != 0:
+  log.info("Starting system alert server on port", flags.arg.smtpport)
+  controller = aiosmtpd.controller.Controller(AlertServer(),
+                                              hostname="",
+                                              port=flags.arg.smtpport)
+  controller.start()
 
 # Run app until shutdown.
 try:
   if flags.arg.smtpport != 0:
     app.start()
-    asyncore.loop()
+    asyncio.new_event_loop().run_forever()
     app.stop()
   else:
     app.run()
@@ -512,4 +521,3 @@ except KeyboardInterrupt:
   pass
 
 log.info("stopped")
-

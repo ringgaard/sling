@@ -80,6 +80,8 @@ fi
 #   torch (bert analyzer)
 #   transformers (bert analyzer)
 #   pymupdf (epub2pdf)
+#   aiosmtpd (sysmon)
+
 
 # Done.
 echo
