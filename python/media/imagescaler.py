@@ -18,7 +18,7 @@ import io
 import urllib3
 import time
 import PIL
-from PIL import Image, JpegImagePlugin, PngImagePlugin, MpoImagePlugin
+from PIL import Image, JpegImagePlugin, PngImagePlugin, MpoImagePlugin, WebPImagePlugin
 
 import sling
 import sling.flags as flags
@@ -93,6 +93,10 @@ def jpeg_reponse(image, request, response):
 
 @sling.net.response(MpoImagePlugin.MpoImageFile)
 def mpo_reponse(image, request, response):
+  return jpeg_reponse(image, request, response)
+
+@sling.net.response(PIL.WebPImagePlugin.WebPImageFile)
+def webp_reponse(image, request, response):
   return jpeg_reponse(image, request, response)
 
 @app.route("/thumb")
