@@ -93,6 +93,9 @@ for line in fin:
   postalcodes[int(postnr)] = store[qid]
 fin.close()
 
+addresses = {}
+cprs = set()
+
 db = sling.Database(flags.arg.db)
 recout = None
 if flags.arg.output:
@@ -111,6 +114,7 @@ def build_person(fields, builder):
   side = get_field(fields, "Side/dørnr")
   postnr = get_field(fields, "Postnr")
   by = get_field(fields, "By")
+  cprs.add(cpr)
 
   # Construct name, postnr, and address for legacy records.
   legacy = False
@@ -139,6 +143,17 @@ def build_person(fields, builder):
   if by: address += " " + by
   address = address.strip()
   if len(address) == 0: address = None
+
+  # Check for existing address.
+  if address and postnr:
+    akey = cpr + str(postnr) + address[0:4]
+    if akey in addresses:
+      if address != addresses[akey]:
+        #print("replace address %s: '%s' -> '%s'" %
+        #      (akey, address, addresses[akey]))
+        address = addresses[akey]
+    else:
+      addresses[akey] = address
 
   # Birth name.
   birthname = None
@@ -256,4 +271,4 @@ for key, _, rec in db:
 
 if recout: recout.close()
 db.close()
-print(num_messages, "messages", num_persons, "persons")
+print(num_messages, "messages", num_persons, "persons", len(cprs), "CPRs")

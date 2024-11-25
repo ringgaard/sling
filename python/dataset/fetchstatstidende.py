@@ -20,6 +20,16 @@ flags.define("--month",
              help="fetch messages for month",
              type=int)
 
+flags.define("--first",
+             default=1,
+             help="first day of month to fatch",
+             type=int)
+
+flags.define("--delay",
+             default=1,
+             help="delay in seconds between requests",
+             type=int)
+
 flags.parse()
 
 db = sling.Database(flags.arg.db)
@@ -30,7 +40,7 @@ def get_field(fields, name):
 
 ua = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
 
-date = datetime.date(flags.arg.year, flags.arg.month, 1)
+date = datetime.date(flags.arg.year, flags.arg.month, flags.arg.first)
 num_fetched = 0
 while date.month == flags.arg.month:
   print(date)
@@ -58,33 +68,33 @@ while date.month == flags.arg.month:
     pagecount = data["pageCount"]
     page += 1
 
-    n = 0
-    for msgid in msgids:
-      n += 1
-      if msgid in db:
-        print("skip", msgid)
-        continue
+  n = 0
+  for msgid in msgids:
+    n += 1
+    if msgid in db:
+      print("skip", msgid)
+      continue
 
-      time.sleep(10)
+    time.sleep(flags.arg.delay)
 
-      url = "https://www.statstidende.dk/api/message/" +  msgid
-      try:
-        r = requests.get(url, headers={"User-Agent": ua}, timeout=60)
-        r.raise_for_status()
-      except requests.exceptions.ReadTimeout:
-        print("timeout", msgid)
-        continue
+    url = "https://www.statstidende.dk/api/message/" +  msgid
+    try:
+      r = requests.get(url, headers={"User-Agent": ua}, timeout=60)
+      r.raise_for_status()
+    except requests.exceptions.ReadTimeout:
+      print("timeout", msgid)
+      continue
 
-      data = r.json();
-      document = json.loads(data["document"])
-      data["document"] = document
-      del data["document"]
-      for k, v in document.items(): data[k] = v
-      outcome = db.put(msgid, json.dumps(data), mode=sling.DBADD)
+    data = r.json();
+    document = json.loads(data["document"])
+    data["document"] = document
+    del data["document"]
+    for k, v in document.items(): data[k] = v
+    outcome = db.put(msgid, json.dumps(data), mode=sling.DBADD)
 
-      print("%d/%d" % (n, len(msgids)), msgid, outcome)
-      sys.stdout.flush()
-      num_fetched += 1
+    print("%d/%d" % (n, len(msgids)), msgid, outcome)
+    sys.stdout.flush()
+    num_fetched += 1
 
   date = date + datetime.timedelta(days=1)
 
