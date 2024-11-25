@@ -103,6 +103,7 @@ if flags.arg.output:
 
 def build_person(fields, builder):
   cpr = get_field(fields, "CPR-nr.")
+  if cpr is None: cpr = get_field(fields, "CPR.nr.")
   doed = get_field(fields, "Dødsdato")
   navn = get_field(fields, "Navn")
   ungnavn = get_field(fields, "Efternavn ved fødsel")
@@ -114,6 +115,7 @@ def build_person(fields, builder):
   side = get_field(fields, "Side/dørnr")
   postnr = get_field(fields, "Postnr")
   by = get_field(fields, "By")
+
   cprs.add(cpr)
 
   # Construct name, postnr, and address for legacy records.
@@ -234,6 +236,11 @@ for key, _, rec in db:
   fields = deceased.get("fields")
 
   cpr = get_field(fields, "CPR-nr.")
+  if cpr is None: cpr = get_field(fields, "CPR.nr.")
+  if cpr is None:
+    print("missing CPR nr:", msgid)
+    continue
+
   builder = sling.util.FrameBuilder(store)
   build_person(fields, builder)
 
@@ -243,6 +250,7 @@ for key, _, rec in db:
   if spouse:
     sfields = spouse["fields"]
     scpr = get_field(sfields, "CPR-nr.")
+    if scpr is None: scpr = get_field(sfields, "CPR.nr.")
     if scpr:
       sbuilder = sling.util.FrameBuilder(store)
       if build_person(sfields, sbuilder):
