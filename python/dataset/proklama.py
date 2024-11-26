@@ -211,12 +211,19 @@ def build_person(fields, builder):
     location = postalcodes.get(int(postnr))
     if location is not None: residence = location
 
-  builder.add(n_residence, store.frame([
-    (n_is, residence),
-    (n_address, address)
-  ]))
+  if residence is None:
+      print("residence:", cpr, navn, address)
+      if address is not None:
+        builder.add(n_residence, address)
+  else:
+    builder.add(n_residence, store.frame([
+      (n_is, residence),
+      (n_address, address)
+    ]))
+
   builder.add(n_country, n_denmark)
   builder.add(n_described_by_source, n_statstidende)
+
   return True
 
 num_messages = 0

@@ -68,12 +68,14 @@ for key, _, rec in db(begin=chkpt.checkpoint):
   if deceased is None: continue
   fields = deceased["fields"]
   cpr = get_field(fields, "CPR-nr.")
+  if cpr is None: cpr = get_field(fields, "CPR.nr.")
   cprnumbers.append(cpr)
   spouse = get_group(proklama,
                      "Tidligere afdød ægtefælle (kun ved uskiftet bo)")
   if spouse:
     sfields = spouse["fields"]
     scpr = get_field(sfields, "CPR-nr.")
+    if scpr is None: scpr = get_field(sfields, "CPR.nr.")
     if scpr: cprnumbers.append(scpr)
 
 # Match persons.
