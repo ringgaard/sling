@@ -49,6 +49,7 @@ while date.month == flags.arg.month:
   pagecount = 1
   msgids = []
   while page < pagecount:
+    time.sleep(flags.arg.delay)
     url = "https://www.statstidende.dk/api/messagesearch?fromDate=%sT00:00:00&toDate=%sT00:00:00&ps=100&page=%d&m=431a79afdf1f5c4ba7a4a20aadda8c0a" % (str(date), str(date), page)
     print(page, pagecount, url)
     r = requests.get(url, headers={"User-Agent": ua})

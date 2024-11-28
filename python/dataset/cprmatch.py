@@ -99,15 +99,15 @@ for cprnr in cprnumbers:
     dob = m[n_birthdate]
     if dob is None: continue
     if dob == born:
-      print('{name:"%s" +%s +%s}' % (name, itemid, m.id))
+      print('{name:"%s" +"%s" +"%s"}' % (name, itemid, m.id))
 
   business = item[n_ownerof]
   if business:
     owners = list(business(n_ownedby))
     if len(owners) == 1 and kb.resolve(owners[0])[n_name] == name:
-      print('{name:"%s" +%s +%s}' % (name, itemid, kb.resolve(owners[0]).id))
+      print('{name:"%s" +"%s" +"%s"}' % (name, itemid, kb.resolve(owners[0]).id))
     else:
-      print('{name:"%s" +%s P1830: %s}' % (name, itemid, business.id))
+      print('{name:"%s" +"%s" P1830: %s}' % (name, itemid, business.id))
 
 chkpt.commit(db.epoch())
 db.close()

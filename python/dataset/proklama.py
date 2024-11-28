@@ -123,7 +123,8 @@ def build_person(fields, builder):
   if navn is None:
     field_list = []
     for f in fields:
-      if f.get("type") == 1: field_list.append(f["value"])
+      if f.get("type") == 1 and f.get("name") is None:
+        field_list.append(f["value"])
     if len(field_list) == 0: return False
     navn = field_list[0]
     vej = ", ".join(field_list[1:])
@@ -135,6 +136,7 @@ def build_person(fields, builder):
   if paren != -1:
     print("trim", cpr, navn)
     navn = navn[:paren - 1].strip()
+    if navn.endswith("-"): navn = navn[:-1].strip()
 
   # Residence.
   address = remove_trailing_zeros(vej)
@@ -144,7 +146,11 @@ def build_person(fields, builder):
   if postnr and not legacy: address += ", " + postnr
   if by: address += " " + by
   address = address.strip()
-  if len(address) == 0: address = None
+  if address and ("Ukendt" in address or "ukendt" in address):
+    print("ukendt:", cpr, address)
+    address = None
+  elif len(address) == 0:
+    address = None
 
   # Check for existing address.
   if address and postnr:
