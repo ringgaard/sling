@@ -125,6 +125,7 @@
     P463: item,       ; member of
     P1344: item,      ; participant of
     PFEIN: item,      ; featured in
+    P1875: item,      ; represented by
 
     ; Author names creates to many matches for articles
     ;P50: item,        ; author

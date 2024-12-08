@@ -14,6 +14,7 @@ const n_name = frame("name");
 const n_description = frame("description");
 const n_type = frame("P31");
 const n_start_point = frame("P1427");
+const n_excluding = frame("P1011");
 const n_human = frame("Q5");
 const n_gender = frame("P21");
 const n_male = frame("Q6581097");
@@ -239,6 +240,13 @@ class Graph {
       visit.push(node);
     }
 
+    // Get stop nodes.
+    let stop = new Set();
+    for (let topic of seed.all(n_excluding)) {
+      topic = store.resolve(topic);
+      stop.add(topic);
+    }
+
     // Construct set of relation to follow.
     let relations = null;
     if (seed.has(n_relation)) {
@@ -257,6 +265,7 @@ class Graph {
         if (relations && !relations.has(property)) continue;
         value = neighborhood.get(value);
         if (!value) continue;
+        if (stop.has(value)) continue;
 
         let target = this.nodes.get(value);
         if (!target) {
@@ -875,4 +884,3 @@ export default class NetworkWidget extends Component {
 };
 
 Component.register(NetworkWidget);
-

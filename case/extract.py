@@ -66,7 +66,7 @@ def handle_extract(request):
   })
 
 def handle_figure(request):
-  m = re.fullmatch("\/(\d+)\/(.*)(\.\w+)", request.path)
+  m = re.fullmatch(r"\/(\d+)\/(.*)(\.\w+)", request.path)
   if m is None: return 404
   ts = int(m[1])
   filename = m[1] + "/" + m[2] + m[3]
@@ -75,4 +75,3 @@ def handle_figure(request):
   content = figures.get(filename)
   if content is None: return 404
   return sling.net.MemoryFile(content, ts, ct)
-

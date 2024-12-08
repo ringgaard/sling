@@ -295,6 +295,7 @@ var plugins = [
     /^https?:\/\/p..ncoven\.com\//,
     /^https?:\/\/vipergirls\.to\/threads\//,
     /^https?:\/\/www\.famousboard\.com\/threads\//,
+    /^https?:\/\/kitty-kats\.net\/threads\//,
   ],
 },
 
@@ -650,4 +651,3 @@ export async function get_widget(topic) {
   // Return new instance of widget.
   return new widget.factory(topic);
 }
-
