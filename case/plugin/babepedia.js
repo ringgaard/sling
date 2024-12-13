@@ -115,14 +115,14 @@ export default class BabepediaPlugin {
     // Get name and aliases.
     let babename = doc.getElementById("babename");
     if (babename) {
-      let name = babename.innerText;
+      let name = babename.innerText.trim();
       topic.put(n_name, name);
     }
     let aka = doc.getElementById("aka");
     if (aka) {
       let names = aka.innerText.substring(4).split(/\s*\/\s*/);
       for (let name of names) {
-        topic.put(n_alias, name);
+        topic.put(n_alias, name.trim());
       }
     }
     topic.put(n_instance_of, n_human);
@@ -263,4 +263,3 @@ export default class BabepediaPlugin {
     context.updated(topic);
   }
 };
-

@@ -477,5 +477,37 @@ class WikidataPruner : public task::FrameProcessor {
 
 REGISTER_TASK_PROCESSOR("wikidata-pruner", WikidataPruner);
 
+// Filter items with multi-language name but no English name.
+class WikidataMultiLanguage : public task::FrameProcessor {
+ public:
+  // Only keep multi-language items.
+  void Process(Slice key, uint64 serial, const Frame &frame) override {
+    Store *store = frame.store();
+    bool has_multi = false;
+    bool has_english = false;
+    for (const Slot &s : frame) {
+      if (s.name == n_name_) {
+        StringDatum *name = store->GetString(s.value);
+        if (name == nullptr) continue;
+        if (name->qualified()) {
+          if (name->qualifier() == n_english_) has_english = true;
+        } else {
+          has_multi = true;
+        }
+      }
+    }
+    if (!has_english && has_multi) {
+      Output(frame);
+    }
+  }
+
+ private:
+  // Symbols.
+  Name n_name_{names_, "name"};
+  Name n_english_{names_, "/lang/en"};
+};
+
+REGISTER_TASK_PROCESSOR("multi-language", WikidataMultiLanguage);
+
 }  // namespace nlp
 }  // namespace sling
