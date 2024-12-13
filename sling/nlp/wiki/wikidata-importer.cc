@@ -497,7 +497,7 @@ class WikidataMultiLanguage : public task::FrameProcessor {
       }
     }
     if (!has_english && has_multi) {
-      Output(frame);
+      Output(key, serial, frame);
     }
   }
 

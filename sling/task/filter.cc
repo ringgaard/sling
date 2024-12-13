@@ -22,8 +22,8 @@
 namespace sling {
 namespace task {
 
-// Filter messages by keys.
-class FilterTask : public Processor {
+// Discard messages by keys.
+class DiscardTask : public Processor {
  public:
   void Start(Task *task) override {
     // Get output channel.
@@ -65,8 +65,7 @@ class FilterTask : public Processor {
   Counter *num_discarded_ = nullptr;
 };
 
-REGISTER_TASK_PROCESSOR("filter", FilterTask);
+REGISTER_TASK_PROCESSOR("discard", DiscardTask);
 
 }  // namespace task
 }  // namespace sling
-

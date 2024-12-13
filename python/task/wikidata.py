@@ -104,7 +104,7 @@ class WikidataWorkflow:
     with self.wf.namespace("wikidata"):
       input = self.wikidata_input(dump)
       items, properties = self.wikidata_convert(input)
-      filtered = self.wf.filter([items, properties], "filter",
+      filtered = self.wf.filter([items, properties], "discard",
                                 auxin={"discard": self.wikidata_deleted()})
       db = self.wikidatadb()
       self.wf.write(filtered, db, name="db-writer",
@@ -171,4 +171,3 @@ def compute_fanin():
   wf = WikidataWorkflow("fanin")
   wf.compute_fanin()
   run(wf.wf)
-
