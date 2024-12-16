@@ -41,6 +41,13 @@ var importers = {
     mime: "application/quick-statements",
     module: "quickstmt.js",
   },
+
+  "ged": {
+    name: "GEDCOM family tree",
+    extension: ".ged",
+    mime: "text/vnd.familysearch.gedcom",
+    module: "gedcom.js",
+  },
 };
 
 
@@ -121,4 +128,3 @@ export async function import_data(casefile, editor) {
     inform(`${context.num_topics} imported`);
   }
 }
-

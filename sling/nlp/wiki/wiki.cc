@@ -225,6 +225,7 @@ void AuxFilter::Init(Store *store) {
 
     "Q523",       // star
     "Q318",       // galaxy
+    "Q83373",     // quasar
 
     nullptr,
   };
@@ -251,4 +252,3 @@ bool AuxFilter::IsAux(const Frame &frame) const {
 
 }  // namespace nlp
 }  // namespace sling
-

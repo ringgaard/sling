@@ -375,6 +375,7 @@ class WikidataPruner : public task::FrameProcessor {
     task->Fetch("prune_wiki_links", &prune_wiki_links_);
     task->Fetch("prune_wiki_maps", &prune_wiki_maps_);
     task->Fetch("prune_category_members", &prune_category_members_);
+    task->Fetch("prune_followers", &prune_followers_);
 
     // Initialize aux filter.
     filter_.Init(commons_);
@@ -430,6 +431,7 @@ class WikidataPruner : public task::FrameProcessor {
     if (prune_wiki_links_) item.Delete(n_links_);
     if (prune_wiki_maps_) item.Delete(n_wikipedia_);
     if (prune_category_members_) item.Delete(n_member_);
+    if (prune_followers_) item.Delete(n_followers_);
     item.Update();
 
     // Filter out aux items.
@@ -455,6 +457,7 @@ class WikidataPruner : public task::FrameProcessor {
   Name n_links_{names_, "/w/item/links"};
   Name n_member_{names_, "/w/item/member"};
   Name n_property_{names_, "/w/property"};
+  Name n_followers_{names_, "P8687"};
 
   // Item filter.
   AuxFilter filter_;
@@ -469,6 +472,7 @@ class WikidataPruner : public task::FrameProcessor {
   bool prune_wiki_links_ = true;
   bool prune_wiki_maps_ = true;
   bool prune_category_members_ = true;
+  bool prune_followers_ = true;
 
   // Statistics.
   task::Counter *num_kb_items_;
