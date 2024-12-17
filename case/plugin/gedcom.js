@@ -22,6 +22,9 @@ const n_denmark = frame("Q756617");
 const n_country = frame("P27");
 const n_email = frame("P968");
 
+const n_start = frame("P580");
+const n_pom = frame("P2842");
+
 const n_dob = frame("P569");
 const n_pob = frame("P19");
 
@@ -36,6 +39,10 @@ const n_spouse = frame("P26");
 const n_father = frame("P22");
 const n_mother = frame("P25");
 const n_child = frame("P40");
+
+const country_from_language = {
+  "Danish": n_denmark,
+}
 
 const months = {
   "JAN": 1, "FEB": 2, "MAR": 3, "APR": 4, "MAY": 5, "JUN": 6,
@@ -61,9 +68,18 @@ function date(s) {
   } catch {
   }
 }
+
+function lookup(node, field) {
+  if (node.children) {
+    for (let n of node.children) {
+      if (n.field == field) return n.value;
+    }
+  }
+}
+
 export default class GEDCOMImporter {
   async process(file, context) {
-    // Initialize GEDCOM parser with file data.
+    // Parse GEDCOM file into tree with nodes.
     let data = await file.text();
     let top = new Array();
     let stack = new Array();
@@ -88,13 +104,22 @@ export default class GEDCOMImporter {
       stack.push(node);
     }
 
+    // Find existing topics with GEDCOM ids.
+    let topics = new Map();
+    for (let t of context.editor.topics) {
+      let uid = t.get(n_gcid);
+      if (uid) topics.set(uid, t);
+    }
+
+    // Import individuals and families.
     let num_persons = 0;
     let num_families = 0;
     let pmap = new Map();
+    let country;
     for (let node of top) {
       //console.log(node.field, node.value);
       if (node.value == "INDI") {
-        let uid, gender, email;
+        let uid, gender;
         let name, married, given, surname;
         let married_name, birth_name;
         let dob, pob, dod, pod;
@@ -139,8 +164,6 @@ export default class GEDCOMImporter {
                   }
                 }
               }
-            } else if (c.field == "EMAIL") {
-              email = c.value;
             } else if (c.field == "_UID") {
               uid = c.value;
             }
@@ -150,27 +173,110 @@ export default class GEDCOMImporter {
           if (given && married) married_name = given + " " + married;
         }
 
-        // Create topic for individual.
-        let topic = await context.new_topic();
-        topic.put(n_name, name);
-        if (birth_name != name) topic.put(n_birth_name, birth_name);
-        if (married_name != name) topic.put(n_married_name, married_name);
+        // Try to find existing topic with matching uid.
+        let topic = uid && topics.get(uid);
 
+        // Create new topic for new individuals.
+        if (!topic) topic = await context.new_topic();
+
+        // Name.
+        let topic_name = topic.get(n_name);
+        if (!topic_name) {
+          topic.put(n_name, name);
+          topic_name = name;
+        } else if (name != birth_name && name != married_name) {
+          if (name != topic_name) topic.put(n_alias, name);
+        }
+        if (birth_name != topic_name) topic.put(n_birth_name, birth_name);
+        if (married_name != topic_name) topic.put(n_married_name, married_name);
+
+        // Type and gender.
         topic.put(n_type, n_human);
         topic.put(n_gender, gender);
-        topic.put(n_dob, dob);
-        if (!topic.has(n_pob)) topic.put(n_pob, pob);
-        topic.put(n_dod, dod);
-        if (!topic.has(n_pod)) topic.put(n_pod, pod);
-        topic.put(n_country, n_denmark);
 
-        if (email) topic.put(n_email, "mailto:" + email);
+        // Birth.
+        if (dob) {
+          let birth = topic.get(n_dob);
+          if (store.isqualifier(birth)) {
+            birth.put(n_is, dob);
+          } else {
+            topic.put(n_dob, dob);
+          }
+        }
+        if (!topic.has(n_pob)) topic.put(n_pob, pob);
+
+        // Death.
+        if (dod) {
+          let death = topic.get(n_dod);
+          if (store.isqualifier(death)) {
+            death.put(n_is, dod);
+          } else {
+            topic.put(n_dod, dod);
+          }
+        }
+        if (!topic.has(n_pod)) topic.put(n_pod, pod);
+
+        // Country.
+        if (!topic.has(n_country)) {
+          topic.put(n_country, country);
+        }
+
         topic.put(n_gcid, uid);
 
         pmap.set(node.field, topic);
         num_persons++;
-      } else if (node.value == "FAM") {
+      } else if (node.value == "FAM" && node.children) {
+        let husband, wife;
+        let children = new Array();
+        let dom, pom;
+        for (let c of node.children) {
+          if (c.field == "HUSB") {
+            husband = pmap.get(c.value);
+          } else if (c.field == "WIFE") {
+            wife = pmap.get(c.value);
+          } else if (c.field == "CHIL") {
+            children.push(pmap.get(c.value));
+          } else if (c.field == "MARR") {
+            dom = date(lookup(c, "DATE"))
+            pom = lookup(c, "PLAC");
+          }
+        }
+
+        for (let child of children) {
+          if (husband) child.put(n_father, husband);
+          if (wife) child.put(n_mother, wife);
+        }
+        if (husband && wife) {
+          if (dom || pom) {
+            if (!husband.has(n_spouse, wife)) {
+              let bride = store.frame();
+              bride.add(n_is, wife);
+              if (dom) bride.add(n_start, dom);
+              if (pom) bride.add(n_pom, pom);
+              husband.put(n_spouse, bride);
+            }
+
+            if (!wife.has(n_spouse, husband)) {
+              let groom = store.frame();
+              groom.add(n_is, husband);
+              if (dom) groom.add(n_start, dom);
+              if (pom) groom.add(n_pom, pom);
+              wife.put(n_spouse, groom);
+            }
+          } else {
+            husband.put(n_spouse, wife);
+            wife.put(n_spouse, husband);
+          }
+        }
+        for (let child of children) {
+          if (husband) husband.put(n_child, child);
+          if (wife) wife.put(n_child, child);
+        }
+
         num_families++;
+      } else if (node.field == "HEAD") {
+        let lang = lookup(node, "LANG");
+        country = country_from_language[lang];
       }
     }
     console.log(`${num_persons} persons and ${num_families} families`);

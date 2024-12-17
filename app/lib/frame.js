@@ -136,6 +136,15 @@ export class Store {
     }
   }
 
+  // Check if object is a qualifier frame.
+  isqualifier(obj) {
+    if (obj instanceof Frame) {
+      return obj.has(this.is) && !obj.has(this.id);
+    } else {
+      return false;
+    }
+  }
+
   // Import object from other store into this store. Returns new object.
   transfer(obj) {
     if (obj instanceof Frame) {
@@ -275,6 +284,11 @@ export class Frame {
   // Check if frame is anonymous.
   isanonymous() {
     return this.state == ANONYMOUS;
+  }
+
+  // Check if frame is a qualifier frame.
+  isqualifier() {
+    return this.has(this.store.is) && !this.has(this.store.id);
   }
 
   // Mark frame as a stub.
