@@ -65,7 +65,7 @@ def read_urls(filename):
   return list
 
 # Find media files in knowledge base.
-def get_media_files():
+def get_media_files(whitelist):
   # Load knowledge base.
   kb = sling.Store()
   kb.load(flags.arg.kb)
@@ -84,7 +84,9 @@ def get_media_files():
 
   # Find media files for all items.
   media = []
+  mediamap = {}
   for item in kb:
+    itemid = item.id;
     for n, v in item:
       if n in imageprops:
         # Add Wikimedia Commons url.
@@ -96,18 +98,16 @@ def get_media_files():
           print("Bad media file name:", item.id, v)
       elif n == p_media:
         # Add media url.
-        v = kb.resolve(v)
-        if type(v) == str:
-          if v.startswith('!'): v = v[1:]
-          media.append(v)
+        url = kb.resolve(v)
+        if type(url) == str:
+          if url.startswith('!'): url = url[1:]
+          if url not in whitelist:
+            media.append(url)
+            mediamap[url] = itemid
         else:
           print("Bad media url:", item.id, v)
 
-  return media
-
-# Get all media files.
-media = get_media_files()
-print(len(media), "media files in knowledge base")
+  return media, mediamap
 
 # Read blacklist and whitelist.
 blacklist = read_urls(flags.arg.blacklist)
@@ -115,6 +115,10 @@ whitelist = read_urls(flags.arg.whitelist)
 print(len(blacklist), "blacklisted media files")
 print(len(whitelist), "whitelisted media files")
 fblack = open(flags.arg.blacklist, "a") if flags.arg.auto_blacklist else None
+
+# Get all media files.
+media, mediamap = get_media_files(whitelist)
+print(len(media), "media files in knowledge base")
 
 # Connect to media database.
 photo.mediadb = sling.Database(flags.arg.mediadb, "mediaload")
@@ -148,7 +152,7 @@ for url in media:
   try:
     r = photo.retrieve_image(url)
     if r == None:
-      print("removed", url)
+      print("removed", url, mediamap[url])
       num_missing += 1
       continue
     elif r.status == 404 and url.startswith(wiki_base_url):
@@ -164,10 +168,10 @@ for url in media:
           continue
     elif r.status != 200:
       num_errors += 1
-      print("error", r.status, url)
+      print("error", r.status, url, mediamap[url])
       continue
   except Exception as e:
-    print("fail", e, url)
+    print("fail", e, url, mediamap[url])
     num_errors += 1
     continue
 
@@ -226,4 +230,3 @@ print(num_known, "known,",
       num_blacklist, "blacklisted",
       num_whitelist, "whitelisted",
       num_bytes, "bytes")
-
