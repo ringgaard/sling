@@ -268,8 +268,8 @@ def lookup_name(name):
   else:
     return celebmap.get(name)
 
-# Get proper name prefix.
-def name_prefix(name):
+# Get proper name prefixes.
+def name_prefixes(name):
   prefix = []
   for word in name.split(" "):
     if len(word) >= 3 and word.isupper(): break
@@ -277,8 +277,14 @@ def name_prefix(name):
       prefix.append(word)
     else:
       break
-  if len(prefix) < 2: return None
-  return " ".join(prefix).strip(" .,-?")
+
+  l = len(prefix)
+  prefixes = []
+  while l > 1:
+    prefixes.append(" ".join(prefix[:l]).strip(" .,-?"))
+    l = l - 1
+
+  return prefixes
 
 # Get size of photo in pixels.
 def pixels(info):
@@ -392,12 +398,14 @@ for key, value in postings:
       itemid = lookup_name(name)
       query = name
 
-    # Try to match name prefix.
+    # Try to match name prefixes.
     if itemid is None:
-      prefix = name_prefix(name)
-      if prefix != None:
+      prefixes = name_prefixes(name)
+      for prefix in prefixes:
         itemid = lookup_name(prefix)
-        query = prefix
+        if itemid is not None:
+          query = prefix
+          break
 
   # Do not match names marked as ambiguous (*).
   ambiguous = itemid == "*"
@@ -561,4 +569,3 @@ if flags.arg.report:
 
 if not flags.arg.dryrun: chkpt.commit(redditdb.position())
 redditdb.close()
-

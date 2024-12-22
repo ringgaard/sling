@@ -8,6 +8,7 @@ import {store, frame, settings} from "/common/lib/global.js";
 const n_name = frame("name");
 const n_alias = frame("alias");
 const n_birth_name = frame("P1477");
+const n_married_name = frame("P2562");
 const n_target = frame("target");
 const n_xref_type = frame("/w/xref");
 
@@ -146,7 +147,8 @@ export class SearchIndex {
 
       // Add topic names, aliases, and xrefs to index.
       for (let [prop, value] of topic) {
-        if (prop == n_name || prop == n_birth_name || prop == n_alias) {
+        if (prop == n_name || prop == n_alias ||
+            prop == n_birth_name || prop == n_married_name) {
           let alias = prop == n_alias;
           let name = normalized(value);
           this.names.push({name, topic, alias});
@@ -381,4 +383,3 @@ export class SearchResultsDialog extends MdDialog {
 }
 
 Component.register(SearchResultsDialog);
-

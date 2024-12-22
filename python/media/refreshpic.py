@@ -28,21 +28,27 @@ flags.define("--mediadb",
              default="vault/media",
              metavar="DB")
 
+flags.define("--ua",
+             help="user-agent string for fetching pictures",
+             default="SLING Bot 1.0")
+
 flags.parse()
 
 mediadb = sling.Database(flags.arg.mediadb, "refreshpic")
 pool = urllib3.PoolManager()
 
+headers = {"User-agent": flags.arg.ua}
+
 def fetch(url):
   # Fetch image.
-  r = pool.request("GET", url, timeout=60)
+  r = pool.request("GET", url, headers=headers, timeout=60)
   for h in r.retries.history:
     if h.redirect_location.endswith("/removed.png"):
       raise Exception("image removed")
     if h.redirect_location.endswith("/no_image.jpg"):
       raise Exception("no image")
   if r.status != 200:
-    raise Exception("error " + str(r.status) + "fetching image")
+    raise Exception("error " + str(r.status) + " fetching image")
   image = r.data
 
   # Check content length.
@@ -62,4 +68,3 @@ if modtime:
 
 result = mediadb.put(flags.arg.url, image, last_modified)
 print(flags.arg.url, len(image), modtime, result)
-

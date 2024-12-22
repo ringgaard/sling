@@ -127,6 +127,8 @@ Name n_author(names, "P50");
 Name n_participant(names, "P710");
 Name n_name(names, "name");
 Name n_alias(names, "alias");
+Name n_birth_name(names, "P1477");
+Name n_married_name(names, "P2562");
 Name n_description(names, "description");
 Name n_ref(names, "ref");
 Name n_topic(names, "topic");
@@ -664,7 +666,8 @@ void TopicNameIndex::Update(const Frame &topic, bool ids) {
     // Add new names and aliases for topic.
     string normalized;
     for (const Slot &s : topic) {
-      if (s.name == n_name || s.name == n_alias) {
+      if (s.name == n_name || s.name == n_alias ||
+          s.name == n_birth_name || s.name == n_married_name) {
         String str(store_, s.value);
         if (!str.valid()) continue;
         Text name = str.text();
