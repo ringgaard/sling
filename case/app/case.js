@@ -843,7 +843,7 @@ class CaseEditor extends MdApp {
             if (m.annotation == source) {
               m.annotation = replacement;
             } else if (m.annotation.get(n_is) == source) {
-              m.annotation.set(n_is) = replacement;
+              m.annotation.set(n_is, replacement);
             }
           }
         }
