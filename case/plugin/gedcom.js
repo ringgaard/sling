@@ -36,6 +36,7 @@ const n_female = frame("Q6581072");
 const n_male = frame("Q6581097");
 
 const n_spouse = frame("P26");
+const n_partner = frame("P451");
 const n_father = frame("P22");
 const n_mother = frame("P25");
 const n_child = frame("P40");
@@ -248,7 +249,7 @@ export default class GEDCOMImporter {
         }
         if (husband && wife) {
           if (dom || pom) {
-            if (!husband.has(n_spouse, wife)) {
+            if (!husband.has(n_spouse, wife) && !husband.has(n_partner, wife)) {
               let bride = store.frame();
               bride.add(n_is, wife);
               if (dom) bride.add(n_start, dom);
@@ -256,7 +257,7 @@ export default class GEDCOMImporter {
               husband.put(n_spouse, bride);
             }
 
-            if (!wife.has(n_spouse, husband)) {
+            if (!wife.has(n_spouse, husband) && !wife.has(n_partner, husband)) {
               let groom = store.frame();
               groom.add(n_is, husband);
               if (dom) groom.add(n_start, dom);
@@ -264,8 +265,8 @@ export default class GEDCOMImporter {
               wife.put(n_spouse, groom);
             }
           } else {
-            husband.put(n_spouse, wife);
-            wife.put(n_spouse, husband);
+            if (!husband.has(n_partner, wife)) husband.put(n_spouse, wife);
+            if (!wife.has(n_partner, husband)) wife.put(n_spouse, husband);
           }
         }
         for (let child of children) {

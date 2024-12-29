@@ -823,7 +823,7 @@ class CaseEditor extends MdApp {
               for (let m = 0; m < value.length; ++m) {
                 if (source == value.value(m)) {
                   value.set_value(m, target);
-                 updated = true;
+                  updated = true;
                 }
               }
             }

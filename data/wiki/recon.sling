@@ -39,6 +39,8 @@
     P2522: {+P1346       ; victory -> winner
       P585: P585   ; point in time
     }
+    PFEAT: PFEIN        ; features -> featured in
+
     P22: P40            ; father -> child
     P25: P40            ; mother -> child
     P26: P26            ; spouse -> spouse
@@ -58,4 +60,3 @@
     P8168/P503: P8168/Q245692    ; received by -> receiver of
   }
 }
-
