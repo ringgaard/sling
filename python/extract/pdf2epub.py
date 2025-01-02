@@ -322,9 +322,9 @@ class PDFChapter:
       pagenum = p.pageno
       for l in p.lines:
         next = level
-        if l.fontsize > h1 and l.fontsize < dropcap:
+        if l.fontsize >= h1 and l.fontsize < dropcap:
           next = LEVEL_HEADING
-        elif l.fontsize > h2 and l.fontsize < dropcap:
+        elif l.fontsize >= h2 and l.fontsize < dropcap:
           next = LEVEL_SUBHEADING
         elif l.para:
           next = LEVEL_PARA
@@ -642,4 +642,3 @@ if flags.arg.debug:
       if l.flags: attrs.append("{%d}" % l.flags)
       if l.para: print()
       print(l.text, " ".join(attrs))
-

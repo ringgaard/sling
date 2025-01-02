@@ -35,9 +35,16 @@ flags.define("--dryrun",
              default=False,
              action="store_true")
 
+flags.define("--fpcache",
+             help="record file with cached photo fingerprints",
+             default=None,
+             metavar="RECFILE")
+
 flags.parse()
 
 fpdb = sling.Database(flags.arg.fpdb)
+
+photo.load_photo_cache(flags.arg.fpcache)
 
 num_fingerprints = 0
 
@@ -63,16 +70,24 @@ if flags.arg.profiles:
       else:
         fpinfo = json.loads(fpdata)
 
-      # Check if hash is already in fingerprint database.
-      if flags.arg.hash in fpinfo: continue
-
       # Compute photo fingerprint.
-      p = photo.get_photo(key, url)
-      if p is None: continue
+      if flags.arg.hash not in fpinfo:
+        p = photo.get_photo(key, url)
+        if p is None: continue
 
-      fpinfo["width"] = p.width
-      fpinfo["height"] = p.height
-      fpinfo[flags.arg.hash] = p.fingerprint
+        fpinfo["width"] = p.width
+        fpinfo["height"] = p.height
+        fpinfo[flags.arg.hash] = p.fingerprint
+
+      # Add duplicate.
+      if key != fpinfo["item"]:
+        other = fpinfo.get("other")
+        if other is None:
+          other = []
+          fpinfo["other"] = other
+        if not key in other:
+          other.append(key)
+          print("=== dup", url, fpinfo)
 
       # Write fingerprint info to database.
       if not flags.arg.dryrun: fpdb[url] = json.dumps(fpinfo)
@@ -120,10 +135,12 @@ if flags.arg.cases:
       # Add missing photo fingerprints.
       new_photos = 0
       for url, fpdata in fingerprints.items():
-        # Skip videos.
+        # Check for empty urls.
         if url is None:
           print("empty url in topic", topicid)
           continue
+
+        # Skip videos.
         if photo.is_video(url): continue
 
         # Parse fingerprint info.
@@ -132,18 +149,26 @@ if flags.arg.cases:
         else:
           fpinfo = json.loads(fpdata)
 
-        # Check if hash is already in fingerprint database.
-        if flags.arg.hash in fpinfo: continue
-
         # Compute photo fingerprint.
-        p = photo.get_photo(itemid, url)
-        if p is None:
-          print(topicid, "missing photo", url)
-          continue
+        if flags.arg.hash not in fpinfo:
+          p = photo.get_photo(itemid, url)
+          if p is None:
+            print(topicid, "missing photo", url)
+            continue
 
-        fpinfo["width"] = p.width
-        fpinfo["height"] = p.height
-        fpinfo[flags.arg.hash] = p.fingerprint
+          fpinfo["width"] = p.width
+          fpinfo["height"] = p.height
+          fpinfo[flags.arg.hash] = p.fingerprint
+
+        # Add duplicate.
+        if itemid != fpinfo["item"] and topicid != fpinfo["item"]:
+          other = fpinfo.get("other")
+          if other is None:
+            other = []
+            fpinfo["other"] = other
+          if not itemid in other:
+            other.append(itemid)
+            print("=== dup", url, fpinfo)
 
         # Write fingerprint info to database.
         if not flags.arg.dryrun: fpdb[url] = json.dumps(fpinfo)
@@ -157,4 +182,3 @@ if flags.arg.cases:
 
 fpdb.close()
 print(num_fingerprints, "new fingerprints added")
-

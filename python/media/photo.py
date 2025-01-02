@@ -227,6 +227,22 @@ class Photo:
 
 photo_cache = {}
 
+def load_photo_cache(filename):
+  if filename is None: return
+  print("Reading cached fingerprints from", filename)
+  fprecs = sling.RecordReader(flags.arg.fpcache)
+  hashalg = flags.arg.hash
+  for url, fpdata in fprecs:
+    url = url.decode()
+    fpinfo = json.loads(fpdata)
+    photo = Photo(None, url)
+    photo.width = fpinfo["width"]
+    photo.height = fpinfo["height"]
+    photo.fingerprint = fpinfo[hashalg]
+    photo_cache[url] = photo
+  print(len(photo_cache), "cached fingerprints")
+  fprecs.close()
+
 def retrieve_image(url):
   headers = {"User-agent": "SLING Bot 1.0"}
   r = pool.request("GET", url, headers=headers, timeout=60)
@@ -438,6 +454,13 @@ class Profile:
     for media in self.media():
       urls.append(self.url(media))
     return urls
+
+  # Return photo info for all media.
+  def photos(self):
+    photos = {}
+    for url in self.urls:
+      photos[url] = get_photo(self.itemid, url)
+    return photos
 
   # Check if photo already in profile.
   def has(self, url, alturl=None):
@@ -664,7 +687,7 @@ class Profile:
       if flags.arg.albums:
         # Fetch albums from text.
         selftext = reply["selftext"]
-        for m in re.finditer("\[(.+)\]\((https?://imgur.com/a/\w+)\)", selftext):
+        for m in re.finditer(r"\[(.+)\]\((https?:\/\/imgur.com/a/\w+)\)", selftext):
           print("Album", m[2], m[1])
           count += self.add_media(m[2], m[1], nsfw)
       else:
@@ -696,7 +719,7 @@ class Profile:
         print("Skipping missing image in gallery", mediaid);
         continue
 
-      m = re.match("https://preview.redd.it/(\w+\.\w+)\?", link)
+      m = re.match(r"https:\/\/preview\.redd\.it\/(\w+\.\w+)\?", link)
       if m != None: link = "https://i.redd.it/" + m.group(1)
 
       # Image caption.
@@ -794,7 +817,7 @@ class Profile:
     url = url.replace("/www.imgur.com/", "/imgur.com/")
     url = url.replace("/m.imgur.com/", "/imgur.com/")
 
-    m = re.match("(https://imgur\.com/.+)\.jpeg", url)
+    m = re.match(r"(https://imgur\.com/.+)\.jpeg", url)
     if m != None: url = m.group(1) + ".jpg"
 
     url = url.replace("/www.reddit.com/", "/reddit.com/")
@@ -803,21 +826,21 @@ class Profile:
     if url.startswith("http://reddit.com"): url = "https" + url[4:]
     if url.startswith("http://imgur.com"): url = "https" + url[4:]
 
-    m = re.match("https://reddit\.com/media\?url=(.+)", url)
+    m = re.match(r"https:\/\/reddit\.com\/media\?url=(.+)", url)
     if m != None: url = urllib.parse.unquote(m.group(1))
 
-    m = re.match("(https://imgur\.com/.+)[\?#].*", url)
-    if m == None: m = re.match("(https?://reddit\.com/.+)[\?#].*", url)
-    if m == None: m = re.match("(https?://i\.redd\.it/.+)[\?#].*", url)
-    if m == None: m = re.match("(https?://i\.redditmedia\.com/.+)[\?#].*", url)
+    m = re.match(r"(https:\/\/imgur\.com/.+)[\?#].*", url)
+    if m == None: m = re.match(r"(https?://reddit\.com/.+)[\?#].*", url)
+    if m == None: m = re.match(r"(https?://i\.redd\.it/.+)[\?#].*", url)
+    if m == None: m = re.match(r"(https?://i\.redditmedia\.com/.+)[\?#].*", url)
     if m != None:
       url = m.group(1)
       if url.endswith("/new"): url = url[:-4]
 
-    m = re.match("https://preview.redd.it/(\w+.png)\?.+", url)
+    m = re.match(r"https://preview.redd.it/(\w+.png)\?.+", url)
     if m != None: url = "https://i.redd.it/" + m.group(1)
 
-    m = re.match("(https://imgur\.com/.+\.jpe?g)-\w+", url)
+    m = re.match(r"(https://imgur\.com/.+\.jpe?g)-\w+", url)
     if m != None: url = m.group(1)
 
     # Discard videos.
@@ -826,70 +849,70 @@ class Profile:
       return 0
 
     # Discard subreddits.
-    m = re.match("^https?://reddit\.com/r/\w+/?$", url)
+    m = re.match(r"^https?://reddit\.com/r/\w+/?$", url)
     if m != None: return 0;
 
     # Discard empty urls.
     if len(url) == 0: return 0
 
     # Imgur album.
-    m = re.match("https://imgur\.com/a/(\w+)", url)
+    m = re.match(r"https://imgur\.com/a/(\w+)", url)
     if m != None:
       albumid = m.group(1)
       return self.add_imgur_album(albumid, caption, nsfw)
 
     # Imgur gallery.
-    m = re.match("https://imgur\.com/gallery/(\w+)", url)
+    m = re.match(r"https://imgur\.com/gallery/(\w+)", url)
     if m != None:
       galleryid = m.group(1)
       return  self.add_imgur_album(galleryid, caption, nsfw)
-    m = re.match("https?://imgur\.com/\w/\w+/(\w+)", url)
+    m = re.match(r"https?://imgur\.com/\w/\w+/(\w+)", url)
     if m != None:
       galleryid = m.group(1)
       return  self.add_imgur_album(galleryid, caption, nsfw)
 
     # Single-image imgur.
-    m = re.match("https://imgur\.com/(\w+)$", url)
+    m = re.match(r"https://imgur\.com/(\w+)$", url)
     if m != None:
       imageid = m.group(1)
       return self.add_imgur_image(imageid, caption, nsfw)
 
     # Reddit gallery.
-    m = re.match("https://reddit\.com/gallery/(\w+)", url)
+    m = re.match(r"https://reddit\.com/gallery/(\w+)", url)
     if m != None:
       galleryid = m.group(1)
       return self.add_reddit_gallery(galleryid, caption, nsfw)
 
     # Reddit posting.
-    m = re.match("https://(www\.)?reddit\.com/\w+/.+/comments/(\w+)/", url)
+    m = re.match(r"https://(www\.)?reddit\.com/\w+/.+/comments/(\w+)/", url)
     if m != None:
       galleryid = m.group(2)
       return self.add_reddit_gallery(galleryid, caption, nsfw)
 
     # Reddit preview.
-    m = re.match("https://preview.redd.it/(\w+.png)\?", url)
+    m = re.match(r"https://preview.redd.it/(\w+.png)\?", url)
     if m != None:
       imagename = m.group(1)
       url = "https://i.redd.it/" + imagename
-    m = re.match("https://preview.redd.it/(\w+.jpg)\?", url)
+    m = re.match(r"https://preview.redd.it/(\w+.jpg)\?", url)
     if m != None:
       imagename = m.group(1)
       url = "https://i.redd.it/" + imagename
 
     # DR image scaler.
-    m = re.match("https://asset.dr.dk/[Ii]mage[Ss]caler/\?(.+)", url)
+    m = re.match(r"https://asset.dr.dk/[Ii]mage[Ss]caler/\?(.+)", url)
     if m != None:
       q = urllib.parse.parse_qs(m.group(1))
       url = "https://%s/%s" % (q["server"][0], q["file"][0])
 
     # Image chest album.
-    m = re.match("https://(?:www\.)?imgchest.com/p/(\w+)", url)
+    m = re.match(r"https://(?:www\.)?imgchest.com/p/(\w+)", url)
     if m != None:
       albumid = m.group(1)
       return self.add_imgchest_album(albumid, caption, nsfw)
 
     # Listal thumb.
-    m = re.match("(https://lthumb.lisimg.com/[0-9\/].jpg)\?.+", url)
+    m = re.match(r"(https://lthumb.lisimg.com/[0-9\/].jpg)\?.+", url)
     if m != None: url = m.group(1)
 
     # Add media to profile.
