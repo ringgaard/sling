@@ -67,9 +67,11 @@ m = re.search(
     r'<a href="(https:\/\/mapping.gleif.org\/api\/v2\/bic-lei\/[^"]+)">',
     str(r.content))
 bicurl = m.group(1)
-bicfn = flags.arg.dir + "/bic.zip"
+if bicurl:
+  bicfn = flags.arg.dir + "/bic.zip"
+  print("Download", bicurl)
+  download(bicurl, bicfn)
+else:
+  print("No BIC mapping found")
 
-print("Download", bicurl)
-download(bicurl, bicfn)
 print("Done.")
-

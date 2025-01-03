@@ -52,7 +52,7 @@ if flags.arg.profiles:
   num_profiles = 0
   for key, _, data in photo.photodb():
     num_profiles += 1
-    new_photos = 0
+    num_photos = 0
 
     profile = photo.Profile(key, data)
 
@@ -65,19 +65,24 @@ if flags.arg.profiles:
       if photo.is_video(url): continue
 
       # Parse fingerprint info.
+      updated = False
       if fpdata is None:
         fpinfo = {"item": key}
+        updated = True
       else:
         fpinfo = json.loads(fpdata)
 
       # Compute photo fingerprint.
       if flags.arg.hash not in fpinfo:
         p = photo.get_photo(key, url)
-        if p is None: continue
+        if p is None:
+          print("unable to fetch photo", key, url)
+          continue
 
         fpinfo["width"] = p.width
         fpinfo["height"] = p.height
         fpinfo[flags.arg.hash] = p.fingerprint
+        updated = True
 
       # Add duplicate.
       if key != fpinfo["item"]:
@@ -87,15 +92,14 @@ if flags.arg.profiles:
           fpinfo["other"] = other
         if not key in other:
           other.append(key)
+          updated = True
           print("=== dup", url, fpinfo)
 
       # Write fingerprint info to database.
-      if not flags.arg.dryrun: fpdb[url] = json.dumps(fpinfo)
-      new_photos += 1
-      num_fingerprints += 1
-
-    if new_photos > 0:
-      print(num_profiles, key, new_photos, "new")
+      if updated:
+        num_fingerprints += 1
+        if not flags.arg.dryrun: fpdb[url] = json.dumps(fpinfo)
+        print(num_profiles, key, url)
 
 if flags.arg.cases:
   store = sling.Store()
@@ -133,7 +137,6 @@ if flags.arg.cases:
       fingerprints = fpdb[urls]
 
       # Add missing photo fingerprints.
-      new_photos = 0
       for url, fpdata in fingerprints.items():
         # Check for empty urls.
         if url is None:
@@ -144,8 +147,10 @@ if flags.arg.cases:
         if photo.is_video(url): continue
 
         # Parse fingerprint info.
+        updated = False
         if fpdata is None:
           fpinfo = {"item": itemid, "topic": topicid}
+          updated = True
         else:
           fpinfo = json.loads(fpdata)
 
@@ -159,6 +164,7 @@ if flags.arg.cases:
           fpinfo["width"] = p.width
           fpinfo["height"] = p.height
           fpinfo[flags.arg.hash] = p.fingerprint
+          updated = False
 
         # Add duplicate.
         if itemid != fpinfo["item"] and topicid != fpinfo["item"]:
@@ -171,12 +177,10 @@ if flags.arg.cases:
             print("=== dup", url, fpinfo)
 
         # Write fingerprint info to database.
-        if not flags.arg.dryrun: fpdb[url] = json.dumps(fpinfo)
-        new_photos += 1
-        num_fingerprints += 1
-
-      if new_photos > 0:
-        print(itemid, topic[n_name], new_photos, "new")
+        if updated:
+          num_fingerprints += 1
+          if not flags.arg.dryrun: fpdb[url] = json.dumps(fpinfo)
+          print(itemid, topic[n_name], url)
 
   casedb.close()
 
