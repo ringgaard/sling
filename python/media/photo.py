@@ -134,6 +134,11 @@ def photodb():
   if db is None: db = sling.Database(flags.arg.photodb)
   return db
 
+def fingerprintdb():
+  global fpdb
+  if fpdb is None: fpdb = sling.Database(flags.arg.fpdb)
+  return fpdb
+
 # Video detection.
 
 video_suffixes = [
@@ -185,6 +190,36 @@ def md5_hasher(image):
 # Average hash computation.
 # See:
 # https://www.hackerfactor.com/blog/index.php?/archives/432-Looks-Like-It.html
+
+def average2x32_hasher(image):
+  try:
+    # Read image.
+    img = Image.open(io.BytesIO(image))
+
+    # Simplify image by reducing its size and colors.
+    pixels = img.convert("L").resize((8, 8), Image.LANCZOS).getdata()
+
+    # Get the average pixel value.
+    sum = 0.0
+    for p in pixels: sum += p
+    mean = sum / 64
+
+    # Generate the hash by comparing each pixel value to the average.
+    bitshi = 0
+    for i in range(32):
+      bitshi <<= 1
+      if pixels[i] > mean: bitshi |= 1
+    bitslo = 0
+    for i in range(32, 64):
+      bitslo <<= 1
+      if pixels[i] > mean: bitslo |= 1
+    fingerprint = "%08x%08x" % (bitshi, bitslo)
+
+    return fingerprint, img.width, img.height
+  except Exception:
+    # Fall back to MD hashing if fingerprint cannot be computed.
+    return md5_hasher(image)
+
 def average_hasher(image):
   try:
     # Read image.
@@ -198,13 +233,14 @@ def average_hasher(image):
     for p in pixels: sum += p
     mean = sum / 64
 
-    # Generate the hash by comparing each pixel's value to the average.
+    # Generate the hash by comparing each pixel value to the average.
     bits = 0
     for p in pixels:
       bits <<= 1
       if p > mean: bits |= 1
+    fingerprint = "%016x" % bits
 
-    return "%016x" % bits, img.width, img.height
+    return fingerprint, img.width, img.height
   except Exception:
     # Fall back to MD hashing if fingerprint cannot be computed.
     return md5_hasher(image)
@@ -212,6 +248,7 @@ def average_hasher(image):
 image_hashers = {
   "md5": md5_hasher,
   "average": average_hasher,
+  "average2x32": average2x32_hasher,
 }
 
 class Photo:
@@ -221,6 +258,7 @@ class Photo:
     self.fingerprint = None
     self.width = None
     self.height = None
+    self.nsfw = None
 
   def size(self):
     return self.width * self.height
@@ -304,10 +342,8 @@ def load_fingerprints(urls):
 
   # Fetch fingerprints from database.
   if len(flags.arg.fpdb) == 0: return
-  global fpdb
-  if fpdb is None: fpdb = sling.Database(flags.arg.fpdb)
 
-  for url, data in fpdb[missing].items():
+  for url, data in fingerprintdb()[missing].items():
     if data is None: continue
     fp = json.loads(data)
     if flags.arg.hash not in fp: continue
@@ -458,8 +494,11 @@ class Profile:
   # Return photo info for all media.
   def photos(self):
     photos = {}
-    for url in self.urls:
-      photos[url] = get_photo(self.itemid, url)
+    for media in self.media():
+      url = self.url(media)
+      photo = get_photo(self.itemid, url)
+      photo.nsfw = self.isnsfw(media)
+      photos[url] = photo
     return photos
 
   # Check if photo already in profile.
@@ -805,6 +844,20 @@ class Profile:
       serial += 1
     return count
 
+  # Add url gallery.
+  def add_url_gallery(self, gallery, caption, nsfw_override=None):
+    count = 0
+    for url in gallery[8:].split(" "):
+      nsfw = False
+      if url.startswith("!"):
+        nsfw = True
+        url = url[1:]
+      nsfw = tri(nsfw, nsfw_override)
+
+      if self.add_photo(url, caption, None, nsfw): count += 1
+
+    return count
+
   # Add media.
   def add_media(self, url, caption=None, nsfw=None):
     # NSFW urls.
@@ -914,6 +967,10 @@ class Profile:
     # Listal thumb.
     m = re.match(r"(https://lthumb.lisimg.com/[0-9\/].jpg)\?.+", url)
     if m != None: url = m.group(1)
+
+    # URL gallery.
+    if url.startswith("gallery:"):
+      return self.add_url_gallery(url, caption, nsfw)
 
     # Add media to profile.
     return self.add_photo(url, caption, flags.arg.source, nsfw)

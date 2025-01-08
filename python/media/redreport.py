@@ -447,7 +447,8 @@ class RedditPosting extends Component {
           <a href="${permalink}" target="_blank">
             ${posting._id || posting.id}
           </a>
-          by <a href="https://www.reddit.com/user/${posting.author}" target="_blank">${posting.author}</a>
+          by <a href="https://www.reddit.com/user/${posting.author}"
+              target="_blank">${posting.author}</a>
           ${xpost}
           <span class="dups">${photomsg}</span>
         </div>
@@ -849,4 +850,3 @@ def picedit(request):
 log.info("running")
 app.run()
 log.info("stopped")
-

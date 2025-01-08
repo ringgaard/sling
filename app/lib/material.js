@@ -1486,12 +1486,14 @@ export class MdCheckbox extends Component {
   }
 
   onconnected() {
-    this.bind(null, "change", e => this.onchange(e));
+    this.bind("input", "change", e => this.onchange(e));
   }
 
   onchange(e) {
     this.state = this.find("input").checked;
     this.find("label").classList.toggle("checked");
+    e.stopPropagation();
+    this.dispatch("change", e);
   }
 
   get checked() {
@@ -1741,6 +1743,10 @@ export class MdInput extends Component {
     input.focus();
   }
 
+  focus() {
+    this.find("input").focus();
+  }
+
   render() {
     let attrs = [];
     if (this.attrs.type) {
@@ -1765,18 +1771,17 @@ export class MdInput extends Component {
         width: 100%;
 
         color: black;
-        font-family: Roboto,Helvetica,sans-serif;
-        font-size: 14px;
       }
 
       $ input {
         outline: none;
         border: none;
-        line-height: 40px;
         height: 40px;
         width: 100%;
         padding: 10px;
         border-radius: 5px;
+        font-family: Roboto,Helvetica,sans-serif;
+        font-size: 15px;
       }
     `;
   }
@@ -2416,4 +2421,3 @@ export class MdDataTable extends Component {
 }
 
 Component.register(MdDataTable);
-

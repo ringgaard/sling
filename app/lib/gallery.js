@@ -117,6 +117,9 @@ export class PhotoGallery extends MdModal {
     this.current = 0;
     this.photos = [];
     for (let image of this.state) {
+      if (image.start) {
+        this.current = this.photos.length;
+      }
       this.photos.push({
         url: image.url,
         caption: image.text,
@@ -326,7 +329,9 @@ export class PhotoGallery extends MdModal {
       caption = caption.toString().replace(/\[\[|\]\]/g, "");
     }
     this.find(".image").replaceWith(photo.image);
-    this.find(".photo").style.cursor = photo.loaded ? "" : "wait";
+    if (mediatype(photo.url) == IMAGE) {
+      this.find(".photo").style.cursor = photo.loaded ? "" : "wait";
+    }
     this.find(".caption").update(caption);
     let counter = `${this.current + 1} / ${this.photos.length}`;
     this.find(".counter").update(counter);
@@ -664,4 +669,3 @@ class PhotoCopyright extends Component {
 }
 
 Component.register(PhotoCopyright);
-
