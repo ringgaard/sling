@@ -11,7 +11,30 @@ class FotomatApp extends MdApp {
       if (e.key === "Escape") this.find("#query").focus();
     });
     this.bind("#search", "click", e => this.onquery(e));
+    this.bind("#save", "click", e => this.onsave(e));
+    this.bind("#copy", "click", e => this.oncopy(e));
     this.bind("#onlydups", "change", e => this.find("#photos").refresh());
+    this.mark_clean();
+    window.addEventListener("beforeunload", e => this.onbeforeunload(e));
+  }
+
+  onbeforeunload(e) {
+    if (this.dirty) {
+      e.preventDefault();
+      e.returnValue = "";
+    }
+  }
+
+  mark_clean() {
+    this.dirty = false;
+    this.find("#save").disable();
+  }
+
+  mark_dirty() {
+    if (this.profile.item) {
+      this.dirty = true;
+      this.find("#save").enable();
+    }
   }
 
   async onquery(e) {
@@ -19,15 +42,59 @@ class FotomatApp extends MdApp {
 
     this.style.cursor = "wait";
     this.find("#photos").update(null);
+    this.mark_clean(true);
+    this.profile = null;
+
     try {
       let r = await fetch(`/fotomat/fetch?q=${encodeURIComponent(query)}`);
-      let result = await r.json();
-      this.find("#photos").update(result);
+      this.profile = await r.json();
+      this.find("#photos").update(this.profile);
       this.find("md-content").scrollTop = 0;
     } catch (e) {
-      inform("Error fetch images: " + e.toString());
+      inform("Error fetching images: " + e.toString());
     }
     this.style.cursor = "";
+  }
+
+  async onsave(e) {
+    this.style.cursor = "wait";
+    try {
+      let photos = new Array();
+      for (let p of this.profile.photos) {
+        if (p.deleted) continue;
+        photos.push({
+          url: p.url,
+          nsfw: p.nsfw,
+          caption: p.caption,
+        });
+      }
+      let profile = {item: this.profile.item, photos: photos}
+      let r = await fetch("/fotomat/update", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(profile)
+        });
+      if (!r.ok) throw new Error("HTTP status " + r.status);
+    } catch (e) {
+      inform("Error updating profile images: " + e.toString());
+    }
+    this.style.cursor = "";
+    this.mark_clean();
+  }
+
+  async oncopy(e) {
+    if (!this.profile) return;
+    console.log("gallery");
+    let urls = new Array();
+    for (let p of this.profile.photos) {
+      if (p.deleted) continue;
+      let url = p.url;
+      if (p.nsfw) url = "!" + url;
+      urls.push(url);
+    }
+    let gallery = `gallery: ${urls.join(" ")}`
+    await navigator.clipboard.writeText(gallery);
+    inform("Gallery URL coped to clipboard");
   }
 
   static stylesheet() {
@@ -50,22 +117,21 @@ Component.register(FotomatApp);
 class PhotoProfile extends MdCard {
   visible() { return this.state?.photos?.length; }
 
-  refresh() {
-    this.update(this.state);
-  }
-
   show_profile_gallery(current) {
     let photos = new Array();
     for (let p of this.state.photos) {
       if (p.deleted) continue;
-      photos.push({url: p.url, nsfw: p.nsfw, start: p.url == current});
+      photos.push({
+        url: p.url,
+        nsfw: p.nsfw,
+        text: p.caption,
+        start: p.url == current});
     }
 
     let gallery = new PhotoGallery();
     gallery.bind(null, "nsfw", e => this.onnsfw(e, true));
     gallery.bind(null, "sfw", e => this.onnsfw(e, false));
     gallery.bind(null, "delimage", e => this.ondelimage(e));
-    gallery.bind(null, "picedit", e => this.onpicupdate());
     gallery.open(photos);
   }
 
@@ -78,28 +144,28 @@ class PhotoProfile extends MdCard {
     gallery.open(photos);
   }
 
+  mark_dirty() {
+    this.match("#app").mark_dirty();
+  }
+
   onnsfw(e, nsfw) {
     let url = e.detail;
-    console.log("nsfw", nsfw, url);
     let strip = this.find_strip(url);
     if (strip) {
       strip.firstChild.state.nsfw = nsfw;
-      strip.update(strip.state);
+      strip.refresh();
+      this.mark_dirty();
     }
   }
 
   ondelimage(e) {
     let url = e.detail;
-    console.log("del", url);
     let strip = this.find_strip(url);
     if (strip) {
       strip.firstChild.state.deleted = true;
       strip.remove();
+      this.mark_dirty();
     }
-  }
-
-  onpicupdate(e) {
-    console.log("picupdate");
   }
 
   find_strip(url) {

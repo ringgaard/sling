@@ -80,6 +80,11 @@ export class Component extends HTMLElement {
     if (this.onupdated) await this.onupdated();
   }
 
+  // Refresh component with the current state.
+  async refresh() {
+    await this.update(this.state);
+  }
+
   // Hide component if it is not visible.
   hide() {
     if (this.visible) {
@@ -226,4 +231,3 @@ export function stylesheet(css) {
   node.appendChild(document.createTextNode(css));
   if (document.head) document.head.appendChild(node);
 }
-

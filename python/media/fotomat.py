@@ -103,8 +103,10 @@ app.page("/fotomat",
         placeholder="Enter photo url or profile id...">
       </md-input>
       <md-icon-button id="search" icon="search"></md-icon-button>
+      <md-checkbox id="onlydups" label="Only dups"></md-checkbox>
       <md-spacer></md-spacer>
-      <md-checkbox id="onlydups" label="Only dups"></md-switch>
+      <md-icon-button id="save" icon="save"></md-icon-button>
+      <md-icon-button id="copy" icon="content_copy"></md-icon-button>
     </md-toolbar>
 
     <md-content>
@@ -122,7 +124,7 @@ app.file("/fotomat/app.js", "python/media/fotomat.js", "text/javascript")
 def handle_fetch(request):
   # Get query.
   query = request.param("q");
-  print("query", query)
+  log.info("query", query)
   if query is None: return 500
   result = {}
   itemid = None
@@ -135,8 +137,14 @@ def handle_fetch(request):
     result["item"] = itemid
   profile.preload_fingerprints()
 
+  captions = {}
+  for media in profile.media():
+    caption = profile.caption(media)
+    if caption: captions[profile.url(media)] = caption
+
   photos = []
   result["photos"] = photos
+
   for photo in profile.photos().values():
     p = {
       "url": photo.url,
@@ -145,6 +153,8 @@ def handle_fetch(request):
       "height": photo.height,
       "nsfw": photo.nsfw,
     }
+    caption = captions.get(photo.url)
+    if caption: p["caption"] = caption
     photos.append(p)
 
     fps = fingerprints.get(photo.fingerprint)
@@ -163,6 +173,19 @@ def handle_fetch(request):
       if len(dups) > 0: p["dups"] = dups
 
   return result
+
+@app.route("/fotomat/update", method="POST")
+def handle_update(request):
+  r = request.json()
+  profile = photolib.Profile(None)
+  profile.itemid = r["item"]
+  for photo in r["photos"]:
+    url = photo["url"]
+    caption = photo.get("caption")
+    nsfw = photo.get("nsfw")
+    profile.add_photo(url, caption, None, nsfw)
+  log.info("profile update", profile.itemid)
+  profile.write()
 
 @app.route("/media")
 def media_request(request):

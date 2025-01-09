@@ -185,6 +185,7 @@ export class PhotoGallery extends MdModal {
 
   onsearch(e) {
     let url = this.photos[this.current].url
+    if (e.ctrlKey) url = "https://ringgaard.com/media/" + url;
     window.open(`https://lens.google.com/uploadbyurl?url=${url}`,
                  "_blank", "noopener,noreferrer");
   }
