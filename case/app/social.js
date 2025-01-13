@@ -387,6 +387,10 @@ let xrefs = [
     pattern: /^https:\/\/fansly\.com\/(.+)/,
     property: frame("P12039"),
   },
+  {
+    pattern: /^https:\/\/www\.familysearch\.org\/tree\/person\/details\/(.+)/,
+    property: frame("P2889"),
+  },
 ];
 
 export function match_link(url) {

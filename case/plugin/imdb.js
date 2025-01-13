@@ -174,7 +174,7 @@ async function parse_date_and_place(context, text) {
   }
 
   let cause = m[3];
-  if (cause == "undisclosed") cause = undefined;
+  if (cause == "undisclosed" or cause == "Undisclosed") cause = undefined;
   cause = await context.lookup(cause);
 
   return {date, location, country, cause};
@@ -511,4 +511,3 @@ export default class IMDBPlugin {
     }
   }
 }
-

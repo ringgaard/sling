@@ -62,6 +62,8 @@ n_external_auditor = kb["P8571"]
 n_supervisory_board_member = kb["P5052"]
 n_occupation = kb["P106"]
 n_director = kb["P1037"]
+n_represented_by = kb["P1875"]
+n_represents = kb["P1268"]
 n_subsidiary = kb["P355"]
 n_parent_organization = kb["P749"]
 n_has_part = kb["P527"]
@@ -145,7 +147,7 @@ corporate_roles = {
   "REGISTER": n_owned_by,
   "FORSIKRINGER": None,
   "HVIDVASK": None,
-  "REPRÆSENTANTER": None,
+  "REPRÆSENTANTER": n_represented_by,
   "BÆREDYGTIGHEDSREVISION": None,
 }
 
@@ -230,7 +232,7 @@ participant_roles = {
   "REGISTER": n_owner_of,
   "FORSIKRINGER": None,
   "HVIDVASK": None,
-  "REPRÆSENTANTER": None,
+  "REPRÆSENTANTER": n_represents,
 }
 
 legal_forms = {
