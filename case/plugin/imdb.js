@@ -174,7 +174,7 @@ async function parse_date_and_place(context, text) {
   }
 
   let cause = m[3];
-  if (cause == "undisclosed" or cause == "Undisclosed") cause = undefined;
+  if (cause == "undisclosed" || cause == "Undisclosed") cause = undefined;
   cause = await context.lookup(cause);
 
   return {date, location, country, cause};
@@ -402,7 +402,7 @@ export default class IMDBPlugin {
           }
           if (r.start == "?") r.start = undefined;
           if (r.end == "?" || r.end == "present") r.end = undefined;
-          if (r.name == "None") continue;
+          if (r.name == "None" || r.name == "No Children") continue;
 
           // Try to resolve name.
           r.relative = r.name;
