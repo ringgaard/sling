@@ -103,6 +103,9 @@ class KnowledgeService {
   // Handle KB item landing page.
   void HandleLandingPage(HTTPRequest *request, HTTPResponse *response);
 
+  // Handle KB bot request.
+  void HandleBot(HTTPRequest *request, HTTPResponse *response, Text itemid);
+
   // Handle KB name queries.
   void HandleQuery(HTTPRequest *request, HTTPResponse *response);
 
@@ -164,6 +167,9 @@ class KnowledgeService {
 
   // Convert value to readable text.
   string AsText(Store *store, Handle value);
+
+  // Properties as HTML table.
+  string PropertiesAsHTMLTable(Store *store, const Handles &properties) const;
 
   // Property information.
   struct Property {
@@ -321,4 +327,3 @@ class KnowledgeService {
 }  // namespace sling
 
 #endif  // NLP_KB_KNOWLEDGE_SERVICE_H_
-

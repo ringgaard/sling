@@ -236,6 +236,7 @@ bots = [
   ("LinkAnalyser",           re.compile(r"LinkAnalyser")),
   ("COIBotParser",           re.compile(r"COIBotParser")),
   ("Gigablast",              re.compile(r"GigablastOpenSource")),
+  ("GPTBot",                 re.compile(r"GPTBot")),
 
   ("Majestic",               re.compile(r"MJ12bot")),
   ("Mail.RU",                re.compile(r"Mail.RU_Bot")),
@@ -276,8 +277,6 @@ bots = [
   ("NetcraftSurveyAgent",    re.compile(r"NetcraftSurveyAgent")),
 
 
-  ("Other bots",           re.compile(r"[Bb]ot")),
-  ("Other crawlers",       re.compile(r"[Cc]rawl")),
   ("Other bots",           re.compile(r"[Bb]ot")),
   ("Other crawlers",       re.compile(r"[Cc]rawl")),
   ("Other gabbers",        re.compile(r"[Gg]rabber")),
@@ -668,4 +667,3 @@ if flags.arg.v:
   print_table("BOTS", "bot", bot_hits)
   print_table("WORMS", "worm", worm_hits)
   print_table("SPAM", "spam", spam_hits)
-

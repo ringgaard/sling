@@ -434,6 +434,17 @@ void KnowledgeService::HandleLandingPage(HTTPRequest *request,
     }
   }
 
+  // Check for bot/crawler.
+  URLQuery query(request->query());
+  bool bot = query.Get("bot", false);
+  const char *ua = request->Get("User-Agent");
+  if (ua && strstr(ua, "bot")) bot = true;
+
+  if (bot && !itemid.empty()) {
+    HandleBot(request, response, itemid);
+    return;
+  }
+
   // Send header.
   response->set_content_type("text/html");
   response->Append(html_landing_header);
@@ -486,6 +497,82 @@ void KnowledgeService::HandleLandingPage(HTTPRequest *request,
 
   // Send remaining header and body.
   response->Append(html_landing_footer);
+}
+
+void KnowledgeService::HandleBot(HTTPRequest *request,
+                                 HTTPResponse *response,
+                                 Text itemid) {
+  // Look up item in knowledge base.
+  WebService ws(kb_, request, response);
+  Store *store = ws.store();
+  Handle handle = RetrieveItem(store, itemid);
+  if (handle.IsNil()) {
+    response->SendError(404, nullptr, "Item not found");
+    return;
+  }
+
+  Frame item(store, handle);
+  if (!item.valid()) {
+    response->SendError(400, nullptr, "Invalid item");
+    return;
+  }
+
+  // Send header.
+  response->set_content_type("text/html");
+  response->Append(html_landing_header);
+
+  // Add social media tags to header.
+  Text id = item.Id();
+  Text name = item.GetText(n_name_);
+  Text description = item.GetText(n_description_);
+  if (!name.empty()) {
+    response->Append("<title>");
+    response->Append(HTMLEscape(name));
+    response->Append("</title>\n");
+  }
+  AddMeta(response, nullptr, "twitter:card", "summary");
+  AddMeta(response, "og:type", nullptr, "article");
+  if (!name.empty()) {
+    AddMeta(response, "og:title", "twitter:title", name);
+  }
+  if (!description.empty()) {
+    AddMeta(response, "og:description", "twitter:description", description);
+  }
+  response->Append("<link rel=\"canonical\" href=\"/kb/");
+  response->Append(id.data(), id.size());
+  response->Append("\"/>");
+
+  response->Append("</head>");
+
+  // Generate simple HTML for bots.
+  response->Append("<body>");
+  response->Append("<h1>");
+  if (name.empty()) {
+    response->Append(HTMLEscape(id));
+  } else {
+    response->Append(HTMLEscape(name));
+  }
+  response->Append("</h1>\n");
+
+  if (!description.empty()) {
+    response->Append("<p>");
+    response->Append(HTMLEscape(description));
+    response->Append("</p>\n");
+  }
+
+  // Output item properties.
+  Item info(store);
+  FetchProperties(item, &info);
+  response->Append(PropertiesAsHTMLTable(store, info.properties));
+
+  // Output item references.
+  if (!info.xrefs.empty()) {
+    response->Append("<h2>References</h2>\n");
+    response->Append(PropertiesAsHTMLTable(store, info.xrefs));
+  }
+
+  response->Append("</body>");
+  response->Append("</html>");
 }
 
 void KnowledgeService::HandleQuery(HTTPRequest *request,
@@ -1348,6 +1435,93 @@ string KnowledgeService::GetImage(const Frame &item) {
   return "";
 }
 
+string KnowledgeService::PropertiesAsHTMLTable(
+    Store *store,
+    const Handles &properties) const {
+  string html;
+  html.append("<table border=1>\n");
+  for (Handle p : properties) {
+    Frame property(store, p);
+    Text pid = store->FrameId(property.GetHandle(n_ref_));
+    Text pname = property.GetText(n_property_);
+    Array values = property.Get(n_values_).AsArray();
+    if (!values.valid()) continue;
+    for (int i = 0; i < values.length(); ++i) {
+      Frame value(store, values.get(i));
+      Text ref = value.GetText(n_ref_);
+      Text text = value.GetText(n_text_);
+      Text url = value.GetText(n_url_);
+
+      html.append("<tr>");
+
+      html.append("<td>");
+      html.append("<a href=\"/kb/");
+      html.append(pid.data(), pid.size());
+      html.append("\">");
+      html.append(HTMLEscape(pname));
+      html.append("</a>");
+      html.append("</td>");
+
+      html.append("<td>");
+      if (!ref.empty()) {
+        html.append("<a href=\"/kb/");
+        html.append(ref.data(), ref.size());
+        html.append("\">");
+      } else if (!url.empty()) {
+        html.append("<a href=\"");
+        html.append(url.data(), url.size());
+        html.append("\">");
+      }
+      html.append(HTMLEscape(text));
+      if (!ref.empty() || !url.empty()) html.append("</a>");
+      if (value.Has(n_qualifiers_)) {
+        bool first = true;
+        Array qualifiers = value.Get(n_qualifiers_).AsArray();
+        for (int i = 0; i < qualifiers.length(); ++i) {
+          Frame qvalue(store, qualifiers.get(i));
+
+          Text qpid = store->FrameId(qvalue.GetHandle(n_ref_));
+          Text qname = qvalue.GetText(n_property_);
+          Array qvalues = qvalue.Get(n_values_).AsArray();
+          if (!values.valid()) continue;
+          for (int j = 0; j < qvalues.length(); ++j) {
+            Frame qv(store, qvalues.get(j));
+            Text qref = qv.GetText(n_ref_);
+            Text qtext = qv.GetText(n_text_);
+            Text qurl = qv.GetText(n_url_);
+
+            html.append(first ? " (" : ", ");
+            first = false;
+            html.append("<a href=\"/kb/");
+            html.append(qpid.data(), qpid.size());
+            html.append("\">");
+            html.append(HTMLEscape(qname));
+            html.append("</a>");
+            html.append(": ");
+
+            if (!qref.empty()) {
+              html.append("<a href=\"/kb/");
+              html.append(qref.data(), qref.size());
+              html.append("\">");
+            } else if (!qurl.empty()) {
+              html.append("<a href=\"");
+              html.append(qurl.data(), qurl.size());
+              html.append("\">");
+            }
+            html.append(HTMLEscape(qtext));
+            if (!qref.empty() || !qurl.empty()) html.append("</a>");
+          }
+        }
+        html.append(")");
+      }
+      html.append("</td>");
+
+      html.append("</tr>\n");
+    }
+  }
+  html.append("</table>\n");
+  return html;
+}
+
 }  // namespace nlp
 }  // namespace sling
-
