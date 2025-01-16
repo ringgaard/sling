@@ -38,6 +38,7 @@ const hair_colors = {
   "black": frame("Q1922956"),
   "auburn": frame("Q2419551"),
   "red": frame("Q152357"),
+  "redhead": frame("Q152357"),
 };
 
 const eye_colors = {

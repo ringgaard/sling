@@ -4,7 +4,7 @@ from sling.log import *
 from sling.nlp.document import *
 from sling.nlp.parser import *
 
-VERSION = "3.0.0"
+VERSION = "3.1.0"
 
 Store = api.Store
 Frame = api.Frame
@@ -61,4 +61,3 @@ def which():
   if (os.path.islink(location)): location += " -> " + os.readlink(location)
   ts = time.ctime(os.path.getmtime(sling.api.__file__))
   print("SLING API version %s (%s) in %s" % (VERSION, ts, location))
-

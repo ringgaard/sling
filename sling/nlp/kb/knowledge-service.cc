@@ -542,7 +542,7 @@ void KnowledgeService::HandleBot(HTTPRequest *request,
   response->Append(id.data(), id.size());
   response->Append("\"/>");
 
-  response->Append("</head>");
+  response->Append("</head>\n");
 
   // Generate simple HTML for bots.
   response->Append("<body>");
@@ -571,8 +571,8 @@ void KnowledgeService::HandleBot(HTTPRequest *request,
     response->Append(PropertiesAsHTMLTable(store, info.xrefs));
   }
 
-  response->Append("</body>");
-  response->Append("</html>");
+  response->Append("</body>\n");
+  response->Append("</html>\n");
 }
 
 void KnowledgeService::HandleQuery(HTTPRequest *request,
