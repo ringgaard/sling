@@ -1,7 +1,7 @@
 # SLING Installation and Building
 
 Operating system: Linux<br>
-Languages: C++ (gcc or clang), Python 3.6+, assembler<br>
+Languages: C++ (gcc or clang), Python 3.9+, assembler<br>
 CPU: Intel x64 or compatible<br>
 Build system: Bazel<br>
 
@@ -12,7 +12,7 @@ pre-trained model, you can install the SLING wheel with pip. On a Linux machine
 with Python 3 you can install a pre-built wheel:
 
 ```shell
-sudo -H pip3 install https://ringgaard.com/data/dist/sling-3.0.0-py3-none-linux_x86_64.whl
+sudo -H pip3 install https://ringgaard.com/data/dist/sling-3.1.0-py3-none-linux_x86_64.whl
 ```
 
 You can test the installation by trying to import the `sling` package:
@@ -80,4 +80,3 @@ sling Python module directly to the Python source directory to use it in
 ```shell
 sudo ln -s $(realpath python) /usr/lib/python3/dist-packages/sling
 ```
-
