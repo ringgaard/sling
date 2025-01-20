@@ -571,6 +571,16 @@ void KnowledgeService::HandleBot(HTTPRequest *request,
     response->Append(PropertiesAsHTMLTable(store, info.xrefs));
   }
 
+  // Output Wikidata identifier.
+  if (id.starts_with("Q")) {
+    response->Append("<p>Wikidata item ID: ");
+    response->Append("<a href=\"https://www.wikidata.org/wiki/");
+    response->Append(id.data(), id.size());
+    response->Append("\"/>");
+    response->Append(id.data(), id.size());
+    response->Append("</a></p>\n");
+  }
+
   response->Append("</body>\n");
   response->Append("</html>\n");
 }

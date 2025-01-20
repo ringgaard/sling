@@ -237,6 +237,7 @@ bots = [
   ("COIBotParser",           re.compile(r"COIBotParser")),
   ("Gigablast",              re.compile(r"GigablastOpenSource")),
   ("GPTBot",                 re.compile(r"GPTBot")),
+  ("Open AI",                re.compile(r"OAI-SearchBot")),
 
   ("Majestic",               re.compile(r"MJ12bot")),
   ("Mail.RU",                re.compile(r"Mail.RU_Bot")),

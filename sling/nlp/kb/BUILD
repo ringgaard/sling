@@ -262,6 +262,18 @@ cc_library(
 )
 
 cc_library(
+  name = "sitemap-service",
+  srcs = ["sitemap-service.cc"],
+  hdrs = ["sitemap-service.h"],
+  deps = [
+    ":knowledge-service",
+    "//sling/base",
+    "//sling/net:http-server",
+    "//sling/string:text",
+  ],
+)
+
+cc_library(
   name = "schema-service",
   srcs = ["schema-service.cc"],
   hdrs = ["schema-service.h"],
@@ -282,6 +294,7 @@ cc_binary(
   deps = [
     ":knowledge-service",
     ":refine-service",
+    ":sitemap-service",
     ":schema-service",
     "//sling/base",
     "//sling/file",
@@ -294,4 +307,3 @@ cc_binary(
     "//sling/string:strcat",
   ],
 )
-

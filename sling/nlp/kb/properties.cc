@@ -70,6 +70,8 @@ const char *property_order[] = {
   "P569",       // date of birth
   "P19",        // place of birth
   "P1636",      // date of baptism in early childhood
+  "P551",       // residence
+  "P937",       // work location
   "P570",       // date of death
   "P20",        // place of death
   "P4602",      // date of burial or cremation
@@ -77,10 +79,6 @@ const char *property_order[] = {
   "P1196",      // manner of death
   "P509",       // cause of death
   "P157",       // killed by
-
-  // Residence.
-  "P551",       // residence
-  "P937",       // work location
   "P27",        // country of citizenship
 
   // Family.
@@ -542,4 +540,3 @@ const char *property_order[] = {
 
 }  // namespace nlp
 }  // namespace sling
-

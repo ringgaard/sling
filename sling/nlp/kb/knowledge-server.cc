@@ -20,6 +20,7 @@
 #include "sling/net/media-service.h"
 #include "sling/nlp/kb/knowledge-service.h"
 #include "sling/nlp/kb/refine-service.h"
+#include "sling/nlp/kb/sitemap-service.h"
 #include "sling/nlp/kb/schema-service.h"
 
 DEFINE_string(host, "", "HTTP server host address");
@@ -74,6 +75,9 @@ int main(int argc, char *argv[]) {
   // Initialize refine service.
   RefineService refine(&commons, &kb);
 
+  // Initialize sitemap service.
+  SitemapService sitemaps(&commons, &kb);
+
   commons.Freeze();
 
   // Initialize schema service.
@@ -88,6 +92,7 @@ int main(int argc, char *argv[]) {
   kb.Register(&http);
   schemas.Register(&http);
   refine.Register(&http);
+  sitemaps.Register(&http);
   http.Register("/thumb", &media, &MediaService::Handle);
 
   http.Register("/", [](HTTPRequest *req, HTTPResponse *rsp) {
@@ -102,4 +107,3 @@ int main(int argc, char *argv[]) {
   LOG(INFO) << "HTTP server done";
   return 0;
 }
-
