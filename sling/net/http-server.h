@@ -19,6 +19,7 @@
 #include  <string>
 #include  <vector>
 
+#include "sling/base/slice.h"
 #include "sling/net/http-utils.h"
 #include "sling/net/socket-server.h"
 #include "sling/util/iobuffer.h"
@@ -336,6 +337,7 @@ class HTTPResponse {
   }
   void Append(const char *str) { if (str) Append(str, strlen(str)); }
   void Append(const string &str) { Append(str.data(), str.size()); }
+  void Append(const Slice &str) { Append(str.data(), str.size()); }
   void AppendNumber(int64 value);
 
   // Set file for streaming response. This will take ownership of the file.
@@ -378,4 +380,3 @@ class HTTPResponse {
 }  // namespace sling
 
 #endif  // SLING_NET_HTTP_SERVER_H_
-

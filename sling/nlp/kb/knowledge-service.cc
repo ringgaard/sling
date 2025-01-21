@@ -405,7 +405,7 @@ void KnowledgeService::Preload(const Frame &item, Store *store) {
   if (!proxies.empty()) {
     std::vector<Slice> keys;
     for (Handle h : proxies) {
-      keys.push_back(store->FrameId(h).slice());
+      keys.push_back(store->FrameId(h));
     }
 
     MutexLock lock(&mu_);
@@ -539,7 +539,7 @@ void KnowledgeService::HandleBot(HTTPRequest *request,
     AddMeta(response, "og:description", "twitter:description", description);
   }
   response->Append("<link rel=\"canonical\" href=\"/kb/");
-  response->Append(id.data(), id.size());
+  response->Append(id);
   response->Append("\"/>");
 
   response->Append("</head>\n");
@@ -575,9 +575,9 @@ void KnowledgeService::HandleBot(HTTPRequest *request,
   if (id.starts_with("Q")) {
     response->Append("<p>Wikidata item ID: ");
     response->Append("<a href=\"https://www.wikidata.org/wiki/");
-    response->Append(id.data(), id.size());
+    response->Append(id);
     response->Append("\"/>");
-    response->Append(id.data(), id.size());
+    response->Append(id);
     response->Append("</a></p>\n");
   }
 

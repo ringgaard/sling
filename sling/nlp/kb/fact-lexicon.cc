@@ -204,7 +204,7 @@ class FactExtractor : public Process {
       Frame item(&commons_, handle);
       if (!item.IsA(n_item_)) return;
       Text id = item.Id();
-      TaskContext ctxt("Facts", id.slice());
+      TaskContext ctxt("Facts", id);
 
       // Skip categories and disambiguation page items.
       Handle cls = item.GetHandle(p_instance_of_);

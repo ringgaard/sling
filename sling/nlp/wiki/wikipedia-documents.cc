@@ -297,7 +297,7 @@ class WikipediaDocumentBuilder : public task::FrameProcessor,
   void OutputAlias(Text qid, Text name, AliasSource source) {
     if (!qid.empty() && !name.empty() && name.size() < 100) {
       string value = StrCat(source, ":", name);
-      aliases_->Send(new task::Message(qid.slice(), Slice(value)));
+      aliases_->Send(new task::Message(qid, Slice(value)));
       num_aliases_[source]->Increment();
     } else {
       num_discarded_aliases_[source]->Increment();
@@ -560,7 +560,7 @@ class CategoryInverter : public task::FrameProcessor {
     for (const Slot &slot : frame) {
       if (slot.name == n_item_category_) {
         Frame category(frame.store(), slot.value);
-        output_->Send(new task::Message(category.Id().slice(), key));
+        output_->Send(new task::Message(category.Id(), key));
       }
     }
   }
@@ -722,4 +722,3 @@ REGISTER_TASK_PROCESSOR("summary-selector", SummarySelector);
 
 }  // namespace nlp
 }  // namespace sling
-

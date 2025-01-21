@@ -100,7 +100,7 @@ class CorpusBrowser : public DocumentService {
 
   bool FetchRecord(Text key, Record *record) {
     MutexLock lock(&mu_);
-    if (db_->Lookup(key.slice(), record)) {
+    if (db_->Lookup(key, record)) {
       history_.emplace_back(db_->current_shard(), record->position);
       return true;
     } else {
@@ -228,4 +228,3 @@ int main(int argc, char *argv[]) {
   LOG(INFO) << "HTTP server done";
   return 0;
 }
-

@@ -31,75 +31,42 @@
 
 namespace sling {
 
-class Text {
- private:
-  const char *ptr_;
-  ssize_t length_;
-
+class Text : public Slice {
  public:
   // Constructors.
-  Text() : ptr_(nullptr), length_(0) {}
-  Text(const char *str) : ptr_(str), length_(str ? strlen(str) : 0) {}
-  Text(const string &str) : ptr_(str.data()), length_(str.size()) {}
-  Text(const char *str, ssize_t len) : ptr_(str), length_(len) {}
-  Text(const Slice &slice) : ptr_(slice.data()), length_(slice.size()) {}
+  Text() : Slice() {}
+  Text(const Slice &slice) : Slice(slice) {}
+  Text(const char *str) : Slice(str, str ? strlen(str) : 0) {}
+  Text(const string &str) : Slice(str.data(), str.size()) {}
+  Text(const char *str, size_t len) : Slice(str, len) {}
 
   // Substring of another text.
   // pos must be non-negative and <= x.length().
-  Text(Text other, ssize_t pos);
+  Text(Text other, size_t pos);
 
   // Substring of another text.
   // pos must be non-negative and <= x.length().
   // len must be non-negative and will be pinned to at most x.length() - pos.
-  Text(Text other, ssize_t pos, ssize_t len);
+  Text(Text other, size_t pos, size_t len);
 
   // Access to string buffer.
-  const char *data() const { return ptr_; }
-  ssize_t size() const { return length_; }
-  ssize_t length() const { return length_; }
-  bool empty() const { return length_ == 0; }
-
-  // Clear text.
-  void clear() {
-    ptr_ = nullptr;
-    length_ = 0;
-  }
+  size_t length() const { return size_; }
 
   // Set contents.
-  void set(const char *data, ssize_t len) {
+  void set(const char *data, size_t len) {
     DCHECK_GE(len, 0);
-    ptr_ = data;
-    length_ = len;
+    data_ = data;
+    size_ = len;
   }
 
   void set(const char *str) {
-    ptr_ = str;
-    length_ = str ? strlen(str) : 0;
+    data_ = str;
+    size_ = str ? strlen(str) : 0;
   }
 
-  void set(const void *data, ssize_t len) {
-    ptr_ = reinterpret_cast<const char *>(data);
-    length_ = len;
-  }
-
-  // Index operator.
-  char operator[](ssize_t index) const {
-    DCHECK_GE(index, 0);
-    DCHECK_LT(index, length_);
-    return ptr_[index];
-  }
-
-  // Remove prefix from text.
-  void remove_prefix(ssize_t n) {
-    DCHECK_GE(length_, n);
-    ptr_ += n;
-    length_ -= n;
-  }
-
-  // Remove suffix from text.
-  void remove_suffix(ssize_t n) {
-    DCHECK_GE(length_, n);
-    length_ -= n;
+  void set(const void *data, size_t len) {
+    data_ = reinterpret_cast<const char *>(data);
+    size_ = len;
   }
 
   // Compare text to another text. Returns {-1, 0, 1}
@@ -108,41 +75,14 @@ class Text {
   // Compare text to another text ignoring the case of the characters.
   int casecompare(Text t) const;
 
-  // Return text as string.
-  string str() const {
-    if (ptr_ == nullptr) return string();
-    return string(data(), size());
-  }
-
-  string as_string() const {
-    if (ptr_ == nullptr) return string();
-    return string(data(), size());
-  }
-
-  string ToString() const {
-    if (ptr_ == nullptr) return string();
-    return string(data(), size());
-  }
+  string as_string() const { return str(); }
+  string ToString() const { return str(); }
 
   // Copy text to string.
   void CopyToString(string *target) const;
 
   // Append text to string.
   void AppendToString(string *target) const;
-
-  // Return text as slice.
-  Slice slice() const { return Slice(ptr_, length_); }
-
-  // Prefix check.
-  bool starts_with(Text t) const {
-    return (length_ >= t.length_) && (memcmp(ptr_, t.ptr_, t.length_) == 0);
-  }
-
-  // Suffix check.
-  bool ends_with(Text t) const {
-    return ((length_ >= t.length_) &&
-            (memcmp(ptr_ + (length_ - t.length_), t.ptr_, t.length_) == 0));
-  }
 
   // STL container definitions.
   typedef char value_type;
@@ -159,16 +99,16 @@ class Text {
   typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
   typedef std::reverse_iterator<iterator> reverse_iterator;
 
-  iterator begin() const { return ptr_; }
-  iterator end() const { return ptr_ + length_; }
+  iterator begin() const { return data_; }
+  iterator end() const { return data_ + size_; }
   const_reverse_iterator rbegin() const {
-    return const_reverse_iterator(ptr_ + length_);
+    return const_reverse_iterator(data_ + size_);
   }
   const_reverse_iterator rend() const {
-    return const_reverse_iterator(ptr_);
+    return const_reverse_iterator(data_);
   }
-  ssize_t max_size() const { return length_; }
-  ssize_t capacity() const { return length_; }
+  ssize_t max_size() const { return size_; }
+  ssize_t capacity() const { return size_; }
   ssize_t copy(char *buf, size_type n, size_type pos = 0) const;
 
   // Checks if text contains another text.
@@ -246,4 +186,3 @@ template<> struct hash<sling::Text> {
 }  // namespace std
 
 #endif  // STRING_TEXT_H_
-

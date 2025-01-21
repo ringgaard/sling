@@ -146,7 +146,7 @@ class PropertyUsage : public task::Process {
       pb.Add(n_usage, tb.Create());
       string data = Encode(pb.Create());
 
-      CHECK(output.Write(store.FrameId(prop).slice(), data));
+      CHECK(output.Write(store.FrameId(prop), data));
     }
     CHECK(output.Close());
   }
@@ -156,4 +156,3 @@ REGISTER_TASK_PROCESSOR("property-usage", PropertyUsage);
 
 }  // namespace nlp
 }  // namespace sling
-

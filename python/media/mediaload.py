@@ -152,7 +152,7 @@ for url in media:
   try:
     r = photo.retrieve_image(url)
     if r == None:
-      print("removed", url, mediamap[url])
+      print("removed", url, mediamap.get(url))
       num_missing += 1
       continue
     elif r.status == 404 and url.startswith(wiki_base_url):
@@ -168,10 +168,10 @@ for url in media:
           continue
     elif r.status != 200:
       num_errors += 1
-      print("error", r.status, url, mediamap[url])
+      print("error", r.status, url, mediamap.get(url))
       continue
   except Exception as e:
-    print("fail", e, url, mediamap[url])
+    print("fail", e, url, mediamap.get(url))
     num_errors += 1
     continue
 

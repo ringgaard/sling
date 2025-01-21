@@ -60,7 +60,7 @@ void SitemapService::HandleSitemap(HTTPRequest *req, HTTPResponse *rsp) {
     Text partid = store.FrameId(s.value);
     if (partid.empty()) continue;
     rsp->Append("<url><loc>https://ringgaard.com/kb/");
-    rsp->Append(partid.data(), partid.size());
+    rsp->Append(partid);
     rsp->Append("</loc></url>\n");
   }
   rsp->Append("</urlset>\n");

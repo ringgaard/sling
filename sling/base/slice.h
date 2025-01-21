@@ -81,8 +81,14 @@ class Slice {
     size_ -= n;
   }
 
+  // Remove suffix from text.
+  void remove_suffix(size_t n) {
+    DCHECK_GE(size_, n);
+    size_ -= n;
+  }
+
   // Return a string that contains a copy of the referenced data.
-  string str() const { return string(data_, size_); }
+  string str() const { return data_ ? string(data_, size_) : string(); }
 
   // Three-way comparison.  Returns value:
   //   <  0 iff this <  other,
@@ -103,8 +109,7 @@ class Slice {
 
   // Prefix check.
   bool starts_with(const Slice &x) const {
-    return size_ >= x.size_ &&
-           memcmp(data_, x.data_, x.size_) == 0;
+    return size_ >= x.size_ && memcmp(data_, x.data_, x.size_) == 0;
   }
 
   // Suffix check.
@@ -113,7 +118,7 @@ class Slice {
            memcmp(data_ + (size_ - x.size_), x.data_, x.size_) == 0;
   }
 
- private:
+ protected:
   const char *data_;
   size_t size_;
 };
@@ -153,4 +158,3 @@ inline std::ostream &operator <<(std::ostream &o, Slice s) {
 }  // namespace sling
 
 #endif  // SLING_BASE_SLICE_H_
-

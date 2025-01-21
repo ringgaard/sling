@@ -155,7 +155,7 @@ void RefineService::HandleQuery(Text queries, HTTPResponse *rsp) {
   VLOG(1) << "query: " << queries;
   Store store(commons_);
   String n_id(&store, "id");
-  Frame input = ReadJSON(&store, queries.slice()).AsFrame();
+  Frame input = ReadJSON(&store, queries).AsFrame();
   if (input.invalid()) {
     rsp->SendError(400);
     return;
@@ -253,7 +253,7 @@ void RefineService::HandleExtend(Text extend, HTTPResponse *rsp) {
   Store store(commons_);
   String n_id(&store, "id");
 
-  Frame input = ReadJSON(&store, extend.slice()).AsFrame();
+  Frame input = ReadJSON(&store, extend).AsFrame();
   if (input.invalid()) {
     rsp->SendError(400);
     return;
@@ -485,4 +485,3 @@ void RefineService::WriteJSON(const Object &object, HTTPResponse *rsp) {
 
 }  // namespace nlp
 }  // namespace sling
-

@@ -53,50 +53,50 @@ static int memcasecmp(const char *s1, const char *s2, size_t n) {
   return 0;
 }
 
-Text::Text(Text other, ssize_t pos)
-    : ptr_(other.ptr_ + pos), length_(other.length_ - pos) {
+Text::Text(Text other, size_t pos)
+    : Slice(other.data_ + pos, other.size_ - pos) {
   DCHECK_LE(0, pos);
-  DCHECK_LE(pos, other.length_);
+  DCHECK_LE(pos, other.size_);
 }
 
-Text::Text(Text other, ssize_t pos, ssize_t len)
-    : ptr_(other.ptr_ + pos), length_(std::min(len, other.length_ - pos)) {
+Text::Text(Text other, size_t pos, size_t len)
+    : Slice(other.data_ + pos, std::min(len, other.size_ - pos)) {
   DCHECK_LE(0, pos);
-  DCHECK_LE(pos, other.length_);
+  DCHECK_LE(pos, other.size_);
   DCHECK_GE(len, 0);
 }
 
 int Text::compare(Text t) const {
-  const ssize_t min_size = length_ < t.length_ ? length_ : t.length_;
-  int r = memcmp(ptr_, t.ptr_, min_size);
+  const ssize_t min_size = size_ < t.size_ ? size_ : t.size_;
+  int r = memcmp(data_, t.data_, min_size);
   if (r < 0) return -1;
   if (r > 0) return 1;
-  if (length_ < t.length_) return -1;
-  if (length_ > t.length_) return 1;
+  if (size_ < t.size_) return -1;
+  if (size_ > t.size_) return 1;
   return 0;
 }
 
 int Text::casecompare(Text t) const {
-  const ssize_t min_size = length_ < t.length_ ? length_ : t.length_;
-  int r = memcasecmp(ptr_, t.ptr_, min_size);
+  const ssize_t min_size = size_ < t.size_ ? size_ : t.size_;
+  int r = memcasecmp(data_, t.data_, min_size);
   if (r < 0) return -1;
   if (r > 0) return 1;
-  if (length_ < t.length_) return -1;
-  if (length_ > t.length_) return 1;
+  if (size_ < t.size_) return -1;
+  if (size_ > t.size_) return 1;
   return 0;
 }
 
 void Text::CopyToString(string *target) const {
-  target->assign(ptr_, length_);
+  target->assign(data_, size_);
 }
 
 void Text::AppendToString(string *target) const {
-  target->append(ptr_, length_);
+  target->append(data_, size_);
 }
 
 ssize_t Text::copy(char *buf, size_type n, size_type pos) const {
-  ssize_t ret = std::min(length_ - pos, n);
-  memcpy(buf, ptr_ + pos, ret);
+  ssize_t ret = std::min(size_ - pos, n);
+  memcpy(buf, data_ + pos, ret);
   return ret;
 }
 
@@ -105,39 +105,39 @@ bool Text::contains(Text t) const {
 }
 
 ssize_t Text::find(Text t, size_type pos) const {
-  if (length_ <= 0 || pos > static_cast<size_type>(length_)) {
-    if (length_ == 0 && pos == 0 && t.length_ == 0) return 0;
+  if (size_ <= 0 || pos > static_cast<size_type>(size_)) {
+    if (size_ == 0 && pos == 0 && t.size_ == 0) return 0;
     return npos;
   }
-  const char *result = memmatch(ptr_ + pos, length_ - pos, t.ptr_, t.length_);
-  return result ? result - ptr_ : npos;
+  const char *result = memmatch(data_ + pos, size_ - pos, t.data_, t.size_);
+  return result ? result - data_ : npos;
 }
 
 ssize_t Text::find(char c, size_type pos) const {
-  if (length_ <= 0 || pos >= static_cast<size_type>(length_)) {
+  if (size_ <= 0 || pos >= static_cast<size_type>(size_)) {
     return npos;
   }
   const char *result =
-    static_cast<const char*>(memchr(ptr_ + pos, c, length_ - pos));
-  return result != nullptr ? result - ptr_ : npos;
+    static_cast<const char*>(memchr(data_ + pos, c, size_ - pos));
+  return result != nullptr ? result - data_ : npos;
 }
 
 ssize_t Text::rfind(Text t, size_type pos) const {
-  if (length_ < t.length_) return npos;
-  const size_t ulen = length_;
-  if (t.length_ == 0) return std::min(ulen, pos);
+  if (size_ < t.size_) return npos;
+  const size_t ulen = size_;
+  if (t.size_ == 0) return std::min(ulen, pos);
 
-  const char *last = ptr_ + std::min(ulen - t.length_, pos) + t.length_;
-  const char *result = std::find_end(ptr_, last, t.ptr_, t.ptr_ + t.length_);
-  return result != last ? result - ptr_ : npos;
+  const char *last = data_ + std::min(ulen - t.size_, pos) + t.size_;
+  const char *result = std::find_end(data_, last, t.data_, t.data_ + t.size_);
+  return result != last ? result - data_ : npos;
 }
 
 // Search range is [0..pos] inclusive.  If pos == npos, search everything.
 ssize_t Text::rfind(char c, size_type pos) const {
-  if (length_ <= 0) return npos;
-  ssize_t end = std::min(pos, static_cast<size_type>(length_ - 1));
+  if (size_ <= 0) return npos;
+  ssize_t end = std::min(pos, static_cast<size_type>(size_ - 1));
   for (ssize_t i = end; i >= 0; --i) {
-    if (ptr_[i] == c) return i;
+    if (data_[i] == c) return i;
   }
   return npos;
 }
@@ -159,15 +159,15 @@ static inline void BuildLookupTable(Text characters, bool *table) {
 }
 
 ssize_t Text::find_first_of(Text t, size_type pos) const {
-  if (length_ <= 0 || t.length_ <= 0) return npos;
+  if (size_ <= 0 || t.size_ <= 0) return npos;
 
   // Avoid the cost of BuildLookupTable() for a single-character search.
-  if (t.length_ == 1) return find_first_of(t.ptr_[0], pos);
+  if (t.size_ == 1) return find_first_of(t.data_[0], pos);
 
   bool lookup[UCHAR_MAX + 1] = { false };
   BuildLookupTable(t, lookup);
-  for (ssize_t i = pos; i < length_; ++i) {
-    if (lookup[static_cast<unsigned char>(ptr_[i])]) {
+  for (ssize_t i = pos; i < size_; ++i) {
+    if (lookup[static_cast<unsigned char>(data_[i])]) {
       return i;
     }
   }
@@ -175,16 +175,16 @@ ssize_t Text::find_first_of(Text t, size_type pos) const {
 }
 
 ssize_t Text::find_first_not_of(Text t, size_type pos) const {
-  if (length_ <= 0) return npos;
-  if (t.length_ <= 0) return 0;
+  if (size_ <= 0) return npos;
+  if (t.size_ <= 0) return 0;
 
   // Avoid the cost of BuildLookupTable() for a single-character search.
-  if (t.length_ == 1) return find_first_not_of(t.ptr_[0], pos);
+  if (t.size_ == 1) return find_first_not_of(t.data_[0], pos);
 
   bool lookup[UCHAR_MAX + 1] = { false };
   BuildLookupTable(t, lookup);
-  for (ssize_t i = pos; i < length_; ++i) {
-    if (!lookup[static_cast<unsigned char>(ptr_[i])]) {
+  for (ssize_t i = pos; i < size_; ++i) {
+    if (!lookup[static_cast<unsigned char>(data_[i])]) {
       return i;
     }
   }
@@ -192,25 +192,25 @@ ssize_t Text::find_first_not_of(Text t, size_type pos) const {
 }
 
 ssize_t Text::find_first_not_of(char c, size_type pos) const {
-  if (length_ <= 0) return npos;
+  if (size_ <= 0) return npos;
 
-  for (; pos < static_cast<size_type>(length_); ++pos) {
-    if (ptr_[pos] != c) return pos;
+  for (; pos < static_cast<size_type>(size_); ++pos) {
+    if (data_[pos] != c) return pos;
   }
   return npos;
 }
 
 ssize_t Text::find_last_of(Text t, size_type pos) const {
-  if (length_ <= 0 || t.length_ <= 0) return npos;
+  if (size_ <= 0 || t.size_ <= 0) return npos;
 
   // Avoid the cost of BuildLookupTable() for a single-character search.
-  if (t.length_ == 1) return find_last_of(t.ptr_[0], pos);
+  if (t.size_ == 1) return find_last_of(t.data_[0], pos);
 
   bool lookup[UCHAR_MAX + 1] = { false };
   BuildLookupTable(t, lookup);
-  ssize_t end = std::min(pos, static_cast<size_type>(length_ - 1));
+  ssize_t end = std::min(pos, static_cast<size_type>(size_ - 1));
   for (ssize_t i = end; i >= 0; --i) {
-    if (lookup[static_cast<unsigned char>(ptr_[i])]) {
+    if (lookup[static_cast<unsigned char>(data_[i])]) {
       return i;
     }
   }
@@ -218,18 +218,18 @@ ssize_t Text::find_last_of(Text t, size_type pos) const {
 }
 
 ssize_t Text::find_last_not_of(Text t, size_type pos) const {
-  if (length_ <= 0) return npos;
+  if (size_ <= 0) return npos;
 
-  ssize_t i = std::min(pos, static_cast<size_type>(length_ - 1));
-  if (t.length_ <= 0) return i;
+  ssize_t i = std::min(pos, static_cast<size_type>(size_ - 1));
+  if (t.size_ <= 0) return i;
 
   // Avoid the cost of BuildLookupTable() for a single-character search.
-  if (t.length_ == 1) return find_last_not_of(t.ptr_[0], pos);
+  if (t.size_ == 1) return find_last_not_of(t.data_[0], pos);
 
   bool lookup[UCHAR_MAX + 1] = { false };
   BuildLookupTable(t, lookup);
   for (; i >= 0; --i) {
-    if (!lookup[static_cast<unsigned char>(ptr_[i])]) {
+    if (!lookup[static_cast<unsigned char>(data_[i])]) {
       return i;
     }
   }
@@ -237,36 +237,36 @@ ssize_t Text::find_last_not_of(Text t, size_type pos) const {
 }
 
 ssize_t Text::find_last_not_of(char c, size_type pos) const {
-  if (length_ <= 0) return npos;
+  if (size_ <= 0) return npos;
 
-  ssize_t end = std::min(pos, static_cast<size_type>(length_ - 1));
+  ssize_t end = std::min(pos, static_cast<size_type>(size_ - 1));
   for (ssize_t i = end; i >= 0; --i) {
-    if (ptr_[i] != c) return i;
+    if (data_[i] != c) return i;
   }
   return npos;
 }
 
 Text Text::substr(size_type pos, size_type n) const {
-  if (pos > length_) pos = length_;
-  if (n > length_ - pos) n = length_ - pos;
-  return Text(ptr_ + pos, n);
+  if (pos > size_) pos = size_;
+  if (n > size_ - pos) n = size_ - pos;
+  return Text(data_ + pos, n);
 }
 
 std::vector<Text> Text::split(char c) const {
   std::vector<Text> parts;
   ssize_t start = 0;
-  while (start < length_) {
+  while (start < size_) {
     ssize_t end = find(c, start);
-    if (end == npos) end = length_;
-    parts.emplace_back(ptr_ + start, end - start);
+    if (end == npos) end = size_;
+    parts.emplace_back(data_ + start, end - start);
     start = end + 1;
   }
   return parts;
 }
 
 Text Text::trim() const {
-  const char *ptr = ptr_;
-  const char *end = ptr_ + length_;
+  const char *ptr = data_;
+  const char *end = data_ + size_;
   while (ptr < end && ascii_isspace(*ptr)) ptr++;
   while (end > ptr && ascii_isspace(end[-1])) end--;
   return Text(ptr, end - ptr);
@@ -278,4 +278,3 @@ std::ostream &operator <<(std::ostream &o, Text t) {
 }
 
 }  // namespace sling
-
