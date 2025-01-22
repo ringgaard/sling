@@ -126,9 +126,10 @@ def process_change(change):
           if reply.status_code == 429:
             # Too many requests.
             print("throttle down...")
-            time.sleep(30)
+            time.sleep(60)
             again = True;
-          reply.raise_for_status()
+          else:
+            reply.raise_for_status()
         except Exception as e:
           print("Error fetching item:", e, ":", change)
           return
@@ -231,4 +232,3 @@ while True:
   except Exception as e:
     print("SSE error:", e)
     time.sleep(60)
-
