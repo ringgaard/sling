@@ -32,6 +32,9 @@
 
 namespace sling {
 
+// On Linux/POSIX, write() will transfer at most 0x7ffff000 bytes.
+const size_t MAX_POSIX_WRITE = 0x7ffff000LL;
+
 namespace {
 
 Status IOError(const string &context, int error) {
@@ -100,22 +103,24 @@ class PosixFile : public File {
   }
 
   Status Write(const void *buffer, size_t size) override {
-    // On Linux, write() will transfer at most 0x7ffff000 bytes.
-    if (size <= 0x7ffff000) {
+    if (size <= MAX_POSIX_WRITE) {
       ssize_t rc = write(fd_, buffer, size);
       if (rc < 0) return IOError(filename_, errno);
-      Perf::add_file_write(rc);
       if (rc != size) return IOError(filename_, EIO);
     } else {
-      while (size > 0) {
-        size_t bytes = size;
-        if (bytes > 0x7ffff000) bytes = 0x7ffff000;
-        ssize_t rc = write(fd_, buffer, bytes);
+      const char *ptr = static_cast<const char *>(buffer);
+      size_t left = size;
+      while (left > 0) {
+        size_t bytes = left;
+        if (bytes > MAX_POSIX_WRITE) bytes = MAX_POSIX_WRITE;
+        ssize_t rc = write(fd_, ptr, bytes);
         if (rc < 0) return IOError(filename_, errno);
-        Perf::add_file_write(rc);
-        size -= rc;
+        if (rc != bytes) return IOError(filename_, EIO);
+        ptr += bytes;
+        left -= bytes;
       }
     }
+    Perf::add_file_write(size);
     return Status::OK;
   }
 
@@ -319,4 +324,3 @@ File *NewStdoutFile() {
 REGISTER_FILE_SYSTEM_TYPE("posix", PosixFileSystem);
 
 }  // namespace sling
-

@@ -72,6 +72,7 @@ const char *property_order[] = {
   "P1636",      // date of baptism in early childhood
   "P551",       // residence
   "P937",       // work location
+  "P746",       // date of disappearance
   "P570",       // date of death
   "P20",        // place of death
   "P4602",      // date of burial or cremation

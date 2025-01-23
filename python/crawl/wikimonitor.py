@@ -84,7 +84,7 @@ commons.freeze()
 # Global variables.
 db = sling.Database(flags.arg.wikidatadb, "wikimonitor")
 wdsession = requests.Session()
-redir_pat = re.compile("\/\* wbcreateredirect:\d+\|\|(Q\d+)\|(Q\d+) \*\/")
+redir_pat = re.compile(r"\/\* wbcreateredirect:\d+\|\|(Q\d+)\|(Q\d+) \*\/")
 num_changes = 0
 dbresults = ["new", "updated", "unchanged", "exists", "stale", "fault"]
 
