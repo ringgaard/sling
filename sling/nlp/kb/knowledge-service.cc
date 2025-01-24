@@ -1478,7 +1478,7 @@ string KnowledgeService::PropertiesAsHTMLTable(
         html.append(ref.data(), ref.size());
         html.append("\">");
       } else if (!url.empty()) {
-        html.append("<a href=\"");
+        html.append("<a rel=\"nofollow\" href=\"");
         html.append(url.data(), url.size());
         html.append("\">");
       }
@@ -1514,7 +1514,7 @@ string KnowledgeService::PropertiesAsHTMLTable(
               html.append(qref.data(), qref.size());
               html.append("\">");
             } else if (!qurl.empty()) {
-              html.append("<a href=\"");
+              html.append("<a rel=\"nofollow\" href=\"");
               html.append(qurl.data(), qurl.size());
               html.append("\">");
             }
