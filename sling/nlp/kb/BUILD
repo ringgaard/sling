@@ -269,6 +269,7 @@ cc_library(
     ":knowledge-service",
     "//sling/base",
     "//sling/net:http-server",
+    "//sling/net:web-service",
     "//sling/string:text",
   ],
 )

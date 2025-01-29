@@ -23,15 +23,16 @@
 
 namespace sling {
 
+static string ShardFile(const string &base, int shard) {
+  string fn = base;
+  string number = std::to_string(shard);
+  for (int z = 0; z < 8 - number.size(); ++z) fn.push_back('0');
+  fn.append(number);
+  return fn;
+}
+
 Database::~Database() {
-  // Close writer.
-  delete writer_;
-
-  // Close data files.
-  for (RecordReader *reader : readers_) delete reader;
-
-  // Close index.
-  delete index_;
+  Close();
 }
 
 Status Database::Open(const string &dbdir, bool recover) {
@@ -55,6 +56,8 @@ Status Database::Open(const string &dbdir, bool recover) {
   // Open reader for all data shards.
   std::vector<string> datafiles;
   string last;
+  size_ = 0;
+  dirty_ = false;
   File::Match(dbdir_ + "/data-*", &datafiles);
   for (const string &datafile : datafiles) {
     RecordReader *reader = new RecordReader(datafile, config_.record);
@@ -112,7 +115,8 @@ Status Database::Open(const string &dbdir, bool recover) {
     uint64 limit = capacity * config_.index_load_factor;
     Status st = index_->Create(IndexFile(), capacity, limit);
     if (!st.ok()) return st;
-    dirty_ = true;
+    st = index_->Flush(sizeof(RecordFile::Header));
+    if (!st.ok()) return st;
   }
 
   // Check that index is up-to-date.
@@ -177,10 +181,8 @@ Status Database::Create(const string &dbdir, const string &config) {
 Status Database::Flush() {
   if (dirty_) {
     // Flush last data shard.
-    if (writer_ != nullptr) {
-      Status st = writer_->Flush();
-      if (!st.ok()) return st;
-    }
+    Status st = SyncWriter();
+    if (!st.ok()) return st;
 
     // Flush index to disk. For a memory-based index, this will just update
     // the epoch in the index header.
@@ -193,6 +195,20 @@ Status Database::Flush() {
   }
 
   return Status::OK;
+}
+
+void Database::Close() {
+  // Close writer.
+  delete writer_;
+  writer_ = nullptr;
+
+  // Close data files.
+  for (RecordReader *reader : readers_) delete reader;
+  readers_.clear();
+
+  // Close index.
+  delete index_;
+  index_ = nullptr;
 }
 
 Status Database::Bulk(bool enable) {
@@ -226,10 +242,159 @@ Status Database::Backup() {
   return st;
 }
 
+Status Database::Clear() {
+  // Check permissions.
+  if (!config_.can_clear) return Status(EACCES, "Not permitted");
+
+  // Get filenames for all data shards.
+  std::vector<string> datafiles;
+  for (RecordReader *reader : readers_) {
+    datafiles.push_back(reader->file()->filename());
+  }
+
+  // Close database.
+  Close();
+
+  // Remove data and index files.
+  for (const string &fn : datafiles) {
+    Status st = File::Delete(fn);
+    if (!st.ok()) return st;
+  }
+  if (File::Exists(IndexFile())) {
+    Status st = File::Delete(IndexFile());
+    if (!st.ok()) return st;
+  }
+
+  if (File::Exists(IndexBackupFile())) {
+    Status st = File::Delete(IndexBackupFile());
+    if (!st.ok()) return st;
+  }
+
+  // Re-open empty database.
+  return Open(dbdir_, false);
+}
+
+Status Database::Purge() {
+  if (config_.partitions.size() > 1) {
+    return Status(ENOSYS, "Purging of multi-volume databases not supported");
+  }
+
+  // Flush database.
+  Status st;
+  st = Flush();
+  if (!st.ok()) return st;
+
+  // Create in-memory index for new data shards. Use the same capacity and limit
+  // as the current index.
+  DatabaseIndex idx;
+  st = idx.Create("", index_->capacity(), index_->limit());
+  if (!st.ok()) return st;
+
+  // Find all active records, i.e. records that have not been deleted or
+  // overwritten.
+  Record record;
+  int current_shard = -1;
+  int new_shards = 0;
+  int64 num_deletes = 0;
+  int64 num_overwrites = 0;
+  int64 num_records = 0;
+  std::vector<string> datafiles;
+  RecordWriter *output = nullptr;
+  for (int shard = 0; shard < readers_.size(); ++shard) {
+    RecordReader *reader = readers_[shard];
+    datafiles.push_back(reader->file()->filename());
+    Status st = reader->Rewind();
+    if (!st.ok()) return st;
+
+    while (!reader->Done()) {
+      // Read next record.
+      Status st = reader->Read(&record);
+      if (!st.ok()) return st;
+      uint64 fp = Fingerprint(record.key);
+      uint64 recid = RecordID(shard, record.position);
+
+      // Skip deletion record.
+      if (record.value.empty()) {
+        num_deletes++;
+        continue;
+      }
+
+      // Skip record if it is not in the index.
+      if (!index_->Exists(fp, recid)) {
+        num_overwrites++;
+        continue;
+      }
+
+      // Check if a new data shard is needed.
+      if (output == nullptr || output->Tell() >= config_.data_shard_size) {
+        // Close existing shard.
+        if (output != nullptr) {
+          st = output->Close();
+          if (!st.ok()) return st;
+          delete output;
+          output = nullptr;
+        }
+
+        // Create new data shard.
+        current_shard = new_shards++;
+        config_.record.append = false;
+        output = new RecordWriter(TempDataFile(current_shard), config_.record);
+      }
+
+      // Write record to output.
+      uint64 pos;
+      st = output->Write(record, &pos);
+      if (!st) return st;
+
+      // Update index.
+      uint64 newid = RecordID(current_shard, pos);
+      idx.Add(fp, newid);
+      num_records++;
+    }
+  }
+
+  // Close last output shard.
+  uint64 epoch = sizeof(RecordFile::Header);
+  if (output) {
+    epoch = RecordID(current_shard, output->Tell());
+    st = output->Close();
+    if (!st.ok()) return st;
+    delete output;
+  }
+
+  VLOG(1) << "Purged " << dbdir_ << ": "
+          << num_deletes << " deletes, "
+          << num_overwrites << " overwrites, "
+          << num_records << " records remaining";
+
+  // Update index.
+  index_->CopyFrom(&idx);
+  st = index_->Flush(epoch);
+  if (!st.ok()) return st;
+
+  // Close database.
+  Close();
+
+  // Remove old data shards.
+  for (const string &fn : datafiles) {
+    st = File::Delete(fn);
+    if (!st.ok()) return st;
+  }
+
+  // Rename new data shards.
+  for (int shard = 0; shard < new_shards; ++shard) {
+    st = File::Rename(TempDataFile(shard), DataFile(shard));
+    if (!st.ok()) return st;
+  }
+
+  // Re-open purged database.
+  return Open(dbdir_, false);
+}
+
 bool Database::Get(const Slice &key, Record *record, bool novalue) {
   // Compute record key fingerprint.
   inc(GET);
-  uint64 fp = Fingerprint(key.data(), key.size());
+  uint64 fp = Fingerprint(key);
 
   // Loop over matching records in index.
   uint64 pos = DatabaseIndex::NPOS;
@@ -261,7 +426,7 @@ uint64 Database::Put(const Record &record, DBMode mode, DBResult *result) {
   if (record.value.empty()) return -1;
 
   // Compute record key fingerprint.
-  uint64 fp = Fingerprint(record.key.data(), record.key.size());
+  uint64 fp = Fingerprint(record.key);
 
   // Loop over matching records in index to check if there is already a record
   // with a matching key.
@@ -349,7 +514,7 @@ bool Database::Delete(const Slice &key) {
   if (config_.read_only) return false;
 
   // Compute record key fingerprint.
-  uint64 fp = Fingerprint(key.data(), key.size());
+  uint64 fp = Fingerprint(key);
 
   // Loop over matching records in index to find record to delete.
   uint64 recid = DatabaseIndex::NVAL;
@@ -393,10 +558,9 @@ bool Database::Next(Record *record, uint64 *iterator,
     if (shard >= readers_.size()) return false;
 
     // Flush writer before reading from the last shard.
-    if (writer_ != nullptr && shard == CurrentShard()) {
-      Status st = writer_->Flush();
+    if (shard == CurrentShard()) {
+      Status st = SyncWriter();
       if (!st) return false;
-      writer_->Sync(readers_.back());
     }
 
     // Seek to position in shard.
@@ -436,7 +600,7 @@ bool Database::Next(Record *record, uint64 *iterator,
     } else {
       // Check for stale record.
       uint64 recid = RecordID(shard, record->position);
-      uint64 fp = Fingerprint(record->key.data(), record->key.size());
+      uint64 fp = Fingerprint(record->key);
       if (!index_->Exists(fp, recid)) continue;
     }
 
@@ -476,22 +640,30 @@ string Database::DataFile(int shard) const {
   if (shard < readers_.size()) {
     return readers_[shard]->file()->filename();
   } else {
-    string fn = datadir_ + "/data-";
-    string number = std::to_string(shard);
-    for (int z = 0; z < 8 - number.size(); ++z) fn.push_back('0');
-    fn.append(number);
-    return fn;
+    return ShardFile(datadir_ + "/data-", shard);
   }
+}
+
+string Database::TempDataFile(int shard) const {
+  return ShardFile(datadir_ + "/temp-", shard);
+}
+
+Status Database::SyncWriter() {
+  if (writer_ != nullptr) {
+    Status st = writer_->Flush();
+    if (!st.ok()) return st;
+    writer_->Sync(readers_.back());
+  }
+  return Status::OK;
 }
 
 Status Database::ReadRecord(uint64 recid, Record *record, bool novalue) {
   Status st;
   uint64 shard = Shard(recid);
-  if (writer_ != nullptr && shard == CurrentShard()) {
+  if (shard == CurrentShard()) {
     // Flush writer before reading from the last shard.
-    st = writer_->Flush();
+    st = SyncWriter();
     if (!st) return st;
-    writer_->Sync(readers_.back());
   }
   RecordReader *reader = readers_[shard];
 
@@ -656,7 +828,7 @@ Status Database::Recover(uint64 capacity) {
       // to stay in read-ahead mode.
       st = reader.Read(&record);
       if (!st.ok()) return st;
-      uint64 fp = Fingerprint(record.key.data(), record.key.size());
+      uint64 fp = Fingerprint(record.key);
       uint64 recid = RecordID(shard, record.position);
 
       // Empty record indicates deletion.
@@ -745,6 +917,7 @@ static bool ParseBool(Text b, bool defval) {
 }
 
 bool Database::ParseConfig(Text config) {
+  config_.partitions.clear();
   for (Text &line : config.split('\n')) {
     // Skip comments.
     line = line.trim();
@@ -812,6 +985,8 @@ bool Database::ParseConfig(Text config) {
       config_.read_only = ParseBool(value, false);
     } else if (key == "timestamped") {
       config_.timestamped = ParseBool(value, false);
+    } else if (key == "can_clear") {
+      config_.can_clear = ParseBool(value, false);
     } else {
       LOG(ERROR) << "Unknown configuration parameter: " << line;
       return false;
@@ -821,4 +996,3 @@ bool Database::ParseConfig(Text config) {
 }
 
 }  // namespace sling
-

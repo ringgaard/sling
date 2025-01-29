@@ -13,6 +13,8 @@
 // limitations under the License.
 
 #include "sling/nlp/kb/sitemap-service.h"
+
+#include "sling/net/web-service.h"
 #include "sling/string/text.h"
 
 namespace sling {
@@ -25,28 +27,25 @@ SitemapService::SitemapService(Store *commons, KnowledgeService *kb)
 }
 
 void SitemapService::Register(HTTPServer *http) {
-  http->Register("/sitemap", this, &SitemapService::HandleSitemap);
+  http->Register("/kb/sitemap", this, &SitemapService::HandleSitemap);
 }
 
 void SitemapService::HandleSitemap(HTTPRequest *req, HTTPResponse *rsp) {
-  Text caseno = req->path();
-  if (caseno.empty()) {
+  WebService ws(commons_, req, rsp);
+  Text itemid = ws.Get("id");
+  if (itemid.empty()) {
       rsp->SendError(400, "Bad Request", nullptr);
       return;
   }
-  if (caseno.starts_with("/")) caseno.remove_prefix(1);
-  if (caseno.ends_with(".xml")) caseno.remove_suffix(4);
-  string itemid = "PCASE/" + caseno.str();
   LOG(INFO) << "Sitemap for " << itemid;
 
-  Store store(commons_);
-  Handle handle = kb_->RetrieveItem(&store, itemid);
+  Handle handle = kb_->RetrieveItem(ws.store(), itemid);
   if (handle.IsNil()) {
     rsp->SendError(404, nullptr, "Item not found");
     return;
   }
 
-  Frame item(&store, handle);
+  Frame item(ws.store(), handle);
   if (!item.valid()) {
     rsp->SendError(400, nullptr, "Invalid item");
     return;
@@ -57,7 +56,7 @@ void SitemapService::HandleSitemap(HTTPRequest *req, HTTPResponse *rsp) {
   rsp->Append("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">");
   rsp->Append("\n");
   for (const Slot &s : item.Slots(n_has_part_)) {
-    Text partid = store.FrameId(s.value);
+    Text partid = ws.store()->FrameId(s.value);
     if (partid.empty()) continue;
     rsp->Append("<url><loc>https://ringgaard.com/kb/");
     rsp->Append(partid);

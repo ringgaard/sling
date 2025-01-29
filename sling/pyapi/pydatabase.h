@@ -71,6 +71,9 @@ struct PyDatabase : public PyBase {
   // Return current epoch for database.
   PyObject *Epoch();
 
+  // Clear all records from database.
+  PyObject *Clear();
+
   // Get slice for string or binary value.
   static bool GetData(PyObject *obj, Slice *data);
 
@@ -151,4 +154,3 @@ struct PyCursor : public PyBase {
 }  // namespace sling
 
 #endif  // SLING_PYAPI_PYDATABASE_H_
-

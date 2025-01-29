@@ -94,6 +94,12 @@ class DBService {
   // Back up database.
   void Backup(HTTPRequest *request, HTTPResponse *response);
 
+  // Clear database by deleting all content.
+  void Clear(HTTPRequest *request, HTTPResponse *response);
+
+  // Compact database by removing all deleted and updated records.
+  void Purge(HTTPRequest *request, HTTPResponse *response);
+
   // Return database statistics.
   void Statusz(HTTPRequest *request, HTTPResponse *response);
 
@@ -222,6 +228,9 @@ class DBSession : public SocketSession {
   // Return current epoch for database.
   Continuation Epoch();
 
+  // Clear all records in database.
+  Continuation Clear();
+
   // Return error message to client.
   Continuation Error(const char *msg);
 
@@ -274,4 +283,3 @@ class DBStream : public SocketStream {
 }  // namespace sling
 
 #endif  // SLING_DB_DBSERVER_H_
-

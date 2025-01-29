@@ -327,6 +327,9 @@ class HTTPResponse {
   void Add(const char *name, const char *value) {
     Add(name, value, strlen(value));
   }
+  void Add(const char *name, const Slice &slice) {
+    Add(name, slice.data(), slice.size());
+  }
 
   // HTTP response headers.
   const std::vector<HTTPHeader> &headers() const { return headers_; }

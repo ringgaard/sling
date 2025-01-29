@@ -55,8 +55,7 @@ uint64 Fingerprint(const char *bytes, size_t len) {
 
 uint32 Fingerprint32(const char *bytes, size_t len) {
   uint64 fp = Fingerprint(bytes, len);
-  return fp ^(fp >> 32);
+  return fp ^ (fp >> 32);
 }
 
 }  // namespace sling
-

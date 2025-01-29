@@ -36,6 +36,7 @@ enum DBVerb : uint32 {
   DBHEAD      = 7,     // check for existence of key(s)
   DBNEXT2     = 8,     // retrieve the next record(s), version 2
   DBSTREAM    = 9,     // retrieve stream of records
+  DBCLEAR     = 10,    // delete all records from database
 
   // Reply verbs.
   DBOK        = 128,   // success reply
@@ -178,9 +179,12 @@ struct DBHeader {
 // Enable/disable bulk mode for database. In bulk mode, there is no periodical
 // forced checkpoints.
 //
+// DBCLEAR -> DBOK
+//
+// Delete all records from database, if allowed.
+//
 // All requests can return a DBERROR message:char[] reply if an error occurs.
 
 }  // namespace sling
 
 #endif  // SLING_DB_DBPROTOCOL_H_
-

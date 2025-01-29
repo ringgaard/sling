@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
   CHECK(index.Open(FLAGS_index));
 
   VLOG(1) << "epoch: " << index.epoch();
-  VLOG(1) << "capacity: " << index.epoch();
+  VLOG(1) << "capacity: " << index.capacity();
   VLOG(1) << "limit: " << index.limit();
   VLOG(1) << "records: " << index.num_records();
   VLOG(1) << "deleted: " << index.num_deleted();
@@ -44,4 +44,3 @@ int main(int argc, char *argv[]) {
 
   return 0;
 }
-

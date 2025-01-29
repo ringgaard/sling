@@ -108,6 +108,9 @@ class DBClient {
   // value for reading new records from the database.
   Status Epoch(uint64 *epoch);
 
+  // Clear all records from database.
+  Status Clear();
+
   // Check if client is connected to database server.
   bool connected() const { return sock_ != -1; }
 
@@ -159,4 +162,3 @@ class DBClient {
 }  // namespace sling
 
 #endif  // SLING_DB_DBCLIENT_H_
-

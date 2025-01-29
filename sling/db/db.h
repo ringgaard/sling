@@ -59,6 +59,9 @@ class Database {
 
     // Record version number is timestamp.
     bool timestamped = false;
+
+    // Allow clearing all records in database.
+    bool can_clear = false;
   };
 
   // Database performance metrics.
@@ -90,12 +93,21 @@ class Database {
   // Flush changes to database.
   Status Flush();
 
+  // Close database.
+  void Close();
+
   // Enable or disable bulk mode. In bulk mode, a memory-based index is used to
   // avoid excessive paging during database loading.
   Status Bulk(bool enable);
 
   // Back up database by making a snapshot of the index.
   Status Backup();
+
+  // Delete all records from database.
+  Status Clear();
+
+  // Compact database by removing all deleted and updated records.
+  Status Purge();
 
   // Get record from database. Return true if found.
   bool Get(const Slice &key, Record *record, bool novalue = false);
@@ -215,6 +227,9 @@ class Database {
   // Return filename for (new) data shard.
   string DataFile(int shard) const;
 
+  // Return filename for temporary data shard.
+  string TempDataFile(int shard) const;
+
   // Read data record (key).
   Status ReadRecord(uint64 recid, Record *record, bool novalue);
 
@@ -226,6 +241,9 @@ class Database {
 
   // Expand database for next record.
   Status Expand();
+
+  // Synchronize readers with writer.
+  Status SyncWriter();
 
   // Recover index from data files.
   Status Recover(uint64 capacity);
@@ -264,4 +282,3 @@ class Database {
 }  // namespace sling
 
 #endif  // SLING_DB_DB_H_
-

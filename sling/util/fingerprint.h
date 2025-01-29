@@ -12,6 +12,7 @@
 // limitations under the License.
 
 #include "sling/base/types.h"
+#include "sling/base/slice.h"
 
 #ifndef SLING_UTIL_FINGERPRINT_H_
 #define SLING_UTIL_FINGERPRINT_H_
@@ -25,11 +26,16 @@ uint64 FingerprintCat(uint64 fp1, uint64 fp2);
 // than the default hash<string>, without being much slower. It never returns
 // 0 or 1.
 uint64 Fingerprint(const char *bytes, size_t len);
+inline uint64 Fingerprint(const Slice &slice) {
+  return Fingerprint(slice.data(), slice.size());
+}
 
 // Compute 32-bit fingerprint by folding 64-bit fingerprint.
 uint32 Fingerprint32(const char *bytes, size_t len);
+inline uint32 Fingerprint32(const Slice &slice) {
+  return Fingerprint32(slice.data(), slice.size());
+}
 
 }  // namespace sling
 
 #endif  // SLING_UTIL_FINGERPRINT_H_
-

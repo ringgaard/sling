@@ -187,6 +187,10 @@ void DBService::Process(HTTPRequest *request, HTTPResponse *response) {
         Unmount(request, response);
       } else if (strcmp(cmd, "backup") == 0) {
         Backup(request, response);
+      } else if (strcmp(cmd, "clear") == 0) {
+        Clear(request, response);
+      } else if (strcmp(cmd, "purge") == 0) {
+        Purge(request, response);
       } else {
         response->SendError(501, nullptr, "Unknown DB command");
       }
@@ -291,7 +295,7 @@ void DBService::ReturnSingle(HTTPResponse *response,
 
   // Add record key.
   if (key) {
-    response->Add("Key", record.key.data(), record.key.size());
+    response->Add("Key", record.key);
   }
 
   // Add next record id.
@@ -300,7 +304,7 @@ void DBService::ReturnSingle(HTTPResponse *response,
   }
 
   // Return record value.
-  response->Append(record.value.data(), record.value.size());
+  response->Append(record.value);
 }
 
 // Return multiple records.
@@ -326,7 +330,7 @@ void DBService::ReturnMultiple(HTTPResponse *response, Database *db,
     response->Append("\r\n");
 
     response->Append("Key: ");
-    response->Append(record.key.data(), record.key.size());
+    response->Append(record.key);
     response->Append("\r\n");
 
     if (record.version != 0) {
@@ -342,7 +346,7 @@ void DBService::ReturnMultiple(HTTPResponse *response, Database *db,
     }
 
     response->Append("\r\n");
-    response->Append(record.value.data(), record.value.size());
+    response->Append(record.value);
   }
 
   if (next == -1) {
@@ -658,6 +662,58 @@ void DBService::Backup(HTTPRequest *request, HTTPResponse *response) {
   response->SendError(200, nullptr, "Database backed up");
 }
 
+void DBService::Clear(HTTPRequest *request, HTTPResponse *response) {
+  // Get parameters.
+  URLQuery query(request->query());
+  string name = query.Get("name").str();
+
+  // Lock database.
+  DBLock l(this, name);
+  if (l.mount() == nullptr) {
+    response->SendError(404, nullptr, "Database not found");
+    return;
+  }
+
+  // Clear database.
+  LOG(INFO) << "Clear database: " << name;
+  Status st = l.db()->Clear();
+  if (!st.ok()) {
+    VLOG(1) << "Error clearing database: " << st;
+    response->SendError(500, nullptr, "Unable to clear database");
+    return;
+  }
+
+  // Database cleared sucessfully.
+  LOG(INFO) << "Database cleared: " << name;
+  response->SendError(200, nullptr, "Database cleared");
+}
+
+void DBService::Purge(HTTPRequest *request, HTTPResponse *response) {
+  // Get parameters.
+  URLQuery query(request->query());
+  string name = query.Get("name").str();
+
+  // Lock database.
+  DBLock l(this, name);
+  if (l.mount() == nullptr) {
+    response->SendError(404, nullptr, "Database not found");
+    return;
+  }
+
+  // Purge database.
+  LOG(INFO) << "Purge database: " << name;
+  Status st = l.db()->Purge();
+  if (!st.ok()) {
+    VLOG(1) << "Error compacting database: " << st;
+    response->SendError(500, nullptr, "Unable to purge database");
+    return;
+  }
+
+  // Database purged sucessfully.
+  LOG(INFO) << "Database purged: " << name;
+  response->SendError(200, nullptr, "Database purged");
+}
+
 void DBService::Statusz(HTTPRequest *request, HTTPResponse *response) {
   // General server information.
   JSON::Object json;
@@ -820,6 +876,7 @@ DBSession::Continuation DBSession::Process(SocketConnection *conn) {
     case DBHEAD: cont = Head(); break;
     case DBNEXT2: cont = Next(2); break;
     case DBSTREAM: cont = Stream(); break;
+    case DBCLEAR: cont = Clear(); break;
     default: return Error("command verb not supported");
   }
 
@@ -1048,6 +1105,14 @@ DBSession::Continuation DBSession::Epoch() {
   return Response(DBRECID);
 }
 
+DBSession::Continuation DBSession::Clear() {
+  if (mount_ == nullptr) return Error("no database");
+  DBLock l(mount_);
+  Status st = l.db()->Clear();
+  if (!st.ok()) return Error(st.message());
+  return Response(DBOK);
+}
+
 DBSession::Continuation DBSession::Error(const char *msg) {
   // Clear existing (partial) response.
   conn_->response_header()->Clear();
@@ -1112,7 +1177,7 @@ void DBSession::WriteRecord(const Record &record,
   uint32 ksize = record.key.size() << 1;
   if (record.version != 0) ksize |= 1;
   rsp->Write(&ksize, 4);
-  rsp->Write(record.key.data(), record.key.size());
+  rsp->Write(record.key);
 
   if (record.version != 0) {
     rsp->Write(&record.version, 8);
@@ -1121,7 +1186,7 @@ void DBSession::WriteRecord(const Record &record,
   uint32 vsize = record.value.size();
   rsp->Write(&vsize, 4);
   if (!novalue) {
-    rsp->Write(record.value.data(), record.value.size());
+    rsp->Write(record.value);
   }
 }
 
@@ -1174,4 +1239,3 @@ int DBStream::Fill(IOBuffer *buffer) {
 }
 
 }  // namespace sling
-

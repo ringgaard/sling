@@ -114,7 +114,7 @@ curl -X POST localhost:7070/create?name=test
 This will create a new database in `/var/lib/slingdb/test`. The database
 directory is configured with `dbdir` configuration option (default is
 /var/lib/slingdb). The database configuration can be specified in the request
-body. The configuaration options are colon-separated key-value pairs:
+body. The configuration options are colon-separated key-value pairs:
 
 * `data`: _path_ (adds data partition to database to allow database to span multiple disks)
 * `initial_index_capacity`: _1M_ (set the initial capacity of the hash index)
@@ -125,6 +125,7 @@ body. The configuaration options are colon-separated key-value pairs:
 * `compression`: _1_ (0=no compression, 1=snappy compression)
 * `read_only`: _false_ (static databases can be set to read-only mode)
 * `timestamped`: _false_ (timestamped databases use version as modification timestamp)
+* `can_clear`: _false_ (database can obly be cleared id this is enabled)
 
 #### mount database
 
@@ -155,6 +156,25 @@ used to speed up database recovery after a crash:
 
 ```
 curl -X POST localhost:7070/backup?name=test
+```
+
+#### clear database
+
+The clear command removes all content from the database. This is only allowed
+if the can_clear config flags is enabled:
+
+```
+curl -X POST localhost:7070/clear?name=test
+```
+
+#### purge database
+
+The purge command compacts the database. Due to the log-structured nature of
+the database system, deleted and updated records still take up space until
+the database is purged:
+
+```
+curl -X POST localhost:7070/purge?name=test
 ```
 
 ## C++ API
@@ -228,6 +248,10 @@ shorthand for `localhost:7070/test`.
 * `db.delete(key)` or `del db[key]`<br>
   Delete record in database.
 
+* `db.clear()`<br>
+  Delete all records in database. This is only allowed if the can_clear config
+  flags is enabled.
+
 #### iterating
 
 * `for key, version, value in db([begin=0], [end=-1], [stable=False], [deletions=False])`<br>
@@ -284,4 +308,3 @@ sudo systemctl restart slingdb
 SLINGDB does not have any access control so you will probably need to run it
 behind a firewall and only allow access through an application server or a
 reverse proxy.
-

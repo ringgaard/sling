@@ -55,6 +55,7 @@ void PyDatabase::Define(PyObject *module) {
   methods.Add("items", &PyDatabase::Items);
   methods.Add("position", &PyDatabase::Position);
   methods.Add("epoch", &PyDatabase::Epoch);
+  methods.Add("clear", &PyDatabase::Clear);
   type.tp_methods = methods.table();
 
   RegisterType(&type, module, "Database");
@@ -326,6 +327,14 @@ PyObject *PyDatabase::Epoch() {
   return PyLong_FromLong(epoch);
 }
 
+PyObject *PyDatabase::Clear() {
+  Status st = Transact([&]() -> Status {
+    return db->Clear();
+  });
+  if (!CheckIO(st)) return nullptr;
+  Py_RETURN_NONE;
+}
+
 bool PyDatabase::GetData(PyObject *obj, Slice *data) {
   if (PyBytes_Check(obj)) {
     char *buffer;
@@ -478,4 +487,3 @@ PyObject *PyCursor::Self() {
 }
 
 }  // namespace sling
-

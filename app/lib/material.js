@@ -75,6 +75,11 @@ export class MdApp extends Component {
 Component.register(MdApp);
 
 export class MdContent extends Component {
+  onconnected() {
+    // Allow content area to receive focus.
+    this.tabIndex = 0;
+  }
+
   static stylesheet() {
     return `
       $ {

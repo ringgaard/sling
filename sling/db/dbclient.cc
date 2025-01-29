@@ -330,17 +330,26 @@ Status DBClient::Epoch(uint64 *epoch) {
   });
 }
 
+Status DBClient::Clear() {
+  return Transact([&]() -> Status {
+    request_.Clear();
+    Status st = Do(DBCLEAR);
+    if (!st.ok()) return st;
+    return Status::OK;
+  });
+}
+
 void DBClient::WriteKey(const Slice &key) {
   uint32 size = key.size();
   request_.Write(&size, 4);
-  request_.Write(key.data(), key.size());
+  request_.Write(key);
 }
 
 void DBClient::WriteRecord(DBRecord *record) {
   uint32 ksize = record->key.size() << 1;
   if (record->version != 0) ksize |= 1;
   request_.Write(&ksize, 4);
-  request_.Write(record->key.data(), record->key.size());
+  request_.Write(record->key);
 
   if (record->version != 0) {
     request_.Write(&record->version, 8);
@@ -348,7 +357,7 @@ void DBClient::WriteRecord(DBRecord *record) {
 
   uint32 vsize = record->value.size();
   request_.Write(&vsize, 4);
-  request_.Write(record->value.data(), record->value.size());
+  request_.Write(record->value);
 }
 
 Status DBClient::ReadRecord(DBRecord *record, IOBuffer *buffer, bool novalue) {
@@ -487,4 +496,3 @@ Status DBClient::Receive(IOBuffer *response) {
 }
 
 }  // namespace sling
-

@@ -158,7 +158,7 @@ void SocketServer::Worker() {
         // Find and lock connection for event.
         SocketConnection *conn = GetConnection(ev->data.ptr);
         if (conn == nullptr) {
-          LOG(ERROR) << "No connection for socket";
+          VLOG(1) << "No connection for socket";
           continue;
         }
 
@@ -666,4 +666,3 @@ const char *SocketConnection::State() const {
 }
 
 }  // namespace sling
-
