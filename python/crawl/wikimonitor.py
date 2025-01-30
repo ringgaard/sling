@@ -19,6 +19,7 @@ import re
 import sys
 import requests
 import time
+import traceback
 from threading import Thread
 from queue import Queue
 import sling
@@ -158,8 +159,8 @@ def process_change(change):
     if redir:
       print("[%d] %s REDIR %s" % (queue.qsize(), qid, redir))
     else:
-      print("[%d] %d %s %s (%s)" % (queue.qsize(), revision, item["id"],
-            item["name"], dbresults[result]))
+      print("[%d] %d %s (%s)" % (queue.qsize(), revision, item["id"],
+            dbresults[result]))
 
   # Update checkpoint.
   global num_changes
@@ -183,6 +184,7 @@ def worker():
       process_change(event)
     except:
       print("Error processing event:", sys.exc_info()[0])
+      traceback.print_exc(file=sys.stdout)
     finally:
       queue.task_done()
 

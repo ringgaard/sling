@@ -6,7 +6,7 @@
 import {Component, stylesheet} from "/common/lib/component.js";
 import {MdApp, MdCard, MdModal, MdSearchResult, StdDialog, inform}
   from "/common/lib/material.js";
-import {PhotoGallery, imageurl, censor} from "/common/lib/gallery.js";
+import {PhotoGallery, imageurl, isimage, censor} from "/common/lib/gallery.js";
 
 var settings = JSON.parse(window.localStorage.getItem("settings") || "{}");
 
@@ -758,7 +758,7 @@ class KbPictureCard extends MdCard {
     if (images && images.length > 0) {
       let index = 0;
       for (let i = 0; i < images.length; ++i) {
-        if (!images[i].nsfw) {
+        if (isimage(images[i].url) && !images[i].nsfw) {
           index = i;
           break;
         }
@@ -1055,4 +1055,3 @@ const mobile_template = `
 `;
 
 document.body.innerHTML = isMobile() ? mobile_template : desktop_template;
-

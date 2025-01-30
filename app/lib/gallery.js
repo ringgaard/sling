@@ -56,6 +56,10 @@ export function mediatype(url) {
   return media_types[url.substring(pos).toLowerCase()];
 }
 
+export function isimage(url) {
+  return mediatype(url) == IMAGE;
+}
+
 export function imageurl(url, thumb) {
   if (mediadb.enabled) {
     let escaped = encodeURIComponent(url);

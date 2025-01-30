@@ -592,15 +592,16 @@ class Profile:
     #print(json.dumps(reply, indent=2))
 
     serial = 1
-    total = len(reply["images"])
-    album_title = reply["title"]
+    images = reply.get("images")
+    if images is None: return 0
+    album_title = reply.get("title")
     if album_title is None:
        album_title = caption
     elif caption is not None and caption.startswith(album_title):
       album_title = caption
 
     count = 0
-    for image in reply["images"]:
+    for image in images:
       link = image["link"]
 
       # Remove query parameters.
