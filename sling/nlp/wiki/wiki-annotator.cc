@@ -198,7 +198,8 @@ WikiAnnotator::WikiAnnotator(WikiAnnotator *other)
       templates_(other->templates_),
       annotations_(store_),
       themes_(store_),
-      categories_(store_) {
+      categories_(store_),
+      extract_media_(other->extract_media_) {
   n_name_.Assign(other->n_name_);
   n_link_.Assign(other->n_link_);
   n_page_category_.Assign(other->n_page_category_);
@@ -268,6 +269,15 @@ void WikiAnnotator::Category(const Node &node, WikiExtractor *extractor) {
   AddCategory(store_->Lookup(link));
 }
 
+void WikiAnnotator::Media(const Node &node, WikiExtractor *extractor) {
+  if (!extract_media_) return;
+  Text media = node.name();
+  int begin = position();
+  Content(media);
+  int end = position();
+  AddMention(begin, end, store_->AllocateString(media));
+}
+
 void WikiAnnotator::AddToDocument(Document *document) {
   // Add annotated spans to document.
   for (Annotation &a : annotations_) {
@@ -318,4 +328,3 @@ void WikiAnnotator::AddAlias(const string &name, AliasSource source) {
 
 }  // namespace nlp
 }  // namespace sling
-

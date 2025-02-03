@@ -191,6 +191,7 @@ class WikiAnnotator : public WikiTextSink {
                 WikiExtractor *extractor,
                 bool unanchored) override;
   void Category(const Node &node, WikiExtractor *extractor) override;
+  void Media(const Node &node, WikiExtractor *extractor) override;
 
   // Add annotations to tokenized document.
   void AddToDocument(Document *document);
@@ -221,6 +222,9 @@ class WikiAnnotator : public WikiTextSink {
   void set_templates(WikiTemplateRepository *templates) {
     templates_ = templates;
   }
+
+  // Image extraction.
+  void enable_media_extraction() { extract_media_ = true; }
 
  private:
   // Annotated span with byte-offset interval for the phrase in the text as well
@@ -269,6 +273,9 @@ class WikiAnnotator : public WikiTextSink {
   // Aliases.
   std::vector<Alias> aliases_;
 
+  // Extract images.
+  bool extract_media_ = false;
+
   // Symbols.
   Names names_;
   Name n_name_{names_, "name"};
@@ -280,4 +287,3 @@ class WikiAnnotator : public WikiTextSink {
 }  // namespace sling
 
 #endif  // SLING_NLP_WIKI_WIKI_ANNOTATOR_H_
-

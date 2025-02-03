@@ -572,6 +572,7 @@ class WikipediaPage {
 
                   // Extract and annotate table cell.
                   nlp::WikiAnnotator annotator(store, wikiex);
+                  annotator.enable_media_extraction();
                   annotator.set_templates(wikiex->templates());
                   extractor.Enter(&annotator);
                   extractor.ExtractNode(cell);
@@ -764,4 +765,3 @@ PyObject *PyWikipediaPage::Tables(PyObject *args) {
 }
 
 }  // namespace sling
-

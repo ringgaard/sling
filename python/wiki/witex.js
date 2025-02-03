@@ -4,6 +4,7 @@
 import {Store, Reader, Frame} from "/common/lib/frame.js";
 import {Document} from "/common/lib/document.js";
 import {Component} from "/common/lib/component.js";
+import {MD5} from "/common/lib/hash.js";
 import {MdApp, MdCard, inform} from "/common/lib/material.js";
 
 var commons = new Store();
@@ -52,6 +53,18 @@ const lib = {
   "int": (value) => {
     if (value instanceof Document) value = value.plain();
     return value && parseInt(value);
+  },
+
+  "image": (fn) => {
+    if (!fn) return null;
+    const commons_base_url = "https://upload.wikimedia.org/wikipedia/commons";
+    if (!fn) return null;
+    fn = fn.replaceAll(' ', '_')
+    let md5 = MD5(fn);
+    fn = fn.replaceAll("?", "%3F")
+    fn = fn.replaceAll("+", "%2B")
+    fn = fn.replaceAll("&", "%26")
+    return `${commons_base_url}/${md5[0]}/${md5[0]}${md5[1]}/${fn}`;
   },
 
   "link": (value) => {
@@ -311,8 +324,7 @@ class WikiTable extends MdCard {
         if (!cell) {
           record.fields.push(null);
         } else {
-          let doc = new Document(store);
-          doc.parse(cell)
+          let doc = new Document(store, cell);
           record.fields.push(doc);
         }
       }
@@ -498,4 +510,3 @@ class WikiAst extends MdCard {
 Component.register(WikiAst);
 
 document.body.style = null;
-
