@@ -1118,7 +1118,7 @@ class TopicCard extends Component {
       let topic = this.state;
       for (let fh of fhs) {
         let file = await fh.getFile();
-        let url = await Drive.save(fh);
+        let url = await Drive.save(file);
         topic.put(n_media, url);
       }
       inform(plural(fhs.length, "photo") + " uploaded");
