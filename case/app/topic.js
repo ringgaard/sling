@@ -18,6 +18,7 @@ import {Document} from "/common/lib/document.js";
 
 import {get_schema, inverse_property} from "./schema.js";
 import {search, kbsearch, SearchResultsDialog} from "./search.js";
+import {Drive} from "./drive.js";
 import "./item.js"
 import "./fact.js"
 
@@ -405,6 +406,7 @@ class TopicToolbox extends MdToolbox {
             <md-menu-item id="extract">Extract text</md-menu-item>
             <md-menu-item id="mentions">Find mentions</md-menu-item>
             <md-menu-item id="toprofile">Move photos to profile</md-menu-item>
+            <md-menu-item id="photoupload">Upload photos</md-menu-item>
           </md-menu>
    `;
  }
@@ -457,6 +459,8 @@ class TopicCard extends Component {
         this.onmentions(e);
       } else if (action == "toprofile") {
         this.ontoprofile(e);
+      } else if (action == "photoupload") {
+        this.onphotoupload(e);
       }
     });
 
@@ -1096,6 +1100,31 @@ class TopicCard extends Component {
     this.style.cursor = "";
     let response = await r.json();
     inform(plural(response.images, "photo") + " added to profile");
+  }
+
+  async onphotoupload(e) {
+    // Pick photos to upload.
+    let fhs = await window.showOpenFilePicker({
+      excludeAcceptAllOption: false,
+      types: [{
+        description: "Images",
+        accept: {"image/*": [".png", ".gif", ".jpeg", ".jpg"]},
+      }],
+      multiple: true,
+    });
+
+    // Upload photos and add to topic.
+    if (fhs.length > 0) {
+      let topic = this.state;
+      for (let fh of fhs) {
+        let file = await fh.getFile();
+        let url = await Drive.save(fh);
+        topic.put(n_media, url);
+      }
+      inform(plural(fhs.length, "photo") + " uploaded");
+      this.mark_dirty();
+      this.refresh();
+    }
   }
 
   ondown(e) {

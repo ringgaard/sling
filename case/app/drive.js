@@ -54,4 +54,3 @@ export const Drive = {
   save: save,
   paste_image: paste_image,
 }
-

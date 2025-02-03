@@ -88,6 +88,7 @@ export class MdContent extends Component {
         display: block;
         overflow: auto;
         background-color: #eeeeee;
+        outline: none;
       }
     `;
   }
