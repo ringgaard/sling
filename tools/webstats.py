@@ -374,6 +374,7 @@ api_calls = defaultdict(int)
 source_files = defaultdict(int)
 date_hits = defaultdict(int)
 date_visitors = defaultdict(set)
+google_crawl = defaultdict(int)
 visitors = set()
 download_hits = defaultdict(int)
 media_hits = defaultdict(int)
@@ -415,6 +416,8 @@ for logfn in flags.arg.logfiles:
     bytes = m.group(7)
     referrer = m.group(8)
     ua = m.group(9)
+    ts = datetime.datetime.strptime(timestamp, "%d/%b/%Y:%H:%M:%S %z")
+    day = ts.date()
 
     # Internal traffic.
     if ipaddr.startswith("10.1.") or ipaddr.startswith("127."):
@@ -435,6 +438,7 @@ for logfn in flags.arg.logfiles:
         bot_hits[bot_name] += 1
         bot = True
         if flags.arg.b and bot_name.startswith("Other"): print(ua)
+        if bot_name == "Google": google_crawl[day] += 1
         break
     if bot:
       num_bots += 1
@@ -576,8 +580,6 @@ for logfn in flags.arg.logfiles:
           break
 
     # Hits and visitors per day.
-    ts = datetime.datetime.strptime(timestamp, "%d/%b/%Y:%H:%M:%S %z")
-    day = ts.date()
     date_hits[day] += 1
     date_visitors[day].add(ipaddr)
     visitors.add(ipaddr)
@@ -656,6 +658,7 @@ print_table("BROWSERS", "browser", browser_hits)
 print_table("PLATFORMS", "platform", platform_hits)
 print_table("DOWNLOADS", "file", download_hits)
 #print_table("IP ADDRESSES", "hits", ip_hits)
+print_table("GOGGLE CRAWL", "date", google_crawl, chron=True)
 if flags.arg.v:
   print_table("MEDIA", "file", media_hits)
   print_table("ITEMS", "item", item_hits)

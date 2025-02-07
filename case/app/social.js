@@ -102,6 +102,10 @@ let xrefs = [
     property: frame("P8604"),
   },
   {
+    pattern: /^https:\/\/www.babepedia.com\/onlyfans\/([^\/\?]+)/,
+    property: frame("P8604"),
+  },
+  {
     pattern: /^https?:\/\/fansly\.com\/([^\/\?]+)/i,
     property: frame("P12039"),
   },
@@ -393,6 +397,10 @@ let xrefs = [
   },
   {
     pattern: /^https:\/\/www\.familysearch\.org\/tree\/person\/details\/(.+)/,
+    property: frame("P2889"),
+  },
+  {
+    pattern: /^https:\/\/www.familysearch.org\/en\/tree\/person\/details\/(.+)/
     property: frame("P2889"),
   },
 ];
