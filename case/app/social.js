@@ -400,7 +400,7 @@ let xrefs = [
     property: frame("P2889"),
   },
   {
-    pattern: /^https:\/\/www.familysearch.org\/en\/tree\/person\/details\/(.+)/
+    pattern: /^https:\/\/www.familysearch.org\/en\/tree\/person\/details\/(.+)/,
     property: frame("P2889"),
   },
 ];
