@@ -284,17 +284,34 @@ export class PhotoGallery extends MdModal {
   }
 
   ongallery(e) {
+    let remove = e.shiftKey;
     let selected = new Array();
+    let removed = new Set();
     for (let photo of this.photos) {
       if (photo.selected) {
         selected.push(photo.nsfw ? "!" + photo.url : photo.url);
         photo.selected = false;
+        if (remove) removed.add(photo);
       }
     }
     if (selected.length > 0) {
+      // Put gallery URL in clipboard.
       navigator.clipboard.writeText("gallery:" + selected.join(" "));
+
+      // Remove selected photos if requested.
+      if (remove) {
+         this.photos = this.photos.filter(photo => {
+           if (removed.has(photo)) {
+             this.dispatch("delimage", photo.url);
+             return false;
+           } else {
+             return true;
+           }
+         });
+         this.edited = true;
+         this.move(0);
+      }
     }
-    this.display(this.current);
   }
 
   onclose(e) {
