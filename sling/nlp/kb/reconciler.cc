@@ -328,6 +328,23 @@ class ItemMerger : public task::Reducer {
   void Start(task::Task *task) override {
     task::Reducer::Start(task);
 
+    // Temporal qualifiers used for testing statement compatibility.
+    static const char *compatible[] = {
+      "P585",   // point in time.
+      "P580",   // start time
+      "P582",   // end time
+      "P2937",  // parliamentary term
+      nullptr,
+    };
+    for (const char **cp = compatible; *cp; ++cp) {
+      Handle property = commons_.Lookup(*cp);
+      temporal_modifiers_.add(property);
+    }
+
+    // Bind symbols.
+    CHECK(names_.Bind(&commons_));
+    commons_.Freeze();
+
     // Statistics.
     num_orig_statements_ = task->GetCounter("original_statements");
     num_final_statements_ = task->GetCounter("final_statements");
@@ -339,13 +356,15 @@ class ItemMerger : public task::Reducer {
 
   void Reduce(const task::ReduceInput &input) override {
     // Create frame with reconciled id.
-    Store store;
-    Handle proxy = store.Lookup(input.key());
+    Store store(&commons_);
     Builder builder(&store);
-    builder.AddId(proxy);
+    builder.AddId(input.key());
+    builder.Update();
+    Handle proxy = builder.handle();
 
     // Merge all item sources.
     Statements statements(&store);
+    bool has_unnames = false;
     for (task::Message *message : input.messages()) {
       // Decode item.
       Frame item = DecodeMessage(&store, message);
@@ -360,7 +379,6 @@ class ItemMerger : public task::Reducer {
       });
 
       // Add/merge statements.
-      Handle n_auxid = store.LookupExisting("PAUXID");
       statements.Ensure(item.size());
       for (const Slot &slot : item) {
         // Skip redirects and comments.
@@ -368,11 +386,14 @@ class ItemMerger : public task::Reducer {
         if (slot.name.IsNil()) continue;
 
         // Add auxiliary ids.
-        if (slot.name == n_auxid) {
+        if (slot.name == n_auxid_) {
           String auxid(&store, slot.value);
           if (auxid.valid()) builder.AddId(auxid.text());
           continue;
         }
+
+        // Check for unnames.
+        if (slot.name == n_unname_) has_unnames = true;
 
         // Check for existing match(es).
         Handle qvalue = store.Resolve(slot.value);
@@ -429,9 +450,7 @@ class ItemMerger : public task::Reducer {
     }
 
     // Replace names if item has unname statements.
-    if (!store.LookupExisting("PUNME").IsNil()) {
-      Unname(builder);
-    }
+    if (has_unnames) Unname(builder);
 
     // Output merged frame for item.
     Frame merged = builder.Create();
@@ -449,35 +468,24 @@ class ItemMerger : public task::Reducer {
 
   // Output property catalog.
   void Flush(task::Task *task) override {
-    Store store;
+    Store store(&commons_);
     Builder catalog(&store);
     catalog.AddId("/w/entity");
-    catalog.AddIs("schema");
-    catalog.Add("name", "Wikidata entity");
-    catalog.AddLink("family", "/schema/wikidata");
+    catalog.AddIs(n_schema_);
+    catalog.Add(n_name_, "Wikidata entity");
+    catalog.AddLink(n_family_, "/schema/wikidata");
     for (const string &id : properties_) {
-      catalog.AddLink("role", id);
+      catalog.AddLink(n_role_, id);
     }
     Output(0, task::CreateMessage(catalog.Create()));
   }
 
   // Check if two qualified values are compatible.
-  static bool Compatible(Store *store, Handle first, Handle second) {
-    // Qualifiers used for testing compatibility.
-    static const char *compatible[] = {
-      "P585",   // point in time.
-      "P580",   // start time
-      "P582",   // end time
-      "P2937",  // parliamentary term
-      nullptr,
-    };
-
+  bool Compatible(Store *store, Handle first, Handle second) {
     // Check for temporal compatibility.
     Frame f(store, first);
     Frame s(store, second);
-    for (const char **cp = compatible; *cp; ++cp) {
-      Handle property = store->LookupExisting(*cp);
-      if (property.IsNil()) continue;
+    for (Handle property : temporal_modifiers_) {
       if (Same(f, s, property)) return true;
     }
 
@@ -514,23 +522,19 @@ class ItemMerger : public task::Reducer {
   // Unname item.
   void Unname(Builder &builder) {
     Store *store = builder.store();
-    Handle n_name = store->Lookup("name");
-    Handle n_alias = store->Lookup("alias");
-    Handle n_unname = store->Lookup("PUNME");
-
     for (int i = 0; i < builder.size(); ++i) {
-      if (builder[i].name == n_unname) {
+      if (builder[i].name == n_unname_) {
         Handle old_name = store->Resolve(builder[i].value);
         Handle new_name = Handle::nil();
         if (old_name != builder[i].value) {
-          new_name = Frame(store, builder[i].value).GetHandle(n_name);
+          new_name = Frame(store, builder[i].value).GetHandle(n_name_);
         }
 
         for (int j = 0; j < builder.size(); ++j) {
-          if (builder[j].name == n_name &&
+          if (builder[j].name == n_name_ &&
               store->Equal(old_name, builder[j].value)) {
             if (new_name.IsNil()) {
-              builder[j].name = n_alias;
+              builder[j].name = n_alias_.handle();
             } else {
               builder[j].value = new_name;
             }
@@ -546,6 +550,19 @@ class ItemMerger : public task::Reducer {
   std::vector<string> properties_;
   Mutex mu_;
 
+  // Symbols.
+  Store commons_;
+  Names names_;
+  Name n_auxid_{names_, "PAUXID"};
+  Name n_unname_{names_, "PUNME"};
+  Name n_schema_{names_, "schema"};
+  Name n_name_{names_, "name"};
+  Name n_alias_{names_, "alias"};
+  Name n_family_{names_, "family"};
+  Name n_role_{names_, "role"};
+
+  Handles temporal_modifiers_{&commons_};
+
   // Statistics.
   task::Counter *num_orig_statements_ = nullptr;
   task::Counter *num_final_statements_ = nullptr;
@@ -559,4 +576,3 @@ REGISTER_TASK_PROCESSOR("item-merger", ItemMerger);
 
 }  // namespace nlp
 }  // namespace sling
-
