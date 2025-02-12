@@ -270,6 +270,36 @@ int Date::Difference(const Date &other) const {
   return years;
 }
 
+bool Date::Contains(const Date &other) const {
+  // The other date cannot be contained within this date if the precision is
+  // lower.
+  if (other.precision < precision) return false;
+  if (precision == NONE) return false;
+
+  switch (precision) {
+    case NONE:
+      return false;
+    case MILLENNIUM: {
+      int m = year > 0 ? (year - 1) : (year + 1);
+      return other.year >= m && other.year < m + 1000;
+    }
+    case CENTURY: {
+      int c = (year - 1);
+      return other.year >= c && other.year < c + 100;
+    }
+    case DECADE:
+      return other.year >= year && other.year < year + 10;
+    case YEAR:
+      return other.year == year;
+    case MONTH:
+      return other.year == year && other.month == month;
+    case DAY:
+      return other.year == year && other.month == month && other.day == day;
+  }
+
+  return false;
+}
+
 Date Date::Today() {
   time_t t = time(0);
   struct tm *tm = localtime(&t);
@@ -703,4 +733,3 @@ int DateFormat::Month(Text name) const {
 
 }  // namespace nlp
 }  // namespace sling
-

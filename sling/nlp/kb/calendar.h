@@ -44,6 +44,7 @@ class Date {
   void Init(const Object &object);
 
   // Parse date from number.
+  Date(int num) { ParseFromNumber(num); }
   void ParseFromNumber(int num);
 
   // Parse string date format: [+-]YYYY-MM-DDT00:00:00Z.
@@ -67,6 +68,9 @@ class Date {
 
   // Compute difference in years between this date and another date.
   int Difference(const Date &other) const;
+
+  // Check if date is contained in this date, e.g. 1960s contains January 1965.
+  bool Contains(const Date &other) const;
 
   // Return todays date.
   static Date Today();
@@ -293,4 +297,3 @@ class DateFormat {
 }  // namespace sling
 
 #endif  // SLING_NLP_KB_CALENDAR_H_
-

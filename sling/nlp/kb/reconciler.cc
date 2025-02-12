@@ -18,6 +18,7 @@
 
 #include "sling/base/types.h"
 #include "sling/frame/serialization.h"
+#include "sling/nlp/kb/calendar.h"
 #include "sling/nlp/kb/xref.h"
 #include "sling/string/ctype.h"
 #include "sling/task/frames.h"
@@ -328,21 +329,11 @@ class ItemMerger : public task::Reducer {
   void Start(task::Task *task) override {
     task::Reducer::Start(task);
 
-    // Temporal qualifiers used for testing statement compatibility.
-    static const char *compatible[] = {
-      "P585",   // point in time.
-      "P580",   // start time
-      "P582",   // end time
-      "P2937",  // parliamentary term
-      nullptr,
-    };
-    for (const char **cp = compatible; *cp; ++cp) {
-      Handle property = commons_.Lookup(*cp);
-      temporal_modifiers_.add(property);
-    }
-
     // Bind symbols.
     CHECK(names_.Bind(&commons_));
+    temporal_modifiers_.add(n_point_in_time_.handle());
+    temporal_modifiers_.add(n_start_time_.handle());
+    temporal_modifiers_.add(n_end_time_.handle());
     commons_.Freeze();
 
     // Statistics.
@@ -459,7 +450,7 @@ class ItemMerger : public task::Reducer {
     num_final_statements_->Increment(merged.size());
 
     // Add properties to property catalog.
-    if (merged.IsA("/w/property")) {
+    if (merged.IsA(n_property_)) {
       MutexLock lock(&mu_);
       string pid = merged.Id().str();
       properties_.push_back(pid);
@@ -497,21 +488,42 @@ class ItemMerger : public task::Reducer {
     Handle v1 = f1.GetHandle(property);
     Handle v2 = f2.GetHandle(property);
     if (v1.IsNil() || v2.IsNil()) return false;
-    return f1.store()->Equal(v1, v2);
+    if (f1.store()->Equal(v1, v2)) return true;
+    if (v1.IsInt() && v2.IsInt()) {
+      Date d1(v1.AsInt());
+      Date d2(v2.AsInt());
+      if (d1.Contains(d2) || d2.Contains(d1)) return true;
+    }
+    return false;
   }
 
   // Merge second frame into the first frame.
-  static void Merge(Frame &f1, Frame &f2) {
+  void Merge(Frame &f1, Frame &f2) {
     CHECK(f1.valid());
     CHECK(f2.valid());
     Store *store = f1.store();
     Builder merged(f1);
     for (const Slot &s2 : f2) {
       bool found = false;
-      for (const Slot &s1 : f1) {
-        if (s1.name == s2.name && store->Equal(s1.value, s2.value)) {
-          found = true;
-          break;
+      for (int i = 0; i < f1.size(); ++i) {
+        Slot &s1 = f1.slot(i);
+        if (s1.name == s2.name) {
+          if (store->Equal(s1.value, s2.value)) {
+            found = true;
+            break;
+          }
+          if (s1.value.IsInt() &&
+              s2.value.IsInt() &&
+              temporal_modifiers_.contains(s1.name)) {
+            // Keep most precise qualifers.
+            Date d1(s1.value.AsInt());
+            Date d2(s2.value.AsInt());
+            if (d1.Contains(d2)) {
+              s1.value = s2.value;
+              found = true;
+              break;
+            }
+          }
         }
       }
       if (!found) merged.Add(s2.name, s2.value);
@@ -560,7 +572,11 @@ class ItemMerger : public task::Reducer {
   Name n_alias_{names_, "alias"};
   Name n_family_{names_, "family"};
   Name n_role_{names_, "role"};
+  Name n_property_{names_, "/w/property"};
 
+  Name n_point_in_time_{names_, "P585"};
+  Name n_start_time_{names_, "P580"};
+  Name n_end_time_{names_, "P582"};
   Handles temporal_modifiers_{&commons_};
 
   // Statistics.

@@ -34,6 +34,16 @@ PyMemberDef PyDate::members[] = {
   {nullptr}
 };
 
+static PyDate *GetDate(PyObject *obj) {
+  if (PyObject_TypeCheck(obj, &PyDate::type)) {
+    PyDate *pydate = reinterpret_cast<PyDate *>(obj);
+    return pydate;
+  } else {
+    PyErr_SetString(PyExc_TypeError, "sling.Date object expected");
+    return nullptr;
+  }
+}
+
 void PyDate::Define(PyObject *module) {
   InitType(&type, "sling.Date", sizeof(PyDate), true);
   type.tp_init = method_cast<initproc>(&PyDate::Init);
@@ -43,6 +53,7 @@ void PyDate::Define(PyObject *module) {
 
   methods.Add("iso", &PyDate::ISO);
   methods.Add("value", &PyDate::Value);
+  methods.AddO("contains", &PyDate::Contains);
   type.tp_methods = methods.table();
 
   RegisterType(&type, module, "Date");
@@ -108,6 +119,13 @@ PyObject *PyDate::Value() {
   int number = date.AsNumber();
   if (number != -1) return PyLong_FromLong(number);
   return AllocateString(date.AsString());
+}
+
+PyObject *PyDate::Contains(PyObject *obj) {
+  PyDate *pydate = GetDate(obj);
+  if (pydate == nullptr) return nullptr;
+
+  return PyBool_FromLong(date.Contains(pydate->date));
 }
 
 PyObject *PyDate::ISO() {
@@ -193,15 +211,4 @@ PyObject *PyCalendar::Millennium(PyObject *obj) {
   return pystore->PyValue(calendar->Millennium(pydate->date));
 }
 
-PyDate *PyCalendar::GetDate(PyObject *obj) {
-  if (PyObject_TypeCheck(obj, &PyDate::type)) {
-    PyDate *pydate = reinterpret_cast<PyDate *>(obj);
-    return pydate;
-  } else {
-    PyErr_SetString(PyExc_TypeError, "sling.Date object expected");
-    return nullptr;
-  }
-}
-
 }  // namespace sling
-

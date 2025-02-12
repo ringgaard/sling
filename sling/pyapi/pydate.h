@@ -38,6 +38,9 @@ struct PyDate : public PyBase {
   // Convert date to string or integer value.
   PyObject *Value();
 
+  // Check if other date in contained within this date.
+  PyObject *Contains(PyObject *obj);
+
   // Date object.
   nlp::Date date;
 
@@ -67,9 +70,6 @@ struct PyCalendar : public PyBase {
   PyObject *Century(PyObject *obj);
   PyObject *Millennium(PyObject *obj);
 
-  // Get date object.
-  PyDate *GetDate(PyObject *obj);
-
   // Store for calendar frames.
   PyStore *pystore;
 
@@ -85,4 +85,3 @@ struct PyCalendar : public PyBase {
 }  // namespace sling
 
 #endif  // SLING_PYAPI_PYDATE_H_
-
