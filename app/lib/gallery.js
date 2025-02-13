@@ -415,7 +415,7 @@ export class PhotoGallery extends MdModal {
 
   preload(position, direction) {
     let lookahead = this.first ? 1 : 3;
-    for (var i = 0; i < lookahead; ++i) {
+    for (let i = 0; i < lookahead; ++i) {
       let n = mod(position + i * direction, this.photos.length);
       let photo = this.photos[n];
       if (photo.image == null) {

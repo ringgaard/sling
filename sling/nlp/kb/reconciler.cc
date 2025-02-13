@@ -400,8 +400,9 @@ class ItemMerger : public task::Reducer {
           Handle compatible = Handle::nil();
           bool replaced = false;
           for (Slot *s = builder.begin(); s < builder.end(); ++s) {
+            if (s->name != slot.name) continue;
             Handle qv = store.Resolve(s->value);
-            if (s->name != slot.name || qv != qvalue) continue;
+            if (qv != qvalue) continue;
 
             if (qv == s->value) {
               // Replace existing unqualified statement.
@@ -505,7 +506,7 @@ class ItemMerger : public task::Reducer {
     Builder merged(f1);
     for (const Slot &s2 : f2) {
       bool found = false;
-      for (int i = 0; i < f1.size(); ++i) {
+      for (int i = 0; i < merged.size(); ++i) {
         Slot &s1 = f1.slot(i);
         if (s1.name == s2.name) {
           if (store->Equal(s1.value, s2.value)) {
@@ -515,11 +516,14 @@ class ItemMerger : public task::Reducer {
           if (s1.value.IsInt() &&
               s2.value.IsInt() &&
               temporal_modifiers_.contains(s1.name)) {
-            // Keep most precise qualifers.
+            // Keep most precise modifier.
             Date d1(s1.value.AsInt());
             Date d2(s2.value.AsInt());
             if (d1.Contains(d2)) {
               s1.value = s2.value;
+              found = true;
+              break;
+            } else if (d2.Contains(d1)) {
               found = true;
               break;
             }
