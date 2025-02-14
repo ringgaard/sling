@@ -279,14 +279,10 @@ bool Date::Contains(const Date &other) const {
   switch (precision) {
     case NONE:
       return false;
-    case MILLENNIUM: {
-      int m = year > 0 ? (year - 1) : (year + 1);
-      return other.year >= m && other.year < m + 1000;
-    }
-    case CENTURY: {
-      int c = (year - 1);
-      return other.year >= c && other.year < c + 100;
-    }
+    case MILLENNIUM:
+      return other.year >= year && other.year < year + 1000;
+    case CENTURY:
+      return other.year >= year && other.year < year + 100;
     case DECADE:
       return other.year >= year && other.year < year + 10;
     case YEAR:

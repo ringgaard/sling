@@ -507,7 +507,7 @@ class ItemMerger : public task::Reducer {
     for (const Slot &s2 : f2) {
       bool found = false;
       for (int i = 0; i < merged.size(); ++i) {
-        Slot &s1 = f1.slot(i);
+        Slot &s1 = merged[i];
         if (s1.name == s2.name) {
           if (store->Equal(s1.value, s2.value)) {
             found = true;
