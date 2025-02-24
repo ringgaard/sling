@@ -158,6 +158,7 @@ apis = [
   ("feedback",             re.compile(r"^\/home/feedback")),
   ("add media",            re.compile(r"^\/redreport\/addmedia\/")),
   ("witex",                re.compile(r"^\/witex\/extract")),
+  ("sitemap",              re.compile(r"^\/kb\/sitemap")),
 
   ("RS refine" ,           re.compile(r"^\/refine")),
   ("RS reconcile" ,        re.compile(r"^\/reconcile")),

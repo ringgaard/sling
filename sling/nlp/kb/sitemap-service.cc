@@ -28,6 +28,7 @@ SitemapService::SitemapService(Store *commons, KnowledgeService *kb)
 
 void SitemapService::Register(HTTPServer *http) {
   http->Register("/kb/sitemap", this, &SitemapService::HandleSitemap);
+  http->Register("/kb/siteindex", this, &SitemapService::HandleSitemapIndex);
 }
 
 void SitemapService::HandleSitemap(HTTPRequest *req, HTTPResponse *rsp) {
@@ -64,6 +65,76 @@ void SitemapService::HandleSitemap(HTTPRequest *req, HTTPResponse *rsp) {
   }
   rsp->Append("</urlset>\n");
 }
+
+void SitemapService::HandleSitemapIndex(HTTPRequest *req, HTTPResponse *rsp) {
+  WebService ws(commons_, req, rsp);
+  Text indexid = ws.Get("id");
+  if (indexid.empty()) {
+      rsp->SendError(400, "Bad Request", nullptr);
+      return;
+  }
+  LOG(INFO) << "Sitemap index for " << indexid;
+
+  Handle handle = kb_->RetrieveItem(ws.store(), indexid);
+  if (handle.IsNil()) {
+    rsp->SendError(404, nullptr, "Index item not found");
+    return;
+  }
+
+  Frame item(ws.store(), handle);
+  if (!item.valid()) {
+    rsp->SendError(400, nullptr, "Invalid index item");
+    return;
+  }
+
+  Frame sitemaps(ws.store(), item.GetHandle(n_main_subject_));
+  if (!sitemaps.valid()) {
+    rsp->SendError(400, nullptr, "Missing main subject");
+    return;
+  }
+
+  rsp->set_content_type("text/xml");
+  rsp->Append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+  rsp->Append("<sitemapindex ");
+  rsp->Append("xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n");
+
+  for (const Slot &s : sitemaps.Slots(n_has_part_)) {
+    Frame section(ws.store(), s.value);
+    Text section_name = section.GetText(n_name_);
+    rsp->Append("\n<!-- ");
+    rsp->Append(section_name);
+    rsp->Append("-->\n\n");
+
+    for (const Slot &ss : section.Slots(n_has_part_)) {
+      Frame part(ws.store(), ss.value);
+      Text partid = part.Id();
+      if (partid.empty()) continue;
+      Text partname = part.GetText(n_name_);
+      int pubdate = part.GetInt(n_pub_date_);
+      rsp->Append("<sitemap>\n");
+      if (!partname.empty()) {
+        rsp->Append("  <!-- ");
+        rsp->Append(partname);
+        rsp->Append("-->\n");
+      }
+      rsp->Append("  <loc>https://ringgaard.com/kb/");
+      rsp->Append(partid);
+      rsp->Append("</loc>\n");
+      if (pubdate != 0) {
+        string date = std::to_string(pubdate);
+        date.insert(4, 1, '-');
+        date.insert(7, 1, '-');
+        rsp->Append("  <lastmod>");
+        rsp->Append(date);
+        rsp->Append("</lastmod>\n");
+      }
+      rsp->Append("</sitemap>\n");
+    }
+  }
+
+  rsp->Append("\n</sitemapindex>\n");
+}
+
 
 }  // namespace nlp
 }  // namespace sling

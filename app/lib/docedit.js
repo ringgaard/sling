@@ -760,6 +760,7 @@ export class DocumentEditor extends Component {
         width: 100%;
         height: 100%;
         overflow: auto;
+        outline: none;
       }
       $ .content {
         outline: none;
@@ -861,4 +862,3 @@ export class DocumentEditor extends Component {
 };
 
 Component.register(DocumentEditor);
-

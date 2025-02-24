@@ -60,8 +60,6 @@ class XRefBuilder : public task::FrameProcessor {
     // Add properties for cases and topics.
     xref_.CreateProperty(Handle::nil(), "c");
     xref_.CreateProperty(Handle::nil(), "t");
-    Handle pcase = commons_->LookupExisting("PCASE");
-    if (!pcase.IsNil()) xref_.CreateProperty(pcase, "PCASE");
 
     // Add fixed URIs.
     Frame uris = config.GetFrame("uris");
@@ -399,4 +397,3 @@ REGISTER_TASK_PROCESSOR("xref-builder", XRefBuilder);
 
 }  // namespace nlp
 }  // namespace sling
-

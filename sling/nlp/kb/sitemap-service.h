@@ -35,6 +35,9 @@ class SitemapService {
   // Sitemap request handlers.
   void HandleSitemap(HTTPRequest *req, HTTPResponse *rsp);
 
+  // Sitemap index request handlers.
+  void HandleSitemapIndex(HTTPRequest *req, HTTPResponse *rsp);
+
  private:
   // Global store with knowledge base.
   Store *commons_;
@@ -44,7 +47,10 @@ class SitemapService {
 
   // Symbols.
   Names names_;
+  Name n_name_{names_, "name"};
   Name n_has_part_{names_, "P527"};
+  Name n_main_subject_{names_, "P921"};
+  Name n_pub_date_{names_, "P577"};
 };
 
 }  // namespace nlp

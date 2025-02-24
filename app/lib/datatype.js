@@ -117,7 +117,8 @@ const month_mapping = {
   "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
   "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
 
-  "mär": 3, "maj": 5, "mai": 5, "okt": 10, "dez": 12,
+  "fév": 2, "mär": 3, "avr": 4, "maj": 5, "mai": 5, "jui": 6, "jui": 7,
+  "aoû": 8, "okt": 10, "dez": 12, "déc": 12,
 };
 
 function monthnum(name) {
@@ -848,4 +849,3 @@ export var parsers = new Map();
 parsers.set(n_time_type, date_parser);
 parsers.set(n_quantity_type, quantity_parser);
 parsers.set(n_geo_type, geo_parser);
-
