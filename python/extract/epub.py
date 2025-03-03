@@ -402,10 +402,10 @@ class EPUBBook:
     return "%s<%s>%s</%s>" % (prefix, tagname, text, tagname)
 
 def extract(content, params):
-   file = io.BytesIO(content)
-   book = EPUBBook(file)
-   book.figure = params["figure"]
-   return book.extract()
+  file = io.BytesIO(content)
+  book = EPUBBook(file)
+  book.figure = params["figure"]
+  return book.extract()
 
 if __name__ == "__main__":
   import sling.flags as flags
@@ -416,4 +416,3 @@ if __name__ == "__main__":
   book = EPUBBook(flags.arg.input)
   frame = book.extract()
   print(frame.data(pretty=True, utf8=True))
-

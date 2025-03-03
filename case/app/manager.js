@@ -620,6 +620,7 @@ class SettingsDialog extends material.MdDialog {
     this.find("#password").value = settings.password;
     this.find("#userscripts").checked = settings.userscripts;
     this.find("#nsfw").checked = settings.nsfw;
+    this.find("#pdfparams").value = settings.pdfparams;
   }
 
   submit() {
@@ -636,6 +637,7 @@ class SettingsDialog extends material.MdDialog {
     settings.password = this.find("#password").value;
     settings.userscripts = this.find("#userscripts").checked;
     settings.nsfw = this.find("#nsfw").checked;
+    settings.pdfparams = this.find("#pdfparams").value;
     save_settings();
     this.close(true);
   }
@@ -695,6 +697,10 @@ class SettingsDialog extends material.MdDialog {
         </md-text-field>
         <md-switch id="userscripts" label="Enable user scripts"></md-switch>
         <md-switch id="nsfw" label="Show adult content (NSFW)"></md-switch>
+        <md-text-field
+          id="pdfparams"
+          label="PDF text extraction parameters">
+        </md-text-field>
       </div>
       </div>
       <md-dialog-bottom>
@@ -715,10 +721,10 @@ class SettingsDialog extends material.MdDialog {
         flex-direction: column;
         row-gap: 16px;
         overflow: auto;
+        padding-right: 8px;
       }
     `;
   }
 }
 
 Component.register(SettingsDialog);
-

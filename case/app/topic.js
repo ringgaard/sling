@@ -999,6 +999,9 @@ class TopicCard extends Component {
     if (mime) {
       headers["Content-Type"] = mime;
     }
+    if (settings.pdfparams) {
+      headers["PDF-params"] = settings.pdfparams;
+    }
     r = await fetch("/case/extract", {
       method: "POST",
       headers: headers,

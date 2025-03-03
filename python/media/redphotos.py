@@ -359,7 +359,11 @@ for key, value in postings:
     print(sr, key, "BAD", title)
     num_errors += 1
     continue
-  title = html.unescape(title.replace('\n', ' ').replace("’", "'").strip())
+  title = title.replace('\n', ' ')
+  title = title.replace("’", "'")
+  title = title.replace("‘", "'")
+  title = title.strip()
+  title = html.unescape(title)
   nsfw = True if posting[n_over_18] else None
 
   # Check for personal subreddit.

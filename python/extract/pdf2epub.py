@@ -20,36 +20,15 @@ import fitz
 
 import sling.flags as flags
 
-flags.define("--input",
-             help="PDF input file",
-             metavar="FILE")
-
-flags.define("--output",
-             help="EPUB output file",
-             metavar="FILE")
-
-flags.define("--toc",
-             help="table of contents for dividing into chapters",
-             default=None,
-             metavar="FILE")
-
-flags.define("--indent",
-             help="line indention",
-             default=5.0,
-             type=float,
-             metavar="NUM")
-
-flags.define("--debug",
-             help="output debug information",
+flags.define("--pdfdebug",
+             help="output debug PDF information",
              default=False,
              action="store_true")
 
 flags.define("--bprdebug",
-             help="output boiler plate debug information",
+             help="output boilerplate debug information",
              default=False,
              action="store_true")
-
-flags.parse()
 
 escapes = [
   ("<", "&#60;"),
@@ -205,7 +184,7 @@ class PDFPage:
     p = page.get_textpage().extractDICT(sort=False)
     for b in p["blocks"]:
       if b["type"] == 1:
-        if flags.arg.debug: print("skip image")
+        if flags.arg.pdfdebug: print("skip image")
         continue
       for l in b["lines"]:
         # Skip text that is not vertical.
@@ -243,10 +222,11 @@ class PDFPage:
 
   def analyze(self, prev=None):
     parbreak = self.book.param("parbreak", 0)
+    indent = self.book.param("indent", 5.0)
     if parbreak == 0:
-      left = self.linestart() + flags.arg.indent
-      right = self.lineend() - flags.arg.indent
-      height = self.lineheight() + flags.arg.indent
+      left = self.linestart() + indent
+      right = self.lineend() - indent
+      height = self.lineheight() + indent
       for l in self.lines:
         # Mark indented and short lines.
         if l.x0 > left: l.indent = True
@@ -271,8 +251,8 @@ class PDFPage:
         prev = l
     elif parbreak == 1 or parbreak == 2:
       # Multi-column (1) and Blaa Bog (2)
-      height = self.lineheight() + flags.arg.indent
-      width = self.linewidth() - flags.arg.indent
+      height = self.lineheight() + indent
+      width = self.linewidth() - indent
       for l in self.lines:
         # Mark short lines.
         if l.x1 - l.x0 < width: l.short = True
@@ -309,13 +289,14 @@ class PDFChapter:
 
   def generate(self, h1, h2, dropcap, pagebreaks):
     s = []
-    s.append('<?xml version="1.0" encoding="UTF-8"?>\n')
-    s.append('<html xmlns="http://www.w3.org/1999/xhtml">\n')
-    s.append('<head>\n')
-    s.append('<title>%s</title>\n' % self.title)
-    s.append('<meta charset="UTF-8"/>\n')
-    s.append('</head>\n')
-    s.append('<body>\n')
+    if self.title is not None:
+      s.append('<?xml version="1.0" encoding="UTF-8"?>\n')
+      s.append('<html xmlns="http://www.w3.org/1999/xhtml">\n')
+      s.append('<head>\n')
+      s.append('<title>%s</title>\n' % self.title)
+      s.append('<meta charset="UTF-8"/>\n')
+      s.append('</head>\n')
+      s.append('<body>\n')
 
     level = LEVEL_START
     for p in self.pages:
@@ -343,8 +324,10 @@ class PDFChapter:
         if not l.hyphen: s.append(' ')
 
     s.append(level_end[level])
-    s.append('</body>\n')
-    s.append('</html>\n')
+    if self.title is not None:
+      s.append('</body>\n')
+      s.append('</html>\n')
+
     return "".join(s)
 
 meta_fields = [
@@ -396,6 +379,13 @@ class PDFBook:
           self.spine.append(chapter)
           self.chapters[pageno] = chapter
 
+  def add_single_book_chapter(self):
+    chapter = PDFChapter(1, None, 1)
+    chapter.pages = self.pages
+    self.spine.append(chapter)
+    self.chapters[1] = chapter
+    return chapter
+
   def param(self, name, defval=None):
     val = self.meta.get(name)
     if val is None: return defval
@@ -427,7 +417,7 @@ class PDFBook:
     bottom_positions = []
     footer_positions = []
 
-    for p in book.pages:
+    for p in self.pages:
       if len(p.lines) < head_lines + foot_lines + 1: continue
       if head_lines > 0:
         head_last = p.lines[head_lines - 1]
@@ -462,7 +452,7 @@ class PDFBook:
     bpr = self.param("bpr", 0)
     pageno = self.param("firstpage", 1)
     pageskip = self.param("pageskip", 10)
-    for p in book.pages:
+    for p in self.pages:
       pnumber = None
 
       if bpr == 0:
@@ -497,7 +487,7 @@ class PDFBook:
           pnumber = p.lines[-1].find_page_number(pageno)
           if pnumber == pageno:
             p.lines[-1] = None
-          elif flags.arg.debug:
+          elif flags.arg.pdfdebug:
             if pnumber is None:
               print("missing pageno: %d '%s'" %
                     (pageno, p.lines[-1].text))
@@ -512,7 +502,7 @@ class PDFBook:
             p.lines[0] = None
           elif p.lines[-1].find_page_number(pageno) == pageno:
             p.lines[-1] = None
-          elif flags.arg.debug:
+          elif flags.arg.pdfdebug:
             print("no pageno found:", pageno)
 
 
@@ -577,7 +567,7 @@ class PDFBook:
     package.append('</metadata>')
 
     package.append('<manifest>')
-    for chapter in book.spine:
+    for chapter in self.spine:
       package.append('<item href="%s" id="%s" '
         % (chapter.filename, chapter.ref) +
         'media-type="application/xhtml+xml"/>')
@@ -586,7 +576,7 @@ class PDFBook:
     package.append('</manifest>')
 
     package.append('<spine toc="ncx">')
-    for chapter in book.spine:
+    for chapter in self.spine:
       package.append('<itemref idref="%s"/>' % chapter.ref)
     package.append('</spine>')
 
@@ -598,7 +588,7 @@ class PDFBook:
       '<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">',
       '<navMap>',
     ]
-    for chapter in book.spine:
+    for chapter in self.spine:
       toc.append('<navPoint>')
       toc.append('<navLabel><text>%s</text></navLabel>' % chapter.title)
       toc.append('<content src="%s"/>' % chapter.filename)
@@ -614,31 +604,71 @@ class PDFBook:
     h1 = self.param("h1", 32.0)
     h2 = self.param("h2", 24.0)
     dropcap = self.param("dropcap", 100.0)
-    for chapter in book.spine:
+
+    for chapter in self.spine:
       content = chapter.generate(h1, h2, dropcap, pagebreaks)
       zip.writestr(chapter.filename, content)
 
     zip.close()
 
-book = PDFBook()
-if flags.arg.toc: book.read_toc(flags.arg.toc)
-pdf = fitz.open(flags.arg.input)
-book.extract(pdf)
-book.analyze_boilerplate()
-book.remove_boilerplate()
-book.analyze()
-if flags.arg.output: book.generate(flags.arg.output)
+  def collect(self):
+    h1 = self.param("h1", 32.0)
+    h2 = self.param("h2", 24.0)
+    dropcap = self.param("dropcap", 100.0)
+    pagebreaks = self.param("pagebreaks", False)
 
-if flags.arg.debug:
-  for p in book.pages:
-    if p.chapter: print("*** CHAPTER:", p.chapter.title)
-    print("=== page", p.pageno)
-    for l in p.lines:
-      attrs = []
-      if l.indent: attrs.append(">")
-      if l.short: attrs.append("<")
-      if l.hyphen: attrs.append("(-)")
-      if l.fontsize: attrs.append(str(round(l.fontsize)))
-      if l.flags: attrs.append("{%d}" % l.flags)
-      if l.para: print()
-      print(l.text, " ".join(attrs))
+    text = ""
+    for chapter in self.spine:
+      content = chapter.generate(h1, h2, dropcap, pagebreaks)
+      text += content
+
+    return text
+
+if __name__ == "__main__":
+
+  flags.define("--input",
+               help="PDF input file",
+               metavar="FILE")
+
+  flags.define("--output",
+               help="EPUB output file",
+               metavar="FILE")
+
+  flags.define("--pdftext",
+               help="Output text of PDF files",
+               default=False,
+               action="store_true")
+
+  flags.define("--toc",
+               help="table of contents for dividing into chapters",
+               default=None,
+               metavar="FILE")
+
+  flags.parse()
+
+  book = PDFBook()
+
+  pdf = fitz.open(flags.arg.input)
+  book.extract(pdf)
+  book.analyze_boilerplate()
+  book.remove_boilerplate()
+  book.analyze()
+  if flags.arg.output: book.generate(flags.arg.output)
+
+  if flags.arg.pdfdebug:
+    for p in book.pages:
+      if p.chapter: print("*** CHAPTER:", p.chapter.title)
+      print("=== page", p.pageno)
+      for l in p.lines:
+        attrs = []
+        if l.indent: attrs.append(">")
+        if l.short: attrs.append("<")
+        if l.hyphen: attrs.append("(-)")
+        if l.fontsize: attrs.append(str(round(l.fontsize)))
+        if l.flags: attrs.append("{%d}" % l.flags)
+        if l.para: print()
+        print(l.text, " ".join(attrs))
+
+  if flags.arg.pdftext:
+    if len(book.chapters) == 0: book.add_single_book_chapter()
+    print(book.collect())

@@ -18,11 +18,14 @@ import re
 import time
 
 import sling.extract.epub
+import sling.extract.pdf
 import sling.net
 
 extractors = {
   "application/epub+zip": sling.extract.epub.extract,
   ".epub": sling.extract.epub.extract,
+  "application/pdf": sling.extract.pdf.extract,
+  ".pdf": sling.extract.pdf.extract,
 }
 
 filetypes = {
@@ -62,6 +65,7 @@ def handle_extract(request):
     "mime": mime,
     "filename": filename,
     "extension": extension,
+    "pdfparams": request["PDF-params"],
     "figure": add_figure,
   })
 
