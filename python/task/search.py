@@ -67,12 +67,12 @@ class SearchWorkflow:
     if items == None: items = self.data.items()
 
     with self.wf.namespace("search"):
-      # Map input items and output entities and terms.
+      # Map input items and output documents and terms.
       mapper = self.wf.task("search-index-mapper")
       mapper.attach_input("config", self.search_config())
       mapper.attach_input("dictionary", self.search_dictionary())
       self.wf.connect(self.wf.read(items, name="item-reader"), mapper)
-      entities = self.wf.channel(mapper, "entities", format="message/entity")
+      documents = self.wf.channel(mapper, "documents", format="message/sdoc")
       terms = self.wf.channel(mapper, "terms", format="message/term")
 
       # Shuffle terms in bucket order (bucket, termid, entityid).
@@ -81,7 +81,7 @@ class SearchWorkflow:
       # Collect entities and terms and build search index.
       builder = self.wf.task("search-index-builder")
       builder.attach_input("config", self.search_config())
-      self.wf.connect(entities, builder, name="entities")
+      self.wf.connect(documents, builder, name="documents")
       self.wf.connect(postings, builder, name="terms")
       repo = self.search_index()
       builder.attach_output("repository", repo)
@@ -117,4 +117,3 @@ def build_search_vocabulary():
   wf = SearchWorkflow("search")
   wf.build_search_vocabulary()
   run(wf.wf)
-

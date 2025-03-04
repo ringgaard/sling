@@ -25,16 +25,16 @@ namespace nlp {
 
 class SearchEngine {
  public:
-  // Entity comparison operator.
-  typedef SearchIndex::Entity Entity;
-  struct EntityCompare {
-    bool operator()(const Entity *a, const Entity *b) {
+  // Document comparison operator.
+  typedef SearchIndex::Document Document;
+  struct DocumentCompare {
+    bool operator()(const Document *a, const Document *b) {
       return a->score() > b->score();
     }
   };
 
   // Search results for selecting top-k results.
-  typedef Top<const Entity *, EntityCompare> Hits;
+  typedef Top<const Document *, DocumentCompare> Hits;
 
   // Search results.
   class Results {
@@ -99,4 +99,3 @@ class SearchEngine {
 }  // namespace sling
 
 #endif  // SLING_NLP_SEARCH_ENGINE_H_
-

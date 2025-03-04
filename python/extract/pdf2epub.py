@@ -280,14 +280,20 @@ class PDFPage:
 
 
 class PDFChapter:
-  def __init__(self, pageno, title, index):
+  def __init__(self, book, pageno, title, index):
+    self.book = book
     self.pageno = pageno
     self.title = title
     self.pages = []
     self.filename = "chapter-%03d.html" % index
     self.ref = "item%03d" % index
 
-  def generate(self, h1, h2, dropcap, pagebreaks):
+  def generate(self):
+    h1 = self.book.param("h1", 32.0)
+    h2 = self.book.param("h2", 24.0)
+    dropcap = self.book.param("dropcap", 100.0)
+    pagebreaks = self.book.param("pagebreaks", False)
+
     s = []
     if self.title is not None:
       s.append('<?xml version="1.0" encoding="UTF-8"?>\n')
@@ -299,16 +305,24 @@ class PDFChapter:
       s.append('<body>\n')
 
     level = LEVEL_START
+    in_header = False
     for p in self.pages:
       pagenum = p.pageno
       for l in p.lines:
         next = level
-        if l.fontsize >= h1 and l.fontsize < dropcap:
+        if in_header:
+          # Only allow single-line headers.
+          next = LEVEL_PARA
+          in_header = False
+        elif l.fontsize >= h1 and l.fontsize < dropcap:
           next = LEVEL_HEADING
+          in_header = True
         elif l.fontsize >= h2 and l.fontsize < dropcap:
           next = LEVEL_SUBHEADING
+          in_header = True
         elif l.para:
           next = LEVEL_PARA
+          in_header = False
 
         if next != level or l.para:
           s.append(level_end[level])
@@ -371,7 +385,7 @@ class PDFBook:
           last_space = line.rindex(' ')
           name = line[0:last_space].strip()
           pageno = int(line[last_space:].strip())
-          chapter = PDFChapter(pageno, name, index)
+          chapter = PDFChapter(self, pageno, name, index)
           if pageno < last_toc_pageno:
             print("TOC ordering warning:", line)
           last_toc_pageno = pageno
@@ -380,7 +394,7 @@ class PDFBook:
           self.chapters[pageno] = chapter
 
   def add_single_book_chapter(self):
-    chapter = PDFChapter(1, None, 1)
+    chapter = PDFChapter(self, 1, None, 1)
     chapter.pages = self.pages
     self.spine.append(chapter)
     self.chapters[1] = chapter
@@ -601,25 +615,16 @@ class PDFBook:
     if self.tocfile: zip.writestr("pdf2epub.toc", self.tocfile)
 
     # Write chapters.
-    h1 = self.param("h1", 32.0)
-    h2 = self.param("h2", 24.0)
-    dropcap = self.param("dropcap", 100.0)
-
     for chapter in self.spine:
-      content = chapter.generate(h1, h2, dropcap, pagebreaks)
+      content = chapter.generate()
       zip.writestr(chapter.filename, content)
 
     zip.close()
 
   def collect(self):
-    h1 = self.param("h1", 32.0)
-    h2 = self.param("h2", 24.0)
-    dropcap = self.param("dropcap", 100.0)
-    pagebreaks = self.param("pagebreaks", False)
-
     text = ""
     for chapter in self.spine:
-      content = chapter.generate(h1, h2, dropcap, pagebreaks)
+      content = chapter.generate()
       text += content
 
     return text

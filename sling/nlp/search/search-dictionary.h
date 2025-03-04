@@ -87,4 +87,3 @@ class SearchDictionary {
 }  // namespace sling
 
 #endif  // SLING_NLP_SEARCH_DICTIONARY_H_
-

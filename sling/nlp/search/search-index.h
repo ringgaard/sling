@@ -25,25 +25,39 @@
 namespace sling {
 namespace nlp {
 
-// Search index with item posting lists for each search term.
+// Search index with posting lists for each search term.
 class SearchIndex {
  public:
-  // Entity item in repository.
-  class Entity : public RepositoryObject {
+  // Document item in repository.
+  class Document : public RepositoryObject {
    public:
-    // Entity id.
+    // Document id.
     Text id() const { return Text(id_ptr(), *idlen_ptr()); }
 
-    // Base score for entity, e.g. popularity or frequency.
+    // Base score for document, e.g. popularity or frequency.
     uint32 score() const { return *score_ptr(); }
 
+    // Number of document tokens.
+    uint32 num_tokens() const { return *tokenlen_ptr(); }
+
+    // List of document 16-bit token fingerprints.
+    const uint16 *tokens() const { return tokens_ptr(); }
+
    private:
-    // Entity score.
+    // Document score.
     REPOSITORY_FIELD(uint32, score, 1, 0);
 
-    // Entity id.
+    // Document id size.
     REPOSITORY_FIELD(uint8, idlen, 1, AFTER(score));
-    REPOSITORY_FIELD(char, id, *idlen_ptr(), AFTER(idlen));
+
+    // Document token array length.
+    REPOSITORY_FIELD(uint32, tokenlen, 1, AFTER(idlen));
+
+    // Document id.
+    REPOSITORY_FIELD(char, id, *idlen_ptr(), AFTER(tokenlen));
+
+    // Document tokens.
+    REPOSITORY_FIELD(uint16, tokens, *tokenlen_ptr(), AFTER(id));
   };
 
   // Term with posting list in repository.
@@ -52,16 +66,16 @@ class SearchIndex {
     // Return fingerprint.
     uint64 fingerprint() const { return *fingerprint_ptr(); }
 
-    // Return number of entities matching term.
-    int num_entities() const { return *entlen_ptr(); }
+    // Return number of documents matching term.
+    int num_documents() const { return *doclen_ptr(); }
 
-    // Return array of entities matching term.
-    const uint32 *entities() const { return entities_ptr(); }
+    // Return array of documents matching term.
+    const uint32 *documents() const { return documents_ptr(); }
 
     // Return next term in list.
     const Term *next() const {
       int size = sizeof(uint64) + sizeof(uint32) +
-                 num_entities() * sizeof(uint32);
+                 num_documents() * sizeof(uint32);
       const char *self = reinterpret_cast<const char *>(this);
       return reinterpret_cast<const Term *>(self + size);
     }
@@ -70,9 +84,9 @@ class SearchIndex {
     // Term fingerprint.
     REPOSITORY_FIELD(uint64, fingerprint, 1, 0);
 
-    // Entity list.
-    REPOSITORY_FIELD(uint32, entlen, 1, AFTER(fingerprint));
-    REPOSITORY_FIELD(uint32, entities, num_entities(), AFTER(entlen));
+    // Document list.
+    REPOSITORY_FIELD(uint32, doclen, 1, AFTER(fingerprint));
+    REPOSITORY_FIELD(uint32, documents, num_documents(), AFTER(doclen));
   };
 
   // Load search index from file.
@@ -81,9 +95,9 @@ class SearchIndex {
   // Find matching term in term table. Return null if term is not found.
   const Term *Find(uint64 fp) const;
 
-  // Get entity from entity index.
-  const Entity *GetEntity(int index) const {
-    return entity_index_.GetEntity(index);
+  // Get document from document index.
+  const Document *GetDocument(int index) const {
+    return document_index_.GetDocument(index);
   }
 
   // Search query normalization.
@@ -100,16 +114,16 @@ class SearchIndex {
   bool loaded() const { return repository_.loaded(); }
 
  private:
-  // Entity index in repository.
-  class EntityIndex : public RepositoryIndex<uint32, Entity> {
+  // Document index in repository.
+  class DocumentIndex : public RepositoryIndex<uint64, Document> {
    public:
     // Initialize name index.
     void Initialize(const Repository &repository) {
-      Init(repository, "EntityIndex", "EntityItems", false);
+      Init(repository, "DocumentIndex", "DocumentItems", false);
     }
 
-    // Return entity from entity index.
-    const Entity *GetEntity(int index) const {
+    // Return document from document index.
+    const Document *GetDocument(int index) const {
       return GetObject(index);
     }
   };
@@ -129,8 +143,8 @@ class SearchIndex {
   // Repository with search index.
   Repository repository_;
 
-  // Entity index.
-  EntityIndex entity_index_;
+  // Document index.
+  DocumentIndex document_index_;
 
   // Term index.
   TermIndex term_index_;
@@ -146,4 +160,3 @@ class SearchIndex {
 }  // namespace sling
 
 #endif  // SLING_NLP_SEARCH_INDEX_H_
-

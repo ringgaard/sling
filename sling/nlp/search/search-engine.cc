@@ -54,12 +54,12 @@ int SearchEngine::Search(Text query, Results *results) {
   // Sort search terms by frequency starting with the most rare terms.
   std::sort(terms.begin(), terms.end(),
     [](const SearchIndex::Term *a, const SearchIndex::Term *b) {
-        return a->num_entities() < b->num_entities();
+        return a->num_documents() < b->num_documents();
     });
 
   // Initialize candidates from first term.
-  const uint32 *candidates_begin = terms[0]->entities();
-  const uint32 *candidates_end = candidates_begin + terms[0]->num_entities();
+  const uint32 *candidates_begin = terms[0]->documents();
+  const uint32 *candidates_end = candidates_begin + terms[0]->num_documents();
 
   // The matches[0] array contains the current matches and matches[1] receives
   // the new matches. These are swapped at the end of each iteration.
@@ -70,8 +70,8 @@ int SearchEngine::Search(Text query, Results *results) {
     const SearchIndex::Term *term = terms[i];
     const uint32 *c = candidates_begin;
     const uint32 *cend = candidates_end;
-    const uint32 *e = term->entities();
-    const uint32 *eend = e + term->num_entities();
+    const uint32 *e = term->documents();
+    const uint32 *eend = e + term->num_documents();
 
     // Intersect current candidates with postings for term.
     std::vector<uint32> &results = matches[1];
@@ -101,8 +101,8 @@ int SearchEngine::Search(Text query, Results *results) {
   int hits = candidates_end - candidates_begin;
   results->total_hits_ = hits;
   for (const uint32 *c = candidates_begin; c != candidates_end; ++c) {
-    const Entity *entity = index_.GetEntity(*c);
-    results->hits_.push(entity);
+    const Document *document = index_.GetDocument(*c);
+    results->hits_.push(document);
   }
   results->hits_.sort();
   return hits;

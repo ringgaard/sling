@@ -43,7 +43,7 @@ class SearchIndexMapper : public task::FrameProcessor {
     config_.Load(commons_, task->GetInputFile("config"));
 
     // Get output channels.
-    entities_ = task->GetSink("entities");
+    documents_ = task->GetSink("documents");
     terms_ = task->GetSink("terms");
 
     // Load search dictionary.
@@ -78,10 +78,6 @@ class SearchIndexMapper : public task::FrameProcessor {
     int popularity = frame.GetInt(n_popularity_);
     int fanin = frame.GetInt(n_fanin_);
     int count = popularity + fanin;
-
-    // Get entity id for item.
-    uint32 entityid = OutputEntity(key, count);
-    CHECK(entityid >= 0);
 
     // Collect search terms for item.
     Terms terms;
@@ -134,13 +130,18 @@ class SearchIndexMapper : public task::FrameProcessor {
     num_items_->Increment();
     num_terms_->Increment(terms.size());
 
+    // Get entity id for item.
+    uint32 entityid = OutputEntity(key, count);
+    CHECK(entityid >= 0);
+
     // Output search terms for item.
     for (uint64 term : terms) OutputTerm(entityid, term);
   }
 
   uint32 OutputEntity(Slice id, uint32 count) {
+    task::TaskContext ctxt("OutputEntity", id);
     MutexLock lock(&mu_);
-    entities_->Send(new task::Message(id, Slice(&count, sizeof(uint32))));
+    documents_->Send(new task::Message(id, Slice(&count, sizeof(uint32))));
     return next_entityid_++;
   }
 
@@ -206,7 +207,7 @@ class SearchIndexMapper : public task::FrameProcessor {
   DocumentLexer lexer_{&tokenizer_};
 
   // Output channels.
-  task::Channel *entities_ = nullptr;
+  task::Channel *documents_ = nullptr;
   task::Channel *terms_ = nullptr;
 
   // Next entity id.
@@ -263,23 +264,24 @@ class SearchIndexBuilder : public task::Processor {
                          stopwords.size() * sizeof(uint64));
 
     // Repository streams.
-    entity_index_ = AddStream("EntityIndex");
-    entity_items_ = AddStream("EntityItems");
+    document_index_ = AddStream("DocumentIndex");
+    document_items_ = AddStream("DocumentItems");
     term_buckets_ = AddStream("TermBuckets");
     term_items_ = AddStream("TermItems");
 
     // Get input channels.
-    entities_ = task->GetSource("entities");
+    documents_ = task->GetSource("documents");
     terms_ = task->GetSource("terms");
 
     // Statistics.
     num_posting_lists_ = task->GetCounter("posting_lists");
-    num_posting_entries_ = task->GetCounter("posting_entries");
+    num_postings_ = task->GetCounter("postings");
+    num_documents_ = task->GetCounter("documents");
   }
 
   void Receive(task::Channel *channel, task::Message *message) override {
-    if (channel == entities_) {
-      ProcessEntity(message->key(), message->value());
+    if (channel == documents_) {
+      ProcessDocument(message->key(), message->value());
     } else if (channel == terms_) {
       ProcessTerm(message->serial(), message->value());
     }
@@ -287,27 +289,31 @@ class SearchIndexBuilder : public task::Processor {
     delete message;
   }
 
-  void ProcessEntity(Slice entityid, Slice count) {
-    // Write entity index entry.
-    entity_index_->Write(&entity_offset_, sizeof(uint32));
+  void ProcessDocument(Slice docid, Slice count) {
+    // Write document index entry.
+    document_index_->Write(&document_offset_, sizeof(uint64));
 
-    // Write count and id to entity entry.
-    CHECK_LT(entityid.size(), 256);
+    // Write entry.
+    CHECK_LT(docid.size(), 256);
     CHECK_EQ(count.size(), sizeof(uint32));
-    uint8 idlen = entityid.size();
-    entity_items_->Write(count.data(), sizeof(uint32));
-    entity_items_->Write(&idlen, sizeof(uint8));
-    entity_items_->Write(entityid.data(), idlen);
+    uint8 idlen = docid.size();
+    int32 num_tokens = 0;
+    document_items_->Write(count.data(), sizeof(uint32));
+    document_items_->Write(&idlen, sizeof(uint8));
+    document_items_->Write(&num_tokens, sizeof(num_tokens));
+    document_items_->Write(docid.data(), idlen);
 
     // Compute offset of next entry.
-    entity_offset_ += sizeof(uint32) + sizeof(uint8) + idlen;
+    document_offset_ += 2 * sizeof(uint32) + sizeof(uint8) +
+                        idlen + num_tokens * sizeof(uint16);
+    num_documents_->Increment();
   }
 
-  void ProcessTerm(uint64 term, Slice entity) {
+  void ProcessTerm(uint64 term, Slice doc) {
     // Parse input.
-    CHECK_EQ(entity.size(), sizeof(uint32));
+    CHECK_EQ(doc.size(), sizeof(uint32));
     int bucket = term % num_buckets_;
-    uint32 entityid = *reinterpret_cast<const uint32 *>(entity.data());
+    uint32 docid = *reinterpret_cast<const uint32 *>(doc.data());
 
     // Check for new term.
     if (term != current_term_) {
@@ -322,7 +328,7 @@ class SearchIndexBuilder : public task::Processor {
     }
 
     // Add new posting to term posting list.
-    posting_list_.push_back(entityid);
+    posting_list_.push_back(docid);
   }
 
   void Done(task::Task *task) override {
@@ -364,7 +370,7 @@ class SearchIndexBuilder : public task::Processor {
 
     posting_list_.clear();
     num_posting_lists_->Increment();
-    num_posting_entries_->Increment(size);
+    num_postings_->Increment(size);
   }
 
  private:
@@ -380,15 +386,15 @@ class SearchIndexBuilder : public task::Processor {
   }
 
   // Input channels.
-  task::Channel *entities_ = nullptr;
+  task::Channel *documents_ = nullptr;
   task::Channel *terms_ = nullptr;
 
   // Seach index repository.
   Repository repository_;
 
   // Output buffers for entity table.
-  OutputBuffer *entity_index_ = nullptr;
-  OutputBuffer *entity_items_ = nullptr;
+  OutputBuffer *document_index_ = nullptr;
+  OutputBuffer *document_items_ = nullptr;
   OutputBuffer *term_buckets_ = nullptr;
   OutputBuffer *term_items_ = nullptr;
   std::vector<OutputBuffer *> streams_;
@@ -403,15 +409,16 @@ class SearchIndexBuilder : public task::Processor {
   // Entities for current term.
   std::vector<uint32> posting_list_;
 
-  // Offset for next entity item.
-  uint32 entity_offset_ = 0;
+  // Offset for next document item.
+  uint64 document_offset_ = 0;
 
   // Offset for next term entry.
   uint64 term_offset_ = 0;
 
   // Statistics.
   task::Counter *num_posting_lists_ = nullptr;
-  task::Counter *num_posting_entries_ = nullptr;
+  task::Counter *num_postings_ = nullptr;
+  task::Counter *num_documents_ = nullptr;
 };
 
 REGISTER_TASK_PROCESSOR("search-index-builder", SearchIndexBuilder);
