@@ -7,6 +7,7 @@ class SSEStream(object):
                chunk_size=4096, **kwargs):
     self.url = url
     self.last = last
+    self.lastts = None
     self.since = since
     self.retry = retry
     self.chunk_size = chunk_size
@@ -26,11 +27,18 @@ class SSEStream(object):
     while True:
       # Send request.
       url = self.url
-      if self.last:
+
+      if self.lastts:
+        t = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(self.lastts - 60))
+        print("Restart stream on", t)
+        url = url + "?since=" + t
+      elif self.last:
         print("Restart stream from", self.last)
         self.headers["Last-Event-ID"] = self.last
       elif self.since:
+        print("Restart stream at", self.since)
         url = url + "?since=" + str(self.since)
+
       r = self.session.get(url, stream=True, **self.args)
       r.raise_for_status()
 
@@ -96,4 +104,3 @@ class SSEEvent(object):
 
   def __str__():
     return self.msg
-

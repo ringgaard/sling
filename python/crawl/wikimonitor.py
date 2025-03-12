@@ -229,6 +229,7 @@ while True:
       if not (title.startswith("Q") or title.startswith("Property:")): continue
 
       # Add event to queue.
+      stream.lastts = time.time()
       queue.put(change)
 
   except Exception as e:
