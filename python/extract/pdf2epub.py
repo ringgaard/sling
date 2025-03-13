@@ -223,6 +223,7 @@ class PDFPage:
   def analyze(self, prev=None):
     parbreak = self.book.param("parbreak", 0)
     indent = self.book.param("indent", 5.0)
+
     if parbreak == 0:
       left = self.linestart() + indent
       right = self.lineend() - indent
@@ -293,6 +294,7 @@ class PDFChapter:
     h2 = self.book.param("h2", 24.0)
     dropcap = self.book.param("dropcap", 100.0)
     pagebreaks = self.book.param("pagebreaks", False)
+    linebreak = self.book.param("linebreak", 1)
 
     s = []
     if self.title is not None:
@@ -333,6 +335,8 @@ class PDFChapter:
         if pagebreaks and pagenum:
           s.append('<span class="page-break" page="%d"></span>' % pagenum)
           pagenum = None
+
+        if linebreak: s.append("<br>\n")
 
         s.append(escape(l.text))
         if not l.hyphen: s.append(' ')
