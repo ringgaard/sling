@@ -88,3 +88,16 @@ cc_library(
   ],
 )
 
+cc_binary(
+  name = "search-server",
+  srcs = ["search-server.cc"],
+  deps = [
+    ":search-engine",
+    "//sling/base",
+    "//sling/file:posix",
+    "//sling/file:recordio",
+    "//sling/net:http-server",
+    "//sling/util:json",
+    "//sling/util:mutex",
+  ],
+)

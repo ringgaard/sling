@@ -182,6 +182,6 @@ cc_library(
   deps = [
     ":iobuffer",
     "//sling/base",
+    "//sling/string:text",
   ],
 )
-

@@ -80,8 +80,6 @@ static void OutputString(IOBuffer *output, const std::string &str) {
     if (c < ' ') {
       // Control character.
       switch (c) {
-        case '"': output->Write("\\\"", 2); break;
-        case '\\': output->Write("\\\\", 2); break;
         case '\n': output->Write("\\n", 2); break;
         case '\t': output->Write("\\t", 2); break;
         case '\b': output->Write("\\b", 2); break;
@@ -93,7 +91,13 @@ static void OutputString(IOBuffer *output, const std::string &str) {
           output->Write(hexdigit[c & 0x0f]);
       }
       s++;
-    } else if (*s < 0x100) {
+    } else if (*s == '\\') {
+      output->Write("\\\\", 2);
+      s++;
+    } else if (*s == '"') {
+      output->Write("\\\"", 2);
+      s++;
+    } else if (*s < 0x80) {
       // ASCII character.
       output->Write(c);
       s++;
@@ -167,6 +171,12 @@ void JSON::Object::Write(IOBuffer *output) const {
     e.second.Write(output);
   }
   output->Write('}');
+}
+
+std::string JSON::Object::AsString() const {
+  IOBuffer buffer;
+  Write(&buffer);
+  return std::string(buffer.begin(), buffer.end());
 }
 
 const JSON &JSON::Object::operator [](const string &key) const {
@@ -459,4 +469,3 @@ JSON JSON::Read(const string &json) {
 }
 
 }  // namespace sling
-

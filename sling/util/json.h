@@ -20,6 +20,7 @@
 #include <utility>
 
 #include "sling/base/types.h"
+#include "sling/string/text.h"
 #include "sling/util/iobuffer.h"
 
 namespace sling {
@@ -59,6 +60,9 @@ class JSON {
     void Add(const string &key, const char *value) {
       items_.emplace_back(key, JSON(value));
     }
+    void Add(const string &key, Text value) {
+      items_.emplace_back(key, JSON(value));
+    }
     void Add(const string &key, Object *value) {
       items_.emplace_back(key, JSON(value));
     }
@@ -77,6 +81,9 @@ class JSON {
 
     // Write object as JSON to output.
     void Write(IOBuffer *buffer) const;
+
+    // Return object in JSON format.
+    std::string AsString() const;
 
     // Get object size.
     int size() const { return items_.size(); }
@@ -117,6 +124,9 @@ class JSON {
       elements_.emplace_back(JSON(value));
     }
     void Add(const char *value) {
+      elements_.emplace_back(JSON(value));
+    }
+    void Add(Text value) {
       elements_.emplace_back(JSON(value));
     }
     void Add(Object *value) {
@@ -215,6 +225,7 @@ class JSON {
   JSON(bool value) : i_(value), type_(BOOL) {}
   JSON(const string &value) : s_(new string(value)), type_(STRING) {}
   JSON(const char *value) : s_(new string(value)), type_(STRING)  {}
+  JSON(Text value) : s_(new string(value.str())), type_(STRING) {}
   JSON(Object *value) : o_(value), type_(OBJECT) {}
   JSON(Array *value) : a_(value), type_(ARRAY) {}
 
@@ -239,6 +250,8 @@ class JSON {
   bool b(bool defval = false) const { return type_ == BOOL ? i_ : defval; }
   double f(double defval = 0.0) const { return type_ == FLOAT ? f_ : defval; }
   const string &s() const { return type_ == STRING ? *s_ : EMPTY_STRING; }
+  const char *c() const { return type_ == STRING ? s_->c_str() : nullptr; }
+  Text t() const { return type_ == STRING ? Text(*s_) : Text(); }
   Object *o() const { return type_ == OBJECT ? o_ : nullptr; }
   Array *a() const { return type_ == ARRAY ? a_ : nullptr; }
 
@@ -260,6 +273,7 @@ class JSON {
   operator double() const { return f(); }
   operator float() const { return f(); }
   operator const string &() const { return s(); }
+  operator Text() const { return t(); }
   operator Object &() const { return *o(); }
   operator const Object &() const { return *o(); }
   operator Array &() const { return *a(); }
@@ -267,6 +281,13 @@ class JSON {
 
   // Check for errors.
   bool valid() const { return type_ != ERROR; }
+
+  // Take ownership of other JSON value.
+  void MoveFrom(JSON &other) {
+    i_ = other.i_;
+    type_ = other.type_;
+    other.type_ = ERROR;
+  }
 
  private:
   // JSON value.
@@ -292,4 +313,3 @@ class JSON {
 }  // namespace sling
 
 #endif  // SLING_UTIL_JSON_H_
-
