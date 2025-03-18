@@ -117,7 +117,7 @@ void SitemapService::HandleSitemapIndex(HTTPRequest *req, HTTPResponse *rsp) {
         rsp->Append(partname);
         rsp->Append("-->\n");
       }
-      rsp->Append("  <loc>https://ringgaard.com/kb/");
+      rsp->Append("  <loc>https://ringgaard.com/kb/sitemap?id=");
       rsp->Append(partid);
       rsp->Append("</loc>\n");
       if (pubdate != 0) {
