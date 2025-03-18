@@ -120,7 +120,7 @@ class FactEditor extends Component {
     this.attach(this.onkeydown, "keydown");
     this.attach(this.onclick, "click");
     //this.attach(this.oncut, "cut");
-    this.attach(this., "copy");
+    this.attach(this.oncopy, "copy");
     this.attach(this.onpaste, "paste");
 
     this.attach(this.oninput, "input");
