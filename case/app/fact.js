@@ -178,7 +178,7 @@ class FactEditor extends Component {
     let focus = selection.focusNode;
     if (!focus) return;
     if ((focus instanceof FactEditor)) focus = focus.lastChild;
-    if ((focus instanceof FactStatement) && focus.placeholder()){
+    if ((focus instanceof FactStatement) && focus.placeholder()) {
       // Add property and value to current placeholder.
       let prop = new FactProperty({property: "", value: ""});
       let val = new FactValue({property: "", value: ""});
@@ -188,7 +188,7 @@ class FactEditor extends Component {
       if (e.data == " ") {
         // Make statement qualified on space.
         focus.qualified = true;
-      } else {
+      } else if (e.data != null) {
         // Add initial character to property.
         let initial = document.createTextNode(e.data);
         prop.appendChild(initial);
