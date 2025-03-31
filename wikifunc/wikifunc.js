@@ -22,32 +22,24 @@ const n_javascript = "Z600";
 const n_python = "Z610";
 const n_english = "Z1002";
 
-/*
-//const wf_base_url = "https://www.wikifunctions.org/";
-//const wf_api_url = wf_base_url + "api.php?";
-//const wf_fetch_url =
-//  wf_api_url + "action=wikilambda_fetch&origin=*&format=json&zids=";
 
-const wf_fetch_url = "https://www.wikifunctions.org/w/api.php?action=wikilambda_fetch&format=json&origin=*&zids=";
+// Cached WikiFunctions loader.
+async function cached_loader(zid) {
+  const wf_fetch_url = "https://ringgaard.com/wikifunc/item?zid=";
+  let url = wf_fetch_url + zid;
+  let r = await fetch(url);
+  let data = await r.json();
+  return new Item(data);
+}
 
-// Fetch item from WikiFunctions.
-async function fetch_wiki_function_item(zid) {
+// WikiFunction loader from origin.
+async function origin_loader(zid) {
+  const wf_fetch_url = "https://www.wikifunctions.org/w/api.php?action=wikilambda_fetch&format=json&origin=*&zids=";
   let url = wf_fetch_url + zid;
   let r = await fetch(url);
   let data = await r.json();
   if (data.error) throw data.error;
   return new Item(JSON.parse(data[zid].wikilambda_fetch));
-}
-*/
-
-const wf_fetch_url = "http://dev.ringgaard.com:8080/wikifunc/item?zid=";
-
-// Fetch item from WikiFunctions.
-async function fetch_wiki_function_item(zid) {
-  let url = wf_fetch_url + zid;
-  let r = await fetch(url);
-  let data = await r.json();
-  return new Item(JSON.parse(data));
 }
 
 // Pick English label.
@@ -132,9 +124,9 @@ class Item {
     return sig;
   }
 
-  async select_implementation() {
+  async select_implementation(wf) {
     for (let iid of this.implementations()) {
-      let item = await fetch_wiki_function_item(iid);
+      let item = await wf.item(iid);
       let impl = item.contents();
       if (impl) {
         let code = impl[n_code];
@@ -147,8 +139,8 @@ class Item {
     }
   }
 
-  async compile() {
-    let impl = await this.select_implementation();
+  async compile(wf) {
+    let impl = await this.select_implementation(wf);
     if (!impl) throw "No JS implementation found for " + id();
 
     let args = this.arguments();
@@ -169,6 +161,8 @@ class Item {
 
     let body = code.join("");
 
+    //console.log(body);
+
     let f = Function(...argnames, body);
     return f;
   }
@@ -176,6 +170,8 @@ class Item {
 
 class WikiFunctions {
   constructor() {
+    this.load = cached_loader;
+    //this.load = origin_loader;
     this.items = new Map();
     this.functions = new Map();
   }
@@ -183,7 +179,7 @@ class WikiFunctions {
   async item(zid) {
     let item = this.items.get(zid);
     if (!item) {
-      item = await fetch_wiki_function_item(zid);
+      item = await this.load(zid);
       this.items.set(zid, item);
     }
     return item;
@@ -196,7 +192,7 @@ class WikiFunctions {
     let item = this.items.get(zid);
     if (!item) item = await this.item(zid);
 
-    f = await item.compile();
+    f = await item.compile(this);
     this.functions.set(zid, f);
     return f;
   }
