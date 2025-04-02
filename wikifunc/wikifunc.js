@@ -1,32 +1,3 @@
-// WikiFuntions keys.
-const n_type = "Z1K1";
-const n_id = "Z2K1";
-const n_contents = "Z2K2";
-const n_labels = "Z2K3";
-const n_aliases = "Z2K4";
-const n_descriptions = "Z2K5";
-const n_string_value = "Z6K1";
-const n_arguments = "Z8K1";
-const n_return_type = "Z8K2";
-const n_implementations = "Z8K4";
-const n_language = "Z11K1";
-const n_text = "Z11K2";
-const n_texts = "Z12K1";
-const n_code = "Z14K3";
-const n_proglang = "Z16K1";
-const n_progcode = "Z16K2";
-const n_argtype = "Z17K1";
-const n_argname = "Z17K2";
-const n_arglabel = "Z17K3";
-const n_to_code = "Z4K7";
-const n_from_code = "Z4K8";
-const n_to_converter = "Z46K3";
-const n_from_converter = "Z64K3";
-const n_native_type = "Z46K4";
-const n_javascript = "Z600";
-const n_python = "Z610";
-const n_english = "Z1002";
-
 // Cached WikiFunctions loader.
 async function cached_loader(zid) {
   const wf_fetch_url = "https://ringgaard.com/wikifunc/item?zid=";
@@ -46,145 +17,68 @@ async function origin_loader(zid) {
   return new Item(JSON.parse(data[zid].wikilambda_fetch));
 }
 
-// Pick English label.
-function pick_label(labels) {
-  for (let l of labels[n_texts].slice(1)) {
-    if (l[n_language] == n_english) return l[n_text];
-  }
-}
-
-class Argument {
-  constructor(json) {
-    this.json = json;
-  }
-
-  type() {
-    return this.json[n_argtype];
-  }
-
-  name() {
-    return this.json[n_argname];
-  }
-
-  label() {
-    return pick_label(this.json[n_arglabel]);
-  }
-}
-
 class Item {
   constructor(json) {
     this.json = json;
   }
 
   type() {
-    return this.json[n_type];
+    return this.json.Z1K1;
   }
 
   id() {
-    return this.json[n_id][n_string_value];
+    return this.json.Z2K1.Z6K1;
   }
 
   contents() {
-    return this.json[n_contents];
+    return this.json.Z2K2;
   }
 
   label() {
-    return pick_label(this.json[n_labels]);
+    for (let l of this.json.Z2K3.Z12K1.slice(1)) {
+      if (l.Z11K1 == "Z1002") return l.Z11K2;
+    }
   }
 
   description() {
-    return pick_label(this.json[n_descriptions]);
-  }
-
-  arguments() {
-    let args = new Array();
-    for (let a of this.json[n_contents][n_arguments].slice(1)) {
-      args.push(new Argument(a));
+    for (let l of this.json.Z2K5.Z12K1.slice(1)) {
+      if (l.Z11K1 == "Z1002") return l.Z11K2;
     }
-    return args;
-  }
-
-  return_type() {
-    return this.json[n_contents][n_return_type];
-  }
-
-  implementations() {
-    return this.json[n_contents][n_implementations].slice(1);
   }
 
   pretty() {
     return JSON.stringify(this.json, null, 2);
   }
-
-  signature() {
-    let sig = this.id() + "(";
-    let first = true;
-    for (let arg of this.arguments()) {
-      if (!first) sig += ", ";
-      sig += arg.type() + " " + arg.name();
-      first = false;
-    }
-    sig += ") -> " + this.return_type();
-    return sig;
-  }
-
-  async select_implementation(wf) {
-    for (let iid of this.implementations()) {
-      let item = await wf.item(iid);
-      let impl = item.contents();
-      if (impl) {
-        let code = impl[n_code];
-        if (code) {
-          let lang = code[n_proglang];
-          let source = code[n_progcode];
-          if (lang == n_javascript) return source;
-        }
-      }
-    }
-  }
-
-  async compile(wf) {
-    let impl = await this.select_implementation(wf);
-    if (!impl) throw "No JS implementation found for " + id();
-
-    let args = this.arguments();
-    let argnames = new Array();
-    for (let i = 0; i < args.length; ++i) {
-      argnames.push(`_a${i}`);
-    }
-
-    let code = new Array();
-    code.push(impl);
-    code.push("\n");
-
-    code.push("return ");
-    code.push(this.id());
-    code.push("(");
-    code.push(argnames.join(", "));
-    code.push(");\n");
-
-    let body = code.join("");
-
-    //console.log(body);
-
-    let f = Function(...argnames, body);
-    return f;
-  }
 }
-
-////////////////////////////////////////////////
 
 const IMPL_JS = 1;
 const IMPL_COMPOSITION = 2;
 
 const INSTR_CALL    = 1;
 const INSTR_ASSIGN  = 2;
-const INSTR_CONVERT = 3;
-const INSTR_RETURN  = 4;
+const INSTR_CONST   = 3;
+const INSTR_CONVERT = 4;
+const INSTR_RETURN  = 5;
+
+class NameGenerator {
+  constructor(prefix) {
+    this.prefix = prefix;
+    this.index = 0;
+  }
+
+  next() {
+    let index = this.index++;
+    return this.prefix + index;
+  }
+}
 
 class Type {
   constructor(item) {
     this.item = item;
+  }
+
+  name() {
+    return this.item.id();
   }
 }
 
@@ -192,6 +86,10 @@ class Variable {
   constructor(name, type) {
     this.name = name;
     this.type = type;
+  }
+
+  baptize(namegen) {
+    if (!this.name) this.name = namegen.next();
   }
 }
 
@@ -201,6 +99,10 @@ class Instruction {
     this.func = func;
     this.dst = dst;
     this.src = src;
+  }
+
+  baptize(namegen) {
+    if (this.dst) this.dst.baptize(namegen);
   }
 
   generate(code) {
@@ -218,10 +120,15 @@ class Instruction {
       }
       code.push(");\n");
     } else if (this.type == INSTR_ASSIGN) {
-      code.push("let ");
       code.push(this.dst.name);
       code.push(" = ");
       code.push(this.src.name);
+      code.push(";\n");
+    } else if (this.type == INSTR_CONST) {
+      code.push("const ");
+      code.push(this.dst.name);
+      code.push(" = ");
+      code.push(JSON.stringify(this.src));
       code.push(";\n");
     } else if (this.type == INSTR_CONVERT) {
       code.push("let ");
@@ -250,6 +157,55 @@ class Block {
     this.instructions.push(new Instruction(type, func, dst, src));
   }
 
+  emit_call(func, retval, args) {
+    this.emit(INSTR_CALL, func, retval, args)
+  }
+
+  emit_return(v) {
+    this.emit(INSTR_RETURN, null, null, v)
+  }
+
+  emit_convert(converter, dst, src) {
+    this.emit(INSTR_CONVERT, converter, dst, src)
+  }
+
+  emit_evoke(func, retval, args) {
+    let kind = func.impl.kind();
+    if (kind == IMPL_JS) {
+      // Convert argument to native form.
+      let native_args = Array.from(args);
+      for (let i = 0; i < native_args.length; ++i) {
+        let arg = native_args[i];
+        let converter = arg.type.tojs;
+        if (converter) {
+          let native_arg = new Variable(null, converter.jstype());
+          this.emit_convert(converter, native_arg, arg);
+          native_args[i] = native_arg;
+        }
+      }
+
+      if (func.rettype.fromjs) {
+        // Call native with output conversion.
+        let native_ret = new Variable(null, func.rettype.fromjs.jstype());
+        this.emit_call(func, native_ret, native_args);
+        this.emit_convert(func.rettype.fromjs, retval, native_ret);
+      } else {
+        // Call native.
+        this.emit_call(func, retval, native_args);
+      }
+    } else if (kind == IMPL_COMPOSITION) {
+      this.emit_call(func, retval, args);
+    } else {
+      throw "Unknown function kind";
+    }
+  }
+
+  baptize(namegen) {
+    for (let instr of this.instructions) {
+      instr.baptize(namegen);
+    }
+  }
+
   generate(code) {
     for (let instr of this.instructions) {
       instr.generate(code);
@@ -266,16 +222,17 @@ class Converter {
     return this.item.id();
   }
 
-  code() {
-    let contents = this.item.contents();
-    let converter = contents[n_to_converter] || contents[n_from_converter];
-    return converter[n_progcode];
-  }
-
   jstype() {
     let contents = this.item.contents();
-    let converter = contents[n_to_converter] || contents[n_from_converter];
+    let converter = contents.Z46K3 || contents.Z64K3;
     return converter.Z46K4 || converter.Z46K4;
+  }
+
+  generate(code) {
+    let contents = this.item.contents();
+    let converter = contents.Z46K3 || contents.Z64K3;
+    code.push(converter.Z16K2);
+    code.push("\n\n");
   }
 }
 
@@ -284,7 +241,15 @@ class Composition {
     this.item = item;
   }
 
-  kind() { return IMPL_COMPOSiTION; }
+  kind() { return IMPL_COMPOSITION; }
+
+  baptize(namegen) {}
+
+  generate(code) {
+    code.push(`/* Composition ${this.item.id()}\n\n`);
+    code.push(this.item.pretty());
+    code.push("\n*/\n\n");
+  }
 }
 
 class Native {
@@ -293,7 +258,11 @@ class Native {
   }
 
   kind() { return IMPL_JS; }
-  code() { return this.item.contents()[n_code][n_progcode]; }
+  baptize(namegen) {}
+  generate(code) {
+    code.push(this.item.contents().Z14K3.Z16K2);
+    code.push("\n\n");
+  }
 }
 
 class Func {
@@ -309,94 +278,65 @@ class Func {
     return this.item.id();
   }
 
+  generate(code) {
+    this.impl.generate(code);
+  }
+
   implementations() {
-    return this.item.contents()[n_implementations].slice(1);
+    return this.item.contents().Z8K4.slice(1);
   }
 }
 
 class Compiler {
   constructor(wf) {
     this.wf = wf;
-    this.args = new Array();
-    this.retval = null;
+    this.types = new Map();
     this.funcs = new Map();
     this.converters = new Map();
-    this.types = new Map();
-    this.variables = new Array();
-    this.body = new Block();
   }
 
   async compile(zid) {
-    let main = await this.get_func(zid);
+    // Fetch main function.
+    let func = await this.get_func(zid);
 
-    let main_args = new Array();
-    for (let a in main.args) {
-      let v = this.alloc_var(a);
-      this.args.push(v);
-      main_args.push(v);
+    // Create variables for main function.
+    let args = new Array();
+    for (let a of func.args) {
+      let v = new Variable(null, a.type);
+      args.push(v);
     }
+    let retval = new Variable(null, func.rettype);
 
-    for (let i = 0; i < main.args.length; ++i) {
-      let converter = main.args[i].type.tojs;
-      if (main.args[i].type.tojs) {
-        let native_arg = this.alloc_var(converter.jstype());
-        this.emit_convert(converter, native_arg, main_args[i]);
-        main_args[i] = native_arg;
-      }
-    }
-    let main_ret = this.alloc_var(main.rettype);
-    let native_ret = main_ret;
-    if (main.rettype.fromjs) {
-      native_ret = this.alloc_var(main.rettype.fromjs.jstype());
-    }
-    this.emit_call(main, native_ret, main_args);
-    if (main_ret != native_ret) {
-      this.emit_convert(main.rettype.fromjs, main_ret, native_ret);
-    }
-    this.emit_return(main_ret);
+    // Generate main function.
+    let body = new Block();
+    body.emit_evoke(func, retval, args);
+    body.emit_return(retval);
 
     // Assign variable names.
-    for (let index = 0; index < this.variables.length; ++index) {
-      this.variables[index].name = `_v${index}`;
-    }
+    let namegen = new NameGenerator("_v");
+    for (let a of args) a.baptize(namegen);
+    body.baptize(namegen);
 
     // Generate code.
     let code = new Array();
     for (let converter of this.converters.values()) {
-      code.push(converter.code());
-      code.push("\n\n");
+      converter.generate(code);
     }
     for (let func of this.funcs.values()) {
-      code.push(func.impl.code());
-      code.push("\n\n");
+      func.generate(code);
     }
-    this.body.generate(code);
+    body.generate(code);
 
-    // Construct function.
+    // Return code.
     let argnames = new Array();
-    for (let a of this.args) argnames.push(a.name);
-    //let body = code.join("");
-    //console.log(`function ${main.name()}(${argnames.join(", ")})\n${body}}`);
-    let f = Function(...argnames, body);
-    return f;
-  }
-
-  alloc_var(type) {
-    let v = new Variable(null, type);
-    this.variables.push(v);
-    return v;
-  }
-
-  emit_call(func, retval, args) {
-    this.body.emit(INSTR_CALL, func, retval, args)
-  }
-
-  emit_return(v) {
-    this.body.emit(INSTR_RETURN, null, null, v)
-  }
-
-  emit_convert(converter, dst, src) {
-    this.body.emit(INSTR_CONVERT, converter, dst, src)
+    for (let a of args) argnames.push(a.name);
+    return {
+      name: zid,
+      label: func.item.label(),
+      description: func.item.description(),
+      args: argnames,
+      body: code.join(""),
+    };
   }
 
   async get_func(zid) {
@@ -409,38 +349,47 @@ class Compiler {
     func = new Func(item);
 
     // Select implementation.
-    let implementations = func.item.contents()[n_implementations].slice(1);
-    for (let i of implementations) {
+    let fallback;
+    for (let i of func.implementations()) {
       let item = await this.wf.item(i);
       let contents = item.contents();
       if (contents) {
-        let code = contents[n_code];
+        let code = contents.Z14K3;
         if (code) {
-          let lang = code[n_proglang];
-          if (lang == n_javascript) {
+          let lang = code.Z16K1;
+          if (lang == "Z600") {
             func.impl = new Native(item);
             break;
           }
         }
+        if (!fallback && contents.Z14K2) {
+          fallback = item;
+        }
       }
+    }
+    if (!func.impl && fallback) {
+      func.impl = new Composition(fallback);
+    }
+    if (!func.impl) {
+      throw `No supported implementation for ${func.name()}`;
     }
 
     // Get arguments.
-    for (let a of func.item.contents()[n_arguments].slice(1)) {
-      let name = a[n_argname];
-      let typeid = a[n_argtype];
+    for (let a of func.item.contents().Z8K1.slice(1)) {
+      let name = a.Z17K2;
+      let typeid = a.Z17K1;
       let type = await this.get_type(typeid);
       func.args.push(new Variable(name, type));
 
       if (func.impl.kind() == IMPL_JS) {
         // Get type converter to JS.
         if (type.tojs === undefined) {
-          let converters = type.item.contents()[n_to_code];
+          let converters = type.item.contents().Z4K7;
           if (converters) {
             for (let c of converters.slice(1)) {
               let item = await this.wf.item(c);
-              let lang = item.contents()[n_to_converter][n_proglang];
-              if (lang == n_javascript) {
+              let lang = item.contents().Z46K3.Z16K1;
+              if (lang == "Z600") {
                 let converter = new Converter(item);
                 this.converters.set(c, converter);
                 type.tojs = converter;
@@ -453,18 +402,18 @@ class Compiler {
     }
 
     // Get return type.
-    let rettypeid = func.item.contents()[n_return_type];
+    let rettypeid = func.item.contents().Z8K2;
     func.rettype = await this.get_type(rettypeid);
 
     // Get type converter from JS.
     if (func.impl.kind() == IMPL_JS) {
       if (func.rettype.fromjs === undefined) {
-        let converters = func.rettype.item.contents()[n_from_code];
+        let converters = func.rettype.item.contents().Z4K8;
         if (converters) {
           for (let c of converters.slice(1)) {
             let item = await this.wf.item(c);
-            let lang = item.contents()[n_from_converter][n_proglang];
-            if (lang == n_javascript) {
+            let lang = item.contents().Z64K3.Z16K1;
+            if (lang == "Z600") {
               let converter = new Converter(item);
               this.converters.set(c, converter);
               func.rettype.fromjs = converter;
@@ -511,15 +460,18 @@ class WikiFunctions {
     return item;
   }
 
+  async compile(zid) {
+    let compiler = new Compiler(this);
+    return await compiler.compile(zid);
+  }
+
   async func(zid) {
     let f = this.functions.get(zid);
     if (f) return f;
 
-    let item = this.items.get(zid);
-    if (!item) item = await this.item(zid);
+    let code = await this.compile(zid);
 
-    let compiler = new Compiler(this);
-    f = await compiler.compile(zid);
+    f = Function(...code.args, code.body);
 
     this.functions.set(zid, f);
     return f;
