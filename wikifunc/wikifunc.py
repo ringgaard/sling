@@ -65,6 +65,15 @@ def handle_extract(request):
 
   return sling.net.HTTPStatic("application/json", item)
 
+@app.route("/wikifunc/forget")
+def handle_extract(request):
+  # Get zid for item.
+  zid = request.param("zid")
+  if zid is None: return 500
+
+  # Remove from cache.
+  if zid in cache: del cache[zid]
+
 # Run app until shutdown.
 log.info("running")
 app.run()

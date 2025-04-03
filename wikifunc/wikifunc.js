@@ -23,11 +23,11 @@ class Item {
   }
 
   type() {
-    return this.json.Z1K1;
+    return this.json.Z2K2?.Z1K1;
   }
 
   id() {
-    return this.json.Z2K1.Z6K1;
+    return this.json.Z2K1?.Z6K1;
   }
 
   contents() {
@@ -50,15 +50,6 @@ class Item {
     return JSON.stringify(this.json, null, 2);
   }
 }
-
-const IMPL_JS = 1;
-const IMPL_COMPOSITION = 2;
-
-const INSTR_CALL    = 1;
-const INSTR_ASSIGN  = 2;
-const INSTR_CONST   = 3;
-const INSTR_CONVERT = 4;
-const INSTR_RETURN  = 5;
 
 class NameGenerator {
   constructor(prefix) {
@@ -93,6 +84,14 @@ class Variable {
   }
 }
 
+const INSTR_CALL     = 1;
+const INSTR_ASSIGN   = 2;
+const INSTR_CONST    = 3;
+const INSTR_CONVERT  = 4;
+const INSTR_RETURN   = 5;
+const INSTR_DECLARE  = 6;
+
+
 class Instruction {
   constructor(type, func, dst, src) {
     this.type = type;
@@ -106,6 +105,7 @@ class Instruction {
   }
 
   generate(code) {
+    //this.annotate(code);
     if (this.type == INSTR_CALL) {
       code.push("let ");
       code.push(this.dst.name);
@@ -142,8 +142,28 @@ class Instruction {
       code.push("return ");
       code.push(this.src.name);
       code.push(";\n");
+    } else if (this.type == INSTR_DECLARE) {
+      code.push("let ");
+      code.push(this.src.name);
+      code.push(";\n");
     } else {
       throw "Illegal instruction";
+    }
+  }
+
+  annotate(code) {
+    if (this.type == INSTR_CALL) {
+      code.push("// Call ");
+      code.push(this.func.item.label());
+      code.push("\n");
+    } else if (this.type == INSTR_CONVERT) {
+      code.push("// Convert ");
+      code.push(this.src?.type?.item?.label() || this.src?.type || "??");
+      code.push(" -> ");
+      code.push(this.dst?.type?.item?.label()|| this.dst?.type || "??");
+      code.push(" using ");
+      code.push(this.func.item.label());
+      code.push("\n");
     }
   }
 }
@@ -158,11 +178,19 @@ class Block {
   }
 
   emit_call(func, retval, args) {
-    this.emit(INSTR_CALL, func, retval, args)
+    this.emit(INSTR_CALL, func, retval, args);
   }
 
   emit_return(v) {
-    this.emit(INSTR_RETURN, null, null, v)
+    this.emit(INSTR_RETURN, null, null, v);
+  }
+
+  emit_declare(v) {
+    this.emit(INSTR_DECLARE, null, v, null);
+  }
+
+  emit_const(v, s) {
+    this.emit(INSTR_CONST, null, v, s);
   }
 
   emit_convert(converter, dst, src) {
@@ -195,6 +223,8 @@ class Block {
       }
     } else if (kind == IMPL_COMPOSITION) {
       this.emit_call(func, retval, args);
+    } else if (kind == IMPL_BUILTIN) {
+      this.emit_call(func, retval, args);
     } else {
       throw "Unknown function kind";
     }
@@ -224,15 +254,13 @@ class Converter {
 
   jstype() {
     let contents = this.item.contents();
-    let converter = contents.Z46K3 || contents.Z64K3;
-    return converter.Z46K4 || converter.Z46K4;
+    return contents.Z46K4 || contents.Z64K4;
   }
 
   generate(code) {
     let contents = this.item.contents();
     let converter = contents.Z46K3 || contents.Z64K3;
     code.push(converter.Z16K2);
-    code.push("\n\n");
   }
 }
 
@@ -243,14 +271,27 @@ class Composition {
 
   kind() { return IMPL_COMPOSITION; }
 
-  baptize(namegen) {}
+  baptize(namegen) {
+    if (this.body) this.body.baptize(namegen);
+  }
 
   generate(code) {
-    code.push(`/* Composition ${this.item.id()}\n\n`);
-    code.push(this.item.pretty());
-    code.push("\n*/\n\n");
+    code.push("function ");
+    code.push(this.item.contents().Z14K1);
+    code.push("(");
+    for (let i = 0; i < this.args.length; ++i) {
+      if (i > 0) code.push(", ");
+      code.push(this.args[i].name);
+    }
+    code.push(") {\n");
+    this.body?.generate(code);
+    code.push("}\n");
   }
 }
+
+const IMPL_JS = 1;
+const IMPL_COMPOSITION = 2;
+const IMPL_BUILTIN = 3;
 
 class Native {
   constructor(item) {
@@ -261,6 +302,20 @@ class Native {
   baptize(namegen) {}
   generate(code) {
     code.push(this.item.contents().Z14K3.Z16K2);
+    code.push("\n\n");
+  }
+}
+
+class BuiltIn {
+  constructor(item) {
+    this.item = item;
+  }
+
+  kind() { return IMPL_BUILTIN; }
+  baptize(namegen) {}
+  generate(code) {
+    code.push("// BUILTIN ");
+    code.push(this.item.id());
     code.push("\n\n");
   }
 }
@@ -276,6 +331,16 @@ class Func {
 
   name() {
     return this.item.id();
+  }
+
+  arg(name) {
+    for (let a of this.args) {
+      if (a.name == name) return a;
+    }
+  }
+
+  baptize(namegen) {
+    this.impl?.baptize(namegen);
   }
 
   generate(code) {
@@ -297,7 +362,7 @@ class Compiler {
 
   async compile(zid) {
     // Fetch main function.
-    let func = await this.get_func(zid);
+    let func = await this.func(zid);
 
     // Create variables for main function.
     let args = new Array();
@@ -312,18 +377,42 @@ class Compiler {
     body.emit_evoke(func, retval, args);
     body.emit_return(retval);
 
+    // Generate compositions.
+    for (;;) {
+      // Find remaining functions that have not been generated.
+      let remaining = new Array();
+      for (let func of this.funcs.values()) {
+        let impl = func.impl;
+        if (impl.kind() == IMPL_COMPOSITION && !impl.body) {
+          remaining.push(func);
+        }
+      }
+      if (remaining.length == 0) break;;
+
+      // Compose remaining functions.
+      for (let f of remaining) {
+        f.impl.body = new Block();
+        let top = f.impl.item.contents().Z14K2;
+        let retval = await this.compose(f, top);
+        f.impl.body.emit_return(retval);
+      }
+    }
+
     // Assign variable names.
     let namegen = new NameGenerator("_v");
     for (let a of args) a.baptize(namegen);
+    for (let f of this.funcs.values()) f.baptize(namegen);
     body.baptize(namegen);
 
     // Generate code.
     let code = new Array();
     for (let converter of this.converters.values()) {
       converter.generate(code);
+      code.push("\n");
     }
     for (let func of this.funcs.values()) {
       func.generate(code);
+      code.push("\n");
     }
     body.generate(code);
 
@@ -339,7 +428,37 @@ class Compiler {
     };
   }
 
-  async get_func(zid) {
+  async compose(func, expr) {
+    if (typeof(expr) === 'string') {
+      // Constant.
+      let v = new Variable(null, typeof(expr));
+      func.impl.body.emit_const(v, expr);
+      return v;
+    } else if (expr.Z1K1 == "Z7") {
+      // Get called function.
+      let callee = await this.func(expr.Z7K1);
+
+      // Compose arguments.
+      let args = new Array();
+      for (let a of callee.args) {
+        let subexpr = expr[a.name];
+        let v = await this.compose(func, subexpr);
+        args.push(v);
+      }
+
+      // Call function.
+      let retval = new Variable(null, callee.rettype);
+      func.impl.body.emit_evoke(callee, retval, args);
+      return retval;
+    } else if (expr.Z1K1 == "Z18") {
+      // Argument reference.
+      return func.arg(expr.Z18K1);
+    } else {
+      throw `Unknown expression type: ${expr.Z1K1}`;
+    }
+  }
+
+  async func(zid) {
     // Check if function is already known.
     let func = this.funcs.get(zid);
     if (func) return func;
@@ -348,8 +467,12 @@ class Compiler {
     let item = await this.wf.item(zid);
     func = new Func(item);
 
+    // Check that item is a function.
+    if (item.type() != "Z8") throw `${zid} is not a function`;
+
     // Select implementation.
     let fallback;
+    let builtin;
     for (let i of func.implementations()) {
       let item = await this.wf.item(i);
       let contents = item.contents();
@@ -362,6 +485,9 @@ class Compiler {
             break;
           }
         }
+        if (!builtin && contents.Z14K2) {
+          builtin = item;
+        }
         if (!fallback && contents.Z14K2) {
           fallback = item;
         }
@@ -369,6 +495,9 @@ class Compiler {
     }
     if (!func.impl && fallback) {
       func.impl = new Composition(fallback);
+    }
+    if (!func.impl && builtin) {
+      func.impl = new BuiltIn(builtin);
     }
     if (!func.impl) {
       throw `No supported implementation for ${func.name()}`;
@@ -378,7 +507,7 @@ class Compiler {
     for (let a of func.item.contents().Z8K1.slice(1)) {
       let name = a.Z17K2;
       let typeid = a.Z17K1;
-      let type = await this.get_type(typeid);
+      let type = await this.type(typeid);
       func.args.push(new Variable(name, type));
 
       if (func.impl.kind() == IMPL_JS) {
@@ -401,9 +530,13 @@ class Compiler {
       }
     }
 
+    if (func.impl.kind() == IMPL_COMPOSITION) {
+      func.impl.args = func.args;
+    }
+
     // Get return type.
     let rettypeid = func.item.contents().Z8K2;
-    func.rettype = await this.get_type(rettypeid);
+    func.rettype = await this.type(rettypeid);
 
     // Get type converter from JS.
     if (func.impl.kind() == IMPL_JS) {
@@ -428,7 +561,7 @@ class Compiler {
     return func;
   }
 
-  async get_type(zid) {
+  async type(zid) {
     // Check if function is already known.
     let type = this.types.get(zid);
     if (type) return type;
