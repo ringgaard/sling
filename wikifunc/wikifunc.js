@@ -143,7 +143,7 @@ class Instruction {
       code.push(";\n");
     } else if (this.op == INSTR_DECLARE) {
       code.push("let ");
-      code.push(this.src.name);
+      code.push(this.dst.name);
       code.push(";\n");
     } else {
       throw "Illegal instruction";
@@ -167,6 +167,42 @@ class Instruction {
   }
 }
 
+class Conditional {
+  constructor(condition) {
+    this.condition = condition;
+    this.ifpart = new Block();
+    this.elsepart = new Block();
+  }
+
+  baptize(namegen) {
+    this.condition.baptize(namegen);
+    this.ifpart.baptize(namegen);
+    this.elsepart.baptize(namegen);
+  }
+
+  eliminate_dead_code(liveset) {
+    liveset.add(this.condition);
+    this.ifpart.eliminate_dead_code(liveset);
+    this.elsepart.eliminate_dead_code(liveset);
+  }
+
+  reach(reachable) {
+    reachable.add(condition);
+    this.ifpart.reach(reachable);
+    this.elsepart.reach(reachable);
+  }
+
+  generate(code) {
+    code.push("if (");
+    code.push(this.condition.name);
+    code.push(") {\n");
+    this.ifpart.generate(code);
+    code.push("} else {\n");
+    this.elsepart.generate(code);
+    code.push("}\n");
+  }
+}
+
 class Block {
   constructor() {
     this.instructions = new Array();
@@ -185,7 +221,11 @@ class Block {
   }
 
   emit_declare(v) {
-    this.emit(INSTR_DECLARE, null, v, null);
+    this.emit(INSTR_DECLARE, null, v);
+  }
+
+  emit_assign(dst, src) {
+    this.emit(INSTR_ASSIGN, null, dst, src);
   }
 
   emit_const(v, s) {
@@ -194,6 +234,12 @@ class Block {
 
   emit_convert(converter, dst, src) {
     this.emit(INSTR_CONVERT, converter, dst, src)
+  }
+
+  emit_conditional(condition) {
+    let cond = new Conditional(condition);
+    this.instructions.push(cond);
+    return cond;
   }
 
   emit_evoke(func, retval, args) {
@@ -251,7 +297,9 @@ class Block {
     for (let i = this.instructions.length - 1; i >= 0; --i) {
       let instr = this.instructions[i];
       if (!instr) continue;
-      if (instr.op == INSTR_CALL) {
+      if (!instr.op) {
+        instr.eliminate_dead_code(liveset);
+      } else if (instr.op == INSTR_CALL) {
         if (liveset.has(instr.dst)) {
           for (let arg of instr.src) liveset.add(arg);
         } else {
@@ -276,7 +324,7 @@ class Block {
       } else if (instr.op == INSTR_RETURN) {
         liveset.add(instr.src);
       } else if (instr.op == INSTR_DECLARE) {
-        if (!liveset.has(instr.src)) {
+        if (!liveset.has(instr.dst)) {
           this.instructions[i] = null;
         }
       }
@@ -453,7 +501,7 @@ class Compiler {
         f.impl.args = f.args;
 
         let top = f.impl.item.contents().Z14K2;
-        let retval = await this.compose(f, top);
+        let retval = await this.compose(f, f.impl.body, top);
         f.impl.body.emit_return(retval);
       }
     }
@@ -509,28 +557,46 @@ class Compiler {
     };
   }
 
-  async compose(func, expr) {
+  async compose(func, body, expr) {
     if (typeof(expr) === 'string') {
       // Constant.
       let v = new Variable(null, typeof(expr));
-      func.impl.body.emit_const(v, expr);
+      body.emit_const(v, expr);
       return v;
     } else if (expr.Z1K1 == "Z7") {
-      // Get called function.
-      let callee = await this.func(expr.Z7K1);
+      if (expr.Z7K1 == "Z802") {
+        // Conditional.
+        let test = await this.compose(func, body, expr.Z802K1);
+        let result = new Variable(null, null);
+        body.emit_declare(result);
 
-      // Compose arguments.
-      let args = new Array();
-      for (let a of callee.args) {
-        let subexpr = expr[a.name];
-        let v = await this.compose(func, subexpr);
-        args.push(v);
+        let cond = body.emit_conditional(test);
+
+        let ifval = await this.compose(func, cond.ifpart, expr.Z802K2);
+        cond.ifpart.emit_assign(result, ifval);
+
+        let elseval = await this.compose(func, cond.elsepart, expr.Z802K3);
+        cond.elsepart.emit_assign(result, elseval);
+
+        result.type = ifval.type;
+        return result;
+      } else {
+        // Get called function.
+        let callee = await this.func(expr.Z7K1);
+
+        // Compose arguments.
+        let args = new Array();
+        for (let a of callee.args) {
+          let subexpr = expr[a.name];
+          let v = await this.compose(func, body, subexpr);
+          args.push(v);
+        }
+
+        // Call function.
+        let retval = new Variable(null, callee.rettype);
+        body.emit_evoke(callee, retval, args);
+        return retval;
       }
-
-      // Call function.
-      let retval = new Variable(null, callee.rettype);
-      func.impl.body.emit_evoke(callee, retval, args);
-      return retval;
     } else if (expr.Z1K1 == "Z18") {
       // Argument reference.
       return func.arg(expr.Z18K1);
