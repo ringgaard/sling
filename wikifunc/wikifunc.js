@@ -91,10 +91,9 @@ const INSTR_CONVERT  = 4;
 const INSTR_RETURN   = 5;
 const INSTR_DECLARE  = 6;
 
-
 class Instruction {
-  constructor(type, func, dst, src) {
-    this.type = type;
+  constructor(op, func, dst, src) {
+    this.op = op;
     this.func = func;
     this.dst = dst;
     this.src = src;
@@ -106,7 +105,7 @@ class Instruction {
 
   generate(code) {
     //this.annotate(code);
-    if (this.type == INSTR_CALL) {
+    if (this.op == INSTR_CALL) {
       code.push("let ");
       code.push(this.dst.name);
       code.push(" = ");
@@ -119,18 +118,18 @@ class Instruction {
         first = false;
       }
       code.push(");\n");
-    } else if (this.type == INSTR_ASSIGN) {
+    } else if (this.op == INSTR_ASSIGN) {
       code.push(this.dst.name);
       code.push(" = ");
       code.push(this.src.name);
       code.push(";\n");
-    } else if (this.type == INSTR_CONST) {
+    } else if (this.op == INSTR_CONST) {
       code.push("const ");
       code.push(this.dst.name);
       code.push(" = ");
       code.push(JSON.stringify(this.src));
       code.push(";\n");
-    } else if (this.type == INSTR_CONVERT) {
+    } else if (this.op == INSTR_CONVERT) {
       code.push("let ");
       code.push(this.dst.name);
       code.push(" = ");
@@ -138,11 +137,11 @@ class Instruction {
       code.push("(");
       code.push(this.src.name);
       code.push(");\n");
-    } else if (this.type == INSTR_RETURN) {
+    } else if (this.op == INSTR_RETURN) {
       code.push("return ");
       code.push(this.src.name);
       code.push(";\n");
-    } else if (this.type == INSTR_DECLARE) {
+    } else if (this.op == INSTR_DECLARE) {
       code.push("let ");
       code.push(this.src.name);
       code.push(";\n");
@@ -152,11 +151,11 @@ class Instruction {
   }
 
   annotate(code) {
-    if (this.type == INSTR_CALL) {
+    if (this.op == INSTR_CALL) {
       code.push("// Call ");
       code.push(this.func.item.label());
       code.push("\n");
-    } else if (this.type == INSTR_CONVERT) {
+    } else if (this.op == INSTR_CONVERT) {
       code.push("// Convert ");
       code.push(this.src?.type?.item?.label() || this.src?.type || "??");
       code.push(" -> ");
@@ -173,8 +172,8 @@ class Block {
     this.instructions = new Array();
   }
 
-  emit(type, func, dst, src) {
-    this.instructions.push(new Instruction(type, func, dst, src));
+  emit(op, func, dst, src) {
+    this.instructions.push(new Instruction(op, func, dst, src));
   }
 
   emit_call(func, retval, args) {
@@ -206,9 +205,21 @@ class Block {
         let arg = native_args[i];
         let converter = arg.type.tojs;
         if (converter) {
-          let native_arg = new Variable(null, converter.jstype());
-          this.emit_convert(converter, native_arg, arg);
-          native_args[i] = native_arg;
+          // Try to find inverse.
+          let inverse = null;
+          for (let instr of this.instructions) {
+            if (instr.op == INSTR_CONVERT && instr.dst == arg) {
+              inverse = instr;
+              break;
+            }
+          }
+          if (inverse) {
+            native_args[i] = inverse.src;
+          } else {
+            let native_arg = new Variable(null, converter.jstype());
+            this.emit_convert(converter, native_arg, arg);
+            native_args[i] = native_arg;
+          }
         }
       }
 
@@ -232,16 +243,63 @@ class Block {
 
   baptize(namegen) {
     for (let instr of this.instructions) {
-      instr.baptize(namegen);
+      if (instr) instr.baptize(namegen);
+    }
+  }
+
+  eliminate_dead_code(liveset) {
+    for (let i = this.instructions.length - 1; i >= 0; --i) {
+      let instr = this.instructions[i];
+      if (!instr) continue;
+      if (instr.op == INSTR_CALL) {
+        if (liveset.has(instr.dst)) {
+          for (let arg of instr.src) liveset.add(arg);
+        } else {
+          this.instructions[i] = null;
+        }
+      } else if (instr.op == INSTR_CONVERT) {
+        if (liveset.has(instr.dst)) {
+          liveset.add(instr.src);
+        } else {
+          this.instructions[i] = null;
+        }
+      } else if (instr.op == INSTR_ASSIGN) {
+        if (liveset.has(instr.dst)) {
+          liveset.add(instr.src);
+        } else {
+          this.instructions[i] = null;
+        }
+      } else if (instr.op == INSTR_CONST) {
+        if (!liveset.has(instr.dst)) {
+          this.instructions[i] = null;
+        }
+      } else if (instr.op == INSTR_RETURN) {
+        liveset.add(instr.src);
+      } else if (instr.op == INSTR_DECLARE) {
+        if (!liveset.has(instr.src)) {
+          this.instructions[i] = null;
+        }
+      }
+    }
+  }
+
+  reach(reachable) {
+    for (let instr of this.instructions) {
+      if (instr && instr.func) reachable.add(instr.func);
     }
   }
 
   generate(code) {
     for (let instr of this.instructions) {
-      instr.generate(code);
+      if (instr) instr.generate(code);
     }
   }
 }
+
+const IMPL_JS = 1;
+const IMPL_COMPOSITION = 2;
+const IMPL_BUILTIN = 3;
+
 
 class Converter {
   constructor(item) {
@@ -289,10 +347,6 @@ class Composition {
   }
 }
 
-const IMPL_JS = 1;
-const IMPL_COMPOSITION = 2;
-const IMPL_BUILTIN = 3;
-
 class Native {
   constructor(item) {
     this.item = item;
@@ -312,10 +366,14 @@ class BuiltIn {
   }
 
   kind() { return IMPL_BUILTIN; }
+
   baptize(namegen) {}
+
   generate(code) {
     code.push("// BUILTIN ");
     code.push(this.item.id());
+    code.push(" for ");
+    code.push(this.item.contents().Z14K1);
     code.push("\n\n");
   }
 }
@@ -326,7 +384,6 @@ class Func {
     this.impl = null;
     this.args = new Array();
     this.rettype = null;
-    this.body = new Block();
   }
 
   name() {
@@ -339,16 +396,17 @@ class Func {
     }
   }
 
+  implementations() {
+    return this.item.contents().Z8K4.slice(1);
+  }
+
   baptize(namegen) {
     this.impl?.baptize(namegen);
   }
 
+
   generate(code) {
     this.impl.generate(code);
-  }
-
-  implementations() {
-    return this.item.contents().Z8K4.slice(1);
   }
 }
 
@@ -392,10 +450,18 @@ class Compiler {
       // Compose remaining functions.
       for (let f of remaining) {
         f.impl.body = new Block();
+        f.impl.args = f.args;
+
         let top = f.impl.item.contents().Z14K2;
         let retval = await this.compose(f, top);
         f.impl.body.emit_return(retval);
       }
+    }
+
+    // Eliminate dead code.
+    body.eliminate_dead_code(new Set());
+    for (let func of this.funcs.values()) {
+      func.impl.body?.eliminate_dead_code(new Set());
     }
 
     // Assign variable names.
@@ -404,15 +470,30 @@ class Compiler {
     for (let f of this.funcs.values()) f.baptize(namegen);
     body.baptize(namegen);
 
+    // Find reachable functions.
+    let reachable = new Set();
+    body.reach(reachable);
+    for (;;) {
+      let before = reachable.size;
+      for (let func of reachable) {
+        func.impl?.body?.reach(reachable);
+      }
+      if (reachable.size == before) break;
+    }
+
     // Generate code.
     let code = new Array();
     for (let converter of this.converters.values()) {
-      converter.generate(code);
-      code.push("\n");
+      if (reachable.has(converter)) {
+        converter.generate(code);
+        code.push("\n");
+      }
     }
     for (let func of this.funcs.values()) {
-      func.generate(code);
-      code.push("\n");
+      if (reachable.has(func)) {
+        func.impl.generate(code);
+        code.push("\n");
+      }
     }
     body.generate(code);
 
@@ -471,7 +552,7 @@ class Compiler {
     if (item.type() != "Z8") throw `${zid} is not a function`;
 
     // Select implementation.
-    let fallback;
+    let composition;
     let builtin;
     for (let i of func.implementations()) {
       let item = await this.wf.item(i);
@@ -485,16 +566,16 @@ class Compiler {
             break;
           }
         }
-        if (!builtin && contents.Z14K2) {
+        if (!builtin && contents.Z14K4) {
           builtin = item;
         }
-        if (!fallback && contents.Z14K2) {
-          fallback = item;
+        if (!composition && contents.Z14K2) {
+          composition = item;
         }
       }
     }
-    if (!func.impl && fallback) {
-      func.impl = new Composition(fallback);
+    if (!func.impl && composition) {
+      func.impl = new Composition(composition);
     }
     if (!func.impl && builtin) {
       func.impl = new BuiltIn(builtin);
@@ -522,16 +603,16 @@ class Compiler {
                 let converter = new Converter(item);
                 this.converters.set(c, converter);
                 type.tojs = converter;
+                if (type.fromjs) {
+                  type.tojs.inverse = type.fromjs;
+                  type.fromjs.inverse = type.tojs;
+                }
               }
             }
           }
           if (!type.tojs) type.tojs = null;
         }
       }
-    }
-
-    if (func.impl.kind() == IMPL_COMPOSITION) {
-      func.impl.args = func.args;
     }
 
     // Get return type.
@@ -550,6 +631,10 @@ class Compiler {
               let converter = new Converter(item);
               this.converters.set(c, converter);
               func.rettype.fromjs = converter;
+              if (func.rettype.tojs) {
+                func.rettype.tojs.inverse = func.rettype.fromjs;
+                func.rettype.fromjs.inverse = func.rettype.tojs;
+              }
             }
           }
         }
