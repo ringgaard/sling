@@ -312,6 +312,7 @@ worms = [
   ("dns", re.compile(r"^\/\?dns\=")),
   ("dns", re.compile(r"^\/\?\=PHP")),
   ("unix", re.compile(r"^\/\?unix:")),
+  ("case params", re.compile(r"^\/c\/\?")),
   ("version.js", re.compile(r"^\/c\/version\.js")),
   ("root params", re.compile(r"^\/\?")),
 ]

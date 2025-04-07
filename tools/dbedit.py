@@ -102,11 +102,11 @@ else:
     if flags.arg.append:
       for name, value in store.parse(flags.arg.append):
        frame.append(name, value)
-    content = frame.data(pretty=True, utf8=True)
+    content = frame.data(pretty=True, utf8=True).encode()
 
 # Write record to temp file.
 fd, fn = tempfile.mkstemp()
-f = os.fdopen(fd, "w")
+f = os.fdopen(fd, "wb")
 f.write(content)
 f.close()
 
@@ -115,7 +115,7 @@ editor = os.environ.get("EDITOR", "nano")
 os.system("%s %s" % (editor, fn))
 
 # Read edited record content.
-f = open(fn, "r")
+f = open(fn, "rb")
 newcontent = f.read()
 f.close()
 os.remove(fn)
@@ -139,4 +139,3 @@ else:
   print("Record %s updated" % flags.arg.id)
 
 db.close()
-

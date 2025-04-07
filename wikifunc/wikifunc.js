@@ -17,6 +17,18 @@ async function origin_loader(zid) {
   return new Item(JSON.parse(data[zid].wikilambda_fetch));
 }
 
+// Implementation overrides.
+const implementation_overrides = {
+  "Z13735": "Z23715", // largest prime divisor
+  "Z11060": "Z23705", // get last character of string
+  "Z14244": "Z23704", // get Nth character
+  "Z844": "Z10583", // Boolean equality
+  "Z14469": "Z18945", // blood compatibility, (for testing composition)
+  "Z18939": "Z23721", // character to sign
+};
+
+const annotate = true;
+
 class Item {
   constructor(json) {
     this.json = json;
@@ -90,6 +102,7 @@ const INSTR_CONST    = 3;
 const INSTR_CONVERT  = 4;
 const INSTR_RETURN   = 5;
 const INSTR_DECLARE  = 6;
+const INSTR_APPEND   = 7;
 
 class Instruction {
   constructor(op, func, dst, src) {
@@ -104,7 +117,7 @@ class Instruction {
   }
 
   generate(code) {
-    //this.annotate(code);
+    if (annotate) this.annotate(code);
     if (this.op == INSTR_CALL) {
       code.push("let ");
       code.push(this.dst.name);
@@ -145,6 +158,11 @@ class Instruction {
       code.push("let ");
       code.push(this.dst.name);
       code.push(";\n");
+    } else if (this.op == INSTR_APPEND) {
+      code.push(this.dst.name);
+      code.push(".push(");
+      code.push(this.src.name);
+      code.push(");\n");
     } else {
       throw "Illegal instruction";
     }
@@ -164,6 +182,10 @@ class Instruction {
       code.push(this.func.item.label());
       code.push("\n");
     }
+  }
+
+  reach(reachable) {
+    if (this.func) reachable.add(this.func);
   }
 }
 
@@ -187,7 +209,6 @@ class Conditional {
   }
 
   reach(reachable) {
-    reachable.add(condition);
     this.ifpart.reach(reachable);
     this.elsepart.reach(reachable);
   }
@@ -228,8 +249,12 @@ class Block {
     this.emit(INSTR_ASSIGN, null, dst, src);
   }
 
-  emit_const(v, s) {
-    this.emit(INSTR_CONST, null, v, s);
+  emit_const(v, constant) {
+    this.emit(INSTR_CONST, null, v, constant);
+  }
+
+  emit_append(v, element) {
+    this.emit(INSTR_APPEND, null, v, element);
   }
 
   emit_convert(converter, dst, src) {
@@ -327,13 +352,19 @@ class Block {
         if (!liveset.has(instr.dst)) {
           this.instructions[i] = null;
         }
+      } else if (instr.op == INSTR_APPEND) {
+        if (liveset.has(instr.dst)) {
+          liveset.add(instr.src);
+        } else {
+          this.instructions[i] = null;
+        }
       }
     }
   }
 
   reach(reachable) {
     for (let instr of this.instructions) {
-      if (instr && instr.func) reachable.add(instr.func);
+      if (instr) instr.reach(reachable);
     }
   }
 
@@ -366,6 +397,13 @@ class Converter {
   generate(code) {
     let contents = this.item.contents();
     let converter = contents.Z46K3 || contents.Z64K3;
+    if (annotate) {
+      code.push("// ");
+      code.push(this.item.label());
+      code.push(" ");
+      code.push(this.item.id());
+      code.push("\n");
+    }
     code.push(converter.Z16K2);
   }
 }
@@ -382,6 +420,14 @@ class Composition {
   }
 
   generate(code) {
+    if (annotate) {
+      code.push("// ");
+      code.push(this.item.label());
+      code.push(" ");
+      code.push(this.item.id());
+      code.push("\n");
+    }
+
     code.push("function ");
     code.push(this.item.contents().Z14K1);
     code.push("(");
@@ -403,6 +449,13 @@ class Native {
   kind() { return IMPL_JS; }
   baptize(namegen) {}
   generate(code) {
+    if (annotate) {
+      code.push("// ");
+      code.push(this.item.label());
+      code.push(" ");
+      code.push(this.item.id());
+      code.push("\n");
+    }
     code.push(this.item.contents().Z14K3.Z16K2);
     code.push("\n\n");
   }
@@ -445,6 +498,8 @@ class Func {
   }
 
   implementations() {
+    let override = implementation_overrides[this.name()];
+    if (override) return [override];
     return this.item.contents().Z8K4.slice(1);
   }
 
@@ -560,8 +615,19 @@ class Compiler {
   async compose(func, body, expr) {
     if (typeof(expr) === 'string') {
       // Constant.
+      if (expr == "Z11853") expr = "";  // TODO: ambiguous??
       let v = new Variable(null, typeof(expr));
       body.emit_const(v, expr);
+      return v;
+    } else if (expr instanceof Array) {
+      // List.
+      let type = await this.type(expr[0] + "[]");
+      let v = new Variable(null, type);
+      body.emit_const(v, []);
+      for (let i = 1; i < expr.length; ++i) {
+        let e = await this.compose(func, body, expr[i]);
+        body.emit_append(v, e);
+      }
       return v;
     } else if (expr.Z1K1 == "Z7") {
       if (expr.Z7K1 == "Z802") {
@@ -580,6 +646,12 @@ class Compiler {
 
         result.type = ifval.type;
         return result;
+      } else if (expr.Z7K1 == "Z801") {
+        // Echo is identity.
+        return await this.compose(func, body, expr.Z801K1);
+      } else if (expr.Z7K1 == "Z17895") {
+        // Untyping a list is identity.
+        return await this.compose(func, body, expr.Z17895K1);
       } else {
         // Get called function.
         let callee = await this.func(expr.Z7K1);
@@ -600,8 +672,22 @@ class Compiler {
     } else if (expr.Z1K1 == "Z18") {
       // Argument reference.
       return func.arg(expr.Z18K1);
+    } else if (expr.Z1K1 == "Z13518") {
+      // Natural number.
+      let type = await this.type("Z13518");
+      let v = new Variable(null, type);
+      let value = {Z13518K1: expr.Z13518K1};
+      body.emit_const(v, value);
+      return v;
+    } else if (expr.Z1K1 == "Z40") {
+      // Boolean.
+      let type = await this.type("Z40");
+      let v = new Variable(null, type);
+      let value = expr.Z40K1 == "Z41" ? true : false;
+      body.emit_const(v, value);
+      return v;
     } else {
-      throw `Unknown expression type: ${expr.Z1K1}`;
+      throw `Unknown expression in ${func.name()}: ${JSON.stringify(expr)}`;
     }
   }
 
@@ -713,17 +799,26 @@ class Compiler {
   }
 
   async type(zid) {
+    // Check for list type.
+    let typename = zid;
+    let islist = false;
+    if (zid.Z1K1 == "Z7" && zid.Z7K1 == "Z881") {
+      typename = zid.Z881K1 + "[]";
+      zid = zid.Z881K1;
+      islist = true;
+    }
+
     // Check if function is already known.
-    let type = this.types.get(zid);
+    let type = this.types.get(typename);
     if (type) return type;
 
     // Fetch type item.
     let item = await this.wf.item(zid);
     type = new Type(item);
+    if (islist) type.list = true;
 
-    this.types.set(zid, type);
+    this.types.set(typename, type);
     return type;
-
   }
 }
 
