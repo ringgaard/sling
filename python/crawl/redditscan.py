@@ -81,7 +81,7 @@ def fetch_posting(sid):
   try:
     while True:
       r = session.get("https://www.reddit.com/comments/%s.json" % sid[3:],
-                      headers = {"User-agent": "SLING Bot 1.0"})
+                      headers={"User-agent": "SLING Bot 1.0"}, timeout=180)
       if r.status_code != 429: break
       reset = int(r.headers.get("x-ratelimit-reset", 60))
       log.info("refetch rate limit", reset, "secs")
@@ -106,7 +106,7 @@ def fetch_new_postings():
   for sr in subreddits:
     # Fetch new postings for subreddit.
     r = session.get("https://www.reddit.com/r/" + sr + "/new.json",
-                    headers = {"User-agent": "SLING Bot 1.0"})
+                    headers={"User-agent": "SLING Bot 1.0"}, timeout=180)
     if r.status_code == 404:
       log.error("unknown subreddit:", sr)
       continue
@@ -173,4 +173,3 @@ while True:
   except:
     traceback.print_exc(file=sys.stdout)
     time.sleep(60)
-

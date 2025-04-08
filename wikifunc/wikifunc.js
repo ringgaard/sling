@@ -96,13 +96,13 @@ class Variable {
   }
 }
 
-const INSTR_CALL     = 1;
-const INSTR_ASSIGN   = 2;
-const INSTR_CONST    = 3;
-const INSTR_CONVERT  = 4;
-const INSTR_RETURN   = 5;
-const INSTR_DECLARE  = 6;
-const INSTR_APPEND   = 7;
+const INSTR_CALL     = 1;  // call function
+const INSTR_ASSIGN   = 2;  // assign value to existing variable
+const INSTR_CONST    = 3;  // declare constant
+const INSTR_CONVERT  = 4;  // convert from/jo javascript
+const INSTR_RETURN   = 5;  // return variable
+const INSTR_DECLARE  = 6;  // declare variable
+const INSTR_BUILD    = 7;  // build list
 
 class Instruction {
   constructor(op, func, dst, src) {
@@ -114,6 +114,63 @@ class Instruction {
 
   baptize(namegen) {
     if (this.dst) this.dst.baptize(namegen);
+  }
+
+  same(other) {
+    if (!other) return false;
+    if (this.op != other.op) return false;
+    if (this.func != other.func) return false;
+    if (this.src) {
+      if (!other.src) return false;
+      if (this.src instanceof Array) {
+        if (this.src.length != other.src.length) return false;
+        for (let i = 0; i < this.src.length; ++i) {
+          if (this.src[i] != other.src[i]) return false;
+        }
+      } else {
+        if (this.src != other.src) return false;
+      }
+    }
+    return true;
+  }
+
+  eliminate_dead_code(liveset) {
+    if (this.op == INSTR_CALL) {
+      if (liveset.has(this.dst)) {
+        for (let arg of this.src) liveset.add(arg);
+      } else {
+        return true;
+      }
+    } else if (this.op == INSTR_CONVERT) {
+      if (liveset.has(this.dst)) {
+        liveset.add(this.src);
+      } else {
+        return true;
+      }
+    } else if (this.op == INSTR_ASSIGN) {
+      if (liveset.has(this.dst)) {
+        liveset.add(this.src);
+      } else {
+        return true;
+      }
+    } else if (this.op == INSTR_CONST) {
+      if (!liveset.has(this.dst)) {
+        return true;
+      }
+    } else if (this.op == INSTR_RETURN) {
+      liveset.add(this.src);
+    } else if (this.op == INSTR_DECLARE) {
+      if (!liveset.has(this.dst)) {
+        return true;
+      }
+    } else if (this.op == INSTR_BUILD) {
+      if (liveset.has(this.dst)) {
+        for (let v in this.src) liveset.add(v)
+      } else {
+        return true;
+      }
+    }
+    return false;
   }
 
   generate(code) {
@@ -158,11 +215,15 @@ class Instruction {
       code.push("let ");
       code.push(this.dst.name);
       code.push(";\n");
-    } else if (this.op == INSTR_APPEND) {
+    } else if (this.op == INSTR_BUILD) {
+      code.push("let ");
       code.push(this.dst.name);
-      code.push(".push(");
-      code.push(this.src.name);
-      code.push(");\n");
+      code.push(" = [");
+      for (let i = 0; i <  this.src.length; ++i) {
+        if (i > 0) code.push(", ");
+        code.push(this.src[i].name);
+      }
+      code.push("];\n");
     } else {
       throw "Illegal instruction";
     }
@@ -184,6 +245,17 @@ class Instruction {
     }
   }
 
+  replace(oldvar, newvar) {
+    this.src
+    if (this.src == oldvar) {
+      this.src = newvar;
+    } else if (this.src instanceof Array) {
+      for (let i = 0; i < this.src.length; ++i) {
+        if (this.src[i] == oldvar) this.src[i] = newvar;
+      }
+    }
+  }
+
   reach(reachable) {
     if (this.func) reachable.add(this.func);
   }
@@ -202,10 +274,29 @@ class Conditional {
     this.elsepart.baptize(namegen);
   }
 
+  same(other) {
+    return false;
+  }
+
+  constant_conversion() {
+    this.ifpart.constant_conversion();
+    this.elsepart.constant_conversion();
+  }
+
+  eliminate_common_subexpressions() {
+    this.ifpart.eliminate_common_subexpressions();
+    this.elsepart.eliminate_common_subexpressions();
+  }
+
   eliminate_dead_code(liveset) {
     liveset.add(this.condition);
     this.ifpart.eliminate_dead_code(liveset);
     this.elsepart.eliminate_dead_code(liveset);
+  }
+
+  replace(oldvar, newvar) {
+    this.ifpart.replace(oldvar, newvar);
+    this.elsepart.replace(oldvar, newvar);
   }
 
   reach(reachable) {
@@ -253,8 +344,8 @@ class Block {
     this.emit(INSTR_CONST, null, v, constant);
   }
 
-  emit_append(v, element) {
-    this.emit(INSTR_APPEND, null, v, element);
+  emit_build(v, elements) {
+    this.emit(INSTR_BUILD, null, v, elements);
   }
 
   emit_convert(converter, dst, src) {
@@ -318,44 +409,50 @@ class Block {
     }
   }
 
+  constant_conversion() {
+    for (let i = 0; i < this.instructions.length; ++i) {
+      let instr = this.instructions[i];
+      if (instr?.constant_conversion) {
+        instr.constant_conversion();
+      } else if (instr?.op == INSTR_CONVERT && instr.src.constant) {
+        if (instr.func.name() == "Z13519" && instr.src.constant.Z13518K1) {
+          instr.op = INSTR_CONST;
+          instr.src = parseInt(instr.src.constant.Z13518K1);
+        }
+      }
+    }
+  }
+
+  eliminate_common_subexpressions() {
+    for (let i = 0; i < this.instructions.length; ++i) {
+      let instr = this.instructions[i];
+      if (!instr) continue;
+      let same = null;
+      for (let j = 0; j < i; ++j) {
+        if (instr.same(this.instructions[j])) {
+          same = this.instructions[j];
+          break;
+        }
+      }
+      if (same) {
+        // Replace variable.
+        this.replace(instr.dst, same.dst);
+
+        // Eliminate duplicate instruction.
+        this.instructions[i] = null;
+      }
+    }
+  }
+
+  replace(oldvar, newvar) {
+    for (let instr of this.instructions) instr?.replace(oldvar, newvar);
+  }
+
   eliminate_dead_code(liveset) {
     for (let i = this.instructions.length - 1; i >= 0; --i) {
       let instr = this.instructions[i];
-      if (!instr) continue;
-      if (!instr.op) {
-        instr.eliminate_dead_code(liveset);
-      } else if (instr.op == INSTR_CALL) {
-        if (liveset.has(instr.dst)) {
-          for (let arg of instr.src) liveset.add(arg);
-        } else {
-          this.instructions[i] = null;
-        }
-      } else if (instr.op == INSTR_CONVERT) {
-        if (liveset.has(instr.dst)) {
-          liveset.add(instr.src);
-        } else {
-          this.instructions[i] = null;
-        }
-      } else if (instr.op == INSTR_ASSIGN) {
-        if (liveset.has(instr.dst)) {
-          liveset.add(instr.src);
-        } else {
-          this.instructions[i] = null;
-        }
-      } else if (instr.op == INSTR_CONST) {
-        if (!liveset.has(instr.dst)) {
-          this.instructions[i] = null;
-        }
-      } else if (instr.op == INSTR_RETURN) {
-        liveset.add(instr.src);
-      } else if (instr.op == INSTR_DECLARE) {
-        if (!liveset.has(instr.dst)) {
-          this.instructions[i] = null;
-        }
-      } else if (instr.op == INSTR_APPEND) {
-        if (liveset.has(instr.dst)) {
-          liveset.add(instr.src);
-        } else {
+      if (instr) {
+        if (instr.eliminate_dead_code(liveset)) {
           this.instructions[i] = null;
         }
       }
@@ -378,7 +475,6 @@ class Block {
 const IMPL_JS = 1;
 const IMPL_COMPOSITION = 2;
 const IMPL_BUILTIN = 3;
-
 
 class Converter {
   constructor(item) {
@@ -561,10 +657,19 @@ class Compiler {
       }
     }
 
-    // Eliminate dead code.
-    body.eliminate_dead_code(new Set());
+    // Eliminate common subexpressions.
+    body.eliminate_common_subexpressions();
+    body.constant_conversion();
     for (let func of this.funcs.values()) {
-      func.impl.body?.eliminate_dead_code(new Set());
+      func.impl.body?.eliminate_common_subexpressions();
+      func.impl.body?.constant_conversion();
+    }
+
+    // Eliminate dead code.
+    let liveset = new Set();
+    body.eliminate_dead_code(liveset);
+    for (let func of this.funcs.values()) {
+      func.impl.body?.eliminate_dead_code(liveset);
     }
 
     // Assign variable names.
@@ -617,17 +722,19 @@ class Compiler {
       // Constant.
       if (expr == "Z11853") expr = "";  // TODO: ambiguous??
       let v = new Variable(null, typeof(expr));
+      v.constant = expr;
       body.emit_const(v, expr);
       return v;
     } else if (expr instanceof Array) {
       // List.
       let type = await this.type(expr[0] + "[]");
       let v = new Variable(null, type);
-      body.emit_const(v, []);
+      let elements = new Array();
       for (let i = 1; i < expr.length; ++i) {
         let e = await this.compose(func, body, expr[i]);
-        body.emit_append(v, e);
+        elements.push(e);
       }
+      body.emit_build(v, elements);
       return v;
     } else if (expr.Z1K1 == "Z7") {
       if (expr.Z7K1 == "Z802") {
@@ -677,6 +784,7 @@ class Compiler {
       let type = await this.type("Z13518");
       let v = new Variable(null, type);
       let value = {Z13518K1: expr.Z13518K1};
+      v.constant = value;
       body.emit_const(v, value);
       return v;
     } else if (expr.Z1K1 == "Z40") {
@@ -685,6 +793,7 @@ class Compiler {
       let v = new Variable(null, type);
       let value = expr.Z40K1 == "Z41" ? true : false;
       body.emit_const(v, value);
+      v.constant = value;
       return v;
     } else {
       throw `Unknown expression in ${func.name()}: ${JSON.stringify(expr)}`;
