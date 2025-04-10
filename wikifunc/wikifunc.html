@@ -1,0 +1,47 @@
+<html>
+<head>
+<title>WikiFunctions</title>
+<script src="wikifunc.js"></script>
+</head>
+<body>
+
+<script>
+
+var wiki = new WikiFunctions();
+
+async function oncompile() {
+  let code;
+  try {
+    let zid = document.getElementById("zid").value;
+    code = await wiki.compile(zid);
+    //let func = await wiki.func(zid);
+
+  document.getElementById("info").innerHTML = `
+name: ${code.name}
+label: ${code.label || ""}
+description: ${code.description || ""}
+`
+  document.getElementById("code").innerHTML = `
+function "${code.name}"(${code.args.join(",")}) {
+
+${code.body}
+}`;
+  } catch (e) {
+    document.getElementById("info").innerHTML = e.toString();
+    document.getElementById("code").innerHTML = "";
+  }
+}
+</script>
+
+
+<h1>WikiFunctions</h1>
+<label for="zid">ZID:</label>
+<input id="zid" value="Z13728">
+<button id="compile" onclick="oncompile()">Compile</button>
+<br>
+<pre id="info">
+</pre>
+<pre id="code" style="background: #f8f8f8;">
+</pre>
+</body>
+</html>

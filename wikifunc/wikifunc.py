@@ -38,6 +38,7 @@ pool =  urllib3.PoolManager()
 app = sling.net.HTTPServer(flags.arg.port)
 app.redirect("/", "/wikifunc/")
 app.file("/wikifunc/wikifunc.js", "wikifunc/wikifunc.js", "text/javascript")
+app.file("/wikifunc/", "wikifunc/wikifunc.html", "text/html")
 
 @app.route("/wikifunc/item")
 def handle_extract(request):
@@ -65,14 +66,18 @@ def handle_extract(request):
 
   return sling.net.HTTPStatic("application/json", item)
 
-@app.route("/wikifunc/forget")
+@app.route("/wikifunc/forget", method="POST")
 def handle_extract(request):
   # Get zid for item.
   zid = request.param("zid")
   if zid is None: return 500
 
   # Remove from cache.
-  if zid in cache: del cache[zid]
+  if zid in cache:
+    log.info("forget", zid)
+    del cache[zid]
+
+  return 200
 
 # Run app until shutdown.
 log.info("running")
