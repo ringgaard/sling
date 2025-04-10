@@ -21,6 +21,7 @@ async function origin_loader(zid) {
 const implementation_overrides = {
   "Z13735": "Z23715", // largest prime divisor
   "Z11060": "Z23705", // get last character of string
+  "Z12961": "Z23807", // append element to list
   "Z14244": "Z23704", // get Nth character
   "Z844": "Z10583", // Boolean equality
   "Z14469": "Z18945", // blood compatibility, (for testing composition)
@@ -120,7 +121,7 @@ class Instruction {
     if (!other) return false;
     if (this.op != other.op) return false;
     if (this.func != other.func) return false;
-    if (this.src) {
+    if (this.src != undefined) {
       if (!other.src) return false;
       if (this.src instanceof Array) {
         if (this.src.length != other.src.length) return false;
@@ -221,7 +222,13 @@ class Instruction {
       code.push(" = [");
       for (let i = 0; i <  this.src.length; ++i) {
         if (i > 0) code.push(", ");
-        code.push(this.src[i].name);
+        if (typeof(this.src[i]) === 'string') {
+          code.push('"');
+          code.push(this.src[i]);
+          code.push('"');
+        } else {
+          code.push(this.src[i].name);
+        }
       }
       code.push("];\n");
     } else {
@@ -283,9 +290,9 @@ class Conditional {
     this.elsepart.constant_conversion();
   }
 
-  eliminate_common_subexpressions() {
-    this.ifpart.eliminate_common_subexpressions();
-    this.elsepart.eliminate_common_subexpressions();
+  eliminate_common_subexpressions(scope) {
+    this.ifpart.eliminate_common_subexpressions(scope);
+    this.elsepart.eliminate_common_subexpressions(scope);
   }
 
   eliminate_dead_code(liveset) {
@@ -423,23 +430,36 @@ class Block {
     }
   }
 
-  eliminate_common_subexpressions() {
+  eliminate_common_subexpressions(scope) {
     for (let i = 0; i < this.instructions.length; ++i) {
       let instr = this.instructions[i];
       if (!instr) continue;
-      let same = null;
-      for (let j = 0; j < i; ++j) {
-        if (instr.same(this.instructions[j])) {
-          same = this.instructions[j];
-          break;
+      if (instr.eliminate_common_subexpressions) {
+        let before = this.instructions.slice(0, i);
+        instr.eliminate_common_subexpressions(scope.concat(before));
+      } else {
+        let same = null;
+        for (let j = 0; j < i; ++j) {
+          if (instr.same(this.instructions[j])) {
+            same = this.instructions[j];
+            break;
+          }
         }
-      }
-      if (same) {
-        // Replace variable.
-        this.replace(instr.dst, same.dst);
+        if (!same && scope) {
+          for (let outer of scope) {
+            if (instr.same(outer)) {
+              same = outer;
+              break;
+            }
+          }
+        }
+        if (same) {
+          // Replace variable.
+          this.replace(instr.dst, same.dst);
 
-        // Eliminate duplicate instruction.
-        this.instructions[i] = null;
+          // Eliminate duplicate instruction.
+          this.instructions[i] = null;
+        }
       }
     }
   }
@@ -658,10 +678,10 @@ class Compiler {
     }
 
     // Eliminate common subexpressions.
-    body.eliminate_common_subexpressions();
+    body.eliminate_common_subexpressions([]);
     body.constant_conversion();
     for (let func of this.funcs.values()) {
-      func.impl.body?.eliminate_common_subexpressions();
+      func.impl.body?.eliminate_common_subexpressions([]);
       func.impl.body?.constant_conversion();
     }
 
@@ -730,6 +750,7 @@ class Compiler {
       let type = await this.type(expr[0] + "[]");
       let v = new Variable(null, type);
       let elements = new Array();
+      elements.push(expr[0]);
       for (let i = 1; i < expr.length; ++i) {
         let e = await this.compose(func, body, expr[i]);
         elements.push(e);
@@ -959,7 +980,7 @@ class WikiFunctions {
 
     let code = await this.compile(zid);
 
-    f = Function(...code.args, code.body);
+    f = new Function(...code.args, code.body);
 
     this.functions.set(zid, f);
     return f;
