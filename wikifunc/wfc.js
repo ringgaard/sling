@@ -73,8 +73,10 @@ class Frontend {
       } else if (req.url.startsWith("/wfc")) {
         res.writeHead(200, {'Content-Type': 'text/html'});
         res.end(main_page);
+      } else if (req.url == "/favicon.ico") {
+        res.writeHead(402);
       } else {
-        console.log("unknown", req.headers);
+        console.log("unknown", req.url, req.headers);
         res.writeHead(400);
       }
     } catch (error) {
@@ -94,7 +96,7 @@ class Frontend {
     let zid = req.url.slice(10);
     let item = await this.wiki.item(zid);
     res.writeHead(200, {'Content-Type': 'application/json'});
-    res.end(JSON.stringify(item));
+    res.end(JSON.stringify(item.json));
   }
 
   async execute(req, res) {
