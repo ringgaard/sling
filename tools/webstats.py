@@ -160,11 +160,12 @@ apis = [
   ("witex",                re.compile(r"^\/witex\/extract")),
   ("sitemap",              re.compile(r"^\/kb\/sitemap")),
 
-  ("RS refine" ,           re.compile(r"^\/refine")),
-  ("RS reconcile" ,        re.compile(r"^\/reconcile")),
-  ("RS preview" ,          re.compile(r"^\/preview")),
-  ("RS suggest" ,          re.compile(r"^\/suggest")),
-  ("RS propose" ,          re.compile(r"^\/propose")),
+  ("RS refine",            re.compile(r"^\/refine")),
+  ("RS reconcile",         re.compile(r"^\/reconcile")),
+  ("RS preview",           re.compile(r"^\/preview")),
+  ("RS suggest",           re.compile(r"^\/suggest")),
+  ("RS propose",           re.compile(r"^\/propose")),
+  ("wikifunc",             re.compile(r"^\/wikifunc")),
 ]
 
 sources = [

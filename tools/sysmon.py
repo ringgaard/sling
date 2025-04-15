@@ -105,7 +105,7 @@ app.page("/",
           <md-data-field field="status">Status</md-data-field>
           <md-data-field field="running" class="right">Running</md-data-field>
           <md-data-field field="waiting" class="right">Waiting</md-data-field>
-          <md-data-field field="running" class="right">Running</md-data-field>
+          <md-data-field field="pending" class="right">Pending</md-data-field>
           <md-data-field field="done" class="right">Done</md-data-field>
           <md-data-field field="failed" class="right">Failed</md-data-field>
         </md-data-table>

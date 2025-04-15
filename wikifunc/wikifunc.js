@@ -28,8 +28,6 @@ const implementation_overrides = {
   "Z18939": "Z23721", // character to sign
 };
 
-const annotate = true;
-
 class Item {
   constructor(json) {
     this.json = json;
@@ -174,8 +172,8 @@ class Instruction {
     return false;
   }
 
-  generate(code) {
-    if (annotate) this.annotate(code);
+  generate(code, options) {
+    if (options.annotate) this.annotate(code);
     if (this.op == INSTR_CALL) {
       code.push("let ");
       code.push(this.dst.name);
@@ -311,13 +309,13 @@ class Conditional {
     this.elsepart.reach(reachable);
   }
 
-  generate(code) {
+  generate(code, options) {
     code.push("if (");
     code.push(this.condition.name);
     code.push(") {\n");
-    this.ifpart.generate(code);
+    this.ifpart.generate(code, options);
     code.push("} else {\n");
-    this.elsepart.generate(code);
+    this.elsepart.generate(code, options);
     code.push("}\n");
   }
 }
@@ -485,9 +483,9 @@ class Block {
     }
   }
 
-  generate(code) {
+  generate(code, options) {
     for (let instr of this.instructions) {
-      if (instr) instr.generate(code);
+      if (instr) instr.generate(code, options);
     }
   }
 }
@@ -510,10 +508,10 @@ class Converter {
     return contents.Z46K4 || contents.Z64K4;
   }
 
-  generate(code) {
+  generate(code, options) {
     let contents = this.item.contents();
     let converter = contents.Z46K3 || contents.Z64K3;
-    if (annotate) {
+    if (options.annotate) {
       code.push("// ");
       code.push(this.item.label());
       code.push(" ");
@@ -535,8 +533,8 @@ class Composition {
     if (this.body) this.body.baptize(namegen);
   }
 
-  generate(code) {
-    if (annotate) {
+  generate(code, options) {
+    if (options.annotate) {
       code.push("// ");
       code.push(this.item.label());
       code.push(" ");
@@ -552,7 +550,7 @@ class Composition {
       code.push(this.args[i].name);
     }
     code.push(") {\n");
-    this.body?.generate(code);
+    this.body?.generate(code, options);
     code.push("}\n");
   }
 }
@@ -564,8 +562,8 @@ class Native {
 
   kind() { return IMPL_JS; }
   baptize(namegen) {}
-  generate(code) {
-    if (annotate) {
+  generate(code, options) {
+    if (options.annotate) {
       code.push("// ");
       code.push(this.item.label());
       code.push(" ");
@@ -586,7 +584,7 @@ class BuiltIn {
 
   baptize(namegen) {}
 
-  generate(code) {
+  generate(code, options) {
     code.push("// BUILTIN ");
     code.push(this.item.id());
     code.push(" for ");
@@ -624,8 +622,8 @@ class Func {
   }
 
 
-  generate(code) {
-    this.impl.generate(code);
+  generate(code, options) {
+    this.impl.generate(code, options);
   }
 }
 
@@ -713,17 +711,17 @@ class Compiler {
     let code = new Array();
     for (let converter of this.converters.values()) {
       if (reachable.has(converter)) {
-        converter.generate(code);
+        converter.generate(code, this.wf.options);
         code.push("\n");
       }
     }
     for (let func of this.funcs.values()) {
       if (reachable.has(func)) {
-        func.impl.generate(code);
+        func.impl.generate(code, this.wf.options);
         code.push("\n");
       }
     }
-    body.generate(code);
+    body.generate(code, this.wf.options);
 
     // Return code.
     let argnames = new Array();
@@ -952,10 +950,10 @@ class Compiler {
   }
 }
 
-class WikiFunctions {
-  constructor() {
-    this.load = cached_loader;
-    //this.load = origin_loader;
+export class WikiFunctions {
+  constructor(options) {
+    this.options = options || {};
+    this.load = this.options.loader || origin_loader;
     this.items = new Map();
     this.functions = new Map();
   }
@@ -986,3 +984,5 @@ class WikiFunctions {
     return f;
   }
 }
+
+//export { WikiFunctions };
