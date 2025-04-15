@@ -1,6 +1,6 @@
 // Cached WikiFunctions loader.
 async function cached_loader(zid) {
-  const wf_fetch_url = "https://ringgaard.com/wikifunc/item?zid=";
+  const wf_fetch_url = "https://ringgaard.com/wfc/item/";
   let url = wf_fetch_url + zid;
   let r = await fetch(url);
   let data = await r.json();
@@ -119,7 +119,7 @@ class Instruction {
     if (!other) return false;
     if (this.op != other.op) return false;
     if (this.func != other.func) return false;
-    if (this.src != undefined) {
+    if (this.src) {
       if (!other.src) return false;
       if (this.src instanceof Array) {
         if (this.src.length != other.src.length) return false;
@@ -129,6 +129,8 @@ class Instruction {
       } else {
         if (this.src != other.src) return false;
       }
+    } else {
+      if (this.dst != other.dst) return false;
     }
     return true;
   }
@@ -402,6 +404,7 @@ class Block {
     } else if (kind == IMPL_COMPOSITION) {
       this.emit_call(func, retval, args);
     } else if (kind == IMPL_BUILTIN) {
+      // TODO: handle calls to built-ins.
       this.emit_call(func, retval, args);
     } else {
       throw "Unknown function kind";
@@ -950,7 +953,7 @@ class Compiler {
   }
 }
 
-export class WikiFunctions {
+class WikiFunctions {
   constructor(options) {
     this.options = options || {};
     this.load = this.options.loader || origin_loader;
@@ -985,4 +988,4 @@ export class WikiFunctions {
   }
 }
 
-//export { WikiFunctions };
+export { WikiFunctions };

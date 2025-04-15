@@ -6,7 +6,7 @@ import * as wikifunc from './wikifunc.js';
 // Get command-line argumnents.
 let port = 8080;
 let annotate = false;
-for (let i = 1; i < process.argv.length; ++i) {
+for (let i = 1; i < process.argv.length - 1; ++i) {
   if (process.argv[i] == "--port") {
     port = JSON.parse(process.argv[++i]);
   } else if (process.argv[i] == "--annotate") {
@@ -81,7 +81,7 @@ class Frontend {
       }
     } catch (error) {
       console.log("error", req.url, error);
-      res.writeHead(500);
+      res.writeHead(500).end();
     }
   }
 
@@ -125,7 +125,7 @@ class Frontend {
         res.end(JSON.stringify(response));
       } catch (error) {
         console.log("error", req.url, error);
-        res.writeHead(500);
+        res.writeHead(500).end();
       }
     });
   }
