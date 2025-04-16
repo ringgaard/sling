@@ -105,7 +105,6 @@ class Frontend {
     req.on('end', async () => {
       try {
         let request = JSON.parse(Buffer.concat(chunks).toString());
-        console.log("request", request);
 
         let compile_start =  performance.now();
         let func = await this.wiki.func(request.func);
@@ -135,4 +134,4 @@ let frontend = new Frontend();
 
 let server = http.createServer(frontend.handle.bind(frontend));
 server.listen(port, '');
-console.log('Server running');
+console.log('WikiFunctions server running on port', port);

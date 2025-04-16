@@ -372,7 +372,8 @@ class Block {
       let native_args = Array.from(args);
       for (let i = 0; i < native_args.length; ++i) {
         let arg = native_args[i];
-        let converter = arg.type.tojs;
+        // Find converter for formal argument type (not actual argument type).
+        let converter = func.args[i].type.tojs;
         if (converter) {
           // Try to find inverse.
           let inverse = null;
