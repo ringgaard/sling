@@ -42,6 +42,12 @@ class CHSStream(object):
         print(now, r.status_code, r.reason)
         time.sleep(60)
         continue
+      if r.status_code == 416:
+        print("Stream expired:", r.status_code, r.reason)
+        self.timepoint = None
+        time.sleep(10)
+        continue
+
       r.raise_for_status()
 
       # Receive response stream and break it into messages.
@@ -178,4 +184,3 @@ def retrieve_owners(company):
     psc = retrieve_list(company_url(company) +
                         "/persons-with-significant-control")
     if psc != None: company["psc"] = psc
-
