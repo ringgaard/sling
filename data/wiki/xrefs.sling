@@ -61,6 +61,7 @@
     P646,  ; Freebase MID
     P2671, ; Google Knowledge Graph ID
     P8168, ; FactGrid
+    P8313, ; Lex ID
   ]
 
   ; Mnemonics for cross-referenced properties.
@@ -101,6 +102,7 @@
     "kg": "P2671"       ; Google Knowledge Graph ID
     "fg": "P8168"       ; FactGrid ID
     "cpr": "PCPR"       ; CPR number
+    "lex": "P8313"      ; Lex ID
   }
 
   ; Case insensitive cross-reference properties.
