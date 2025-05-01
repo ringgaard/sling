@@ -23,23 +23,12 @@
 
 namespace sling {
 
-// Return system error.
-static Status Error(const char *context) {
-  return Status(errno, context, strerror(errno));
-}
-
 // Return truncation error.
 static Status Truncated() {
   return Status(EBADMSG, "packet truncated");
 }
 
 Status DBClient::Connect(const string &database, const string &agent) {
-  // Close existing connection.
-  if (sock_ != -1) {
-    close(sock_);
-    sock_ = -1;
-  }
-
   // Parse database specification.
   database_ = database;
   agent_ = agent;
@@ -61,58 +50,9 @@ Status DBClient::Connect(const string &database, const string &agent) {
     }
   }
 
-  // Look up server address and connect.
-  struct addrinfo hints = {}, *addrs;
-  hints.ai_family = AF_INET;
-  hints.ai_socktype = SOCK_STREAM;
-  hints.ai_protocol = IPPROTO_TCP;
-  int err = getaddrinfo(hostname.c_str(), portname.c_str(), &hints, &addrs);
-  if (err != 0) return Status(err, gai_strerror(err), hostname);
-
-  for (struct addrinfo *addr = addrs; addr != nullptr; addr = addr->ai_next) {
-    // Create socket.
-    sock_ = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
-    if (sock_ == -1) {
-      err = errno;
-      break;
-    }
-
-    // Connect socket.
-    if (connect(sock_, addr->ai_addr, addr->ai_addrlen) == 0) break;
-    err = errno;
-    close(sock_);
-    sock_ = -1;
-  }
-  freeaddrinfo(addrs);
-  if (sock_ == -1) return Status(err, strerror(err), database);
-
-  // Upgrade connection from HTTP to SLINGDB protocol.
-  request_.Clear();
-  request_.Write(
-    "GET / HTTP/1.1\r\n"
-    "Host: " + hostname + "\r\n"
-    "User-Agent: " + agent + "\r\n"
-    "Connection: upgrade\r\n"
-    "Upgrade: slingdb\r\n"
-    "\r\n");
-  int rc = send(sock_, request_.begin(), request_.available(), 0);
-  if (rc < 0) return Error("send");
-  if (rc != request_.available()) {
-    return Status(EBADE, "Upgrade failed in send");
-  }
-
-  response_.Clear();
-  while (response_.available() < 12 ||
-         memcmp(response_.end() - 4, "\r\n\r\n", 4) != 0) {
-    response_.Ensure(256);
-    int rc = recv(sock_, response_.end(), response_.remaining(), 0);
-    if (rc < 0) return Error("recv");
-    if (rc == 0) return Status(EBADE, "Upgrade failed in recv");
-    response_.Append(rc);
-  }
-  if (!response_.data().starts_with("HTTP/1.1 101")) {
-    return Status(EBADE, "Upgrade failed");
-  }
+  // Connect to database server.
+  Status st = Client::Connect(hostname, portname, "slingdb", agent);
+  if (!st.ok()) return st;
 
   // Switch to database.
   if (!dbname.empty()) {
@@ -120,14 +60,6 @@ Status DBClient::Connect(const string &database, const string &agent) {
   } else {
     return Status::OK;
   }
-}
-
-Status DBClient::Close() {
-  if (sock_ != -1) {
-    if (close(sock_) != 0) return Error("close");
-    sock_ = -1;
-  }
-  return Status::OK;
 }
 
 Status DBClient::Use(const string &dbname) {
@@ -312,6 +244,9 @@ Status DBClient::Stream(DBIterator *iterator, Callback cb) {
       if (!st.ok()) return st;
       st = cb(record);
       if (!st.ok()) return st;
+    } else if (reply_ == DBERROR) {
+      int size = buffer->available();
+      return Status(EINVAL, buffer->Consume(size), size);
     } else {
       return Status(EBADMSG, "bad db packet");
     }
@@ -430,66 +365,14 @@ Status DBClient::Transact(Transaction tx) {
 }
 
 Status DBClient::Do(DBVerb verb, IOBuffer *response) {
-  // Send request.
-  Status st = Send(verb, &request_);
+  if (response == nullptr) response = &response_;
+  Status st = Perform(verb, &request_, response);
   if (!st.ok()) return st;
 
-  // Receive response.
-  if (response == nullptr) response = &response_;
-  return Receive(response);
-}
-
-Status DBClient::Send(DBVerb verb, IOBuffer *request) {
-  DBHeader hdr;
-  hdr.verb = verb;
-  hdr.size = request->available();
-
-  size_t reqsize = request->available();
-  size_t bufsize = sizeof(DBHeader) + reqsize;
-  iovec buf[2];
-  buf[0].iov_base = &hdr;
-  buf[0].iov_len = sizeof(DBHeader);
-  buf[1].iov_base = request->Consume(reqsize);
-  buf[1].iov_len = reqsize;
-
-  int rc = writev(sock_, buf, 2);
-  if (rc == 0) return Status(EPIPE, "Connection closed");
-  if (rc < 0) return Error("send");
-  if (rc != bufsize) return Status(EMSGSIZE, "Send truncated");
-  Perf::add_network_transmit(rc);
-
-  return Status::OK;
-}
-
-Status DBClient::Receive(IOBuffer *response) {
-  DBHeader hdr;
-  char *data = reinterpret_cast<char *>(&hdr);
-  int left = sizeof(DBHeader);
-  while (left > 0) {
-    int rc = recv(sock_, data, left, 0);
-    if (rc == 0) return Status(EPIPE, "Connection closed");
-    if (rc < 0) return Error("recv");
-    data += rc;
-    Perf::add_network_receive(rc);
-    left -= rc;
-  }
-  reply_ = hdr.verb;
-
-  response->Clear();
-  response->Ensure(hdr.size);
-  left = hdr.size;
-  while (left > 0) {
-    int rc = recv(sock_, response->end(), left, 0);
-    if (rc == 0) return Status(EPIPE, "Connection closed");
-    if (rc < 0) return Error("recv");
-    response->Append(rc);
-    Perf::add_network_receive(rc);
-    left -= rc;
-  }
-
-  // Check for errors.
+  // Check for server errors.
   if (reply_ == DBERROR) {
-    return Status(EINVAL, response->Consume(hdr.size), hdr.size);
+    int size = response->available();
+    return Status(EINVAL, response->Consume(size), size);
   }
 
   return Status::OK;

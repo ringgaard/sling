@@ -111,3 +111,13 @@ cc_library(
   ],
 )
 
+cc_library(
+  name = "client",
+  srcs = ["client.cc"],
+  hdrs = ["client.h"],
+  deps = [
+    "//sling/base",
+    "//sling/base:perf",
+    "//sling/util:iobuffer",
+  ],
+)

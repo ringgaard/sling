@@ -71,7 +71,7 @@ cc_library(
   deps = [
     ":dbprotocol",
     "//sling/base",
-    "//sling/base:perf",
+    "//sling/net:client",
     "//sling/util:iobuffer",
   ],
 )
@@ -96,4 +96,3 @@ cc_binary(
     "//sling/file:posix",
   ],
 )
-

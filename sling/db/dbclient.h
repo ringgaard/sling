@@ -22,6 +22,7 @@
 #include "sling/base/status.h"
 #include "sling/base/types.h"
 #include "sling/db/dbprotocol.h"
+#include "sling/net/client.h"
 #include "sling/util/iobuffer.h"
 
 namespace sling {
@@ -49,20 +50,15 @@ struct DBIterator {
 
 // Database connection to database server. This uses the binary SLINGDB
 // protocol to communicate with the database server.
-class DBClient {
+class DBClient : public Client {
  public:
   // Database iteration callback.
   typedef std::function<Status(const DBRecord &record)> Callback;
-
-  ~DBClient() { Close(); }
 
   // Connect to database server. The format of the database name is:
   // [<hostname>[:<port>]/]<database name>. The default server is localhost and
   // the default port is 7070.
   Status Connect(const string &database, const string &agent);
-
-  // Close connection to server.
-  Status Close();
 
   // Switch to using another database on server.
   Status Use(const string &dbname);
@@ -111,9 +107,6 @@ class DBClient {
   // Clear all records from database.
   Status Clear();
 
-  // Check if client is connected to database server.
-  bool connected() const { return sock_ != -1; }
-
  private:
   // Database transaction.
   typedef std::function<Status()> Transaction;
@@ -136,27 +129,15 @@ class DBClient {
   // Send request to server and receive reply.
   Status Do(DBVerb verb, IOBuffer *response = nullptr);
 
-  // Send request to server.
-  Status Send(DBVerb verb, IOBuffer *request);
-
-  // Receive response from server.
-  Status Receive(IOBuffer *response);
-
   // Database name.
   string database_;
 
   // User agent.
   string agent_;
 
-  // Socket for connection.
-  int sock_ = -1;
-
   // Request and response buffers.
   IOBuffer request_;
   IOBuffer response_;
-
-  // Reply verb from last request.
-  DBVerb reply_ = DBOK;
 };
 
 }  // namespace sling
