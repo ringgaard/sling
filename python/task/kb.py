@@ -282,7 +282,7 @@ class KnowledgeBaseWorkflow:
 
   def property_usage(self):
     """Task for computing property usage statistics."""
-    usage = self.wf.task("property-usage", params={"maxtypes": 200})
+    usage = self.wf.task("property-usage", params={"maxtypes": 500})
     usage.attach_input("kb", self.data.knowledge_base())
     usage.attach_output("output", self.usage())
 

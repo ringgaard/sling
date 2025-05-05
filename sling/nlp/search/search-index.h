@@ -21,6 +21,7 @@
 #include "sling/base/types.h"
 #include "sling/file/repository.h"
 #include "sling/string/text.h"
+#include "sling/util/json.h"
 
 namespace sling {
 namespace nlp {
@@ -101,9 +102,7 @@ class SearchIndex {
   }
 
   // Search query normalization.
-  string normalization() const {
-    return repository_.GetBlockString("normalization");
-  }
+  string normalization() const { return params_["normalization"]; }
 
   // Check if term is a stopword.
   bool stopword(uint64 fp) const {
@@ -151,6 +150,9 @@ class SearchIndex {
 
   // Number of term buckets.
   int num_buckets_ = 0;
+
+  // Search index parameters.
+  JSON params_;
 
   // Stopwords.
   std::unordered_set<uint64> stopwords_;

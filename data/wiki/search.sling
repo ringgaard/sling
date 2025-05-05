@@ -1,6 +1,6 @@
 {
   ; Term normalization.
-  normalization: "clnp"
+  normalization: "clnpqD"
   dictionary_aliases: false
 
   ; Languages for selecting dictionary terms.

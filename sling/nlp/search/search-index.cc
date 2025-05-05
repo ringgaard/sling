@@ -25,6 +25,10 @@ void SearchIndex::Load(const string &filename) {
   repository_.LoadAll();
   repository_.Close();
 
+  // Get search index parameters.
+  JSON json = JSON::Read(repository_.GetBlockString("params"));
+  params_.MoveFrom(json);
+
   // Initialize document table.
   document_index_.Initialize(repository_);
 

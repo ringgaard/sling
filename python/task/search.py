@@ -36,11 +36,10 @@ class SearchWorkflow:
                             dir=corpora.kbdir(),
                             format="repository")
 
-  def search_index(self):
+  def search_index(self, aux):
     """Resource for search index repository."""
-    return self.wf.resource("search-index.repo",
-                            dir=corpora.kbdir(),
-                            format="repository")
+    filename = "aux-search-index.repo" if aux == 1 else "search-index.repo"
+    return self.wf.resource(filename, dir=corpora.kbdir(), format="repository")
 
   def search_vocabulary(self):
     """Resource for search vocabulary."""
@@ -62,13 +61,13 @@ class SearchWorkflow:
 
     return repo
 
-  def build_search_index(self, items=None):
-    """Task for building search dictionary."""
+  def build_search_index(self, aux=2, items=None):
+    """Task for building search index."""
     if items == None: items = self.data.items()
 
     with self.wf.namespace("search"):
       # Map input items and output documents and terms.
-      mapper = self.wf.task("search-index-mapper")
+      mapper = self.wf.task("search-index-mapper", params={"aux": aux})
       mapper.attach_input("config", self.search_config())
       mapper.attach_input("dictionary", self.search_dictionary())
       self.wf.connect(self.wf.read(items, name="item-reader"), mapper)
@@ -76,14 +75,14 @@ class SearchWorkflow:
       terms = self.wf.channel(mapper, "terms", format="message/term")
 
       # Shuffle terms in bucket order (bucket, termid, entityid).
-      postings = self.wf.shuffle(terms, bufsize=256 * 1024 * 1024)
+      postings = self.wf.shuffle(terms, bufsize=512 * 1024 * 1024)
 
       # Collect entities and terms and build search index.
       builder = self.wf.task("search-index-builder")
       builder.attach_input("config", self.search_config())
       self.wf.connect(documents, builder, name="documents")
       self.wf.connect(postings, builder, name="terms")
-      repo = self.search_index()
+      repo = self.search_index(aux)
       builder.attach_output("repository", repo)
 
     return repo
@@ -109,7 +108,13 @@ def build_search_dictionary():
 def build_search_index():
   log.info("Build search index")
   wf = SearchWorkflow("search")
-  wf.build_search_index()
+  wf.build_search_index(0)
+  run(wf.wf)
+
+def build_aux_search_index():
+  log.info("Build aux search index")
+  wf = SearchWorkflow("search")
+  wf.build_search_index(1)
   run(wf.wf)
 
 def build_search_vocabulary():

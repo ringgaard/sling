@@ -35,7 +35,7 @@ class NameTableBuilder : public task::FrameProcessor {
  public:
   void Startup(task::Task *task) override {
     // Set name normalization. Use phrase normalization for name table.
-    normalization_ = ParseNormalization(task->Get("normalization", "lcnP"));
+    normalization_ = ParseNormalization(task->Get("normalization", "lcpnDP"));
 
     // Statistics.
     num_aliases_ = task->GetCounter("aliases");
@@ -241,4 +241,3 @@ REGISTER_TASK_PROCESSOR("name-table-builder", NameTableBuilder);
 
 }  // namespace nlp
 }  // namespace sling
-

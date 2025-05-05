@@ -58,4 +58,10 @@ uint32 Fingerprint32(const char *bytes, size_t len) {
   return fp ^ (fp >> 32);
 }
 
+uint16 WordFingerprint(uint64 fp) {
+  uint64 mix = ((fp >> 48) ^ (fp >> 32) ^ (fp >> 16) ^ fp) & 0xFFFF;
+  if (mix < WORDFP_FIRST) mix += WORDFP_FIRST;
+  return mix;
+}
+
 }  // namespace sling

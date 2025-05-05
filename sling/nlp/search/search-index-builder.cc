@@ -23,10 +23,12 @@
 #include "sling/nlp/kb/calendar.h"
 #include "sling/nlp/search/search-dictionary.h"
 #include "sling/nlp/search/search-config.h"
+#include "sling/nlp/wiki/wiki.h"
 #include "sling/task/frames.h"
 #include "sling/task/task.h"
 #include "sling/string/text.h"
-#include "sling/util/arena.h"
+#include "sling/util/json.h"
+#include "sling/util/iobuffer.h"
 #include "sling/util/mutex.h"
 #include "sling/util/unicode.h"
 
@@ -37,6 +39,7 @@ namespace nlp {
 class SearchIndexMapper : public task::FrameProcessor {
  public:
   typedef std::unordered_set<uint64> Terms;
+  typedef std::vector<uint16> Words;
 
   void Startup(task::Task *task) override {
     // Read search index configuration.
@@ -58,10 +61,16 @@ class SearchIndexMapper : public task::FrameProcessor {
       year_terms_[y] = Fingerprint(year.data(), year.size());
     }
 
+    // Initialize aux filter.
+    task->Fetch("aux", &aux_);
+    if (aux_ != 2) filter_.Init(commons_);
+
     // Statistics.
     num_items_ = task->GetCounter("items");
     num_terms_ = task->GetCounter("terms");
+    num_words_ = task->GetCounter("words");
     num_stopwords_ = task->GetCounter("stopwords");
+    num_discarded_ = task->GetCounter("discarded");
   }
 
   void Process(Slice key, uint64 serial, const Frame &frame) override {
@@ -74,6 +83,16 @@ class SearchIndexMapper : public task::FrameProcessor {
       }
     }
 
+    // Skip/keep aux items; 0=skip aux, 1=keep aux, 2=discard none.
+    if (aux_ != 2) {
+      bool discard = filter_.IsAux(frame);
+      if (aux_ == 1) discard = !discard;
+      if (discard) {
+        num_discarded_->Increment();
+        return;
+      }
+    }
+
     // Compute frequency count for item.
     int popularity = frame.GetInt(n_popularity_);
     int fanin = frame.GetInt(n_fanin_);
@@ -81,6 +100,7 @@ class SearchIndexMapper : public task::FrameProcessor {
 
     // Collect search terms for item.
     Terms terms;
+    Words words;
     bool omit_properties = config_.omit(key.str());
     for (const Slot &s : frame) {
       // Check if properties should be indexed.
@@ -95,7 +115,7 @@ class SearchIndexMapper : public task::FrameProcessor {
           Handle lang = store->GetString(value)->qualifier();
           if (!config_.foreign(lang)) {
             Text name = store->GetString(value)->str();
-            Collect(&terms, name);
+            Collect(&terms, &words, name);
           }
         }
       } else if (type == n_item_) {
@@ -105,7 +125,7 @@ class SearchIndexMapper : public task::FrameProcessor {
           Collect(&terms, item);
         } else if (store->IsString(value)) {
           Text str = store->GetString(value)->str();
-          Collect(&terms, str);
+          Collect(&terms, &words, str);
         }
       } else if (type == n_date_) {
         Date date(Object(store, value));
@@ -121,7 +141,7 @@ class SearchIndexMapper : public task::FrameProcessor {
             Text lex = store->GetString(value)->str();
             Document document(store);
             if (lexer_.Lex(&document, lex)) {
-              Collect(&terms, document);
+              Collect(&terms, &words, document);
             }
           }
         }
@@ -129,19 +149,23 @@ class SearchIndexMapper : public task::FrameProcessor {
     }
     num_items_->Increment();
     num_terms_->Increment(terms.size());
+    num_words_->Increment(words.size());
 
     // Get entity id for item.
-    uint32 entityid = OutputEntity(key, count);
+    uint32 entityid = OutputEntity(key, count, words);
     CHECK(entityid >= 0);
 
     // Output search terms for item.
     for (uint64 term : terms) OutputTerm(entityid, term);
   }
 
-  uint32 OutputEntity(Slice id, uint32 count) {
+  uint32 OutputEntity(Slice id, uint32 count, const Words &words) {
     task::TaskContext ctxt("OutputEntity", id);
+    IOBuffer buffer;
+    buffer.Write(&count, sizeof(uint32));
+    buffer.Write(words.data(), words.size() * sizeof(uint16));
     MutexLock lock(&mu_);
-    documents_->Send(new task::Message(id, Slice(&count, sizeof(uint32))));
+    documents_->Send(new task::Message(id, buffer.data()));
     return next_entityid_++;
   }
 
@@ -153,8 +177,11 @@ class SearchIndexMapper : public task::FrameProcessor {
       Slice(&entityid, sizeof(uint32))));
   }
 
-  void Collect(Terms *terms, Text text) {
+  void Collect(Terms *terms, Words *words, Text text) {
     if (!UTF8::Valid(text.data(), text.size())) return;
+    if (words != nullptr && !words->empty()) {
+      words->push_back(WORDFP_BREAK);
+    }
     std::vector<uint64> tokens;
     config_.tokenizer().TokenFingerprints(text, &tokens);
     for (uint64 token : tokens) {
@@ -162,6 +189,7 @@ class SearchIndexMapper : public task::FrameProcessor {
         num_stopwords_->Increment();
       } else {
         terms->insert(token);
+        words->push_back(WordFingerprint(token));
       }
     }
   }
@@ -174,11 +202,22 @@ class SearchIndexMapper : public task::FrameProcessor {
     }
   }
 
-  void Collect(Terms *terms, const Document &document) {
+  void Collect(Terms *terms, Words *words, const Document &document) {
+    // Add break before document start.
+    if (words != nullptr && !words->empty()) {
+      words->push_back(WORDFP_BREAK);
+    }
+
     // Add text to terms.
     for (const Token &token : document.tokens()) {
       uint64 term = config_.fingerprint(token.word());
-      if (!config_.stopword(term)) terms->insert(term);
+      if (config_.stopword(term)) {
+        num_stopwords_->Increment();
+      } else {
+        terms->insert(term);
+        if (token.brk() >= PARAGRAPH_BREAK) words->push_back(WORDFP_BREAK);
+        words->push_back(WordFingerprint(term));
+      }
     }
 
     // Add links to terms.
@@ -206,6 +245,10 @@ class SearchIndexMapper : public task::FrameProcessor {
   DocumentTokenizer tokenizer_;
   DocumentLexer lexer_{&tokenizer_};
 
+  // Auxiliary items filter.
+  AuxFilter filter_;
+  int aux_ = 2;
+
   // Output channels.
   task::Channel *documents_ = nullptr;
   task::Channel *terms_ = nullptr;
@@ -215,6 +258,10 @@ class SearchIndexMapper : public task::FrameProcessor {
 
   // Fingerprints for years.
   uint64 year_terms_[MAX_YEAR];
+
+  // Document generation.
+  bool score_names_ = false;
+  bool score_lex_ = false;
 
   // Symbols.
   Name n_name_{names_, "name"};
@@ -229,7 +276,9 @@ class SearchIndexMapper : public task::FrameProcessor {
   // Statistics.
   task::Counter *num_items_ = nullptr;
   task::Counter *num_terms_ = nullptr;
+  task::Counter *num_words_ = nullptr;
   task::Counter *num_stopwords_ = nullptr;
+  task::Counter *num_discarded_ = nullptr;
 
   // Mutex for serializing access to entity ids.
   Mutex mu_;
@@ -251,8 +300,10 @@ class SearchIndexBuilder : public task::Processor {
     config.Load(&store, task->GetInputFile("config"));
     num_buckets_ = config.buckets();
 
-    // Add normalization flags to repository.
-    repository_.AddBlock("normalization", config.normalization());
+    // Add search configuration to repository.
+    JSON::Object params;
+    params.Add("normalization", config.normalization());
+    repository_.AddBlock("params", params.AsString());
 
     // Add stopwords to repository.
     std::vector<uint64> stopwords;
@@ -289,23 +340,25 @@ class SearchIndexBuilder : public task::Processor {
     delete message;
   }
 
-  void ProcessDocument(Slice docid, Slice count) {
+  void ProcessDocument(Slice docid, Slice data) {
     // Write document index entry.
     document_index_->Write(&document_offset_, sizeof(uint64));
 
     // Write entry.
     CHECK_LT(docid.size(), 256);
-    CHECK_EQ(count.size(), sizeof(uint32));
     uint8 idlen = docid.size();
-    int32 num_tokens = 0;
-    document_items_->Write(count.data(), sizeof(uint32));
+    int32 token_bytes = data.size() - sizeof(uint32);
+    uint32 num_tokens = token_bytes / sizeof(uint16);
+
+    document_items_->Write(data.data(), sizeof(uint32));
     document_items_->Write(&idlen, sizeof(uint8));
     document_items_->Write(&num_tokens, sizeof(num_tokens));
     document_items_->Write(docid.data(), idlen);
+    document_items_->Write(data.data() + sizeof(uint32), token_bytes);
 
     // Compute offset of next entry.
     document_offset_ += 2 * sizeof(uint32) + sizeof(uint8) +
-                        idlen + num_tokens * sizeof(uint16);
+                        idlen + token_bytes;
     num_documents_->Increment();
   }
 

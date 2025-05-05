@@ -36,6 +36,16 @@ inline uint32 Fingerprint32(const Slice &slice) {
   return Fingerprint32(slice.data(), slice.size());
 }
 
+// A word fingerprints is a 16-bit compressed fingerprints constructed from a
+// 64-bit fingerprint. Never returns a reserved fingerprint.
+
+enum ReservedWordFingerprint {
+  WORDFP_BREAK  = 0,
+  WORDFP_FIRST  = 16,
+};
+
+uint16 WordFingerprint(uint64 fp);
+
 }  // namespace sling
 
 #endif  // SLING_UTIL_FINGERPRINT_H_

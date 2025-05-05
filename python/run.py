@@ -208,6 +208,10 @@ commands = [
     help="Build search index",
     package="sling.task.search",
   ),
+  Command("build_aux_search_index",
+    help="Build aux search index",
+    package="sling.task.search",
+  ),
   Command("build_search_vocabulary",
     help="Build search vocabulary",
     package="sling.task.search",
@@ -352,4 +356,3 @@ def main():
 
 if __name__ == '__main__':
   main()
-

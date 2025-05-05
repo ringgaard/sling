@@ -55,10 +55,12 @@ cc_library(
     "//sling/file:repository",
     "//sling/nlp/document:lex",
     "//sling/nlp/kb:calendar",
+    "//sling/nlp/wiki:wiki",
     "//sling/task",
     "//sling/task:frames",
     "//sling/string:text",
-    "//sling/util:arena",
+    "//sling/util:json",
+    "//sling/util:iobuffer",
     "//sling/util:mutex",
   ],
   alwayslink = 1,
@@ -72,6 +74,7 @@ cc_library(
     "//sling/base",
     "//sling/file:repository",
     "//sling/string:text",
+    "//sling/util:json",
   ],
 )
 

@@ -124,4 +124,3 @@ class SearchConfiguration {
 }  // namespace sling
 
 #endif  // SLING_NLP_SEARCH_CONFIG_H_
-
