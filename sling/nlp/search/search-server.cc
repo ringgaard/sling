@@ -97,11 +97,10 @@ class SearchService {
     JSON::Object json;
     json.Add("total", total);
     JSON::Array *hits = json.AddArray("hits");
-    for (auto *result : result.hits()) {
-      JSON::Object *hit = hits->AddObject();
-      int score = result->score();
-      hit->Add("docid", result->id());
-      hit->Add("score", score);
+    for (const nlp::SearchEngine::Hit &hit : result.hits()) {
+      JSON::Object *result = hits->AddObject();
+      result->Add("docid", hit.id());
+      result->Add("score", hit.score);
     }
 
     json.Write(response->buffer());

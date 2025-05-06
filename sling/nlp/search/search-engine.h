@@ -25,49 +25,51 @@ namespace nlp {
 
 class SearchEngine {
  public:
-  // Document comparison operator.
+  // Query hit.
   typedef SearchIndex::Document Document;
-  struct DocumentCompare {
-    bool operator()(const Document *a, const Document *b) {
-      return a->score() > b->score();
+  struct Hit {
+    Hit(const Document *document) : document(document), score(0) {}
+    Text id() const { return document->id(); }
+    const Document *document;
+    int score;
+  };
+
+  // Search hit comparison operator.
+  struct HitCompare {
+    bool operator()(const Hit &a, const Hit &b) {
+      return a.score > b.score;
     }
   };
 
   // Search results for selecting top-k results.
-  typedef Top<const Document *, DocumentCompare> Hits;
+  typedef Top<Hit, HitCompare> Hits;
 
   // Search results.
   class Results {
    public:
     Results(int limit) : hits_(limit) {}
 
-    // Clear search results.
-    void Reset(const SearchEngine *search);
-
     // Return search matches.
     const Hits &hits() const { return hits_; }
 
-    // Score result against query.
-    int Score(Text text, int base) const;
+    // Score document against query.
+    int Score(const Document *document);
 
    private:
     // Check for unigram query match.
-    bool Unigram(uint64 term) const;
+    bool Unigram(uint16 term) const;
 
     // Check for bigram query match.
-    bool Bigram(uint64 term1, uint64 term2) const;
+    bool Bigram(uint16 term1, uint16 term2) const;
 
-    // Search terms.
-    std::vector<uint64> query_terms_;
+    // Work fingerprints for search terms.
+    std::vector<uint16> query_terms_;
 
     // Search hits.
     Hits hits_;
 
     // Total number of matches.
     int total_hits_ = 0;
-
-    // Seach engine.
-    const SearchEngine *search_ = nullptr;
 
     friend class SearchEngine;
   };

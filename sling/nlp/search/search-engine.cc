@@ -33,21 +33,22 @@ void SearchEngine::Load(const string &filename) {
 
 int SearchEngine::Search(Text query, Results *results) {
   // Return empty result if index has not been loaded.
-  results->Reset(this);
   if (!loaded()) return 0;
 
   // Tokenize query.
-  tokenize(query, &results->query_terms_);
+  std::vector<uint64> query_terms;
+  tokenize(query, &query_terms);
 
   // Look up posting lists for tokens in search index.
   std::vector<const SearchIndex::Term *> terms;
-  for (uint64 token : results->query_terms_) {
+  for (uint64 token : query_terms) {
     if (index_.stopword(token)) continue;
 
     const SearchIndex::Term *term = index_.Find(token);
     if (term == nullptr) return 0;
 
     terms.push_back(term);
+    results->query_terms_.push_back(WordFingerprint(token));
   }
   if (terms.empty()) return 0;
 
@@ -97,49 +98,45 @@ int SearchEngine::Search(Text query, Results *results) {
     candidates_end = candidates_begin + matches[0].size();
   }
 
-  // Output results.
+  // Rank hits.
   int hits = candidates_end - candidates_begin;
   results->total_hits_ = hits;
   for (const uint32 *c = candidates_begin; c != candidates_end; ++c) {
-    const Document *document = index_.GetDocument(*c);
-    results->hits_.push(document);
+    Hit hit(index_.GetDocument(*c));
+    hit.score = results->Score(hit.document);
+    results->hits_.push(hit);
   }
   results->hits_.sort();
   return hits;
 }
 
-void SearchEngine::Results::Reset(const SearchEngine *search) {
-  search_ = search;
-  query_terms_.clear();
-  hits_.clear();
-}
-
-int SearchEngine::Results::Score(Text text, int base) const {
-  std::vector<uint64> tokens;
-  search_->tokenize(text, &tokens);
+int SearchEngine::Results::Score(const Document *document) {
   int unigrams = 0;
   int bigrams = 0;
-  uint64 prev = 0;
-  for (uint64 token : tokens) {
-    if (Unigram(token)) {
+  const uint16 *begin = document->tokens();
+  const uint16 *end = begin + document->num_tokens();
+  uint16 prev = WORDFP_BREAK;
+  for (const uint16 *t = begin; t < end; ++t) {
+    if (Unigram(*t)) {
       unigrams++;
-      if (prev != 0 && Bigram(prev, token)) bigrams++;
+      if (prev != WORDFP_BREAK && Bigram(prev, *t)) bigrams++;
     }
-    prev = token;
+    prev = *t;
   }
+
   int boost = 100 * bigrams + 10 * unigrams + 1;
-  if (unigrams == tokens.size()) boost++;
-  return (base + 1) * boost;
+  if (unigrams == query_terms_.size()) boost++;
+  return (document->score() + 1) * boost;
 }
 
-bool SearchEngine::Results::Unigram(uint64 term) const {
+bool SearchEngine::Results::Unigram(uint16 term) const {
   for (int i = 0; i < query_terms_.size(); ++i) {
     if (query_terms_[i] == term) return true;
   }
   return false;
 }
 
-bool SearchEngine::Results::Bigram(uint64 term1, uint64 term2) const {
+bool SearchEngine::Results::Bigram(uint16 term1, uint16 term2) const {
   for (int i = 0; i < query_terms_.size() - 1; ++i) {
     if (query_terms_[i] == term1 && query_terms_[i + 1] == term2) return true;
   }
