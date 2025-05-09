@@ -32,6 +32,7 @@
 #include "sling/nlp/kb/name-table.h"
 #include "sling/nlp/kb/xref.h"
 #include "sling/nlp/search/search-engine.h"
+#include "sling/nlp/search/search-client.h"
 #include "sling/util/mutex.h"
 #include "sling/util/top.h"
 
@@ -90,6 +91,9 @@ class KnowledgeService {
 
   // Load search index.
   void LoadSearchIndex(const string &search_index);
+
+  // Connect to search server.
+  void ConnectSearch(const string &search_server);
 
   // Open item record set for offline items.
   void OpenItems(const string &filename);
@@ -234,6 +238,9 @@ class KnowledgeService {
 
   // Search engine.
   SearchEngine search_;
+
+  // Client interface to search server.
+  SearchClient search_server_;
 
   // Record database for looking up items that are not in the knowledge base.
   RecordDatabase *items_ = nullptr;

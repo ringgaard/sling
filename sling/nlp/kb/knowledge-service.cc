@@ -324,6 +324,10 @@ void KnowledgeService::LoadSearchIndex(const string &search_index) {
   search_.Load(search_index);
 }
 
+void KnowledgeService::ConnectSearch(const string &search_server) {
+  search_server_.Connect(search_server, "kb");
+}
+
 void KnowledgeService::OpenItems(const string &filename) {
   delete items_;
   RecordFileOptions options;
@@ -683,30 +687,67 @@ void KnowledgeService::HandleSearch(HTTPRequest *request,
   // Get query
   Text query = ws.Get("q");
   int limit = ws.Get("limit", 50);
+  Text tag = ws.Get("tag");
+  if (tag.empty()) tag = "main";
   VLOG(1) << "Search query: " << query;
 
-  // Search index.
-  SearchEngine::Results results(limit);
-  int hits = search_.Search(query, &results);
+  if (search_server_.connected()) {
+    // Send search query to search server.
+    JSON result = search_server_.Search(query, limit, tag);
+    if (!result.valid()) {
+      response->SendError(500, nullptr, "Error sending query to search engine");
+      return;
+    }
+    Handles matches(ws.store());
+    Builder b(ws.store());
+    int total = result["total"].i();
+    b.Add(n_hits_, total);
+    JSON::Array *hits = result["hits"].a();
+    if (!hits) {
+      response->SendError(500, nullptr, "Bad response from search engine");
+      return;
+    }
+    for (int i = 0; i < hits->size(); ++i) {
+     const JSON &hit = (*hits)[i];
+      if (!hit.valid()) continue;
+      Text docid = hit["docid"].t();
+      int score = hit["score"].i();
 
-  // Generate response.
-  Handles matches(ws.store());
-  Builder b(ws.store());
-  b.Add(n_hits_, hits);
-  for (const SearchEngine::Hit &hit : results.hits()) {
-    Frame item(ws.store(), RetrieveItem(ws.store(), hit.id()));
-    if (item.invalid()) continue;
-    Builder match(ws.store());
-    GetStandardProperties(item, &match, true);
-    int score = hit.score;
-    match.Add(n_score_, score);
-    Handle h = match.Create().handle();
-    matches.push_back(h);
+      Frame item(ws.store(), RetrieveItem(ws.store(), docid));
+      Builder match(ws.store());
+      GetStandardProperties(item, &match, true);
+      match.Add(n_score_, score);
+      Handle h = match.Create().handle();
+      matches.push_back(h);
+    }
+    b.Add(n_matches_,  Array(ws.store(), matches));
+
+    // Return response.
+    ws.set_output(b.Create());
+  } else {
+    // Search index.
+    SearchEngine::Results results(limit);
+    int hits = search_.Search(query, &results);
+
+    // Generate response.
+    Handles matches(ws.store());
+    Builder b(ws.store());
+    b.Add(n_hits_, hits);
+    for (const SearchEngine::Hit &hit : results.hits()) {
+      Frame item(ws.store(), RetrieveItem(ws.store(), hit.id()));
+      if (item.invalid()) continue;
+      Builder match(ws.store());
+      GetStandardProperties(item, &match, true);
+      int score = hit.score;
+      match.Add(n_score_, score);
+      Handle h = match.Create().handle();
+      matches.push_back(h);
+    }
+    b.Add(n_matches_,  Array(ws.store(), matches));
+
+    // Return response.
+    ws.set_output(b.Create());
   }
-  b.Add(n_matches_,  Array(ws.store(), matches));
-
-  // Return response.
-  ws.set_output(b.Create());
 }
 
 void KnowledgeService::HandleGetItem(HTTPRequest *request,

@@ -129,7 +129,7 @@
 
     ; Author names creates to many matches for articles
     ;P50: item,        ; author
-    ;P2093: item,      ; author name string
+    P2093: name,       ; author name string
   }
 
   ; Items with large number of properties that are omitted from the search

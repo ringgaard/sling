@@ -91,16 +91,43 @@ cc_library(
   ],
 )
 
+cc_library(
+  name = "search-protocol",
+  hdrs = ["search-protocol.h"],
+  deps = [
+    "//sling/base",
+  ],
+)
+
 cc_binary(
   name = "search-server",
   srcs = ["search-server.cc"],
   deps = [
     ":search-engine",
+    ":search-protocol",
     "//sling/base",
     "//sling/file:posix",
     "//sling/file:recordio",
     "//sling/net:http-server",
     "//sling/util:json",
     "//sling/util:mutex",
+  ],
+)
+
+cc_library(
+  name = "search-client",
+  srcs = ["search-client.cc"],
+  hdrs = ["search-client.h"],
+  deps = [
+    ":search-protocol",
+    "//sling/base",
+    "//sling/frame:store",
+    "//sling/frame:object",
+    "//sling/frame:serialization",
+    "//sling/net:client",
+    "//sling/stream:memory",
+    "//sling/string:text",
+    "//sling/util:mutex",
+    "//sling/util:json",
   ],
 )

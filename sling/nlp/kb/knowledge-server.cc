@@ -30,6 +30,7 @@ DEFINE_string(kb, "data/e/kb/kb.sling", "Knowledge base");
 DEFINE_string(names, "data/e/kb/en/name-table.repo", "Name table");
 DEFINE_string(xref, "", "Cross-reference table");
 DEFINE_string(search, "", "Search index");
+DEFINE_string(search_server, "", "Search server");
 DEFINE_string(items, "", "Off-line items");
 DEFINE_string(itemdb, "", "Database for off-line items");
 DEFINE_string(mediadb, "", "Media database");
@@ -62,6 +63,10 @@ int main(int argc, char *argv[]) {
   if (!FLAGS_search.empty()) {
     LOG(INFO) << "Loading search index from " << FLAGS_search;
     kb.LoadSearchIndex(FLAGS_search);
+  }
+  if (!FLAGS_search_server.empty()) {
+    LOG(INFO) << "Connect to search server " << FLAGS_search_server;
+    kb.ConnectSearch(FLAGS_search_server);
   }
   if (!FLAGS_items.empty()) {
     LOG(INFO) << "Open item set " << FLAGS_items;

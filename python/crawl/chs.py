@@ -81,19 +81,19 @@ class CHSStream(object):
 # Retrieve data from Companies House with rate limiting.
 def retrieve(url):
   # Send query.
-  r = apisession.get(url, auth=credentials)
+  r = apisession.get(url, auth=credentials, timeout=60)
 
   if r.status_code == 502:
     # Try again on 502 Bad Gateway error.
     print("bad gateway, try again")
     time.sleep(10)
-    r = apisession.get(url, auth=credentials)
+    r = apisession.get(url, auth=credentials, timeout=60)
   elif r.status_code == 401:
     # Keep trying on authorization errors.
     while r.status_code == 401:
       print("auth error", r.headers)
       time.sleep(60)
-      r = apisession.get(url, auth=credentials)
+      r = apisession.get(url, auth=credentials, timeout=60)
 
   # Check status.
   if r.status_code != 200:

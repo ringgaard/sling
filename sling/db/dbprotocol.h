@@ -107,7 +107,7 @@ struct DBHeader {
 //
 //   key: {
 //     ksize:uint32;
-//     key: byte[keylen];
+//     key: byte[ksize];
 //   }
 //
 //   record: {
