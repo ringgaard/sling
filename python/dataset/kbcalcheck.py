@@ -88,7 +88,7 @@ for k, v, in calendar["/w/years"]:
 
   dt = sling.Date(v)
   if dt.precision != sling.YEAR or dt.year != k:
-    print("Year time mismatch", v.id, v.name, year, dt)
+    print("Year time mismatch", v.id, v.name, year, dt, dt.year)
     errors += 1
 
 print("*** Check decades")
@@ -158,4 +158,3 @@ for k, v, in calendar["/w/millennia"]:
     errors += 1
 
 if errors > 0: raise Exception("errors in calendar")
-

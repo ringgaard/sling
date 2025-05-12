@@ -132,7 +132,10 @@ def kbdir(language=None):
   """Location of knowledge base datasets."""
   return workdir("kb", language)
 
+def searchdir(language=None):
+  """Location of search index datasets."""
+  return workdir("search", language)
+
 def repository(path):
   """Location of file in Git repository."""
   return flags.arg.repository + "/" + path
-

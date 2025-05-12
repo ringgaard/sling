@@ -33,18 +33,18 @@ class SearchWorkflow:
   def search_dictionary(self):
     """Resource for search dictionary repository."""
     return self.wf.resource("search-dictionary.repo",
-                            dir=corpora.kbdir(),
+                            dir=corpora.searchdir(),
                             format="repository")
 
   def search_index(self, aux):
     """Resource for search index repository."""
-    filename = "aux-search-index.repo" if aux == 1 else "search-index.repo"
-    return self.wf.resource(filename, dir=corpora.kbdir(), format="repository")
+    fn = "aux-search-index.repo" if aux == 1 else "search-index.repo"
+    return self.wf.resource(fn, dir=corpora.searchdir(), format="repository")
 
   def search_vocabulary(self):
     """Resource for search vocabulary."""
     return self.wf.resource("search-vocabulary.map",
-                            dir=corpora.kbdir(),
+                            dir=corpora.searchdir(),
                             format="textmap/term")
 
   def build_search_dictionary(self, items=None):

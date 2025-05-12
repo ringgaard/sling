@@ -278,7 +278,18 @@ class PDFPage:
           if parbreak == 2 and l.bbbreak(): points += 1
           if points > 1: l.para = True
         prev = l
+    elif parbreak == 3:
+      # BB name register.
+      left = self.linestart() + indent
+      for l in self.lines:
+        # Fix up soft hyphens.
+        if prev and prev.last() == "-":
+          if not prev.short and l.capital() < 0:
+            prev.hyphen = True
+            prev.text = prev.text[:-1]
 
+        # Line breaks on lines starting with letter.
+        l.para = l.text[0].isupper()
 
 class PDFChapter:
   def __init__(self, book, pageno, title, index):
@@ -294,7 +305,7 @@ class PDFChapter:
     h2 = self.book.param("h2", 24.0)
     dropcap = self.book.param("dropcap", 100.0)
     pagebreaks = self.book.param("pagebreaks", False)
-    linebreak = self.book.param("linebreak", 1)
+    linebreak = self.book.param("linebreak", 0)
 
     s = []
     if self.title is not None:
@@ -328,7 +339,7 @@ class PDFChapter:
 
         if next != level or l.para:
           s.append(level_end[level])
-          if l.vbreak: s.append("\n")
+          if l.vbreak: s.append("<br>\n")
           s.append(level_start[next])
           level = next
 
@@ -656,6 +667,7 @@ if __name__ == "__main__":
   flags.parse()
 
   book = PDFBook()
+  if flags.arg.toc: book.read_toc(flags.arg.toc)
 
   pdf = fitz.open(flags.arg.input)
   book.extract(pdf)
