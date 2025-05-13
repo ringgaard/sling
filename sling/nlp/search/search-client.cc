@@ -36,7 +36,7 @@ Status SearchClient::Connect(const string &server, const string &agent) {
   return Status::OK;
 }
 
-JSON SearchClient::Search(Text q, int limit, Text tag) {
+JSON SearchClient::Search(Text q, int limit, Text tag) const {
   JSON::Object query;
   query.Add("q", q);
   query.Add("limit", limit);
@@ -54,7 +54,7 @@ JSON SearchClient::Search(Text q, int limit, Text tag) {
 }
 
 Status SearchClient::Fetch(std::vector<Text> &ids,
-                           Store *store, Handles *items) {
+                           Store *store, Handles *items) const {
   MutexLock lock(&mu_);
   IOBuffer request;
   IOBuffer response;

@@ -169,6 +169,7 @@ class SearchService {
     // Return result.
     JSON::Object json;
     json.Add("total", total);
+    json.Add("fetchable", shard->fetchable());
     JSON::Array *hits = json.AddArray("hits");
     for (const nlp::SearchEngine::Hit &hit : result.hits()) {
       JSON::Object *result = hits->AddObject();

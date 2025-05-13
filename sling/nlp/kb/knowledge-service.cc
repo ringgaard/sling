@@ -390,12 +390,21 @@ Handle KnowledgeService::RetrieveItem(Store *store, Text id,
     }
   }
 
+  if (handle.IsNil() && offline && search_server_.connected()) {
+    // Try looking up item in search backend.
+    std::vector<Text> itemids;
+    itemids.push_back(id);
+    Handles items(store);
+    Status st = search_server_.Fetch(itemids, store, &items);
+    if (st.ok() && items.size() == 1) handle = items[0];
+  }
+
   return handle;
 }
 
 void KnowledgeService::Preload(const Frame &item, Store *store) {
-  // Skip preloading if there is no item database.
-  if (itemdb_ == nullptr) return;
+  // Skip preloading if there is no item database or search backend.
+  if (itemdb_== nullptr && !search_server_.connected()) return;
 
   // Find proxies.
   HandleSet proxies;
@@ -407,22 +416,34 @@ void KnowledgeService::Preload(const Frame &item, Store *store) {
 
   // Prefetch items for proxies into store.
   if (!proxies.empty()) {
-    std::vector<Slice> keys;
-    for (Handle h : proxies) {
-      keys.push_back(store->FrameId(h));
-    }
-
-    MutexLock lock(&mu_);
-    std::vector<DBRecord> recs;
-    Status st = itemdb_->Get(keys, &recs);
-    if (st.ok()) {
-      for (auto &rec : recs) {
-        ArrayInputStream stream(rec.value);
-        InputParser parser(store, &stream);
-        parser.Read();
+    if (itemdb_!= nullptr) {
+      std::vector<Slice> keys;
+      for (Handle h : proxies) {
+        keys.push_back(store->FrameId(h));
       }
-    } else {
-      LOG(WARNING) << "Error fetching items: " << st;
+
+      MutexLock lock(&mu_);
+      std::vector<DBRecord> recs;
+      Status st = itemdb_->Get(keys, &recs);
+      if (st.ok()) {
+        for (auto &rec : recs) {
+          ArrayInputStream stream(rec.value);
+          InputParser parser(store, &stream);
+          parser.Read();
+        }
+      } else {
+        LOG(WARNING) << "Error fetching items: " << st;
+      }
+    } else if (search_server_.connected()) {
+      std::vector<Text> itemids;
+      for (Handle h : proxies) {
+        itemids.push_back(store->FrameId(h));
+      }
+      Handles items(store);
+      Status st = search_server_.Fetch(itemids, store, &items);
+      if (!st.ok()) {
+        LOG(WARNING) << "Error fetching search items: " << st;
+      }
     }
   }
 }
@@ -683,6 +704,7 @@ void KnowledgeService::HandleQuery(HTTPRequest *request,
 void KnowledgeService::HandleSearch(HTTPRequest *request,
                                     HTTPResponse *response) {
   WebService ws(kb_, request, response);
+  Store *store = ws.store();
 
   // Get query
   Text query = ws.Get("q");
@@ -698,29 +720,50 @@ void KnowledgeService::HandleSearch(HTTPRequest *request,
       response->SendError(500, nullptr, "Error sending query to search engine");
       return;
     }
-    Handles matches(ws.store());
-    Builder b(ws.store());
+    Handles matches(store);
+    Builder b(store);
     int total = result["total"].i();
+    bool fetchable = result["fetchable"].b();
     b.Add(n_hits_, total);
     JSON::Array *hits = result["hits"].a();
     if (!hits) {
       response->SendError(500, nullptr, "Bad response from search engine");
       return;
     }
+
+    if (fetchable) {
+      std::vector<Text> itemids;
+      for (int i = 0; i < hits->size(); ++i) {
+       const JSON &hit = (*hits)[i];
+        if (!hit.valid()) continue;
+        Text docid = hit["docid"].t();
+        Handle item = store->LookupExisting(docid);
+        if (item.IsNil() || store->IsProxy(item)) itemids.push_back(docid);
+
+      }
+      if (!itemids.empty()) {
+        Handles items(store);
+        Status st = search_server_.Fetch(itemids, store, &items);
+        if (!st.ok()) {
+          LOG(WARNING) << "Error fetching from search engine: " << st.message();
+        }
+      }
+    }
+
     for (int i = 0; i < hits->size(); ++i) {
      const JSON &hit = (*hits)[i];
       if (!hit.valid()) continue;
       Text docid = hit["docid"].t();
       int score = hit["score"].i();
 
-      Frame item(ws.store(), RetrieveItem(ws.store(), docid));
-      Builder match(ws.store());
+      Frame item(store, RetrieveItem(store, docid));
+      Builder match(store);
       GetStandardProperties(item, &match, true);
       match.Add(n_score_, score);
       Handle h = match.Create().handle();
       matches.push_back(h);
     }
-    b.Add(n_matches_,  Array(ws.store(), matches));
+    b.Add(n_matches_,  Array(store, matches));
 
     // Return response.
     ws.set_output(b.Create());
@@ -730,20 +773,20 @@ void KnowledgeService::HandleSearch(HTTPRequest *request,
     int hits = search_.Search(query, &results);
 
     // Generate response.
-    Handles matches(ws.store());
-    Builder b(ws.store());
+    Handles matches(store);
+    Builder b(store);
     b.Add(n_hits_, hits);
     for (const SearchEngine::Hit &hit : results.hits()) {
-      Frame item(ws.store(), RetrieveItem(ws.store(), hit.id()));
+      Frame item(store, RetrieveItem(store, hit.id()));
       if (item.invalid()) continue;
-      Builder match(ws.store());
+      Builder match(store);
       GetStandardProperties(item, &match, true);
       int score = hit.score;
       match.Add(n_score_, score);
       Handle h = match.Create().handle();
       matches.push_back(h);
     }
-    b.Add(n_matches_,  Array(ws.store(), matches));
+    b.Add(n_matches_,  Array(store, matches));
 
     // Return response.
     ws.set_output(b.Create());
@@ -1060,10 +1103,12 @@ void KnowledgeService::GetStandardProperties(Frame &item,
                                              Builder *builder,
                                              bool full) const {
   // Try to retrieve item from offline storage if it is a proxy.
+  if (!item.valid()) return;
   if (item.IsProxy()) {
     Store *store = item.store();
     Handle h = RetrieveItem(store, item.Id());
-    if (!h.IsNil()) item = Frame(store, h);
+    if (h.IsNil()) return;
+    item = Frame(store, h);
   }
 
   // Get reference.

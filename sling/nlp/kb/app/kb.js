@@ -197,11 +197,20 @@ class KbSearchBox extends Component {
     } else  if (query.endsWith("?")) {
       path = "/kb/search";
       query = query.slice(0, -1);
+      let m = query.match(/(#[a-z]+)/);
+      console.log("match", m);
+      if (m) {
+        let tag = m[0].slice(1);
+        query = query.replace("#" + tag, "");
+        params += "&tag=" + tag;
+      }
+
       search = true;
     }
 
     try {
       let r = await fetch(`${path}?${params}&q=${encodeURIComponent(query)}`);
+      if (!r.ok) throw `Search failed: ${r.statusText}`;
       let data = await r.json();
       let items = [];
       for (let item of data.matches) {

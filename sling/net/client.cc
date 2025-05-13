@@ -100,7 +100,9 @@ Status Client::Close() {
   return Status::OK;
 }
 
-Status Client::Perform(uint32 verb, IOBuffer *request, IOBuffer *response) {
+Status Client::Perform(uint32 verb,
+                       IOBuffer *request,
+                       IOBuffer *response) const {
   // Send request.
   Status st = Send(verb, request);
   if (!st.ok()) return st;
@@ -109,7 +111,7 @@ Status Client::Perform(uint32 verb, IOBuffer *request, IOBuffer *response) {
   return Receive(response);
 }
 
-Status Client::Send(uint32 verb, IOBuffer *request) {
+Status Client::Send(uint32 verb, IOBuffer *request) const {
   Header hdr;
   hdr.verb = verb;
   hdr.size = request->available();
@@ -131,7 +133,7 @@ Status Client::Send(uint32 verb, IOBuffer *request) {
   return Status::OK;
 }
 
-Status Client::Receive(IOBuffer *response) {
+Status Client::Receive(IOBuffer *response) const {
   Header hdr;
   char *data = reinterpret_cast<char *>(&hdr);
   int left = sizeof(Header);

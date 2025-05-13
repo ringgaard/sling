@@ -34,13 +34,13 @@ class SearchClient : public Client {
   Status Connect(const string &server, const string &agent);
 
   // Send search request to server.
-  JSON Search(Text q, int limit, Text tag);
+  JSON Search(Text q, int limit, Text tag) const;
 
   // Fetch items from search server.
-  Status Fetch(std::vector<Text> &ids, Store *store, Handles *items);
+  Status Fetch(std::vector<Text> &ids, Store *store, Handles *items) const;
 
  private:
-  Mutex mu_;
+  mutable Mutex mu_;
 };
 
 }  // namespace sling
