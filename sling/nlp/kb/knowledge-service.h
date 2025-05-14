@@ -275,7 +275,7 @@ class KnowledgeService {
   Name n_text_{names_, "text"};
   Name n_ref_{names_, "ref"};
   Name n_url_{names_, "url"};
-  Name n_lex_{names_, "lex"};
+  Name n_summary_{names_, "summary"};
   Name n_document_{names_, "document"};
   Name n_matches_{names_, "matches"};
   Name n_score_{names_, "score"};

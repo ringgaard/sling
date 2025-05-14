@@ -709,13 +709,14 @@ void KnowledgeService::HandleSearch(HTTPRequest *request,
   // Get query
   Text query = ws.Get("q");
   int limit = ws.Get("limit", 50);
+  int maxambig = ws.Get("maxambig", 10000);
   Text tag = ws.Get("tag");
   if (tag.empty()) tag = "main";
   VLOG(1) << "Search query: " << query;
 
   if (search_server_.connected()) {
     // Send search query to search server.
-    JSON result = search_server_.Search(query, limit, tag);
+    JSON result = search_server_.Search(query, limit, maxambig, tag);
     if (!result.valid()) {
       response->SendError(500, nullptr, "Error sending query to search engine");
       return;
@@ -767,9 +768,9 @@ void KnowledgeService::HandleSearch(HTTPRequest *request,
 
     // Return response.
     ws.set_output(b.Create());
-  } else {
-    // Search index.
-    SearchEngine::Results results(limit);
+  } else if (search_.loaded()) {
+    // Search internal index.
+    SearchEngine::Results results(limit, maxambig);
     int hits = search_.Search(query, &results);
 
     // Generate response.
@@ -790,6 +791,8 @@ void KnowledgeService::HandleSearch(HTTPRequest *request,
 
     // Return response.
     ws.set_output(b.Create());
+  } else {
+    response->SendError(400, nullptr, "No search engine");
   }
 }
 
@@ -840,14 +843,14 @@ void KnowledgeService::HandleGetItem(HTTPRequest *request,
   b.Add(n_gallery_, Array(ws.store(), info.gallery));
 
   // Add summary.
-  if (item.Has(n_lex_)) {
+  if (item.Has(n_summary_)) {
     // Add document URL.
     Text url = item.GetText(n_url_);
     if (!url.empty()) b.Add(n_url_, url);
 
     // Add document text.
     Document document(ws.store(), docnames_);
-    if (lexer_.Lex(&document, item.GetText(n_lex_))) {
+    if (lexer_.Lex(&document, item.GetText(n_summary_))) {
       b.Add(n_document_, ToHTML(document));
     }
   }

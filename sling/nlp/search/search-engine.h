@@ -47,13 +47,16 @@ class SearchEngine {
   // Search results.
   class Results {
    public:
-    Results(int limit) : hits_(limit) {}
+    Results(int limit, int maxambig) : hits_(limit), maxambig_(maxambig) {}
 
     // Return search matches.
     const Hits &hits() const { return hits_; }
 
     // Score document against query.
     int Score(const Document *document);
+
+    // Maximum query ambiguity.
+    int maxambig() const { return maxambig_; }
 
    private:
     // Check for unigram query match.
@@ -70,6 +73,9 @@ class SearchEngine {
 
     // Total number of matches.
     int total_hits_ = 0;
+
+    // Maximum ambiguity.
+    int maxambig_ = 0;
 
     friend class SearchEngine;
   };

@@ -660,7 +660,7 @@ class SummarySelector : public task::Reducer {
 
     Builder b(&store);
     if (!url.empty()) b.Add(docnames_->n_url, url);
-    b.Add(n_lex_, lex, top.GetHandle(n_lang_));
+    b.Add(n_summary_, lex, top.GetHandle(n_lang_));
 
     Output(input.shard(), task::CreateMessage(input.key(), b.Create()));
   }
@@ -715,7 +715,7 @@ class SummarySelector : public task::Reducer {
   DocumentNames *docnames_ = nullptr;
   Names names_;
   Name n_lang_{names_, "lang"};
-  Name n_lex_{names_, "lex"};
+  Name n_summary_{names_, "summary"};
 };
 
 REGISTER_TASK_PROCESSOR("summary-selector", SummarySelector);

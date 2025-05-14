@@ -62,6 +62,14 @@ export async function search(queries, backends, options = {}) {
       // Do keyword matching if query ends with question mark.
       options.keyword = true;
       query = query.slice(0, -1);
+
+      // Add optional query tag.
+      let m = query.match(/(#[a-z]+)/);
+      if (m) {
+        let tag = m[0].slice(1);
+        query = query.replace("#" + tag, "");
+        options.tag = tag;
+      }
     }
 
     // Collect search results from backends.
@@ -105,6 +113,7 @@ export async function kbsearch(query, results, options) {
     let params = "fmt=cjson";
     if (options.full) params += "&fullmatch=1";
     if (options.property) params += "&prop=" + options.property.id;
+    if (options.keyword && options.tag) params += "&tag=" + options.tag;
     params += `&q=${encodeURIComponent(query)}`;
 
     let response = await fetch(`${settings.kbservice}${path}?${params}`);

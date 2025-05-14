@@ -101,6 +101,10 @@ int SearchEngine::Search(Text query, Results *results) {
   // Rank hits.
   int hits = candidates_end - candidates_begin;
   results->total_hits_ = hits;
+  if (hits > results->maxambig()) {
+    // Limit the number of scored documents for very ambiguous queries.
+    candidates_end = candidates_begin + results->maxambig();
+  }
   for (const uint32 *c = candidates_begin; c != candidates_end; ++c) {
     Hit hit(index_.GetDocument(*c));
     hit.score = results->Score(hit.document);

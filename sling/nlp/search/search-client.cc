@@ -36,10 +36,11 @@ Status SearchClient::Connect(const string &server, const string &agent) {
   return Status::OK;
 }
 
-JSON SearchClient::Search(Text q, int limit, Text tag) const {
+JSON SearchClient::Search(Text q, int limit, int maxambig, Text tag) const {
   JSON::Object query;
   query.Add("q", q);
   query.Add("limit", limit);
+  query.Add("maxambig", maxambig);
   query.Add("tag", tag);
 
   IOBuffer request;

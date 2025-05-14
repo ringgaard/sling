@@ -153,6 +153,7 @@ class SearchService {
     Text q = query.Get("q");
     Text tag = query.Get("tag");
     int limit = query.Get("limit", 50);
+    int maxambig = query.Get("maxambig", 10000);
 
     // Find search shard.
     MutexLock lock(&mu_);
@@ -163,7 +164,7 @@ class SearchService {
     }
 
     // Search for hits in shard.
-    nlp::SearchEngine::Results result(limit);
+    nlp::SearchEngine::Results result(limit, maxambig);
     int total = shard->engine.Search(q, &result);
 
     // Return result.
@@ -226,6 +227,7 @@ class SearchService {
     Text q = query["q"];
     Text tag = query["tag"];
     int limit = query["limit"].i(50);
+    int maxambig = query["maxambig"].i(10000);
 
     // Find search shard.
     MutexLock lock(&mu_);
@@ -233,7 +235,7 @@ class SearchService {
     if (shard == nullptr) return Status(ENOENT, "shard not found");
 
     // Search for hits in shard.
-    nlp::SearchEngine::Results result(limit);
+    nlp::SearchEngine::Results result(limit, maxambig);
     int total = shard->engine.Search(q, &result);
 
     // Return result.

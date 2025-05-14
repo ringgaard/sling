@@ -198,7 +198,6 @@ class KbSearchBox extends Component {
       path = "/kb/search";
       query = query.slice(0, -1);
       let m = query.match(/(#[a-z]+)/);
-      console.log("match", m);
       if (m) {
         let tag = m[0].slice(1);
         query = query.replace("#" + tag, "");

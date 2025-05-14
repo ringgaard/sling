@@ -12,7 +12,7 @@ import {
 import {Frame, QString, Printer} from "/common/lib/frame.js";
 import {store, frame, settings} from "/common/lib/global.js";
 import {imageurl} from "/common/lib/gallery.js";
-import {LabelCollector, ItemCollector, value_parser}
+import {LabelCollector, ItemCollector, value_parser, Time}
   from "/common/lib/datatype.js";
 import {Document} from "/common/lib/document.js";
 
@@ -37,6 +37,9 @@ const n_not_safe_for_work = frame("Q2716583");
 const n_full_work = frame("P953");
 const n_url = frame("P2699");
 const n_mime_type = frame("P1163");
+const n_dob = frame("P569");
+const n_dod = frame("P570");
+const n_birth_name = frame("P1477");
 
 // Cross-reference configuration.
 var xrefs;
@@ -403,6 +406,7 @@ class TopicToolbox extends MdToolbox {
             <md-menu-item id="mentions">Find mentions</md-menu-item>
             <md-menu-item id="toprofile">Move photos to profile</md-menu-item>
             <md-menu-item id="photoupload">Upload photos</md-menu-item>
+            <md-menu-item id="myheritage">Search myheritage.dk</md-menu-item>
           </md-menu>
    `;
  }
@@ -457,6 +461,8 @@ class TopicCard extends Component {
         this.ontoprofile(e);
       } else if (action == "photoupload") {
         this.onphotoupload(e);
+      } else if (action == "myheritage") {
+        this.onmyheritage(e);
       }
     });
 
@@ -1124,6 +1130,49 @@ class TopicCard extends Component {
       this.mark_dirty();
       this.refresh();
     }
+  }
+
+  async onmyheritage(e) {
+    function escape(str) {
+      return str.replaceAll(" ", "%2F3").replaceAll(".", "%2F2");
+    }
+
+    // Build search query for myheritage.dk.
+    let topic = this.state;
+    let url = "https://www.myheritage.dk/research?";
+    url += "s=1&formId=master&formMode=1&useTranslation=1";
+    url += "&exactSearch=&p=1&action=query&view_mode=card";
+    let name = topic.get(n_birth_name) || topic.get(n_name);
+    let dob = new Time(topic.get(n_dob));
+    let dod = new Time(topic.get(n_dod));
+    if (name) {
+      let fn, ln;
+      let space = name.lastIndexOf(" ");
+      if (space) {
+        fn = name.substring(0, space);
+        ln = name.substring(space + 1);
+      } else {
+        ln = name
+      }
+      url += "&qname=Name";
+      if (fn) url += "+fn." + escape(fn);
+      if (ln) url += "+ln." + escape(ln);
+    }
+
+    if (dob.precision) {
+      url += "&qevents-event1=Event+et.birth";
+      if (dob.day) url += "+ed." + dob.day;
+      if (dob.month) url += "+em." + dob.month;
+      if (dob.year) url += "+ey." + dob.year;
+    }
+    if (dod.precision) {
+      url += "&qevents-any/1event_1=Event+et.death";
+      if (dod.day) url += "+ed." + dod.day;
+      if (dod.month) url += "+em." + dod.month;
+      if (dod.year) url += "+ey." + dod.year;
+    }
+    url += "&qevents=List";
+    window.open(url, "_blank", "noreferrer");
   }
 
   ondown(e) {
