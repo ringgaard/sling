@@ -46,6 +46,7 @@ def download(url, fn):
 
 # Get publishing list.
 r = requests.get(flags.arg.gleif + "/api/v2/golden-copies/publishes")
+r.raise_for_status()
 latest = r.json()["data"][0]
 print("Published:", latest["publish_date"])
 
@@ -63,6 +64,7 @@ for dataset in ["lei2", "rr", "repex"]:
 # Download BIC-to-LEI mapping file.
 r = requests.get("https://www.gleif.org/en/lei-data/lei-mapping/" +
                  "download-bic-to-lei-relationship-files")
+r.raise_for_status()
 m = re.search(
     r'<a href="(https:\/\/mapping.gleif.org\/api\/v2\/bic-lei\/[^"]+)">',
     str(r.content))

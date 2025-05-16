@@ -234,7 +234,7 @@ Status DBClient::Stream(DBIterator *iterator, Callback cb) {
   DBRecord record;
   bool done = false;
   while (!done) {
-    st = Receive(buffer);
+    st = Receive(&reply_, buffer);
     if (!st.ok()) return st;
     if (reply_ == DBEND) {
       done = true;
@@ -366,14 +366,11 @@ Status DBClient::Transact(Transaction tx) {
 
 Status DBClient::Do(DBVerb verb, IOBuffer *response) {
   if (response == nullptr) response = &response_;
-  Status st = Perform(verb, &request_, response);
+  Status st = Perform(verb, &request_, &reply_, response);
   if (!st.ok()) return st;
 
   // Check for server errors.
-  if (reply_ == DBERROR) {
-    int size = response->available();
-    return Status(EINVAL, response->Consume(size), size);
-  }
+  if (reply_ == DBERROR) return Status(EINVAL, response->data());
 
   return Status::OK;
 }

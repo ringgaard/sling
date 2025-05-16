@@ -2,7 +2,7 @@
 // Licensed under the Apache License, Version 2
 
 import {Frame, QString} from "./frame.js";
-import {store, frame, settings} from "./global.js";
+import {store, frame, kbfetch} from "./global.js";
 
 const n_is = store.is;
 const n_isa = store.isa;
@@ -478,7 +478,7 @@ export class LabelCollector {
     if (this.items.size == 0) return null;
 
     // Retrieve stubs from knowledge service.
-    let response = await fetch(settings.kbservice + "/kb/stubs", {
+    let response = await kbfetch("/kb/stubs", {
       method: 'POST',
       headers: {
         'Content-Type': 'application/sling',
@@ -532,7 +532,7 @@ export class ItemCollector {
     if (this.items.size == 0) return null;
 
     // Retrieve items from knowledge service.
-    let response = await fetch(settings.kbservice + "/kb/topics", {
+    let response = await kbfetch("/kb/topics", {
       method: 'POST',
       headers: {
         'Content-Type': 'application/sling',

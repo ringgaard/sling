@@ -1072,6 +1072,21 @@ class CaseEditor extends MdApp {
   async delete_topics(topics, preserve) {
     if (this.readonly || topics.length == 0) return;
 
+    // Confirm if deleting topic(s) from collaboration.
+    if (!preserve || this.collab) {
+      if (topics.length > 1) {
+        if (!await StdDialog.confirm(
+        "Delete topics",
+        `Delete ${topics.length} topics?`,
+        "Delete")) return;
+      } else if (this.refcount(topics[0]) < 2) {
+        if (!await StdDialog.confirm(
+        "Delete topic",
+        `Delete ${selection[0].get(n_name) || selection[0].id}?`,
+        "Delete")) return;
+      }
+    }
+
     // Focus should move to first topic after selection.
     let next = null;
     let last = this.folder.indexOf(topics.at(-1));

@@ -54,19 +54,17 @@ class Client {
   };
 
   // Send request to server and receive reply.
-  Status Perform(uint32 verb, IOBuffer *request, IOBuffer *response) const;
+  Status Perform(uint32 verb, IOBuffer *request,
+                 uint32 *reply, IOBuffer *response) const;
 
   // Send request to server.
   Status Send(uint32 verb, IOBuffer *request) const;
 
   // Receive response from server.
-  Status Receive(IOBuffer *response) const;
+  Status Receive(uint32 *reply, IOBuffer *response) const;
 
   // Socket for connection.
   int sock_ = -1;
-
-  // Reply verb from last request.
-  mutable uint32 reply_ = 0;
 };
 
 }  // namespace sling

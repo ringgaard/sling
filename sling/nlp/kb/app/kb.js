@@ -6,9 +6,8 @@
 import {Component, stylesheet} from "/common/lib/component.js";
 import {MdApp, MdCard, MdModal, MdSearchResult, StdDialog, inform}
   from "/common/lib/material.js";
+import {settings, kbfetch} from "/common/lib/global.js";
 import {PhotoGallery, imageurl, isimage, censor} from "/common/lib/gallery.js";
-
-var settings = JSON.parse(window.localStorage.getItem("settings") || "{}");
 
 var mobile_ckecked = false;
 var is_mobile = false;
@@ -79,11 +78,7 @@ class KbApp extends MdApp {
     if (current) scrollmap[current] = this.find("md-content").scrollTop;
 
     try {
-      let r = await fetch("/kb/item?fmt=cjson&id=" + encodeURIComponent(id));
-      if (!r.ok) {
-        inform(`Error fetching item ${id}: ${r.statusText}`);
-        return;
-      }
+      let r = await kbfetch("/kb/item?fmt=cjson&id=" + encodeURIComponent(id));
       let item = await r.json();
       if (initial) {
         history.replaceState(item, "", "/kb/" + item.ref);
@@ -208,8 +203,7 @@ class KbSearchBox extends Component {
     }
 
     try {
-      let r = await fetch(`${path}?${params}&q=${encodeURIComponent(query)}`);
-      if (!r.ok) throw `Search failed: ${r.statusText}`;
+      let r = await kbfetch(`${path}?${params}&q=${encodeURIComponent(query)}`);
       let data = await r.json();
       let items = [];
       for (let item of data.matches) {

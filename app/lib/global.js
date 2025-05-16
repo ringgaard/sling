@@ -18,7 +18,7 @@ export var settings = {}
 
 export function read_settings() {
   settings = JSON.parse(window.localStorage.getItem("settings") || "{}");
-  if (!settings.kbservice) settings.kbservice = "https://ringgaard.com";
+  if (!settings.kbservice) settings.kbservice = "";
   if (!settings.collaburl) settings.collaburl = "wss://ringgaard.com/collab/";
   if (!settings.cookiejar) settings.cookiejar = {};
 }
@@ -27,5 +27,17 @@ export function save_settings() {
   window.localStorage.setItem("settings", JSON.stringify(settings));
 }
 
-read_settings();
+export async function kbfetch(url, options) {
+  let r = await fetch(settings.kbservice + url, options);
+  if (!r.ok) {
+    let error = r.headers.get("Message");
+    if (!error) error = r.headers.get("Error");
+    if (!error) error = r.headers.get("Status");
+    if (!error) error = r.statusText;
+    if (!error) error = `HTTP error ${r.status}`;
+    throw new Error(error);
+  }
+  return r;
+}
 
+read_settings();

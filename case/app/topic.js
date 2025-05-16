@@ -177,21 +177,7 @@ class TopicList extends Component {
   }
 
   async delete_selected() {
-    let editor = this.match("#editor");
     let selection = this.selection();
-    if (editor.collab) {
-      if (selection.length > 1) {
-        if (!await StdDialog.confirm(
-        "Delete topics",
-        `Delete ${selection.length} topics?`,
-        "Delete")) return;
-      } else if (editor.refcount(selection[0]) < 2) {
-        if (!await StdDialog.confirm(
-        "Delete topic",
-        `Delete ${selection[0].get(n_name) || selection[0].id}?`,
-        "Delete")) return;
-      }
-    }
     this.match("#editor").delete_topics(selection);
   }
 
@@ -738,6 +724,9 @@ class TopicCard extends Component {
       queries.push(name.toString());
     }
     for (let name of topic.all(n_alias)) {
+      queries.push(name.toString());
+    }
+    for (let name of topic.all(n_birth_name)) {
       queries.push(name.toString());
     }
     ignore.push(topic.id);

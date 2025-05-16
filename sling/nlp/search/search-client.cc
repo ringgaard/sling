@@ -36,7 +36,8 @@ Status SearchClient::Connect(const string &server, const string &agent) {
   return Status::OK;
 }
 
-JSON SearchClient::Search(Text q, int limit, int maxambig, Text tag) const {
+Status SearchClient::Search(Text q, int limit, int maxambig,
+                          Text tag, JSON *result) const {
   JSON::Object query;
   query.Add("q", q);
   query.Add("limit", limit);
@@ -48,10 +49,14 @@ JSON SearchClient::Search(Text q, int limit, int maxambig, Text tag) const {
 
   MutexLock lock(&mu_);
   IOBuffer response;
-  Status st = Perform(SPSEARCH, &request, &response);
-  if (!st.ok()) return JSON();
-  if (reply_ == SPERROR) return JSON();
-  return JSON::Read(&response);
+  uint32 reply;
+  Status st = Perform(SPSEARCH, &request, &reply, &response);
+  if (!st.ok()) return st;
+  if (reply == SPERROR) return Status(EIO, response.data());
+  JSON json = JSON::Read(&response);
+  if (!json.valid()) return Status(EINVAL, "Invalid JSON response");
+  result->MoveFrom(json);
+  return Status::OK;
 }
 
 Status SearchClient::Fetch(std::vector<Text> &ids,
@@ -65,11 +70,11 @@ Status SearchClient::Fetch(std::vector<Text> &ids,
     request.Write(&len, 1);
     request.Write(id.data(), len);
   }
-  Status st = Perform(SPFETCH, &request, &response);
+  uint32 reply;
+  Status st = Perform(SPFETCH, &request, &reply, &response);
   if (!st.ok()) return st;
-  if (reply_ == SPERROR) {
-    int size = response.available();
-    return Status(EIO, response.Consume(size), size);
+  if (reply == SPERROR) {
+    return Status(EIO, "Error fetching items");
   }
 
   while (response.available() > 0) {

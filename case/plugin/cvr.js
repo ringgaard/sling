@@ -3,7 +3,7 @@
 
 // SLING case plug-in for adding topic from CVR (Danish Business Register).
 
-import {store, frame, settings} from "/common/lib/global.js";
+import {store, frame, kbfetch} from "/common/lib/global.js";
 
 import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 
@@ -43,7 +43,6 @@ export default class CVRPlugin {
   }
 
   async populate(context, topic, unittype, cvrid) {
-
     // Determine item id based on CVR unit type.
     var itemid;
     if (unittype == "virksomhed") {
@@ -59,8 +58,7 @@ export default class CVRPlugin {
     // Fetch item for CVR unit.
     let item = frame(itemid);
     if (!item.ispublic()) {
-      let url = `${settings.kbservice}/kb/topic?id=${item.id}`;
-      let response = await fetch(url);
+      let response = await kbfetch(`/kb/topic?id=${item.id}`);
       item = await store.parse(response);
     }
 
@@ -72,4 +70,3 @@ export default class CVRPlugin {
     context.updated(topic);
   }
 };
-

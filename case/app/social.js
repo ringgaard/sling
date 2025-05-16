@@ -45,6 +45,10 @@ let xrefs = [
     property: frame("P2003"),
   },
   {
+    pattern: /^https:\/\/www\.threads\.com\/@(.+)\/?/,
+    property: frame("P11892"),
+  },
+  {
     pattern: /^https?:\/\/(?:(:?www|m)\.)facebook\.com\/pg\/([^\?\/]+)/i,
     property: frame("P2013"),
   },

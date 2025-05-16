@@ -4,7 +4,7 @@
 // Knowledge base schema.
 
 import {Frame} from "/common/lib/frame.js";
-import {store, frame, settings} from "/common/lib/global.js";
+import {store, frame, kbfetch} from "/common/lib/global.js";
 
 import {SearchIndex} from "./search.js";
 
@@ -80,9 +80,7 @@ class Properties {
 
     // Retrieve type if needed.
     if (!type.ispublic()) {
-      let url = `${settings.kbservice}/kb/topic?id=${type.id}`;
-      let response = await fetch(url);
-      if (!response.ok) return;
+      let response = await kbfetch(/kb/topic?id=${type.id}`);
       type = await store.parse(response);
     }
 
@@ -220,7 +218,7 @@ export async function get_schema() {
   if (kbschema) return kbschema;
 
   // Fetch schema from server and decode it.
-  let response = await fetch(settings.kbservice + "/schema/");
+  let response = await kbfetch("/schema/");
   if (kbschema) return kbschema;
   kbschema = await store.parse(response);
 
@@ -313,4 +311,3 @@ export async function psearch(query, results, options) {
     });
   }
 }
-

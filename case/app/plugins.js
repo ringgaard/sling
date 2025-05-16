@@ -3,7 +3,7 @@
 
 // SLING case plug-ins.
 
-import {store, frame, settings} from "/common/lib/global.js";
+import {store, frame, settings, kbfetch} from "/common/lib/global.js";
 
 import {xref_patterns} from "./social.js";
 
@@ -504,12 +504,11 @@ export class Context {
     return response;
   }
 
-  kblookup(query, params) {
+  async kblookup(query, params) {
     let qs = new URLSearchParams(params);
     qs.append("q", query);
     qs.append("fmt", "cjson");
-    let url = `${settings.kbservice}/kb/query?${qs}`;
-    return fetch(url);
+    return await kbfetch(/kb/query?${qs}`);
   }
 
   async lookup(name) {

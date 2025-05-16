@@ -34,7 +34,7 @@ class SearchClient : public Client {
   Status Connect(const string &server, const string &agent);
 
   // Send search request to server.
-  JSON Search(Text q, int limit, int maxambig, Text tag) const;
+  Status Search(Text q, int limit, int maxambig, Text tag, JSON *result) const;
 
   // Fetch items from search server.
   Status Fetch(std::vector<Text> &ids, Store *store, Handles *items) const;

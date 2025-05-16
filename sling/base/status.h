@@ -20,6 +20,7 @@
 #include <string>
 
 #include "sling/base/logging.h"
+#include "sling/base/slice.h"
 #include "sling/base/types.h"
 
 namespace sling {
@@ -38,6 +39,7 @@ class Status {
   Status(int code, const char *msg1, const char *msg2);
   Status(int code, const string &msg);
   Status(int code, const char *msg1, const string &msg2);
+  Status(int code, Slice slice);
 
   // Copy the specified status.
   Status(const Status &s) : state_(CopyState(s.state_)) {}

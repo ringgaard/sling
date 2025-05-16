@@ -716,9 +716,10 @@ void KnowledgeService::HandleSearch(HTTPRequest *request,
 
   if (search_server_.connected()) {
     // Send search query to search server.
-    JSON result = search_server_.Search(query, limit, maxambig, tag);
-    if (!result.valid()) {
-      response->SendError(500, nullptr, "Error sending query to search engine");
+    JSON result;
+    Status st = search_server_.Search(query, limit, maxambig, tag, &result);
+    if (!st.ok()) {
+      response->SendError(500, nullptr, st.message());
       return;
     }
     Handles matches(store);

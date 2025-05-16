@@ -100,15 +100,14 @@ Status Client::Close() {
   return Status::OK;
 }
 
-Status Client::Perform(uint32 verb,
-                       IOBuffer *request,
-                       IOBuffer *response) const {
+Status Client::Perform(uint32 verb,IOBuffer *request,
+                       uint32 *reply, IOBuffer *response) const {
   // Send request.
   Status st = Send(verb, request);
   if (!st.ok()) return st;
 
   // Receive response.
-  return Receive(response);
+  return Receive(reply, response);
 }
 
 Status Client::Send(uint32 verb, IOBuffer *request) const {
@@ -133,7 +132,7 @@ Status Client::Send(uint32 verb, IOBuffer *request) const {
   return Status::OK;
 }
 
-Status Client::Receive(IOBuffer *response) const {
+Status Client::Receive(uint32 *reply, IOBuffer *response) const {
   Header hdr;
   char *data = reinterpret_cast<char *>(&hdr);
   int left = sizeof(Header);
@@ -145,7 +144,7 @@ Status Client::Receive(IOBuffer *response) const {
     Perf::add_network_receive(rc);
     left -= rc;
   }
-  reply_ = hdr.verb;
+  *reply = hdr.verb;
 
   response->Clear();
   response->Ensure(hdr.size);

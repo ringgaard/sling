@@ -3,7 +3,7 @@
 
 import {Component} from "/common/lib/component.js";
 import {MdSearchResult, MdDialog} from "/common/lib/material.js";
-import {store, frame, settings} from "/common/lib/global.js";
+import {store, frame, kbfetch} from "/common/lib/global.js";
 
 const n_name = frame("name");
 const n_alias = frame("alias");
@@ -116,8 +116,7 @@ export async function kbsearch(query, results, options) {
     if (options.keyword && options.tag) params += "&tag=" + options.tag;
     params += `&q=${encodeURIComponent(query)}`;
 
-    let response = await fetch(`${settings.kbservice}${path}?${params}`);
-    if (!response.ok) throw `Search failed: ${response.statusText}`;
+    let response = await kbfetch(`${path}?${params}`);
     let data = await response.json();
     let twiddle = true;
     for (let item of data.matches) {

@@ -284,6 +284,7 @@ class JSON {
 
   // Take ownership of other JSON value.
   void MoveFrom(JSON &other) {
+    CHECK_EQ(type_, ERROR);
     i_ = other.i_;
     type_ = other.type_;
     other.type_ = ERROR;

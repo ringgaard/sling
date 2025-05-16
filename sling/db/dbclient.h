@@ -138,6 +138,7 @@ class DBClient : public Client {
   // Request and response buffers.
   IOBuffer request_;
   IOBuffer response_;
+  uint32 reply_;
 };
 
 }  // namespace sling

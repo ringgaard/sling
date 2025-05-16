@@ -24,7 +24,7 @@
   stopwords: [
     ; English
     "+",
-    "a", "after", "an", "and", "are", "as", "at", "also",
+    "a", "after", "aka", "an", "and", "are", "as", "at", "also",
     "be", "by", "between",
     "for", "from",
     "human", "have", "her", "has", "he", "he's", "his",

@@ -79,6 +79,9 @@ Status::Status(int code, const char *msg1, const string &msg2)
 Status::Status(int code, const string &msg)
   : Status(code, msg.c_str()) {}
 
+Status::Status(int code, Slice slice)
+  : Status(code, slice.data(), slice.size()) {}
+
 string Status::ToString() const {
   if (state_ == nullptr) {
     return "OK";
@@ -88,4 +91,3 @@ string Status::ToString() const {
 }
 
 }  // namespace sling
-

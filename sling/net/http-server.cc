@@ -64,7 +64,7 @@ static void Handle503(HTTPRequest *request, HTTPResponse *response) {
   response->set_content_type("text/html");
   response->set_status(503);
   response->Append("<html><head>\n");
-  response->Append("<title>404 Service Unavailable</title>\n");
+  response->Append("<title>503 Service Unavailable</title>\n");
   response->Append("</head><body>\n");
   response->Append("<h1>Service Unavailable</h1>\n");
   response->Append("<p>The system is down for maintenance</p>");
@@ -450,6 +450,7 @@ void HTTPResponse::SendError(int status, const char *title, const char *msg) {
 
   set_content_type("text/html");
   set_status(status);
+  Add("Error", msg);
 
   buffer()->Clear();
   Append("<html><head>\n");
@@ -524,6 +525,15 @@ void HTTPResponse::WriteHeader(IOBuffer *rsp) {
 
   VLOG(4) << "HTTP response: " << status_ << " " << StatusText(status_);
 
+  // Output status as HTTP header for error response.
+  if (status_ != 200 && status_ != 204) {
+    rsp->Write("Status: ");
+    rsp->Write(statusnum);
+    rsp->Write(" ");
+    rsp->Write(StatusText(status_));
+    rsp->Write("\r\n");
+  }
+
   // Output HTTP headers.
   for (const HTTPHeader &h : headers_) {
     rsp->Write(h.name);
@@ -537,4 +547,3 @@ void HTTPResponse::WriteHeader(IOBuffer *rsp) {
 }
 
 }  // namespace sling
-
