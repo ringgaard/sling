@@ -399,6 +399,7 @@ class CaseEditor extends MdApp {
     if (this.readonly) return;
     this.sidebar.commit();
     if (this.collab) {
+      this.purge_scraps();
       let ts = await this.collab.flush();
       this.casefile.set(n_modified, ts);
       await this.save();
@@ -1069,11 +1070,11 @@ class CaseEditor extends MdApp {
     return link;
   }
 
-  async delete_topics(topics, preserve) {
+  async delete_topics(topics, options) {
     if (this.readonly || topics.length == 0) return;
 
     // Confirm if deleting topic(s) from collaboration.
-    if (!preserve || this.collab) {
+    if (options.confirm) {
       if (topics.length > 1) {
         if (!await StdDialog.confirm(
         "Delete topics",
@@ -1082,7 +1083,7 @@ class CaseEditor extends MdApp {
       } else if (this.refcount(topics[0]) < 2) {
         if (!await StdDialog.confirm(
         "Delete topic",
-        `Delete ${selection[0].get(n_name) || selection[0].id}?`,
+        `Delete ${topics[0].get(n_name) || topics[0].id}?`,
         "Delete")) return;
       }
     }
@@ -1120,10 +1121,12 @@ class CaseEditor extends MdApp {
             console.log("topic not found", topic.id);
           }
 
-          // Move topic to scraps.
-          if (preserve || !this.collab) this.scraps.push(topic);
-
-          this.topic_deleted(topic);
+          if (options.preserve) {
+            // Move topic to scraps.
+            this.scraps.push(topic);
+          } else {
+            this.topic_deleted(topic);
+          }
         }
       }
     }
@@ -1143,8 +1146,8 @@ class CaseEditor extends MdApp {
     }
   }
 
-  delete_topic(topic) {
-    return this.delete_topics([topic]);
+  async delete_topic(topic, options) {
+    return await this.delete_topics([topic], options);
   }
 
   purge_topic(topic) {
@@ -1159,6 +1162,7 @@ class CaseEditor extends MdApp {
       // Remove all references to draft topics.
       for (let topic of this.scraps) {
         this.purge_topic(topic);
+        this.topic_deleted(topic);
       }
 
       // Remove scraps.
@@ -1220,7 +1224,7 @@ class CaseEditor extends MdApp {
     await write_to_clipboard(selected);
 
     // Delete selected topics.
-    this.delete_topics(selected, true);
+    await this.delete_topics(selected, {preserve: true, confirm: false});
   }
 
   async oncopy(e) {
@@ -1440,7 +1444,7 @@ class CaseEditor extends MdApp {
     }
 
     // Delete merged topics from folder.
-    await this.delete_topics(sources);
+    await this.delete_topics(sources, {confirm: false, preserve: false});
 
     // Update folders.
     for (let f of updated_folders) {

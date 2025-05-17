@@ -232,7 +232,7 @@ class SearchService {
     // Find search shard.
     MutexLock lock(&mu_);
     SearchShard *shard = Find(tag);
-    if (shard == nullptr) return Status(ENOENT, "shard not found");
+    if (shard == nullptr) return Status(ENOENT, "Unknown search index");
 
     // Search for hits in shard.
     nlp::SearchEngine::Results result(limit, maxambig);

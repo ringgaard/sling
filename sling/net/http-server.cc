@@ -450,7 +450,6 @@ void HTTPResponse::SendError(int status, const char *title, const char *msg) {
 
   set_content_type("text/html");
   set_status(status);
-  Add("Error", msg);
 
   buffer()->Clear();
   Append("<html><head>\n");
@@ -467,6 +466,7 @@ void HTTPResponse::SendError(int status, const char *title, const char *msg) {
   Append("</head><body>\n");
   if (msg != nullptr) {
     Append(msg);
+    if (strchr(msg, '\n') == nullptr) Add("Error", msg);
   } else {
     Append("<p>Error ");
     AppendNumber(status);
@@ -524,15 +524,6 @@ void HTTPResponse::WriteHeader(IOBuffer *rsp) {
   rsp->Write("\r\n");
 
   VLOG(4) << "HTTP response: " << status_ << " " << StatusText(status_);
-
-  // Output status as HTTP header for error response.
-  if (status_ != 200 && status_ != 204) {
-    rsp->Write("Status: ");
-    rsp->Write(statusnum);
-    rsp->Write(" ");
-    rsp->Write(StatusText(status_));
-    rsp->Write("\r\n");
-  }
 
   // Output HTTP headers.
   for (const HTTPHeader &h : headers_) {

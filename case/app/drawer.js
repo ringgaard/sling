@@ -321,7 +321,7 @@ class ScrapsFolder extends CaseFolder {
     if (editor.folder != scraps) {
       await editor.show_folder(scraps);
     }
-    await editor.delete_topics([...scraps]);
+    await editor.delete_topics([...scraps], {confirm: false, preserve: false});
   }
 
   render() {
@@ -522,4 +522,3 @@ class RenameFolderDialog extends MdDialog {
 }
 
 Component.register(RenameFolderDialog);
-

@@ -30,9 +30,7 @@ export function save_settings() {
 export async function kbfetch(url, options) {
   let r = await fetch(settings.kbservice + url, options);
   if (!r.ok) {
-    let error = r.headers.get("Message");
-    if (!error) error = r.headers.get("Error");
-    if (!error) error = r.headers.get("Status");
+    let error = r.headers.get("Error");
     if (!error) error = r.statusText;
     if (!error) error = `HTTP error ${r.status}`;
     throw new Error(error);
