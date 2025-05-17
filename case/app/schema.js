@@ -80,7 +80,7 @@ class Properties {
 
     // Retrieve type if needed.
     if (!type.ispublic()) {
-      let response = await kbfetch(/kb/topic?id=${type.id}`);
+      let response = await kbfetch(`/kb/topic?id=${type.id}`);
       type = await store.parse(response);
     }
 

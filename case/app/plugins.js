@@ -508,7 +508,7 @@ export class Context {
     let qs = new URLSearchParams(params);
     qs.append("q", query);
     qs.append("fmt", "cjson");
-    return await kbfetch(/kb/query?${qs}`);
+    return await kbfetch(`/kb/query?${qs}`);
   }
 
   async lookup(name) {
