@@ -403,6 +403,7 @@ class CaseEditor extends MdApp {
       let ts = await this.collab.flush();
       this.casefile.set(n_modified, ts);
       await this.save();
+      this.set_collab_status("white");
     } else if (this.dirty) {
       // Update modification time.
       let ts = new Date().toJSON();
@@ -1798,36 +1799,42 @@ class CaseEditor extends MdApp {
   topic_updated(topic) {
     if (this.collab) {
       this.collab.topic_updated(topic);
+      this.mark_collab_dirty();
     }
   }
 
   topics_updated(topics) {
     if (this.collab) {
       this.collab.topics_updated(topics);
+      this.mark_collab_dirty();
     }
   }
 
   topic_deleted(topic) {
     if (this.collab) {
       this.collab.topic_deleted(topic);
+      this.mark_collab_dirty();
     }
   }
 
   folder_updated(folder) {
     if (this.collab && folder != this.scraps && folder != this.work) {
       this.collab.folder_updated(this.folder_name(folder), folder);
+      this.mark_collab_dirty();
     }
   }
 
   folder_renamed(folder, name) {
     if (this.collab) {
       this.collab.folder_renamed(this.folder_name(folder), name);
+      this.mark_collab_dirty();
     }
   }
 
   folders_updated() {
     if (this.collab) {
       this.collab.folders_updated(this.folders);
+      this.mark_collab_dirty();
     }
   }
 
@@ -1897,10 +1904,12 @@ class CaseEditor extends MdApp {
       this.localcase.set(n_modified, modtime);
       this.save();
     }
+    this.set_collab_status("white");
   }
 
   async remote_closed(collab) {
     inform("Connection to collaboration server lost");
+    this.set_collab_status("red");
     let reconnect = await StdDialog.ask("Connection lost",
                                         "Reconnect to collaboration server?");
     if (reconnect) location.reload();
@@ -1908,6 +1917,16 @@ class CaseEditor extends MdApp {
 
   remote_error(collab) {
     inform("Error communicating with collaboration server");
+    this.set_collab_status("red");
+  }
+
+  mark_collab_dirty() {
+    this.set_collab_status("wheat");
+  }
+
+  set_collab_status(color) {
+    let icon = this.find("#invite").find("md-icon");
+    icon.style.color = color;
   }
 
   async toggle_work_folder() {

@@ -1146,6 +1146,7 @@ export class MdIconButton extends MdRippleButton {
         border: 0;
         height: 40px;
         width: 40px;
+        color: inherit;
         background: transparent;
         user-select: none;
         cursor: pointer;
@@ -1410,6 +1411,7 @@ export class MdIcon extends Component {
   static stylesheet() {
     return `
       $ {
+        color: inherit;
         font-family: 'Material Icons';
         font-weight: normal;
         font-style: normal;
