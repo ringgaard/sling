@@ -35,6 +35,7 @@
 #include "sling/util/sortmap.h"
 
 DEFINE_string(thumbnails, "", "Thumbnail web service");
+DEFINE_string(minibio_lang, "en", "Language for automatic mini-biographies");
 
 namespace sling {
 namespace nlp {
@@ -303,6 +304,17 @@ void KnowledgeService::Load(Store *kb, const string &name_table) {
     CHECK(f != properties_.end());
     if (f->second.order == kint32max) {
       f->second.order = order++;
+    }
+  }
+
+  // Initialize demonyms for mini-bios.
+  Frame langinfo(kb, "/lang/" + FLAGS_minibio_lang);
+  if (langinfo.valid()) {
+    Frame demonyms = langinfo.GetFrame(n_demonyms_);
+    if (demonyms.valid()) {
+      for (const Slot &s : demonyms) {
+        demonyms_[s.name] = kb->GetText(s.value);
+      }
     }
   }
 
@@ -1129,7 +1141,65 @@ void KnowledgeService::GetStandardProperties(Frame &item,
   // Get description.
   if (full) {
     Handle description = item.GetHandle(n_description_);
-    if (!description.IsNil()) builder->Add(n_description_, description);
+    if (!description.IsNil()) {
+      builder->Add(n_description_, description);
+    } else {
+      // Add automatic mini-bio for persons.
+      Handle type = item.GetHandle(n_instance_of_);
+      if (type == n_human_) {
+        Store *store = item.store();
+        Handle dob = item.Resolve(n_date_of_birth_);
+        Handle dod = item.Resolve(n_date_of_death_);
+        Handle occupation = item.Resolve(n_occupation_);
+        Handle country = item.Resolve(n_citizenship_);
+
+        string bio;
+        if (!occupation.IsNil()) {
+          if (occupation == n_actor_) {
+            Handle gender = item.GetHandle(n_gender_);
+            if (gender == n_female_) occupation = n_actress_.handle();
+          }
+          string job;
+          if (store->IsString(occupation)) {
+            job = store->GetText(occupation).str();
+          } else if (store->IsFrame(occupation)) {
+            job = Frame(store, occupation).GetString(n_name_);
+            if (!country.IsNil() && !job.empty()) {
+              auto f = demonyms_.find(country);
+              if (f != demonyms_.end()) {
+                StrAppend(&bio, f->second.str(), " ", job);
+              } else if (store->IsFrame(country)) {
+                Text place = Frame(store, country).GetText(n_name_);
+                if (!place.empty()) {
+                  StrAppend(&bio, job, " from ", place);
+                }
+              }
+            }
+          }
+          if (bio.empty()) bio = job;
+        }
+
+        if (!dob.IsNil() || !dod.IsNil()) {
+          if (!bio.empty()) bio.push_back(' ');
+          Date born(Object(store, item.Resolve(n_date_of_birth_)));
+          Date died(Object(store, item.Resolve(n_date_of_death_)));
+          int b = born.precision > Date::YEAR ? born.year : 0;
+          int d = died.precision > Date::YEAR ? died.year : 0;
+          if (b > 1000 && d > 1000) {
+            StrAppend(&bio, "(", b, "-", d, ")");
+          } else if (b > 1000) {
+            StrAppend(&bio, "(born ", b , ")");
+          } else if (d > 1000) {
+            StrAppend(&bio, "(died ", d , ")");
+          }
+        }
+
+        if (!bio.empty()) {
+          builder->Add(n_description_, bio);
+          builder->Add(n_auto_, true);
+        }
+      }
+    }
   }
 }
 

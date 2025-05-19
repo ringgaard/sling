@@ -363,6 +363,7 @@ num_internal = 0
 num_errors = 0
 num_cached = 0
 num_posts = 0
+num_heads = 0
 num_robotstxt = 0
 num_favicons = 0
 num_hits = 0
@@ -373,6 +374,7 @@ num_curls = 0
 
 page_hits = defaultdict(int)
 ip_hits = defaultdict(int)
+head_hits = defaultdict(int)
 api_calls = defaultdict(int)
 source_files = defaultdict(int)
 date_hits = defaultdict(int)
@@ -481,6 +483,12 @@ for logfn in flags.arg.logfiles:
     # POSTs.
     if method == "POST":
       num_posts += 1
+
+    # HEADs.
+    if method == "HEAD" or ipaddr in head_hits:
+      num_heads += 1
+      head_hits[ipaddr] += 1
+      continue
 
     # Mobile.
     if mobile_pattern.search(ua):
@@ -635,6 +643,7 @@ print("%6d hits" % num_hits)
 print("%6d visitors" % len(visitors))
 print("%6d cached" % num_cached)
 print("%6d POSTs" % num_posts)
+print("%6d HEADs" % num_heads)
 print("%6d mobile hits" % num_mobile)
 print("%6d internal hits" % num_internal)
 print("%6d internal monitoring" % num_monitor)
@@ -668,6 +677,7 @@ if flags.arg.v:
   print_table("QUERIES", "query", query_hits)
 print_table("REFFERING DOMAINS", "domain", referring_domains)
 print_table("REFERRERS", "referrer", referrers)
+#print_table("HEADS", "HEAD requests", head_hits)
 
 if flags.arg.v:
   print_table("HTTP ERRORS", "HTTP status", http_codes)

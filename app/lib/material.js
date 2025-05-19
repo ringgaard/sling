@@ -2196,6 +2196,7 @@ export class MdSearchResult extends MdSearchItem {
     let title = this.state.title;
     if (!title) title = this.state.name;
     let description = this.state.description;
+    let auto = this.state.auto;
 
     if (title) {
       h.push('<span class="item-title">');
@@ -2203,7 +2204,11 @@ export class MdSearchResult extends MdSearchItem {
       h.push('</span>');
     }
     if (description) {
-      h.push('<span class="item-description">');
+      if (auto) {
+        h.push('<span class="item-description auto">');
+      } else {
+        h.push('<span class="item-description">');
+      }
       h.push(Component.escape(description));
       h.push('</span>');
     }
@@ -2221,6 +2226,10 @@ export class MdSearchResult extends MdSearchItem {
       $ .item-description {
         display: block;
         padding: 0px 10px 0px 10px;
+      }
+
+      $ .auto {
+        color: #808080;
       }
     `;
   }

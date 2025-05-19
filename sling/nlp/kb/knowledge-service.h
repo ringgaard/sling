@@ -230,6 +230,9 @@ class KnowledgeService {
   // Calendar.
   Calendar calendar_;
 
+  // Demonyms for auto-generated mini-biographies.
+  HandleMap<Text> demonyms_;
+
   // Name table.
   NameTable aliases_;
 
@@ -284,6 +287,7 @@ class KnowledgeService {
   Name n_nsfw_{names_, "nsfw"};
   Name n_age_{names_, "age"};
   Name n_rank_{names_, "rank"};
+  Name n_auto_{names_, "auto"};
 
   Name n_xref_type_{names_, "/w/xref"};
   Name n_item_type_{names_, "/w/item"};
@@ -317,6 +321,9 @@ class KnowledgeService {
   Name n_language_{names_, "P407"};
   Name n_date_of_birth_{names_, "P569"};
   Name n_date_of_death_{names_, "P570"};
+  Name n_citizenship_{names_, "P27"};
+  Name n_occupation_{names_, "P106"};
+  Name n_gender_{names_, "P21"};
 
   Name n_start_time_{names_, "P580"};
   Name n_end_time_{names_, "P582"};
@@ -325,9 +332,14 @@ class KnowledgeService {
   Name n_media_legend_{names_, "P2096"};
   Name n_has_quality_{names_, "P1552"};
   Name n_not_safe_for_work_{names_, "Q2716583"};
+  Name n_human_{names_, "Q5"};
+  Name n_female_{names_, "Q6581072"};
+  Name n_actor_{names_, "Q33999"};
+  Name n_actress_{names_, "Q21169216"};
 
   Name n_popularity_{names_, "/w/item/popularity"};
   Name n_fanin_{names_, "/w/item/fanin"};
+  Name n_demonyms_{names_, "/lang/wikilang/demonyms"};
 };
 
 }  // namespace nlp

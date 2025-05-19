@@ -408,7 +408,7 @@ let xrefs = [
     property: frame("P2889"),
   },
   {
-    pattern: /^https:\/\/billiongraves\.com\/grave\/[A-Za-z -]+\/(\d+)/,
+    pattern: /^https:\/\/billiongraves\.com\/grave\/[A-Za-z0-9% -]+\/(\d+)/,
     property: frame("P10554"),
   },
 ];
