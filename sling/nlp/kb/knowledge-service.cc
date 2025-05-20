@@ -1183,8 +1183,8 @@ void KnowledgeService::GetStandardProperties(Frame &item,
           if (!bio.empty()) bio.push_back(' ');
           Date born(Object(store, item.Resolve(n_date_of_birth_)));
           Date died(Object(store, item.Resolve(n_date_of_death_)));
-          int b = born.precision > Date::YEAR ? born.year : 0;
-          int d = died.precision > Date::YEAR ? died.year : 0;
+          int b = born.precision >= Date::YEAR ? born.year : 0;
+          int d = died.precision >= Date::YEAR ? died.year : 0;
           if (b > 1000 && d > 1000) {
             StrAppend(&bio, "(", b, "-", d, ")");
           } else if (b > 1000) {
