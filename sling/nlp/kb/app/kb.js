@@ -104,7 +104,7 @@ class KbApp extends MdApp {
     this.find("#properties").update(item);
     this.find("#categories").update(item);
     this.find("#xrefs").update(item);
-    window.document.title = item ? item.text : "KnolBase";
+    window.document.title = item ? item.name : "KnolBase";
   }
 
   onpopstate(e) {
@@ -301,7 +301,9 @@ class KbPropertyTable extends Component {
         out.push(val.url.replace(/"/g, '&quot;'));
         out.push('" target="_blank" rel="noreferrer" tabindex="-1">');
       }
-      if (val.text) {
+      if (val.name) {
+        out.push(Component.escape(val.name));
+      } else if (val.text) {
         out.push(Component.escape(val.text));
       } else {
         out.push('&#x1f6ab;');
@@ -518,7 +520,7 @@ class KbItemList extends Component {
       }
       let name = item.text || item.name;
       if (name) {
-        let anchor = name.substr(name.text.indexOf(':') + 1);
+        let anchor = name.substr(name.indexOf(':') + 1);
         out.push(Component.escape(anchor));
       } else {
         out.push('???');
@@ -576,7 +578,7 @@ class KbItemCard extends MdCard {
 
   onupdate() {
     let item = this.state;
-    this.find("#title").update(item.text);
+    this.find("#title").update(item.name);
     this.find("#ref").update({
       url: wikiurl(item.ref),
       text: item.ref,
@@ -594,7 +596,7 @@ class KbItemCard extends MdCard {
 
   onimgsearch(e) {
     let item = this.state;
-    let url = `/photosearch?q="${encodeURIComponent(item.text)}"`;
+    let url = `/photosearch?q="${encodeURIComponent(item.name)}"`;
     if (settings.nsfw) url += "&nsfw=1";
     window.open(url, "_blank");
   }
