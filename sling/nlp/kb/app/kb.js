@@ -207,11 +207,7 @@ class KbSearchBox extends Component {
       let data = await r.json();
       let items = [];
       for (let item of data.matches) {
-        items.push(new MdSearchResult({
-          ref: item.ref,
-          name: item.text,
-          description: item.description,
-        }));
+        items.push(new MdSearchResult(item));
       }
       if (!search) {
         items.push(new MdSearchResult({

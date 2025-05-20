@@ -2193,10 +2193,11 @@ Component.register(MdSearchItem);
 export class MdSearchResult extends MdSearchItem {
   render() {
     let h = [];
-    let title = this.state.title;
-    if (!title) title = this.state.name;
-    let description = this.state.description;
-    let auto = this.state.auto;
+    let item = this.state;
+    if (!item) return "(empty)";
+    let title = item.title || item.text || item.name;
+    let description = item.description;
+    let auto = item.auto;
 
     if (title) {
       h.push('<span class="item-title">');

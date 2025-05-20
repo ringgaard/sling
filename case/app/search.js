@@ -120,18 +120,13 @@ export async function kbsearch(query, results, options) {
     let data = await response.json();
     let twiddle = true;
     for (let item of data.matches) {
-      let result = {
-        ref: item.ref,
-        name: item.text,
-        description: item.description,
-      };
       if (twiddle && item.score > 1000000) {
         if (!options.local || !options.local.ids.get(item.ref)) {
-          results.unshift(result);
+          results.unshift(item);
         }
         twiddle = false;
       } else {
-        results.push(result);
+        results.push(item);
       }
     }
   } catch (error) {
