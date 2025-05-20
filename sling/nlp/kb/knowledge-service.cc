@@ -1133,7 +1133,7 @@ void KnowledgeService::GetStandardProperties(Frame &item,
   // Get name.
   Handle name = item.GetHandle(n_name_);
   if (!name.IsNil()) {
-    builder->Add(n_text_, name);
+    builder->Add(n_name_, name);
   } else {
     builder->Add(n_text_, item.Id());
   }

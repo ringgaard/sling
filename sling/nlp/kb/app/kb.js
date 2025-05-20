@@ -211,7 +211,7 @@ class KbSearchBox extends Component {
       }
       if (!search) {
         items.push(new MdSearchResult({
-          name: "more...",
+          text: "more...",
           description: 'search for "' + query + '" 🔎',
           query: query,
         }));
@@ -516,9 +516,10 @@ class KbItemList extends Component {
         out.push(item.ref);
         out.push('">');
       }
-      if (item.text) {
-        let text = item.text.substr(item.text.indexOf(':') + 1);
-        out.push(Component.escape(text));
+      let name = item.text || item.name;
+      if (name) {
+        let anchor = name.substr(name.text.indexOf(':') + 1);
+        out.push(Component.escape(anchor));
       } else {
         out.push('???');
       }
