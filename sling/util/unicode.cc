@@ -456,11 +456,17 @@ void UTF8::Normalize(const char *s, int len, int flags, string *normalized) {
     uint8 c = *reinterpret_cast<const uint8 *>(s);
     if (c & 0x80) break;
     int ch = Unicode::Normalize(c, flags);
-    if (ch == last && (flags & NORMALIZE_DOUBLES)) {
-      s++;
-      continue;
+    if (flags & NORMALIZE_DOUBLES) {
+      // Treat w and double v.
+      if (ch == 'w') ch = 'v';
+
+      // Ignore double non-digit characters.
+      if (ch == last && !Unicode::IsDigit(ch)) {
+        s++;
+        continue;
+      }
+      last = ch;
     }
-    last = ch;
     if (ch > 0) {
       if (ch == ' ') {
         brk = true;
@@ -483,11 +489,17 @@ void UTF8::Normalize(const char *s, int len, int flags, string *normalized) {
   // characters.
   while (s < end) {
     int ch = Unicode::Normalize(Decode(s), flags);
-    if (ch == last && (flags & NORMALIZE_DOUBLES)) {
-      s = Next(s);
-      continue;
+    if (flags & NORMALIZE_DOUBLES) {
+      // Treat w and double v.
+      if (ch == 'w') ch = 'v';
+
+      // Ignore double non-digit characters.
+      if (ch == last && !Unicode::IsDigit(ch)) {
+        s = Next(s);
+        continue;
+      }
+      last = ch;
     }
-    last = ch;
     if (ch > 0) {
       if (ch == ' ') {
         brk = true;
