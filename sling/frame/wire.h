@@ -39,6 +39,7 @@ enum WireSpecial {
   WIRE_INDEX    = 6,  // index value, followed by varint32 encoded integer
   WIRE_RESOLVE  = 7,  // resolve link, followed by slots and replacement index
   WIRE_QSTRING  = 8,  // qstring, followed by length, data, and qualifier
+  WIRE_NAME     = 9,  // "name" value
 };
 
 // The binary marker (i.e. a nul character) is used for prefixing serialized
@@ -53,4 +54,3 @@ enum EncodingMarker {
 }  // namespace sling
 
 #endif  // SLING_FRAME_WIRE_H_
-

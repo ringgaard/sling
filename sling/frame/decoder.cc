@@ -93,6 +93,7 @@ Handle Decoder::DecodeObject() {
         case WIRE_ID: handle = Handle::id(); break;
         case WIRE_ISA: handle = Handle::isa(); break;
         case WIRE_IS: handle = Handle::is(); break;
+        case WIRE_NAME: handle = Handle::name(); break;
         case WIRE_ARRAY:
           handle = DecodeArray();
           break;
@@ -315,4 +316,3 @@ Handle Decoder::DecodeLink(int name_size) {
 }
 
 }  // namespace sling
-

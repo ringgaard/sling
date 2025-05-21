@@ -33,25 +33,29 @@ namespace sling {
 
 static const Word kInitialHeap[] = {
   // id frame
-  FRAME | PUBLIC |  8, 0x04, 0x04, 0x10,
+  FRAME | PUBLIC |  8, 0x04, 0x04, 0x14,
   // isa frame
-  FRAME | PUBLIC |  8, 0x08, 0x04, 0x14,
+  FRAME | PUBLIC |  8, 0x08, 0x04, 0x18,
   // is frame
-  FRAME | PUBLIC |  8, 0x0C, 0x04, 0x18,
+  FRAME | PUBLIC |  8, 0x0C, 0x04, 0x1C,
+  // name frame
+  FRAME | PUBLIC |  8, 0x10, 0x04, 0x20,
 
   // id symbol
-  SYMBOL         | 14, 0x10, 0, 0x04, 0x307A1C66, CHARS('i', 'd', 0, 0),
+  SYMBOL | 14, 0x14, 0, 0x04, 0x307A1C66, CHARS('i', 'd', 0, 0),
   // isa symbol
-  SYMBOL         | 15, 0x14, 0, 0x08, 0x6966506A, CHARS('i', 's', 'a', 0),
+  SYMBOL | 15, 0x18, 0, 0x08, 0x6966506A, CHARS('i', 's', 'a', 0),
   // is symbol
-  SYMBOL         | 14, 0x18, 0, 0x0C, 0xC089FC02, CHARS('i', 's', 0, 0),
+  SYMBOL | 14, 0x1C, 0, 0x0C, 0xC089FC02, CHARS('i', 's', 0, 0),
+  // name symbol
+  SYMBOL | 16, 0x20, 0, 0x10, 0x2C9346CE, CHARS('n', 'a', 'm', 'e'),
 };
 
 #undef CHARS
 
 // Size of pristine store.
-static const int kPristineSymbols = 3;
-static const int kPristineHandles = 8;
+static const int kPristineSymbols = 4;
+static const int kPristineHandles = 10;
 
 // Default store options.
 const Store::Options Store::kDefaultOptions;

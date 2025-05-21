@@ -5,20 +5,11 @@
   name: "Named"
   family: /schema/meta
 
-  role: {=name :slot
-    name: "name"
-    source: named
-    target: string
-  }
+  role: name
   role: {=description :slot
     name: "description"
     source: named
     target: string
-  }
-  role: {=lang :slot
-    name: "language"
-    source: named
-    target: language
   }
 }
 

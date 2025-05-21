@@ -384,6 +384,7 @@ class Shell {
             case WIRE_ID: std::cout << "SPECIAL id\n"; break;
             case WIRE_ISA: std::cout << "SPECIAL isa\n"; break;
             case WIRE_IS: std::cout << "SPECIAL is\n"; break;
+            case WIRE_NAME: std::cout << "SPECIAL name\n"; break;
 
             case WIRE_ARRAY: {
               uint32 size;
@@ -903,4 +904,3 @@ int main(int argc, char *argv[]) {
 
   return 0;
 }
-

@@ -228,6 +228,7 @@ struct Handle {
   static const Word kId          = kGlobalTag | 0x00000004;
   static const Word kIsA         = kGlobalTag | 0x00000008;
   static const Word kIs          = kGlobalTag | 0x0000000C;
+  static const Word kName        = kGlobalTag | 0x00000010;
 
   static const Word kZero        = kIntTag | (0 << kIntShift);
   static const Word kOne         = kIntTag | (1 << kIntShift);
@@ -257,6 +258,7 @@ struct Handle {
   bool IsId() const { return bits == kId; }
   bool IsIsA() const { return bits == kIsA; }
   bool IsIs() const { return bits == kIs; }
+  bool IsName() const { return bits == kName; }
   bool IsFalse() const { return bits == kFalse; }
   bool IsTrue() const { return !IsFalse(); }
   bool IsZero() const { return bits == kZero; }
@@ -368,6 +370,7 @@ struct Handle {
   static constexpr Handle id() { return Handle{kId}; }
   static constexpr Handle isa() { return Handle{kIsA}; }
   static constexpr Handle is() { return Handle{kIs}; }
+  static constexpr Handle name() { return Handle{kName}; }
   static constexpr Handle zero() { return Handle{kZero}; }
   static constexpr Handle one() { return Handle{kOne}; }
   static constexpr Handle error() { return Handle{kError}; }

@@ -51,14 +51,17 @@ export class Store {
       this.id = globals.id;
       this.isa = globals.isa;
       this.is = globals.is;
+      this.name = globals.name;
     } else {
       this.id = new Frame(this, []);
       this.id.slots = [this.id, "id"];
       this.isa = new Frame(this, [this.id, "isa"]);
       this.is = new Frame(this, [this.id, "is"]);
+      this.name = new Frame(this, [this.id, "name"]);
       this.add(this.id);
       this.add(this.isa);
       this.add(this.is);
+      this.add(this.name);
     }
   }
 
@@ -356,6 +359,7 @@ export class Frame {
 
   // Return name for nth slot.
   name(n) {
+    if (n === undefined) return get(this.store.name);
     return this.slots[n * 2];
   }
 
@@ -696,6 +700,7 @@ export class Decoder {
           case 2: object = this.store.id; break;
           case 3: object = this.store.isa; break;
           case 4: object = this.store.is; break;
+          case 9: object = this.store.name; break;
 
           case 5:
             // ARRAY.
@@ -843,6 +848,7 @@ export class Encoder {
     this.refs.set(store.id, {status: Status.ENCODED, index: -2});
     this.refs.set(store.isa, {status: Status.ENCODED, index: -3});
     this.refs.set(store.is, {status: Status.ENCODED, index: -4});
+    this.refs.set(store.name, {status: Status.ENCODED, index: -9});
 
     // Output binary encoding mark.
     if (marker) this.write_byte(0);

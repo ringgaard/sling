@@ -43,7 +43,7 @@ class Snapshot {
  private:
   // Current magic and version for snapshots.
   static const int MAGIC = 0x50414e53;
-  static const int VERSION = 4;
+  static const int VERSION = 5;
 
   // Snapshot file header.
   struct Header {
@@ -61,4 +61,3 @@ class Snapshot {
 }  // namespace sling
 
 #endif  // SLING_FRAME_SNAPSHOT_H_
-

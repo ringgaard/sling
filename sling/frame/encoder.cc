@@ -31,6 +31,7 @@ Encoder::Encoder(const Store *store, Output *output, bool marker)
   references_[Handle::id()] = Reference(WIRE_ID);
   references_[Handle::isa()] = Reference(WIRE_ISA);
   references_[Handle::is()] = Reference(WIRE_IS);
+  references_[Handle::name()] = Reference(WIRE_NAME);
 
   // Output binary encoding mark.
   if (marker) output_->WriteChar(WIRE_BINARY_MARKER);
@@ -211,4 +212,3 @@ void Encoder::WriteReference(const Reference &ref) {
 }
 
 }  // namespace sling
-

@@ -61,6 +61,8 @@ loc "python/dataset"
 loc "python/org"
 loc "python/wiki"
 loc "python/extract"
+loc "python/analyzer"
+loc "python/news"
 
 loc "case"
 loc "case/service"
@@ -87,4 +89,3 @@ loc "sling/myelin/kernel"
 loc "third_party/jit"
 
 echo -e "total\t${total}"
-

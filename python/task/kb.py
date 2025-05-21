@@ -262,7 +262,7 @@ class KnowledgeBaseWorkflow:
                                auxin={"config": self.recon_config()})
 
   def build_knowledge_base(self):
-    """Task for building knowledge base store with items, and schemas."""
+    """Task for building knowledge base store with items and schemas."""
     items = self.data.items()
 
     with self.wf.namespace("kb"):
