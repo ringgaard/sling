@@ -117,15 +117,22 @@ int SearchEngine::Search(Text query, Results *results) {
 int SearchEngine::Results::Score(const Document *document) {
   int unigrams = 0;
   int bigrams = 0;
+  int importance = 1;
   const uint16 *begin = document->tokens();
   const uint16 *end = begin + document->num_tokens();
   uint16 prev = WORDFP_BREAK;
+
   for (const uint16 *t = begin; t < end; ++t) {
-    if (Unigram(*t)) {
-      unigrams++;
-      if (prev != WORDFP_BREAK && Bigram(prev, *t)) bigrams++;
+    uint16 token = *t;
+    if (Unigram(token)) {
+      unigrams += importance;
+      if (prev != WORDFP_BREAK && Bigram(prev, token)) {
+        bigrams += importance;
+      }
     }
-    prev = *t;
+    if (token == WORDFP_BREAK) importance = 1;
+    if (token == WORDFP_IMPORTANT) importance = 50;
+    prev = token;
   }
 
   int boost = 100 * bigrams + 10 * unigrams + 1;

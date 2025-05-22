@@ -128,7 +128,7 @@
     P1875: item,      ; represented by
 
     P50: item,         ; author
-    P2093: name,       ; author name string
+    P2093: text,       ; author name string
   }
 
   ; Items with large number of properties that are omitted from the search

@@ -114,8 +114,9 @@ class SearchIndexMapper : public task::FrameProcessor {
         if (store->IsString(value)) {
           Handle lang = store->GetString(value)->qualifier();
           if (!config_.foreign(lang)) {
-            Text name = store->GetString(value)->str();
-            Collect(&terms, &words, name);
+            Text text = store->GetString(value)->str();
+            bool important = type == n_name_;
+            Collect(&terms, &words, text, important);
           }
         }
       } else if (type == n_item_) {
@@ -125,7 +126,7 @@ class SearchIndexMapper : public task::FrameProcessor {
           Collect(&terms, item);
         } else if (store->IsString(value)) {
           Text str = store->GetString(value)->str();
-          Collect(&terms, &words, str);
+          Collect(&terms, &words, str, false);
         }
       } else if (type == n_date_) {
         Date date(Object(store, value));
@@ -177,9 +178,11 @@ class SearchIndexMapper : public task::FrameProcessor {
       Slice(&entityid, sizeof(uint32))));
   }
 
-  void Collect(Terms *terms, Words *words, Text text) {
+  void Collect(Terms *terms, Words *words, Text text, bool important) {
     if (!UTF8::Valid(text.data(), text.size())) return;
-    if (words != nullptr && !words->empty()) {
+    if (important) {
+      words->push_back(WORDFP_IMPORTANT);
+    } else if (!words->empty()) {
       words->push_back(WORDFP_BREAK);
     }
     std::vector<uint64> tokens;
@@ -204,7 +207,7 @@ class SearchIndexMapper : public task::FrameProcessor {
 
   void Collect(Terms *terms, Words *words, const Document &document) {
     // Add break before document start.
-    if (words != nullptr && !words->empty()) {
+    if (!words->empty()) {
       words->push_back(WORDFP_BREAK);
     }
 

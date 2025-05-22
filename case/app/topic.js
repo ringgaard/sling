@@ -179,7 +179,7 @@ class TopicList extends Component {
   async delete_selected() {
     let selection = this.selection();
     let editor = this.match("#editor");
-    editor.delete_topics(selection, {confirm: true, preserve: true});
+    editor.delete_topics(selection, {manual: true});
   }
 
   async navigate_to(topic) {
@@ -695,7 +695,7 @@ class TopicCard extends Component {
   async ondelete(e) {
     e.stopPropagation();
     let topic = this.state;
-    this.match("#editor").delete_topic(topic, {confirm: true, preserve: true});
+    this.match("#editor").delete_topic(topic, {manual: true});
   }
 
   onimport(e) {

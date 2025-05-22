@@ -44,27 +44,19 @@ REGISTER_ANNOTATOR("parser", ParserAnnotator);
 // Document annotator for adding names to frame based on first mention.
 class MentionNameAnnotator : public Annotator {
  public:
-  void Init(task::Task *task, Store *commons) override {
-    names_.Bind(commons);
-  }
-
   bool Annotate(Document *document) override {
     Handles evoked(document->store());
     for (Span *span : document->spans()) {
       span->AllEvoked(&evoked);
       for (Handle h : evoked) {
         Frame f(document->store(), h);
-        if (!f.Has(n_name_)) {
-          f.Add(n_name_, span->GetText());
+        if (!f.Has(Handle::name())) {
+          f.Add(Handle::name(), span->GetText());
         }
       }
     }
     return true;
   }
-
- private:
-  Names names_;
-  Name n_name_{names_, "name"};
 };
 
 REGISTER_ANNOTATOR("mention-name", MentionNameAnnotator);

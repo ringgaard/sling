@@ -66,7 +66,7 @@ Frame DocumentService::Convert(const Document &document) const {
   Handles themes(store);
   mapping.Add(Handle::isa());
   mapping.Add(Handle::is());
-  mapping.Add(n_name_.handle());
+  mapping.Add(Handle::name());
   mapping.Add(n_item_.handle());
   mapping.Add(n_property_.handle());
 

@@ -209,6 +209,11 @@ void AuxFilter::Init(Store *store) {
     "Q13433827",  // encyclopedia article
     "Q17329259",  // encyclopedic article (old)
     "Q19389637",  // biographical article
+    "Q452237",    // motion
+    "Q96739634",  // individual motion
+    "Q43305660",  // United States patent
+    "Q191067",    // article
+    "Q87167",     // manuscript
 
     "Q17633526",  // Wikinews article
     "Q17362920",  // Wikimedia duplicated page
@@ -222,10 +227,27 @@ void AuxFilter::Init(Store *store) {
     "Q11173",     // chemical compound
     "Q30612",     // clinical trial
     "Q113145171", // type of chemical entity
+    "Q21014462",  // cell line
+    "Q23038290",  // fossil taxon
 
     "Q523",       // star
     "Q318",       // galaxy
     "Q83373",     // quasar
+    "Q1931185",   // astronomical radio source
+    "Q2247863",   // high proper-motion star
+    "Q1457376",   // eclipsing binary star
+    "Q3863",      // asteroid
+    "Q67206691",  // infrared source
+    "Q2154519",   // astrophysical X-ray source
+    "Q204107",    // galaxy cluster
+    "Q65259218",  // compact group of galaxies
+    "Q67206701",  // far-IR source
+    "Q1151284",   // brightest cluster galaxy
+    "Q66619666",  // red giant branch star
+    "Q6243",      // variable star
+    "Q2168098",   // rotating variable star
+    "Q12795622",  // low-mass star
+    "Q6999",      // astronomical object
 
     nullptr,
   };

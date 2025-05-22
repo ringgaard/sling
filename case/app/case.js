@@ -1074,7 +1074,19 @@ class CaseEditor extends MdApp {
   async delete_topics(topics, options) {
     if (this.readonly || topics.length == 0) return;
 
-    // Confirm if deleting topic(s) from collaboration.
+    // Confirm manual deletions from collaborations; otherwise move the
+    // topics to the scrap folder.
+    if (options.manual) {
+      if (this.collab) {
+        options.confirm = true;
+        options.preserve = false;
+      } else {
+        options.confirm = false;
+        options.preserve = true;
+      }
+    }
+
+    // Confirm delete if requested.
     if (options.confirm) {
       if (topics.length > 1) {
         if (!await StdDialog.confirm(
@@ -1887,6 +1899,10 @@ class CaseEditor extends MdApp {
     let topic = frame(topicid);
     let pos = this.topics.indexOf(topic);
     if (pos != -1) this.topics.splice(pos, 1);
+    if (this.work) {
+      let workpos = this.work.indexOf(topic);
+      if (workpos != -1) this.work.splice(pos, 1);
+    }
   }
 
   remote_folder_rename(oldname, newname) {

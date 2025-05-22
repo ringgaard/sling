@@ -411,6 +411,10 @@ let xrefs = [
     pattern: /^https:\/\/billiongraves\.com\/grave\/[A-Za-z0-9% -]+\/(\d+)/,
     property: frame("P10554"),
   },
+  {
+    pattern: /^https:\/\/www\.myheritage\.dk\/research\/collection-1\/myheritage-family-slaegtstraeer\?itemId=([0-9-]+)/,
+    property: frame("PMHI"),
+  },
 ];
 
 export function match_link(url) {

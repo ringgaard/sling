@@ -303,11 +303,8 @@ Date Date::Today() {
 }
 
 void Calendar::Init(Store *store) {
-  // Get symbols.
-  store_ = store;
-  n_name_ = store->Lookup("name");
-
   // Get calendar from store.
+  store_ = store;
   Frame cal(store, "/w/calendar");
   if (!cal.valid()) return;
 
@@ -495,7 +492,7 @@ Handle Calendar::Millennium(int year) const {
 Text Calendar::ItemName(Handle item) const {
   if (!store_->IsFrame(item)) return "";
   FrameDatum *frame = store_->GetFrame(item);
-  Handle name = frame->get(n_name_);
+  Handle name = frame->get(Handle::name());
   if (!store_->IsString(name)) return "";
   StringDatum *str = store_->GetString(name);
   return str->str();

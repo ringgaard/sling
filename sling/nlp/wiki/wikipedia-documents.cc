@@ -272,7 +272,7 @@ class WikipediaDocumentBuilder : public task::FrameProcessor,
       Frame theme(document.store(), h);
       if (theme.IsA(n_link_)) {
         Text qid = theme.GetFrame(Handle::is()).Id();
-        Text anchor = theme.GetText(n_name_);
+        Text anchor = theme.GetText(Handle::name());
         OutputAlias(qid, anchor, SRC_WIKIPEDIA_LINK);
       }
     }
@@ -383,7 +383,6 @@ class WikipediaDocumentBuilder : public task::FrameProcessor,
 
   // Symbols.
   DocumentNames *docnames_ = nullptr;
-  Name n_name_{names_, "name"};
   Name n_lang_{names_, "lang"};
   Name n_lang_category_{names_, "/lang/wikilang/wiki_category"};
   Name n_lang_template_{names_, "/lang/wikilang/wiki_template"};

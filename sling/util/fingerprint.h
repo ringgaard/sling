@@ -40,8 +40,9 @@ inline uint32 Fingerprint32(const Slice &slice) {
 // 64-bit fingerprint. Never returns a reserved fingerprint.
 
 enum ReservedWordFingerprint {
-  WORDFP_BREAK  = 0,
-  WORDFP_FIRST  = 16,
+  WORDFP_BREAK      = 0,
+  WORDFP_IMPORTANT  = 1,
+  WORDFP_FIRST      = 16,
 };
 
 uint16 WordFingerprint(uint64 fp);

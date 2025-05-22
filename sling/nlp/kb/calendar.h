@@ -188,9 +188,6 @@ class Calendar {
   // Store with calendar.
   Store *store_ = nullptr;
 
-  // Symbols.
-  Handle n_name_;
-
   // Weekdays (0=Sunday).
   CalendarMap weekdays_;
 

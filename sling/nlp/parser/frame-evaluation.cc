@@ -165,17 +165,16 @@ void FrameEvaluation::Evaluate(ParallelCorpus *corpus, Output *output) {
   combined.add(label);
 
   // Add labels to type and role benchmarks.
-  Handle n_name = corpus->Commons()->LookupExisting("name");
   for (auto &it : output->types) {
     Frame type(corpus->Commons(), it.first);
-    it.second.name = type.GetString(n_name);
+    it.second.name = type.GetString(Handle::name());
     if (it.second.name.empty()) {
       it.second.name = corpus->Commons()->DebugString(it.first);
     }
   }
   for (auto &it : output->roles) {
     Frame role(corpus->Commons(), it.first);
-    it.second.name = role.GetString(n_name);
+    it.second.name = role.GetString(Handle::name());
     if (it.second.name.empty()) {
       it.second.name = corpus->Commons()->DebugString(it.first);
     }
