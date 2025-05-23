@@ -1607,6 +1607,7 @@ string KnowledgeService::PropertiesAsHTMLTable(
       Frame value(store, values.get(i));
       Text ref = value.GetText(n_ref_);
       Text text = value.GetText(n_text_);
+      if (text.empty()) text = value.GetText(n_name_);
       Text url = value.GetText(n_url_);
 
       html.append("<tr>");
@@ -1645,6 +1646,7 @@ string KnowledgeService::PropertiesAsHTMLTable(
             Frame qv(store, qvalues.get(j));
             Text qref = qv.GetText(n_ref_);
             Text qtext = qv.GetText(n_text_);
+            if (qtext.empty()) qtext = qv.GetText(n_name_);
             Text qurl = qv.GetText(n_url_);
 
             html.append(first ? " (" : ", ");
