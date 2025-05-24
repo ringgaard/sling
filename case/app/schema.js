@@ -194,8 +194,12 @@ class URLFormatter {
         let m = value.match(v.pattern);
         if (m) {
           let url = v.formatter;
-          for (let i = 1; i < m.length; ++i) {
-            url = url.replace("$" + i, m[i]);
+          if (m.length > 1) {
+            for (let i = 1; i < m.length; ++i) {
+              url = url.replace("$" + i, m[i]);
+            }
+          } else {
+            url = url.replace("$1", value);
           }
           return url;
         }

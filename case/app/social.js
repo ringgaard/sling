@@ -412,39 +412,39 @@ let xrefs = [
     property: frame("P10554"),
   },
   {
-    pattern: /^https:\/\/www\.myheritage\.dk\/research\/collection-1\/myheritage-family-slaegtstraeer\?itemId=([0-9-]+)/,
+    pattern: /^https:\/\/www\.myheritage\.dk\/research\/collection-1\/myheritage-family-slaegtstraeer\?itemId=([0-9]+)/,
     property: frame("PMHI"),
   },
   {
-    pattern: /^https:\/\/www\.myheritage\.dk\/research\/collection-10187\/1901-danmark-folketaelling\?itemId=([0-9-]+)/,
+    pattern: /^https:\/\/www\.myheritage\.dk\/research\/collection-10187\/1901-danmark-folketaelling\?itemId=([0-9]+)/,
     property: frame("PDFT01"),
   },
   {
-    pattern: /^https:\/\/www\.myheritage\.dk\/research\/collection-10253\/1906-danmark-folketaelling\?itemId=([0-9-]+)/,
+    pattern: /^https:\/\/www\.myheritage\.dk\/research\/collection-10253\/1906-danmark-folketaelling\?itemId=([0-9]+)/,
     property: frame("PDFT06"),
   },
   {
-    pattern: /^https:\/\/www\.myheritage\.dk\/research\/collection-10184\/1911-danmark-folketaelling\?itemId=([0-9-]+)/,
+    pattern: /^https:\/\/www\.myheritage\.dk\/research\/collection-10184\/1911-danmark-folketaelling\?itemId=([0-9]+)/,
     property: frame("PDFT11"),
   },
   {
-    pattern: /^https:\/\/www\.myheritage\.dk\/research\/collection-10196\/1916-danmark-folketaelling\?itemId=([0-9-]+)/,
+    pattern: /^https:\/\/www\.myheritage\.dk\/research\/collection-10196\/1916-danmark-folketaelling\?itemId=([0-9]+)/,
     property: frame("PDFT16"),
   },
   {
-    pattern: /^https:\/\/www\.myheritage\.dk\/research\/collection-10197\/1921-danmark-folketaelling\?itemId=([0-9-]+)/,
+    pattern: /^https:\/\/www\.myheritage\.dk\/research\/collection-10197\/1921-danmark-folketaelling\?itemId=([0-9]+)/,
     property: frame("PDFT21"),
   },
   {
-    pattern: /^https:\/\/www\.myheritage\.dk\/research\/collection-10190\/1925-danmark-folketaelling\?itemId=([0-9-]+)/,
+    pattern: /^https:\/\/www\.myheritage\.dk\/research\/collection-10190\/1925-danmark-folketaelling\?itemId=([0-9]+)/,
     property: frame("PDFT25"),
   },
   {
-    pattern: /^https:\/\/www\.myheritage\.dk\/research\/collection-10181\/1930-danmark-folketaelling\?itemId=([0-9-]+)/,
+    pattern: /^https:\/\/www\.myheritage\.dk\/research\/collection-10181\/1930-danmark-folketaelling\?itemId=([0-9]+)/,
     property: frame("PDFT30"),
   },
   {
-    pattern: /^https:\/\/www\.myheritage\.dk\/research\/collection-10706\/1940-danmark-folketaelling\?itemId=([0-9-]+)/,
+    pattern: /^https:\/\/www\.myheritage\.dk\/research\/collection-10706\/1940-danmark-folketaelling\?itemId=([0-9]+)/,
     property: frame("PDFT40"),
   },
 

@@ -577,8 +577,10 @@ void KnowledgeService::HandleBot(HTTPRequest *request,
   }
   response->Append("<link rel=\"canonical\" href=\"/kb/");
   response->Append(id);
-  response->Append("\"/>");
-
+  response->Append("\"/>\n");
+  if (!Indexable(item)) {
+    response->Append("<meta name=\"robots\" content=\"noindex\">\n");
+  }
   response->Append("</head>\n");
 
   // Generate simple HTML for bots.
@@ -617,7 +619,7 @@ void KnowledgeService::HandleBot(HTTPRequest *request,
     response->Append(id);
     response->Append("</a></p>\n");
   }
-
+  response->Append("<p><a href=\"/\">Home</a></p>\n");
   response->Append("</body>\n");
   response->Append("</html>\n");
 }
@@ -870,6 +872,11 @@ void KnowledgeService::HandleGetItem(HTTPRequest *request,
 
   // Return response.
   ws.set_output(b.Create());
+}
+
+bool KnowledgeService::Indexable(const Frame &item) const {
+  if (!item.valid()) return false;
+  return item.Has(n_topic_);
 }
 
 void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
@@ -1622,7 +1629,11 @@ string KnowledgeService::PropertiesAsHTMLTable(
 
       html.append("<td>");
       if (!ref.empty()) {
-        html.append("<a href=\"/kb/");
+        if (Indexable(value)) {
+          html.append("<a href=\"/kb/");
+        } else {
+          html.append("<a rel=\"nofollow\" href=\"/kb/");
+        }
         html.append(ref.data(), ref.size());
         html.append("\">");
       } else if (!url.empty()) {
@@ -1651,7 +1662,11 @@ string KnowledgeService::PropertiesAsHTMLTable(
 
             html.append(first ? " (" : ", ");
             first = false;
-            html.append("<a href=\"/kb/");
+            if (Indexable(qv)) {
+              html.append("<a href=\"/kb/");
+            } else {
+              html.append("<a rel=\"nofollow\" href=\"/kb/");
+            }
             html.append(qpid.data(), qpid.size());
             html.append("\">");
             html.append(HTMLEscape(qname));

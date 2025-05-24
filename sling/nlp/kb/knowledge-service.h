@@ -142,6 +142,9 @@ class KnowledgeService {
   const NameTable &aliases() const { return aliases_; }
 
  private:
+  // Check if item is indexable.
+  bool Indexable(const Frame &item) const;
+
   // Fetch properties.
   void FetchProperties(const Frame &item, Item *info);
 
@@ -314,6 +317,7 @@ class KnowledgeService {
   Name n_reason_for_deprecation_{names_, "P2241"};
   Name n_applies_if_regex_matches_{names_, "P8460"};
   Name n_signature_{names_, "P109"};
+  Name n_topic_{names_, "PTOPIC"};
 
   Name n_unit_symbol_{names_, "P558"};
   Name n_writing_system_{names_, "P282"};
