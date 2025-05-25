@@ -412,7 +412,7 @@ let xrefs = [
     property: frame("P10554"),
   },
   {
-    pattern: /^https:\/\/www\.myheritage\.dk\/research\/collection-1\/myheritage-family-slaegtstraeer\?itemId=([0-9]+)/,
+    pattern: /^https:\/\/www\.myheritage\.dk\/research\/collection-1\/myheritage-family-slaegtstraeer\?itemId=([0-9-]+)/,
     property: frame("PMHI"),
   },
   {
