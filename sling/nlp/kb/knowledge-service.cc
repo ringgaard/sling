@@ -948,12 +948,12 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
           Frame ref(store, value);
           GetStandardProperties(ref, &v, false);
         } else {
-          v.Add(n_text_, value);
+          v.Add(n_name_, value);
         }
       } else if (property->datatype == n_xref_type_) {
         // Add external reference.
         String identifier(store, value);
-        v.Add(n_text_, identifier);
+        v.Add(n_name_, identifier);
       } else if (property->datatype == n_property_type_) {
         // Add reference to property.
         Frame ref(store, value);
@@ -962,16 +962,16 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
         }
       } else if (property->datatype == n_string_type_) {
         // Add string value.
-        v.Add(n_text_, value);
+        v.Add(n_name_, value);
       } else if (property->datatype == n_text_type_) {
         // Add text value with language.
         if (store->IsString(value)) {
           String monotext(store, value);
           Handle qual = monotext.qualifier();
           if (qual.IsNil()) {
-            v.Add(n_text_, value);
+            v.Add(n_name_, value);
           } else {
-            v.Add(n_text_, monotext.text());
+            v.Add(n_name_, monotext.text());
             Frame lang(store, qual);
             if (lang.valid()) {
               v.Add(n_lang_, lang.GetHandle(n_name_));
@@ -979,27 +979,27 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
           }
         } else if (store->IsFrame(value)) {
           Frame monotext(store, value);
-          v.Add(n_text_, monotext.GetHandle(Handle::is()));
+          v.Add(n_name_, monotext.GetHandle(Handle::is()));
           Frame lang = monotext.GetFrame(n_lang_);
           if (lang.valid()) {
             v.Add(n_lang_, lang.GetHandle(n_name_));
           }
         } else {
-          v.Add(n_text_, value);
+          v.Add(n_name_, value);
         }
       } else if (property->datatype == n_url_type_) {
         // Add URL value.
-        v.Add(n_text_, value);
+        v.Add(n_name_, value);
         v.Add(n_url_, value);
       } else if (property->datatype == n_media_type_) {
         // Add image.
-        v.Add(n_text_, value);
+        v.Add(n_name_, value);
       } else if (property->datatype == n_geo_type_) {
         // Add coordinate value.
         Frame coord(store, value);
         double lat = coord.GetFloat(n_lat_);
         double lng = coord.GetFloat(n_lng_);
-        v.Add(n_text_, StrCat(ConvertGeoCoord(lat, true), ", ",
+        v.Add(n_name_, StrCat(ConvertGeoCoord(lat, true), ", ",
                               ConvertGeoCoord(lng, false)));
         v.Add(n_url_, StrCat("http://maps.google.com/maps?q=",
                               lat, ",", lng));
@@ -1017,11 +1017,11 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
         } else {
           text = AsText(store, value);
         }
-        v.Add(n_text_, text);
+        v.Add(n_name_, text);
       } else if (property->datatype == n_time_type_) {
         // Add time value.
         Object time(store, value);
-        v.Add(n_text_, calendar_.DateAsString(time));
+        v.Add(n_name_, calendar_.DateAsString(time));
         if (info->start.precision != Date::NONE) {
           if (property->origin) {
             if (info->end.precision == Date::NONE) {
@@ -1039,7 +1039,7 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
           Frame ref(store, value);
           GetStandardProperties(ref, &v, false);
         } else {
-          v.Add(n_text_, value);
+          v.Add(n_name_, value);
         }
       }
 
@@ -1077,7 +1077,7 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
         if (qualified) {
           Frame image(store, h);
           Handle legend = image.GetHandle(n_media_legend_);
-          if (!legend.IsNil()) m.Add(n_text_, legend);
+          if (!legend.IsNil()) m.Add(n_name_, legend);
         }
         info->gallery.push_back(m.Create().handle());
       }
@@ -1112,7 +1112,7 @@ void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
     if (store->IsFrame(media)) {
       Frame image(store, media);
       Handle legend = image.GetHandle(n_media_legend_);
-      if (!legend.IsNil()) m.Add(n_text_, legend);
+      if (!legend.IsNil()) m.Add(n_name_, legend);
 
       Handle quality = image.GetHandle(n_has_quality_);
       if (quality == n_not_safe_for_work_) nsfw = true;
@@ -1142,7 +1142,7 @@ void KnowledgeService::GetStandardProperties(Frame &item,
   if (!name.IsNil()) {
     builder->Add(n_name_, name);
   } else {
-    builder->Add(n_text_, item.Id());
+    builder->Add(n_name_, item.Id());
   }
 
   // Get description.
@@ -1613,8 +1613,7 @@ string KnowledgeService::PropertiesAsHTMLTable(
     for (int i = 0; i < values.length(); ++i) {
       Frame value(store, values.get(i));
       Text ref = value.GetText(n_ref_);
-      Text text = value.GetText(n_text_);
-      if (text.empty()) text = value.GetText(n_name_);
+      Text name = value.GetText(n_name_);
       Text url = value.GetText(n_url_);
 
       html.append("<tr>");
@@ -1641,7 +1640,7 @@ string KnowledgeService::PropertiesAsHTMLTable(
         html.append(url.data(), url.size());
         html.append("\">");
       }
-      html.append(HTMLEscape(text));
+      html.append(HTMLEscape(name));
       if (!ref.empty() || !url.empty()) html.append("</a>");
       if (value.Has(n_qualifiers_)) {
         bool first = true;
@@ -1650,14 +1649,13 @@ string KnowledgeService::PropertiesAsHTMLTable(
           Frame qvalue(store, qualifiers.get(i));
 
           Text qpid = store->FrameId(qvalue.GetHandle(n_ref_));
-          Text qname = qvalue.GetText(n_property_);
+          Text qpname = qvalue.GetText(n_property_);
           Array qvalues = qvalue.Get(n_values_).AsArray();
           if (!values.valid()) continue;
           for (int j = 0; j < qvalues.length(); ++j) {
             Frame qv(store, qvalues.get(j));
             Text qref = qv.GetText(n_ref_);
-            Text qtext = qv.GetText(n_text_);
-            if (qtext.empty()) qtext = qv.GetText(n_name_);
+            Text qname = qv.GetText(n_name_);
             Text qurl = qv.GetText(n_url_);
 
             html.append(first ? " (" : ", ");
@@ -1669,7 +1667,7 @@ string KnowledgeService::PropertiesAsHTMLTable(
             }
             html.append(qpid.data(), qpid.size());
             html.append("\">");
-            html.append(HTMLEscape(qname));
+            html.append(HTMLEscape(qpname));
             html.append("</a>");
             html.append(": ");
 
@@ -1682,7 +1680,7 @@ string KnowledgeService::PropertiesAsHTMLTable(
               html.append(qurl.data(), qurl.size());
               html.append("\">");
             }
-            html.append(HTMLEscape(qtext));
+            html.append(HTMLEscape(qname));
             if (!qref.empty() || !qurl.empty()) html.append("</a>");
           }
         }

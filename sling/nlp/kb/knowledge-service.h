@@ -278,7 +278,6 @@ class KnowledgeService {
   Name n_categories_{names_, "categories"};
   Name n_gallery_{names_, "gallery"};
   Name n_type_{names_, "type"};
-  Name n_text_{names_, "text"};
   Name n_ref_{names_, "ref"};
   Name n_url_{names_, "url"};
   Name n_summary_{names_, "summary"};
