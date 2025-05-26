@@ -575,7 +575,7 @@ void KnowledgeService::HandleBot(HTTPRequest *request,
   if (!description.empty()) {
     AddMeta(response, "og:description", "twitter:description", description);
   }
-  response->Append("<link rel=\"canonical\" href=\"/kb/");
+  response->Append("<link rel=\"canonical\" href=\"https://ringgaard.com/kb/");
   response->Append(id);
   response->Append("\"/>\n");
   if (!Indexable(item)) {
@@ -1619,7 +1619,7 @@ string KnowledgeService::PropertiesAsHTMLTable(
       html.append("<tr>");
 
       html.append("<td>");
-      html.append("<a href=\"/kb/");
+      html.append("<a rel=\"nofollow\" href=\"/kb/");
       html.append(pid.data(), pid.size());
       html.append("\">");
       html.append(HTMLEscape(pname));
