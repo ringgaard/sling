@@ -157,6 +157,9 @@ class KnowledgeService {
   // Get standard properties (ref, name, and optinally description).
   void GetStandardProperties(Frame &item, Builder *builder, bool full) const;
 
+  // Generate short bio.
+  string AutoBio(const Frame &item) const;
+
   // Compare values. Return true if a is before b.
   bool Compare(Store *store, Handle a, Handle b) const;
 

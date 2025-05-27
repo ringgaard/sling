@@ -584,7 +584,13 @@ class KbItemCard extends MdCard {
       text: item.ref,
       external: true,
     });
-    this.find("#description").update(item.description);
+    let description = this.find("#description");
+    description.update(item.description);
+    if (item.auto) {
+      description.classList.add("autogen");
+    } else {
+      description.classList.remove("autogen");
+    }
     this.find("#datatype").update(item.type ? "Datatype: " + item.type : "");
   }
 
@@ -630,6 +636,10 @@ class KbItemCard extends MdCard {
 
       $ #description {
         font-size: 16px;
+      }
+
+      $ .autogen {
+        color: #808080;
       }
 
       $ #datatype {

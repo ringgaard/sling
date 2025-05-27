@@ -558,10 +558,17 @@ void KnowledgeService::HandleBot(HTTPRequest *request,
   response->set_content_type("text/html");
   response->Append(html_landing_header);
 
-  // Add social media tags to header.
+  // Get name and description.
+  string bio;
   Text id = item.Id();
   Text name = item.GetText(n_name_);
   Text description = item.GetText(n_description_);
+  if (description.empty()) {
+    bio = AutoBio(item);
+    description = bio;
+  }
+
+  // Add social media tags to header.
   if (!name.empty()) {
     response->Append("<title>");
     response->Append(HTMLEscape(name));
@@ -1151,63 +1158,67 @@ void KnowledgeService::GetStandardProperties(Frame &item,
     if (!description.IsNil()) {
       builder->Add(n_description_, description);
     } else {
-      // Add automatic mini-bio for persons.
-      Handle type = item.GetHandle(n_instance_of_);
-      if (type == n_human_) {
-        Store *store = item.store();
-        Handle dob = item.Resolve(n_date_of_birth_);
-        Handle dod = item.Resolve(n_date_of_death_);
-        Handle occupation = item.Resolve(n_occupation_);
-        Handle country = item.Resolve(n_citizenship_);
-
-        string bio;
-        if (!occupation.IsNil()) {
-          if (occupation == n_actor_) {
-            Handle gender = item.GetHandle(n_gender_);
-            if (gender == n_female_) occupation = n_actress_.handle();
-          }
-          string job;
-          if (store->IsString(occupation)) {
-            job = store->GetText(occupation).str();
-          } else if (store->IsFrame(occupation)) {
-            job = Frame(store, occupation).GetString(n_name_);
-            if (!country.IsNil() && !job.empty()) {
-              auto f = demonyms_.find(country);
-              if (f != demonyms_.end()) {
-                StrAppend(&bio, f->second.str(), " ", job);
-              } else if (store->IsFrame(country)) {
-                Text place = Frame(store, country).GetText(n_name_);
-                if (!place.empty()) {
-                  StrAppend(&bio, job, " from ", place);
-                }
-              }
-            }
-          }
-          if (bio.empty()) bio = job;
-        }
-
-        if (!dob.IsNil() || !dod.IsNil()) {
-          if (!bio.empty()) bio.push_back(' ');
-          Date born(Object(store, item.Resolve(n_date_of_birth_)));
-          Date died(Object(store, item.Resolve(n_date_of_death_)));
-          int b = born.precision >= Date::YEAR ? born.year : 0;
-          int d = died.precision >= Date::YEAR ? died.year : 0;
-          if (b > 1000 && d > 1000) {
-            StrAppend(&bio, "(", b, "-", d, ")");
-          } else if (b > 1000) {
-            StrAppend(&bio, "(born ", b , ")");
-          } else if (d > 1000) {
-            StrAppend(&bio, "(died ", d , ")");
-          }
-        }
-
-        if (!bio.empty()) {
-          builder->Add(n_description_, bio);
-          builder->Add(n_auto_, true);
-        }
+      string bio = AutoBio(item);
+      if (!bio.empty()) {
+        builder->Add(n_description_, bio);
+        builder->Add(n_auto_, true);
       }
     }
   }
+}
+
+string KnowledgeService::AutoBio(const Frame &item) const {
+  string bio;
+  Handle type = item.GetHandle(n_instance_of_);
+  if (type == n_human_) {
+    Store *store = item.store();
+    Handle dob = item.Resolve(n_date_of_birth_);
+    Handle dod = item.Resolve(n_date_of_death_);
+    Handle occupation = item.Resolve(n_occupation_);
+    Handle country = item.Resolve(n_citizenship_);
+
+    if (!occupation.IsNil()) {
+      if (occupation == n_actor_) {
+        Handle gender = item.GetHandle(n_gender_);
+        if (gender == n_female_) occupation = n_actress_.handle();
+      }
+      string job;
+      if (store->IsString(occupation)) {
+        job = store->GetText(occupation).str();
+      } else if (store->IsFrame(occupation)) {
+        job = Frame(store, occupation).GetString(n_name_);
+        if (!country.IsNil() && !job.empty()) {
+          auto f = demonyms_.find(country);
+          if (f != demonyms_.end()) {
+            StrAppend(&bio, f->second.str(), " ", job);
+          } else if (store->IsFrame(country)) {
+            Text place = Frame(store, country).GetText(n_name_);
+            if (!place.empty()) {
+              StrAppend(&bio, job, " from ", place);
+            }
+          }
+        }
+      }
+      if (bio.empty()) bio = job;
+    }
+
+    if (!dob.IsNil() || !dod.IsNil()) {
+      if (!bio.empty()) bio.push_back(' ');
+      Date born(Object(store, item.Resolve(n_date_of_birth_)));
+      Date died(Object(store, item.Resolve(n_date_of_death_)));
+      int b = born.precision >= Date::YEAR ? born.year : 0;
+      int d = died.precision >= Date::YEAR ? died.year : 0;
+      if (b > 1000 && d > 1000) {
+        StrAppend(&bio, "(", b, "-", d, ")");
+      } else if (b > 1000) {
+        StrAppend(&bio, "(born ", b , ")");
+      } else if (d > 1000) {
+        StrAppend(&bio, "(died ", d , ")");
+      }
+    }
+  }
+
+  return bio;
 }
 
 bool KnowledgeService::Compare(Store *store, Handle a, Handle b) const {

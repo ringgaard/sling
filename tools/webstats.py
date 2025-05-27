@@ -89,6 +89,7 @@ url_pattern = re.compile(r"https?:\/\/([A-Za-z0-9\-\.]+)(\:[0-9]+)?(\/.*)?")
 item_pattern = re.compile(r"\/kb\/item\?fmt=cjson\&id=(.+)")
 query_pattern = re.compile(r"\/kb\/query\?fmt=cjson(\&fullmatch=1)?\&q=(.+)")
 mobile_pattern = re.compile(r"iPhone|Android")
+kb_pattern = re.compile(r"\/kb\/[PQt]")
 
 pages = [
   ("Home page",            re.compile(r"^\/$")),
@@ -396,6 +397,8 @@ referring_domains = defaultdict(int)
 
 home_ips = set()
 bday_ips = set()
+kb_ips = set()
+item_ips = set()
 
 prev_query = {}
 for logfn in flags.arg.logfiles:
@@ -431,6 +434,8 @@ for logfn in flags.arg.logfiles:
       else:
         num_internal += 1
       continue
+
+    # Spam IPs.
     if ipaddr in spammers:
       spam_hits[ipaddr] += 1
       num_spammers += 1
@@ -480,15 +485,15 @@ for logfn in flags.arg.logfiles:
       if status == "301" and flags.arg.r: print(logline.strip())
       continue
 
-    # POSTs.
-    if method == "POST":
-      num_posts += 1
-
     # HEADs.
     if method == "HEAD" or ipaddr in head_hits:
       num_heads += 1
       head_hits[ipaddr] += 1
       continue
+
+    # POSTs.
+    if method == "POST":
+      num_posts += 1
 
     # Mobile.
     if mobile_pattern.search(ua):
@@ -498,6 +503,10 @@ for logfn in flags.arg.logfiles:
     ip_hits[ipaddr] += 1
     if path == "/": home_ips.add(ipaddr)
     if path == "/home/birthdays": bday_ips.add(ipaddr)
+    if kb_pattern.match(path):
+      kb_ips.add(ipaddr);
+    elif item_pattern.match(path) or query_pattern.match(path):
+      item_ips.add(ipaddr);
 
     # Browsers and platforms.
     for browser_name, browser_pattern in browsers:
@@ -630,36 +639,48 @@ visits_per_day = {}
 for date, ipaddrs in date_visitors.items():
   visits_per_day[date] = len(ipaddrs)
 
-warm_hits = 0
-cold_hits = 0
+warm_ips = defaultdict(int)
+cold_ips = defaultdict(int)
 for ipaddr in home_ips:
   if ipaddr in bday_ips:
-    warm_hits += ip_hits[ipaddr]
+    warm_ips[ipaddr] += ip_hits[ipaddr]
   else:
-    cold_hits += ip_hits[ipaddr]
+    cold_ips[ipaddr] += ip_hits[ipaddr]
+
+for ipaddr in kb_ips:
+  if ipaddr in item_ips:
+    warm_ips[ipaddr] += ip_hits[ipaddr]
+  else:
+    cold_ips[ipaddr] += ip_hits[ipaddr]
+
+warm_hits = sum(warm_ips.values())
+cold_hits = sum(cold_ips.values())
 
 print("\nSUMMARY\n")
-print("%6d hits" % num_hits)
-print("%6d visitors" % len(visitors))
-print("%6d cached" % num_cached)
-print("%6d POSTs" % num_posts)
-print("%6d HEADs" % num_heads)
-print("%6d mobile hits" % num_mobile)
-print("%6d internal hits" % num_internal)
-print("%6d internal monitoring" % num_monitor)
-print("%6d favicons" % num_favicons)
-print("%6d robots.txt" % num_robotstxt)
-print("%6d curl requests" % num_curls)
-print("%6d bot requests" % num_bots)
-print("%6d worm requests" % num_worms)
-print("%6d spam hits" % num_spammers)
-print("%6d warm hits" % warm_hits)
-print("%6d cold hits" % cold_hits)
-print("%6d errors" % num_errors)
-print("%6d unknown requests" % num_unknown)
-print("%6d invalid requests" % num_invalid)
-print("%6d total hits" % total_hits)
-print("%6d MB" % (num_bytes / (1024 * 1024)))
+print("%7d hits" % num_hits)
+print("%7d visitors" % len(visitors))
+print("%7d cached" % num_cached)
+print("%7d POSTs" % num_posts)
+print("%7d HEADs" % num_heads)
+print("%7d mobile hits" % num_mobile)
+print("%7d internal hits" % num_internal)
+print("%7d internal monitoring" % num_monitor)
+print("%7d favicons" % num_favicons)
+print("%7d robots.txt" % num_robotstxt)
+print("%7d curl requests" % num_curls)
+print("%7d bot requests" % num_bots)
+print("%7d worm requests" % num_worms)
+print("%7d spam hits" % num_spammers)
+print("%7d errors" % num_errors)
+print("%7d unknown requests" % num_unknown)
+print("%7d invalid requests" % num_invalid)
+print("%7d total hits" % total_hits)
+print("%7d MB" % (num_bytes / (1024 * 1024)))
+
+real_pct = warm_hits / (warm_hits + cold_hits) * 100
+
+print()
+print("%.2f%% real traffic (%d warm, %d cold)" % (real_pct, warm_hits, cold_hits))
 
 print_table("PAGES", "page", page_hits)
 print_table("API CALLS", "api", api_calls)
@@ -678,6 +699,8 @@ if flags.arg.v:
 print_table("REFFERING DOMAINS", "domain", referring_domains)
 print_table("REFERRERS", "referrer", referrers)
 #print_table("HEADS", "HEAD requests", head_hits)
+#print_table("COLD IP ADDRESSES", "hits", cold_ips)
+#print_table("WARM IP ADDRESSES", "hits", warm_ips)
 
 if flags.arg.v:
   print_table("HTTP ERRORS", "HTTP status", http_codes)

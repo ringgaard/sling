@@ -2206,7 +2206,7 @@ export class MdSearchResult extends MdSearchItem {
     }
     if (description) {
       if (auto) {
-        h.push('<span class="item-description auto">');
+        h.push('<span class="item-description autogen">');
       } else {
         h.push('<span class="item-description">');
       }
@@ -2229,7 +2229,7 @@ export class MdSearchResult extends MdSearchItem {
         padding: 0px 10px 0px 10px;
       }
 
-      $ .auto {
+      $ .autogen {
         color: #808080;
       }
     `;
