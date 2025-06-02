@@ -447,6 +447,10 @@ let xrefs = [
     pattern: /^https:\/\/www\.myheritage\.dk\/research\/collection-10706\/1940-danmark-folketaelling\?itemId=([0-9]+)/,
     property: frame("PDFT40"),
   },
+  {
+    pattern: /^https:\/\/www\.modelmayhem\.com\/(.+)/,
+    property: frame("PMAYH"),
+  },
 
 ];
 
