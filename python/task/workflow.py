@@ -876,4 +876,3 @@ def shutdown():
 
   # Save log to log directory.
   save_workflow_log(flags.arg.logdir)
-

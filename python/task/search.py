@@ -19,6 +19,18 @@ import sling.task.corpora as corpora
 import sling.task.data as data
 from sling.task import *
 
+flags.define("--custom_search_items",
+             metavar="RECFILES",
+             help="record file with items for custom indexing ")
+
+flags.define("--custom_search_index",
+             metavar="REPO",
+             help="output repository for custom index")
+
+flags.define("--custom_search_config",
+             metavar="CONFIG",
+             help="search configuration for custom index")
+
 class SearchWorkflow:
   def __init__(self, name=None):
     self.wf = Workflow(name)
@@ -47,6 +59,20 @@ class SearchWorkflow:
                             dir=corpora.searchdir(),
                             format="textmap/term")
 
+  def custom_search_config(self):
+    """Resource for custom search index configuration."""
+    return self.wf.resource(flags.arg.custom_search_config,
+                            format="store/frame")
+
+  def custom_search_items(self):
+    """Resource for custom search index repository."""
+    return self.wf.resource(flags.arg.custom_search_items,
+                            format="records/frame")
+
+  def custom_search_index(self):
+    """Resource for custom search index repository."""
+    return self.wf.resource(flags.arg.custom_search_index, format="repository")
+
   def build_search_dictionary(self, items=None):
     """Task for building search dictionary."""
     if items == None: items = self.data.items()
@@ -61,14 +87,16 @@ class SearchWorkflow:
 
     return repo
 
-  def build_search_index(self, aux=2, items=None):
+  def build_search_index(self, aux=2, items=None, repo=None, config=None):
     """Task for building search index."""
     if items == None: items = self.data.items()
+    if repo == None: repo = self.search_index(aux)
+    if config == None: config = self.search_config()
 
     with self.wf.namespace("search"):
       # Map input items and output documents and terms.
       mapper = self.wf.task("search-index-mapper", params={"aux": aux})
-      mapper.attach_input("config", self.search_config())
+      mapper.attach_input("config", config)
       mapper.attach_input("dictionary", self.search_dictionary())
       self.wf.connect(self.wf.read(items, name="item-reader"), mapper)
       documents = self.wf.channel(mapper, "documents", format="message/sdoc")
@@ -79,10 +107,9 @@ class SearchWorkflow:
 
       # Collect entities and terms and build search index.
       builder = self.wf.task("search-index-builder")
-      builder.attach_input("config", self.search_config())
+      builder.attach_input("config", config)
       self.wf.connect(documents, builder, name="documents")
       self.wf.connect(postings, builder, name="terms")
-      repo = self.search_index(aux)
       builder.attach_output("repository", repo)
 
     return repo
@@ -115,6 +142,15 @@ def build_aux_search_index():
   log.info("Build aux search index")
   wf = SearchWorkflow("search")
   wf.build_search_index(1)
+  run(wf.wf)
+
+def build_custom_search_index():
+  log.info("Build aux search index")
+  wf = SearchWorkflow("search")
+  wf.build_search_index(2,
+                        items=wf.custom_search_items(),
+                        repo=wf.custom_search_index(),
+                        config=wf.custom_search_config())
   run(wf.wf)
 
 def build_search_vocabulary():

@@ -15,6 +15,7 @@
 #include <signal.h>
 #include <vector>
 
+#include "sling/base/clock.h"
 #include "sling/base/flags.h"
 #include "sling/base/init.h"
 #include "sling/base/logging.h"
@@ -156,6 +157,7 @@ class SearchService {
     int maxambig = query.Get("maxambig", 10000);
 
     // Find search shard.
+    Clock clock;
     MutexLock lock(&mu_);
     SearchShard *shard = Find(tag);
     if (shard == nullptr) {
@@ -164,13 +166,16 @@ class SearchService {
     }
 
     // Search for hits in shard.
+    clock.start();
     nlp::SearchEngine::Results result(limit, maxambig);
     int total = shard->engine.Search(q, &result);
+    clock.stop();
 
     // Return result.
     JSON::Object json;
     json.Add("total", total);
     json.Add("fetchable", shard->fetchable());
+    json.Add("time", clock.ms());
     JSON::Array *hits = json.AddArray("hits");
     for (const nlp::SearchEngine::Hit &hit : result.hits()) {
       JSON::Object *result = hits->AddObject();
@@ -181,6 +186,8 @@ class SearchService {
     json.Write(response->buffer());
     response->set_content_type("text/json");
     response->set_status(200);
+    VLOG(1) << "Query: " << q << " ,tag: " << tag
+            << ", time: " << clock.ms() << " ms";
   }
 
   void HandleLoad(HTTPRequest *request, HTTPResponse *response) {
@@ -235,18 +242,24 @@ class SearchService {
     if (shard == nullptr) return Status(ENOENT, "Unknown search index");
 
     // Search for hits in shard.
+    Clock clock;
+    clock.start();
     nlp::SearchEngine::Results result(limit, maxambig);
     int total = shard->engine.Search(q, &result);
+    clock.stop();
 
     // Return result.
     response->Add("total", total);
     response->Add("fetchable", shard->fetchable());
+    response->Add("time", clock.ms());
     JSON::Array *hits = response->AddArray("hits");
     for (const nlp::SearchEngine::Hit &hit : result.hits()) {
       JSON::Object *result = hits->AddObject();
       result->Add("docid", hit.id());
       result->Add("score", hit.score);
     }
+    VLOG(1) << "Query: " << q << ", tag: " << tag
+            << ", time: " << clock.ms() << " ms";
 
     return Status::OK;
   }
@@ -255,6 +268,9 @@ class SearchService {
     MutexLock lock(&mu_);
     Record record;
     SearchShard *shard = nullptr;
+    int num_items = 0;
+    Clock clock;
+    clock.start();
     while (request->available() > 0) {
       // Read next document id.
       uint8 klen;
@@ -274,7 +290,13 @@ class SearchService {
         response->Write(&size, 4);
         response->Write(record.value.data(), record.value.size());
       }
+      num_items++;
     }
+    clock.stop();
+
+    VLOG(1) << "Fetch " << num_items << ", "
+            << response->available() << " bytes, "
+            << clock.ms() << " ms";
 
     return true;
   }

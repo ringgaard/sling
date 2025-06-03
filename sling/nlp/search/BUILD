@@ -106,6 +106,7 @@ cc_binary(
     ":search-engine",
     ":search-protocol",
     "//sling/base",
+    "//sling/base:clock",
     "//sling/file:posix",
     "//sling/file:recordio",
     "//sling/net:http-server",
