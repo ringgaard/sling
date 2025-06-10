@@ -700,7 +700,7 @@ void TopicNameIndex::Delete(const Frame &topic) {
   // Remove topic.
   topics_.erase(topic.handle());
 
-  // Clear search index, so it will be rebuild for the next seach.
+  // Clear search index, so it will be rebuild for the next search.
   names_.clear();
 }
 

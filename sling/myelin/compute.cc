@@ -1100,9 +1100,11 @@ static void OrthogonalizeColumns(float *A, int m, int n) {
     aj = A + j;
     float sum = 0.0;
     for (int i = 0; i < m; ++i, aj += n) sum += *aj * *aj;
-    float scaler = 1.0/ sqrt(sum);
-    aj = A + j;
-    for (int i = 0; i < m; ++i, aj += n) *aj *= scaler;
+    if (sum != 0.0) {
+      float scaler = 1.0 / sqrt(sum);
+      aj = A + j;
+      for (int i = 0; i < m; ++i, aj += n) *aj *= scaler;
+    }
   }
 }
 
@@ -1129,8 +1131,10 @@ static void OrthogonalizeRows(float *A, int m, int n) {
     // Normalize A_j.
     float sum = 0.0;
     for (int i = 0; i < n; ++i) sum += aj[i] * aj[i];
-    float scaler = 1.0/ sqrt(sum);
-    for (int i = 0; i < n; ++i) aj[i] *= scaler;
+    if (sum != 0.0) {
+      float scaler = 1.0 / sqrt(sum);
+      for (int i = 0; i < n; ++i) aj[i] *= scaler;
+    }
   }
 }
 
@@ -2627,4 +2631,3 @@ void CustomKernel::Generate(Step *step, MacroAssembler *masm) {
 
 }  // namespace myelin
 }  // namespace sling
-

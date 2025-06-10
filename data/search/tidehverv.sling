@@ -1,7 +1,7 @@
 {
   ; Term normalization.
   normalization: "clnpqD"
-  dictionary_aliases: false
+  dictionary_aliases: true
 
   ; Languages for selecting dictionary terms.
   dictionary_languages: [
@@ -38,9 +38,12 @@
     description: text,
     lex: lex,
 
-    P577: date         ; publication date
     P31: item,         ; instance of
+    P577: date         ; publication date
+    P1433: item,       ; published in
     P50: item,         ; author
     P2093: text,       ; author name string
+    Q65970010: item,   ; author of
+    Q66759300: item,   ; contains
   }
 }

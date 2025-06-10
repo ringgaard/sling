@@ -46,7 +46,7 @@ data = casedb[flags.arg.caseno]
 casefile = store.parse(data)
 
 # Extract text from PDF files.
-output = sling.RecordWriter(flags.arg.output)
+output = sling.RecordWriter(flags.arg.output, index=True)
 for topic in casefile[n_topics]:
   url = store.resolve(topic[n_url])
   if url is not None and url.endswith(".pdf"):

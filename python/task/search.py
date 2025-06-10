@@ -23,6 +23,10 @@ flags.define("--custom_search_items",
              metavar="RECFILES",
              help="record file with items for custom indexing ")
 
+flags.define("--custom_search_dictionary",
+             metavar="REPO",
+             help="custom searh dictionary repository")
+
 flags.define("--custom_search_index",
              metavar="REPO",
              help="output repository for custom index")
@@ -64,6 +68,11 @@ class SearchWorkflow:
     return self.wf.resource(flags.arg.custom_search_config,
                             format="store/frame")
 
+  def custom_search_dictionary(self):
+    """Resource for custom search dictionary repository."""
+    return self.wf.resource(flags.arg.custom_search_dictionary,
+                            format="repository")
+
   def custom_search_items(self):
     """Resource for custom search index repository."""
     return self.wf.resource(flags.arg.custom_search_items,
@@ -73,31 +82,34 @@ class SearchWorkflow:
     """Resource for custom search index repository."""
     return self.wf.resource(flags.arg.custom_search_index, format="repository")
 
-  def build_search_dictionary(self, items=None):
+  def build_search_dictionary(self, items=None, dictionary=None, config=None):
     """Task for building search dictionary."""
-    if items == None: items = self.data.items()
+    if items is None: items = self.data.items()
+    if dictionary is None: dictionary = self.search_dictionary()
+    if config is None: config = self.search_config()
 
     with self.wf.namespace("search"):
       builder = self.wf.task("search-dictionary-builder")
-      builder.attach_input("config", self.search_config())
+      builder.attach_input("config", config)
       self.wf.connect(self.wf.read(items, name="item-reader"), builder)
 
-      repo = self.search_dictionary()
-      builder.attach_output("repository", repo)
+      builder.attach_output("repository", dictionary)
 
-    return repo
+    return dictionary
 
-  def build_search_index(self, aux=2, items=None, repo=None, config=None):
+  def build_search_index(self, aux=2, items=None, dictionary=None,
+                         repo=None, config=None):
     """Task for building search index."""
-    if items == None: items = self.data.items()
-    if repo == None: repo = self.search_index(aux)
-    if config == None: config = self.search_config()
+    if items is None: items = self.data.items()
+    if repo is None: repo = self.search_index(aux)
+    if config is None: config = self.search_config()
+    if dictionary is None: dictionary = self.search_dictionary()
 
     with self.wf.namespace("search"):
       # Map input items and output documents and terms.
       mapper = self.wf.task("search-index-mapper", params={"aux": aux})
       mapper.attach_input("config", config)
-      mapper.attach_input("dictionary", self.search_dictionary())
+      mapper.attach_input("dictionary", dictionary)
       self.wf.connect(self.wf.read(items, name="item-reader"), mapper)
       documents = self.wf.channel(mapper, "documents", format="message/sdoc")
       terms = self.wf.channel(mapper, "terms", format="message/term")
@@ -144,11 +156,21 @@ def build_aux_search_index():
   wf.build_search_index(1)
   run(wf.wf)
 
+def build_custom_search_dictionary():
+  log.info("Build custom search dictionary")
+  wf = SearchWorkflow("search")
+  wf.build_search_dictionary(
+    items=wf.custom_search_items(),
+    dictionary=wf.custom_search_dictionary(),
+    config=wf.custom_search_config())
+  run(wf.wf)
+
 def build_custom_search_index():
   log.info("Build aux search index")
   wf = SearchWorkflow("search")
   wf.build_search_index(2,
                         items=wf.custom_search_items(),
+                        dictionary=wf.custom_search_dictionary(),
                         repo=wf.custom_search_index(),
                         config=wf.custom_search_config())
   run(wf.wf)
