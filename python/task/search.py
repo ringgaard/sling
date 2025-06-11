@@ -88,7 +88,7 @@ class SearchWorkflow:
     if dictionary is None: dictionary = self.search_dictionary()
     if config is None: config = self.search_config()
 
-    with self.wf.namespace("search"):
+    with self.wf.namespace("search dictionary"):
       builder = self.wf.task("search-dictionary-builder")
       builder.attach_input("config", config)
       self.wf.connect(self.wf.read(items, name="item-reader"), builder)
@@ -105,7 +105,7 @@ class SearchWorkflow:
     if config is None: config = self.search_config()
     if dictionary is None: dictionary = self.search_dictionary()
 
-    with self.wf.namespace("search"):
+    with self.wf.namespace("search index"):
       # Map input items and output documents and terms.
       mapper = self.wf.task("search-index-mapper", params={"aux": aux})
       mapper.attach_input("config", config)

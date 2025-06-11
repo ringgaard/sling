@@ -144,12 +144,19 @@ class TidehvervApp extends MdApp {
     this.find("#query").clear();
   }
 
-  onclick(e) {
-    let type = e.target.getAttribute("type");
-    let ref = e.target.getAttribute("ref");
+  async onclick(e) {
+    let target = e.target;
+    let type = target.getAttribute("type");
+    let ref = target.getAttribute("ref");
     if (type && ref) {
       if (type == "document" || type == "issue" || type == "article") {
         window.open(`/tidehverv/document?docid=${ref}`, "_blank");
+      } else if (type == "author") {
+        let r = await fetch("/tidehverv/author?authorid=" + ref);
+        let author = await r.json();
+        this.find("#content").update(author);
+      } else if (type == "bio") {
+        window.open(`https://ringgaard.com/kb/${ref}`, "_blank");
       } else {
         console.log(type, ref);
       }
@@ -174,6 +181,10 @@ class TidehvervApp extends MdApp {
       $ #title {
         padding-right: 16px;
       }
+      $ h1 {
+        font-size: 24px;
+        font-weight: 400;
+      }
     `;
   }
 }
@@ -183,18 +194,20 @@ Component.register(TidehvervApp);
 class TidehvervContent extends MdCard {
   render() {
     let h = [];
-    let type = this.state?.type;
+    let state = this.state;
+    let type = state?.type;
     if (type == "overview") {
       h.push('<h1>Årgange</h1>');
-      for (let v of this.state.volumes) {
-        h.push('<p><a ref="');
-        h.push(v.id);
-        h.push('">');
-        h.push(v.name);
-        h.push('</a></p>');
+      for (let v of state.volumes) {
+        h.push('<div class="title">');
+        h.push(`<md-icon icon="menu_book" outlined></md-icon>`);
+        h.push(`<span class="link" type="volume" ref="${v.id}">`);
+        h.push(Component.escape(v.name));
+        h.push('</span>');
+        h.push('</div>');
       }
     } else if (type == "results") {
-      for (let hit of this.state.hits) {
+      for (let hit of state.hits) {
         h.push('<div class="result">');
 
         h.push('<div class="title">');
@@ -227,23 +240,17 @@ class TidehvervContent extends MdCard {
               h.push(Component.escape(hit.author));
               h.push('</span>');
             } else {
-              h.push(h.author);
+              h.push(Component.escape(hit.author));
             }
           }
           if (hit.issue) {
             h.push(' i ');
-            h.push(`<span class="link" type="issue" ref="${hit.issueid}">`);
             h.push(Component.escape(hit.issue));
-            h.push('</span>');
           }
           if (hit.page) {
             h.push(', side ');
             h.push(hit.page);
           }
-
-          //h.push(`<span class="button" type="document" ref="${hit.issueid}">`);
-          //h.push('Læs');
-          //h.push('</span>');
         } else if (hit.type == "issue") {
           h.push('tidsskrift');
           if (hit.articles > 1) {
@@ -270,6 +277,47 @@ class TidehvervContent extends MdCard {
 
         h.push('</div>');
       }
+    } else if (type == "author") {
+      h.push('<div class="title">');
+      h.push(Component.escape(state.name));
+      if (state.bio) {
+        h.push(`<span class="button" type="bio" ref="${state.bio}">`);
+        h.push('Biografi');
+        h.push('</span>');
+      }
+      h.push('</div>');
+
+      h.push('<table>');
+      h.push('<tr>');
+      h.push('<th class="name">Artikel</th>');
+      h.push('<th class="year">År</th>');
+      h.push('<th class="issue">Nr.</th>');
+      h.push('<th class="page">Side</th>');
+      h.push('</tr>');
+      for (let a of state.articles) {
+        h.push(`<tr class="clickable" type="issue" ref="${a.issueid}">`);
+
+        h.push('<td class="name">');
+        h.push(`<span class="link" type="issue" ref="${a.issueid}">`);
+        h.push(Component.escape(a.name));
+        h.push('</span>');
+        h.push('</td>');
+
+        h.push('<td class="year">');
+        h.push(Math.floor(a.date / 100));
+        h.push('</td>');
+
+        h.push('<td class="issue">');
+        h.push(a.issueno);
+        h.push('</td>');
+
+        h.push('<td class="page">');
+        h.push(a.page);
+        h.push('</td>');
+
+        h.push('</tr>');
+      }
+      h.push('</table>');
     }
     if (h.length > 0) return h.join("");
   }
@@ -288,7 +336,7 @@ class TidehvervContent extends MdCard {
       $ div.title {
         display: flex;
         align-items: center;
-        font-family: 'Arial';
+        font-family: 'Times';
         font-size: 24px;
         padding-bottom: 4px;
       }
@@ -310,10 +358,39 @@ class TidehvervContent extends MdCard {
         color: #FFFFFF;
         border-radius: 5px;
         padding: 5px;
-        margin-left: 10px;
+        margin-left: 5px;
+        font-size: 12px;
       }
       $ span.button:hover {
         background: #AAAAAA;
+      }
+      $ table {
+        font-size: 18px;
+        font-family: times;
+      }
+      $ td, th {
+        padding: 6px;
+      }
+      $ tr.clickable {
+        cursor: pointer;
+      }
+      $ tr.clickable:hover {
+        background: #EEEEEE;
+      }
+      $ th.name {
+        text-align: left;
+      }
+      $ td.name {
+        text-align: left;
+      }
+      $ td.year {
+        text-align: right;
+      }
+      $ td.issue {
+        text-align: right;
+      }
+      $ td.page {
+        text-align: right;
       }
     `;
   }
@@ -397,8 +474,6 @@ def handle_search(request):
         num_articles += 1
         issue = store.resolve(a[n_published_in])
         if issue:
-          #if n_pubdate not in issue:
-          #  print("missing pub date", issue.i
           pubdate = issue[n_pubdate] // 100
           if start is None or pubdate < start: start = pubdate
           if end is None or pubdate > end: end = pubdate
@@ -416,6 +491,32 @@ def handle_search(request):
     "type": "results",
     "total": results["total"],
     "hits": hits,
+  }
+
+@app.route("/tidehverv/author")
+def handle_author(request):
+  authorid = request.param("authorid")
+  if authorid is None: return 400
+  if authorid not in store: return 404
+  item = store[authorid]
+  articles = []
+  for a in item(n_author_of):
+    issue = store.resolve(a[n_published_in])
+
+    articles.append({
+      "name": a[n_name],
+      "issueid": issue[n_id],
+      "issueno": issue[n_issue],
+      "date": issue[n_pubdate],
+      "page": a[n_published_in][n_page],
+    })
+
+  articles.sort(key=lambda a: a["date"])
+  return {
+    "type": "author",
+    "name": item[n_name],
+    "bio": item[n_is],
+    "articles": articles,
   }
 
 @app.route("/tidehverv/document")
