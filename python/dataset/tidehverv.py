@@ -118,6 +118,7 @@ const icons = {
 class TidehvervApp extends MdApp {
   onconnected() {
     this.attach(this.onsearch, "click", "#search");
+    this.attach(this.onhome, "click", "#home");
     this.attach(this.onclick, "click");
     window.onkeydown = e => {
       if (e.key === "Enter") this.onsearch();
@@ -131,9 +132,7 @@ class TidehvervApp extends MdApp {
     this.style.cursor = "wait";
     try {
       let r = await fetch(`/tidehverv/search?q=${encodeURIComponent(query)}`);
-      let results = await r.json();
-      this.find("md-content").scrollTop = 0;
-      this.find("#content").update(results);
+      this.set_content(await r.json());
     } catch (e) {
       inform("Error fetch article: " + e.toString());
     }
@@ -153,8 +152,10 @@ class TidehvervApp extends MdApp {
         window.open(`/tidehverv/document?docid=${ref}`, "_blank");
       } else if (type == "author") {
         let r = await fetch("/tidehverv/author?authorid=" + ref);
-        let author = await r.json();
-        this.find("#content").update(author);
+        this.set_content(await r.json());
+      } else if (type == "volume") {
+        let r = await fetch("/tidehverv/volume?volumeid=" + ref);
+        this.set_content(await r.json());
       } else if (type == "bio") {
         window.open(`https://ringgaard.com/kb/${ref}`, "_blank");
       } else {
@@ -165,8 +166,12 @@ class TidehvervApp extends MdApp {
 
   async onhome() {
     let r = await fetch("/tidehverv/overview");
-    let overview = await r.json();
-    this.find("#content").update(overview);
+    this.set_content(await r.json());
+  }
+
+  set_content(data) {
+    this.find("#content").update(data);
+    this.find("md-content").scrollTop = 0;
   }
 
   static stylesheet() {
@@ -270,11 +275,6 @@ class TidehvervContent extends MdCard {
         }
 
         h.push('</div>');
-
-        //h.push('<pre>');
-        //h.push(JSON.stringify(hit, null, 2));
-        //h.push('</pre>');
-
         h.push('</div>');
       }
     } else if (type == "author") {
@@ -295,7 +295,7 @@ class TidehvervContent extends MdCard {
       h.push('<th class="page">Side</th>');
       h.push('</tr>');
       for (let a of state.articles) {
-        h.push(`<tr class="clickable" type="issue" ref="${a.issueid}">`);
+        h.push('<tr class="hilite">');
 
         h.push('<td class="name">');
         h.push(`<span class="link" type="issue" ref="${a.issueid}">`);
@@ -305,6 +305,63 @@ class TidehvervContent extends MdCard {
 
         h.push('<td class="year">');
         h.push(Math.floor(a.date / 100));
+        h.push('</td>');
+
+        h.push('<td class="issue">');
+        h.push(a.issueno);
+        h.push('</td>');
+
+        h.push('<td class="page">');
+        h.push(a.page);
+        h.push('</td>');
+
+        h.push('</tr>');
+      }
+      h.push('</table>');
+    } else if (type == "volume") {
+      h.push('<div class="title">');
+      h.push(Component.escape(state.name));
+      h.push('</div>');
+
+      if (state.issues?.length > 0) {
+        h.push('<div class="snippet">');
+        if (state.issues.length == 1) {
+          h.push("et tidsskrift:");
+        } else {
+          h.push(`${state.issues.length} tidsskrifter:`);
+        }
+        for (let issue of state.issues) {
+          h.push(` <span class="link" type="issue" ref="${issue.issueid}">`);
+          h.push(issue.issueno);
+          h.push('</span>');
+        }
+        h.push('</div>');
+      }
+
+      h.push('<table>');
+      h.push('<tr>');
+      h.push('<th class="name">Artikel</th>');
+      h.push('<th class="name">Forfatter</th>');
+      h.push('<th class="issue">Nr.</th>');
+      h.push('<th class="page">Side</th>');
+      h.push('</tr>');
+      for (let a of state.articles) {
+        h.push('<tr class="hilite">');
+
+        h.push('<td class="name">');
+        h.push(`<span class="link" type="issue" ref="${a.issueid}">`);
+        h.push(Component.escape(a.name));
+        h.push('</span>');
+        h.push('</td>');
+
+        h.push('<td class="name">');
+        if (a.authorid) {
+          h.push(`<span class="link" type="author" ref="${a.authorid}">`);
+          h.push(Component.escape(a.author));
+          h.push('</span>');
+        } else {
+          h.push(Component.escape(a.author));
+        }
         h.push('</td>');
 
         h.push('<td class="issue">');
@@ -371,10 +428,10 @@ class TidehvervContent extends MdCard {
       $ td, th {
         padding: 6px;
       }
-      $ tr.clickable {
+      $ tr.hilite {
         cursor: pointer;
       }
-      $ tr.clickable:hover {
+      $ tr.hilite:hover {
         background: #EEEEEE;
       }
       $ th.name {
@@ -516,6 +573,35 @@ def handle_author(request):
     "type": "author",
     "name": item[n_name],
     "bio": item[n_is],
+    "articles": articles,
+  }
+
+@app.route("/tidehverv/volume")
+def handle_volume(request):
+  volumeid = request.param("volumeid")
+  if volumeid is None: return 400
+  if volumeid not in store: return 404
+  item = store[volumeid]
+  issues = []
+  articles = []
+  for issue in item(n_has_part):
+    issues.append({"issueno": issue[n_issue], "issueid": issue[n_id]})
+    for a in issue(n_contains):
+      author = a[n_author]
+      articles.append({
+        "name": a[n_name],
+        "author": author[n_name] if type(author) is sling.Frame else author,
+        "authorid": author[n_id] if type(author) is sling.Frame else None,
+        "issueid": issue[n_id],
+        "issueno": issue[n_issue],
+        "date": issue[n_pubdate],
+        "page": a[n_published_in][n_page],
+      })
+
+  return {
+    "type": "volume",
+    "name": item[n_name],
+    "issues": issues,
     "articles": articles,
   }
 
