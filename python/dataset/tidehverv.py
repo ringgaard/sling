@@ -202,7 +202,10 @@ class TidehvervContent extends MdCard {
     let state = this.state;
     let type = state?.type;
     if (type == "overview") {
-      h.push('<h1>Årgange</h1>');
+      h.push('<div class="frontpage">');
+      h.push('<div class="banner">TIDEHVERV</div>');
+      h.push('<div class="sub">Digitalt arkiv med 100 års Tidehverv</div>');
+      h.push('<div class="volumes">');
       for (let v of state.volumes) {
         h.push('<div class="title">');
         h.push(`<md-icon icon="menu_book" outlined></md-icon>`);
@@ -211,6 +214,8 @@ class TidehvervContent extends MdCard {
         h.push('</span>');
         h.push('</div>');
       }
+      h.push('</div>');
+      h.push('</div>');
     } else if (type == "results") {
       for (let hit of state.hits) {
         h.push('<div class="result">');
@@ -389,6 +394,28 @@ class TidehvervContent extends MdCard {
       }
       $ div.result {
         padding-bottom: 20px;
+      }
+      $ div.frontpage {
+        display: flex;
+        justify-content: center;
+        flex-direction: column;
+      }
+      $ div.banner {
+        display: flex;
+        justify-content: center;
+        font-family:  Times New Roman;
+        font-size: 120px;
+      }
+      $ div.sub {
+        display: flex;
+        justify-content: center;
+        font-family: arial;
+        font-size: 24px;
+        padding-bottom: 20px;
+      }
+      $ div.volumes {
+        display: grid;
+        justify-content: center;
       }
       $ div.title {
         display: flex;
