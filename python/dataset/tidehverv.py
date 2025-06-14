@@ -83,7 +83,7 @@ app.page("/tidehverv/",
 <body style="display: none">
   <tidehverv-app id="app">
     <md-toolbar>
-      <md-toolbar-logo></md-toolbar-logo>
+      <img class="logo" src="/tidehverv/logo.svg"></img>
       <div id="title">Tidehverv arkiv</div>
       <md-input
         id="query"
@@ -176,6 +176,13 @@ class TidehvervApp extends MdApp {
 
   static stylesheet() {
     return `
+      $ md-toolbar {
+        background-color: #ba8167;
+      }
+      $ .logo {
+        width: 64px;
+        padding: 5px;
+      }
       $ md-input {
         display: flex;
         max-width: 600px;
@@ -431,7 +438,7 @@ class TidehvervContent extends MdCard {
       }
       $ span.link {
         cursor: pointer;
-        color: #26119E;
+        color: #9D0000;
       }
       $ span.link:hover {
          text-decoration: underline;
@@ -481,6 +488,7 @@ class TidehvervContent extends MdCard {
 }
 
 Component.register(TidehvervContent);
+
 
 document.body.style = null;
 """)
@@ -643,6 +651,17 @@ def handle_document(request):
   url = item[n_url].resolve()
   if url is None: return 500
   return sling.net.HTTPRedirect(url)
+
+with open("app/image/olielampe.png", "rb") as f: logo_png = f.read()
+with open("app/image/olielampe.svg", "rb") as f: logo_svg = f.read()
+
+@app.route("/tidehverv/logo.png")
+def handle_logo(request):
+  return sling.net.HTTPStatic("image/png", logo_png)
+
+@app.route("/tidehverv/logo.svg")
+def handle_logo(request):
+  return sling.net.HTTPStatic("image/svg+xml", logo_svg)
 
 # Run app until shutdown.
 log.info("running")
