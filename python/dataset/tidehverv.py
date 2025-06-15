@@ -79,6 +79,7 @@ app.page("/tidehverv/",
   <title>Tidehverv</title>
   <link rel="icon" href="/common/image/appicon.ico" type="image/x-icon" />
   <script type="module" src="/tidehverv/tidehverv.js"></script>
+  <meta name="robots" content="noindex">
 </head>
 <body style="display: none">
   <tidehverv-app id="app">
@@ -211,7 +212,13 @@ class TidehvervContent extends MdCard {
     if (type == "overview") {
       h.push('<div class="frontpage">');
       h.push('<div class="banner">TIDEHVERV</div>');
-      h.push('<div class="sub">Digitalt arkiv med 100 års Tidehverv</div>');
+      h.push(`<div class="sub">
+        Arkiv med ${state.volumes.length} årgange,
+        ${state.issues} tidsskrifter,
+        ${state.authors} skribenter,
+        ${state.articles} artikler og
+        ${state.pages} sider
+      </div>`);
       h.push('<div class="volumes">');
       for (let v of state.volumes) {
         h.push('<div class="title">');
@@ -222,6 +229,19 @@ class TidehvervContent extends MdCard {
         h.push('</div>');
       }
       h.push('</div>');
+      h.push(`<div class="notice">
+        <p>Efterlysning! Vi mangler stadig nogle få tidskrifter for at arkivet er komplet:</p>
+        <ul>
+          <li>Tidehverv 90. årgang nr. 9, november 2016</li>
+          <li>Tidehverv 92. årgang nr. 2, februar 2018 (p. 21-36)</li>
+          <li>Tidehverv 92. årgang nr. 5, juni 2018 (p. 85-100)</li>
+          <li>Tidehverv 92. årgang nr. 7-9, oktober-november 2018 (p. 129-176)</li>
+        </ul>
+        <p>Hvis du ligger inde med en eller flere af disse numre, vil vi være
+        taknemlige hvis du vil kontakte <a href="https://tidehverv.dk">tidehverv.dk</a>,
+        så vi kan aftale scanning af disse. Tidsskrifter kan scannes uden at
+        beskadige originalen.</p>
+      </div>`);
       h.push('</div>');
     } else if (type == "results") {
       for (let hit of state.hits) {
@@ -288,6 +308,9 @@ class TidehvervContent extends MdCard {
 
         h.push('</div>');
         h.push('</div>');
+      }
+      if (state.hits.length == 0) {
+        h.push('ingen match fundet');
       }
     } else if (type == "author") {
       h.push('<div class="title">');
@@ -483,6 +506,9 @@ class TidehvervContent extends MdCard {
       $ td.page {
         text-align: right;
       }
+      $ div.notice {
+        font-size: 12px;
+      }
     `;
   }
 }
@@ -493,15 +519,45 @@ Component.register(TidehvervContent);
 document.body.style = null;
 """)
 
+# Statistics.
+volumes = []
+for vol in main(n_has_part):
+  volumes.append({"id": vol[n_id], "name": vol[n_name]})
+num_issues = 0
+num_articles = 0
+num_authors = 0
+num_pages = 0
+for topic in casefile[n_topics]:
+  kind = topic[n_instance_of]
+  if kind == n_article:
+    num_articles += 1
+  elif kind == n_human:
+    num_authors += 1
+  elif kind == n_issue:
+    num_issues += 1
+    pages = topic[n_page]
+    if pages is None:
+      print("missing page nos", topic.id, topic.name)
+    else:
+      f = pages.split("-")
+      if len(f) != 2:
+        print("invald page nos", topic.id, topic.name)
+      else:
+        pages = int(f[1]) - int(f[0]) + 1
+        num_pages += pages
+
+overview = {
+  "type": "overview",
+  "volumes": volumes,
+  "issues": num_issues,
+  "articles": num_articles,
+  "authors": num_authors,
+  "pages": num_pages,
+}
+
 @app.route("/tidehverv/overview")
-def handle_volumes(request):
-  volumes = []
-  for vol in main(n_has_part):
-    volumes.append({"id": vol[n_id], "name": vol[n_name]})
-  return {
-    "type": "overview",
-    "volumes": volumes,
-  }
+def handle_overview(request):
+  return overview
 
 @app.route("/tidehverv/search")
 def handle_search(request):
