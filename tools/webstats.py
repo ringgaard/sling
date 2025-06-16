@@ -128,6 +128,7 @@ pages = [
   ("reddit report",        re.compile(r"^\/reddit\/report\/")),
   ("Witex",                re.compile(r"^\/witex\/?$")),
   ("MeterMan",             re.compile(r"^\/meterman\/?")),
+  ("Tidehverv",            re.compile(r"^\/tidehverv")),
 ]
 
 apis = [

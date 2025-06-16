@@ -194,9 +194,11 @@ class TidehvervApp extends MdApp {
       $ #title {
         padding-right: 16px;
       }
-      $ h1 {
-        font-size: 24px;
-        font-weight: 400;
+
+      @media (width <= 1024px) {
+        $ #title {
+          display: none;
+        }
       }
     `;
   }
@@ -212,25 +214,21 @@ class TidehvervContent extends MdCard {
     if (type == "overview") {
       h.push('<div class="frontpage">');
       h.push('<div class="banner">TIDEHVERV</div>');
-      h.push(`<div class="sub">
-        Arkiv med ${state.volumes.length} årgange,
-        ${state.issues} tidsskrifter,
-        ${state.authors} skribenter,
-        ${state.articles} artikler og
-        ${state.pages} sider
-      </div>`);
-      h.push('<div class="volumes">');
+      h.push(`<p>
+        Arkiv for Tidehverv med ${state.volumes.length} årgange,
+        ${state.issues} tidsskrifter med ${state.pages} sider og
+        ${state.articles} artikler skrevet af ${state.authors} skribenter.
+        </p>`);
+      h.push("<p>Årgange:");
       for (let v of state.volumes) {
-        h.push('<div class="title">');
-        h.push(`<md-icon icon="menu_book" outlined></md-icon>`);
-        h.push(`<span class="link" type="volume" ref="${v.id}">`);
-        h.push(Component.escape(v.name));
+        h.push(` <span class="link" type="volume" ref="${v.id}">`);
+        h.push(Component.escape(v.year));
         h.push('</span>');
-        h.push('</div>');
       }
-      h.push('</div>');
-      h.push(`<div class="notice">
-        <p>Efterlysning! Vi mangler stadig nogle få tidskrifter for at arkivet er komplet:</p>
+      h.push('</p>');
+      h.push(`
+        <p>Efterlysning! Vi mangler stadig nogle få tidsskrifter, for at arkivet
+        er komplet:</p>
         <ul>
           <li>Tidehverv 90. årgang nr. 9, november 2016</li>
           <li>Tidehverv 92. årgang nr. 2, februar 2018 (p. 21-36)</li>
@@ -238,11 +236,10 @@ class TidehvervContent extends MdCard {
           <li>Tidehverv 92. årgang nr. 7-9, oktober-november 2018 (p. 129-176)</li>
         </ul>
         <p>Hvis du ligger inde med en eller flere af disse numre, vil vi være
-        taknemlige hvis du vil kontakte <a href="https://tidehverv.dk">tidehverv.dk</a>,
+        taknemmelige, hvis du vil kontakte
+        <a href="https://tidehverv.dk">tidehverv.dk</a>,
         så vi kan aftale scanning af disse. Tidsskrifter kan scannes uden at
-        beskadige originalen.</p>
-      </div>`);
-      h.push('</div>');
+        beskadige originalen.</p>`);
     } else if (type == "results") {
       for (let hit of state.hits) {
         h.push('<div class="result">');
@@ -418,6 +415,7 @@ class TidehvervContent extends MdCard {
     return `
       $ {
         padding: 16px;
+        overflow: auto;
       }
       $ md-icon {
         padding-right: 4px;
@@ -426,26 +424,13 @@ class TidehvervContent extends MdCard {
         padding-bottom: 20px;
       }
       $ div.frontpage {
-        display: flex;
-        justify-content: center;
-        flex-direction: column;
+        font-size: 16px;
       }
       $ div.banner {
         display: flex;
         justify-content: center;
         font-family:  Times New Roman;
         font-size: 120px;
-      }
-      $ div.sub {
-        display: flex;
-        justify-content: center;
-        font-family: arial;
-        font-size: 24px;
-        padding-bottom: 20px;
-      }
-      $ div.volumes {
-        display: grid;
-        justify-content: center;
       }
       $ div.title {
         display: flex;
@@ -509,6 +494,12 @@ class TidehvervContent extends MdCard {
       $ div.notice {
         font-size: 12px;
       }
+
+      @media (width <= 1024px) {
+        $ div.banner {
+          font-size: 48px;
+        }
+      }
     `;
   }
 }
@@ -522,7 +513,12 @@ document.body.style = null;
 # Statistics.
 volumes = []
 for vol in main(n_has_part):
-  volumes.append({"id": vol[n_id], "name": vol[n_name]})
+  volumes.append({
+    "id": vol[n_id],
+    "name": vol[n_name],
+    "year": vol[n_pubdate],
+  })
+
 num_issues = 0
 num_articles = 0
 num_authors = 0
