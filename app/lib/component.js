@@ -153,7 +153,7 @@ export class Component extends HTMLElement {
         }
       }
     } else if (content instanceof Node) {
-      thisreplaceChildren(content);
+      this.replaceChildren(content);
     } else if (content instanceof Template) {
       content.mount(this);
     } else if (content != null) {
