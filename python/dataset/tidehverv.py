@@ -106,7 +106,7 @@ app.page("/tidehverv/",
 
 app.js("/tidehverv/tidehverv.js",
 """
-import {Component} from "/common/lib/component.js";
+import {Component, html} from "/common/lib/component.js";
 import {MdApp, MdCard, inform} from "/common/lib/material.js";
 
 const icons = {
@@ -159,8 +159,6 @@ class TidehvervApp extends MdApp {
         this.set_content(await r.json());
       } else if (type == "bio") {
         window.open(`https://ringgaard.com/kb/${ref}`, "_blank");
-      } else {
-        console.log(type, ref);
       }
     }
   }
@@ -208,207 +206,146 @@ Component.register(TidehvervApp);
 
 class TidehvervContent extends MdCard {
   render() {
-    let h = [];
+    let h = html``;
     let state = this.state;
     let type = state?.type;
     if (type == "overview") {
-      h.push('<div class="frontpage">');
-      h.push('<div class="banner">TIDEHVERV</div>');
-      h.push(`<p>
+      h.html`<div class="frontpage">`;
+      h.html`<div class="banner">TIDEHVERV</div>`;
+      h.html`<p>
         Arkiv for Tidehverv med ${state.volumes.length} årgange,
         ${state.issues} tidsskrifter med ${state.pages} sider og
         ${state.articles} artikler skrevet af ${state.authors} skribenter.
-        </p>`);
-      h.push("<p>Årgange:");
+        </p>
+        <p>Årgange:`;
       for (let v of state.volumes) {
-        h.push(` <span class="link" type="volume" ref="${v.id}">`);
-        h.push(Component.escape(v.year));
-        h.push('</span>');
+        h.push(link("volume", v.id, v.year));
       }
-      h.push('</p>');
-      h.push(`
+      h.html`</p>
         <p>Efterlysning! Vi mangler stadig nogle få tidsskrifter, for at arkivet
         er komplet:</p>
         <ul>
           <li>Tidehverv 90. årgang nr. 9, november 2016</li>
           <li>Tidehverv 92. årgang nr. 2, februar 2018 (p. 21-36)</li>
           <li>Tidehverv 92. årgang nr. 5, juni 2018 (p. 85-100)</li>
-          <li>Tidehverv 92. årgang nr. 7-9, oktober-november 2018 (p. 129-176)</li>
+          <li>Tidehverv 92. årgang nr. 7-8, oktober-november 2018 (p. 129-176)</li>
         </ul>
         <p>Hvis du ligger inde med en eller flere af disse numre, vil vi være
         taknemmelige, hvis du vil kontakte
         <a href="https://tidehverv.dk">tidehverv.dk</a>,
         så vi kan aftale scanning af disse. Tidsskrifter kan scannes uden at
-        beskadige originalen.</p>`);
+        beskadige originalen.</p>`;
     } else if (type == "results") {
       for (let hit of state.hits) {
-        h.push('<div class="result">');
+        h.html`
+          <div class="result">
+            <div class="title">
+              <md-icon icon="${icons[hit.type]}" outlined></md-icon>
+              ${link(hit.type, hit.id, hit.name)}
+           </div>
+           <div class="snippet">`;
 
-        h.push('<div class="title">');
-        h.push(`<md-icon icon="${icons[hit.type]}" outlined></md-icon>`);
-        h.push(`<span class="link" type="${hit.type}" ref="${hit.id}">`);
-        h.push(Component.escape(hit.name));
-        h.push('</span>');
-        h.push('</div>');
-
-        h.push('<div class="snippet">');
         if (hit.type == "author") {
           if (hit.articles == 1) {
-            h.push('forfatter til en artikel');
+            h.html`forfatter til en artikel`;
           } else {
-            h.push(`forfatter til ${hit.articles} artikler`);
+            h.html`forfatter til ${hit.articles} artikler`;
           }
           if (hit.start && hit.end) {
             if (hit.start == hit.end) {
-              h.push(` i ${hit.start}`);
+              h.html` i ${hit.start}`;
             } else {
-              h.push(` i perioden ${hit.start}-${hit.end}`);
+              h.html` i perioden ${hit.start}-${hit.end}`;
             }
           }
         } else if (hit.type == "article") {
-          h.push('artikel');
+          h.html`artikel`;
           if (hit.author) {
-            h.push(' af ');
-            if (hit.authorid) {
-              h.push(`<span class="link" type="author" ref="${hit.authorid}">`);
-              h.push(Component.escape(hit.author));
-              h.push('</span>');
-            } else {
-              h.push(Component.escape(hit.author));
-            }
+            h.html` af ${link("author", hit.authorid, hit.author)}`;
           }
           if (hit.issue) {
-            h.push(' i ');
-            h.push(Component.escape(hit.issue));
+            h.html` i ${hit.issue}`;
           }
           if (hit.page) {
-            h.push(', side ');
-            h.push(hit.page);
+            h.html`, side ${hit.page}`;
           }
         } else if (hit.type == "issue") {
-          h.push('tidsskrift');
+          h.html`tidsskrift`;
           if (hit.articles > 1) {
-            h.push(', ');
-            h.push(hit.articles);
-            h.push(' artikler');
+            h.html`, ${hit.articles} artikler`;
           }
           if (hit.pages) {
-            h.push(', side ');
-            h.push(hit.pages);
+            h.html`, side ${hit.pages}`;
           }
         } else if (hit.type == "volume") {
-          h.push(hit.volume);
-          h.push('. årgang, ');
-          h.push(hit.issues);
-          h.push(' tidsskrifter');
+          h.html`${hit.volume}. årgang, ${hit.issues} tidsskrifter`;
         }
 
-        h.push('</div>');
-        h.push('</div>');
+        h.html`</div></div>`;
       }
       if (state.hits.length == 0) {
-        h.push('ingen match fundet');
+        h.html`ingen match fundet`;
       }
     } else if (type == "author") {
-      h.push('<div class="title">');
-      h.push(Component.escape(state.name));
+      h.html`<div class="title">${state.name}`;
       if (state.bio) {
-        h.push(`<span class="button" type="bio" ref="${state.bio}">`);
-        h.push('Biografi');
-        h.push('</span>');
+        h.html`<span class="button" type="bio" ref="${state.bio}">Biografi</span>`;
       }
-      h.push('</div>');
+      h.html`</div>`;
 
-      h.push('<table>');
-      h.push('<tr>');
-      h.push('<th class="name">Artikel</th>');
-      h.push('<th class="year">År</th>');
-      h.push('<th class="issue">Nr.</th>');
-      h.push('<th class="page">Side</th>');
-      h.push('</tr>');
+      h.html`
+        <table>
+        <tr>
+         <th class="name">Artikel</th>
+         <th class="year">År</th>
+         <th class="issue">Nr.</th>
+         <th class="page">Side</th>
+        </tr>`;
       for (let a of state.articles) {
-        h.push('<tr class="hilite">');
-
-        h.push('<td class="name">');
-        h.push(`<span class="link" type="issue" ref="${a.issueid}">`);
-        h.push(Component.escape(a.name));
-        h.push('</span>');
-        h.push('</td>');
-
-        h.push('<td class="year">');
-        h.push(Math.floor(a.date / 100));
-        h.push('</td>');
-
-        h.push('<td class="issue">');
-        h.push(a.issueno);
-        h.push('</td>');
-
-        h.push('<td class="page">');
-        h.push(a.page);
-        h.push('</td>');
-
-        h.push('</tr>');
+        h.html`
+          <tr class="hilite">
+            <td class="name">${link("issue", a.issueid, a.name)}</td>
+            <td class="year">${Math.floor(a.date / 100)}</td>
+            <td class="issue">${a.issueno}</td>
+            <td class="page">${a.page}</td>
+          </tr>`;
       }
-      h.push('</table>');
+      h.html`</table>`
     } else if (type == "volume") {
-      h.push('<div class="title">');
-      h.push(Component.escape(state.name));
-      h.push('</div>');
+      h.html`<div class="title">${state.name}</div>`;
 
       if (state.issues?.length > 0) {
-        h.push('<div class="snippet">');
+        h.html`<div class="snippet">`;
         if (state.issues.length == 1) {
-          h.push("et tidsskrift:");
+          h.html`et tidsskrift:`;
         } else {
-          h.push(`${state.issues.length} tidsskrifter:`);
+          h.html`${state.issues.length} tidsskrifter:`;
         }
         for (let issue of state.issues) {
-          h.push(` <span class="link" type="issue" ref="${issue.issueid}">`);
-          h.push(issue.issueno);
-          h.push('</span>');
+          h.push(link("issue", issue.issueid, issue.issueno));
         }
-        h.push('</div>');
+        h.html`</div>`;
       }
 
-      h.push('<table>');
-      h.push('<tr>');
-      h.push('<th class="name">Artikel</th>');
-      h.push('<th class="name">Forfatter</th>');
-      h.push('<th class="issue">Nr.</th>');
-      h.push('<th class="page">Side</th>');
-      h.push('</tr>');
+      h.html`<table>
+        <tr>
+          <th class="name">Artikel</th>
+          <th class="name">Forfatter</th>
+          <th class="issue">Nr.</th>
+          <th class="page">Side</th>
+        </tr>`;
       for (let a of state.articles) {
-        h.push('<tr class="hilite">');
-
-        h.push('<td class="name">');
-        h.push(`<span class="link" type="issue" ref="${a.issueid}">`);
-        h.push(Component.escape(a.name));
-        h.push('</span>');
-        h.push('</td>');
-
-        h.push('<td class="name">');
-        if (a.authorid) {
-          h.push(`<span class="link" type="author" ref="${a.authorid}">`);
-          h.push(Component.escape(a.author));
-          h.push('</span>');
-        } else {
-          h.push(Component.escape(a.author));
-        }
-        h.push('</td>');
-
-        h.push('<td class="issue">');
-        h.push(a.issueno);
-        h.push('</td>');
-
-        h.push('<td class="page">');
-        h.push(a.page);
-        h.push('</td>');
-
-        h.push('</tr>');
+        h.html`
+          <tr class="hilite">
+            <td class="name">${link("issue", a.issueid, a.name)}</td>
+            <td class="name">${link("author", a.authorid, a.author)}</td>
+            <td class="issue">${a.issueno}</td>
+            <td class="page">${a.page}</td>
+          </tr>`;
       }
-      h.push('</table>');
+      h.html`</table>`;
     }
-    if (h.length > 0) return h.join("");
+    return h;
   }
 
   static stylesheet() {
@@ -449,7 +386,7 @@ class TidehvervContent extends MdCard {
         color: #9D0000;
       }
       $ span.link:hover {
-         text-decoration: underline;
+        text-decoration: underline;
       }
       $ span.button {
         cursor: pointer;
@@ -506,6 +443,13 @@ class TidehvervContent extends MdCard {
 
 Component.register(TidehvervContent);
 
+function link(type, ref, name) {
+  if (ref) {
+    return html`<span class="link" type="${type}" ref="${ref}">${name}</span> `;
+  } else {
+    return name;
+  }
+}
 
 document.body.style = null;
 """)

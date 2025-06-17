@@ -11,7 +11,6 @@ const htmlmap = {
   '<': '&lt;',
   '>': '&gt;',
   '`': '&#x60;',
-  '/': '&#x2F;'
 }
 
 // Defer showing page until loaded.
@@ -154,8 +153,9 @@ export class Component extends HTMLElement {
         }
       }
     } else if (content instanceof Node) {
-      while (this.firstChild) this.removeChild(this.lastChild);
-      this.appendChild(content);
+      thisreplaceChildren(content);
+    } else if (content instanceof Template) {
+      content.mount(this);
     } else if (content != null) {
       this.innerHTML = content;
     }
@@ -195,7 +195,7 @@ export class Component extends HTMLElement {
 
   static escape(s) {
     if (s == undefined) return "";
-    return s.toString().replace(/["&'<>`/]/g, c => htmlmap[c]);
+    return s.toString().replace(/["&'<>`]/g, c => htmlmap[c]);
   }
 
   // Register class as a HTML web component.
@@ -223,6 +223,65 @@ export class Component extends HTMLElement {
       stylesheet(css);
     }
   }
+}
+
+// HTML template with variable substitution.
+class Template {
+  // Construct new template.
+  constructor(strings, values) {
+    this.parts = new Array();
+    this.vars = null;
+    this.append(strings, values);
+  }
+
+  // Template function for adding to the existing template.
+  html(stings, ...values) {
+    this.append(stings, values);
+  }
+
+  // Add value, variable, or aother template to template.
+  push(value) {
+    if (value instanceof Element) {
+      this.parts.push("<var></var>");
+      if (!this.vars) this.vars = new Array();
+      this.vars.push(value);
+    } else if (value instanceof Template) {
+      this.parts.push(...value.parts);
+      if (value.vars) {
+        if (!this.vars) this.vars = new Array();
+        this.vars.push(...value.vars);
+      }
+    } else if (value != undefined && value != null && value != "") {
+      this.parts.push(Component.escape(value.toString()));
+    }
+  }
+
+  // Append template to this template.
+  append(strings, values) {
+    this.parts.push(strings[0]);
+    for (let i = 0; i < values.length; ++i) {
+      this.push(values[i]);
+      this.parts.push(strings[i + 1]);
+    }
+  }
+
+  // Mount template into element.
+  mount(element) {
+    element.innerHTML = this.parts.join("");
+    if (this.vars) {
+      let next = 0;
+      for (let v of element.querySelectorAll("var")) {
+        v.replaceWith(this.vars[next++]);
+      }
+    }
+  }
+}
+
+// HTML template function. Element values are inserted into the DOM at the
+// variable position in the template. Other values are converted to strings
+// and escaped.
+export function html(strings, ...values) {
+  return new Template(strings, values);
 }
 
 // Add global style sheet to document.
