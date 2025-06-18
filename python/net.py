@@ -122,7 +122,7 @@ class HTTPResponse:
 
   def error(self, status, message=None):
     self.status = status
-    self.ct = "text/plain"
+    self.ct = "text/plain; charset=utf-8"
     self.body = message
     self.file = None
 
@@ -354,3 +354,43 @@ def private(url):
   checked_hostnames.add(addr.hostname)
   return False
 
+non_proxy_headers = set([
+  "connection",
+  "content-length",
+  "content-encoding",
+  "content-security-policy",
+  "transfer-encoding",
+  "strict-transport-security",
+])
+
+def proxy(request, relay):
+  # Get URL.
+  url = request.param("url")
+
+  # Check that request is not for local network.
+  if sling.net.private(url): return 403
+
+  # Set up request headers.
+  headers = {}
+  ua = request["XUser-Agent"]
+  if ua: headers["User-Agent"] = ua
+  cookie = request["XCookie"]
+  if cookie: headers["Cookie"] = cookie
+
+  log.info("Proxy request for", url)
+
+  # Forward request.
+  r = relay.request("GET", url, headers=headers, timeout=30)
+
+  # Relay back response.
+  response = sling.net.HTTPResponse()
+  response.status = r.status
+  response.body = r.data
+
+  response.headers = []
+  for key, value in r.headers.items():
+    if key.lower() in non_proxy_headers: continue
+    if key.lower() == "set-cookie": key = "XSet-Cookie"
+    response.headers.append((key, value))
+
+  return response

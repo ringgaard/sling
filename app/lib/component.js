@@ -14,7 +14,7 @@ const htmlmap = {
 }
 
 // Defer showing page until loaded.
-window.addEventListener('load', (e) => {
+window.addEventListener('DOMContentLoaded', (e) => {
   document.body.style.display = "";
 });
 

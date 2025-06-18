@@ -14,6 +14,7 @@
 
 """Search Reddit for photos."""
 
+import urllib3
 import sling
 import sling.flags as flags
 import sling.log as log
@@ -32,7 +33,7 @@ flags.parse()
 # Initialize web server.
 app = sling.net.HTTPServer(flags.arg.port)
 app.static("/common", "app", internal=True)
-app.redirect("/", "/photosearch")
+app.redirect("/", "/photosearch/")
 
 # Main page.
 app.page("/photosearch",
@@ -45,7 +46,7 @@ app.page("/photosearch",
   <title>Reddit photo search</title>
   <link rel="icon" href="/common/image/appicon.ico" type="image/x-icon" />
   <script type="module" src="/common/lib/material.js"></script>
-  <script type="module" src="app.js"></script>
+  <script type="module" src="/photosearch/app.js"></script>
 </head>
 <body style="display: none">
   <photo-search-app id="app">
@@ -331,6 +332,7 @@ class SearchResults extends MdCard {
     let url = `https://www.reddit.com/search.json?q=${q}&limit=100`;
     if (nsfw) url = url + "&include_over_18=on";
     if (this.after) url = url + `&after=${this.after}`;
+    url = `/photosearch/proxy?url=${encodeURIComponent(url)}`;
 
     document.body.style.cursor = "wait";
     fetch(url)
@@ -384,6 +386,13 @@ Component.register(SearchResults);
 document.body.style = null;
 """)
 
+proxy_pool = urllib3.PoolManager()
+
+@app.route("/photosearch/proxy")
+def service_request(request):
+  # Forward request.
+  return sling.net.proxy(request, proxy_pool)
+
 @app.route("/photosearch/gallery", method="POST")
 def handle_albums(request):
   # Get media urls.
@@ -410,4 +419,3 @@ def handle_albums(request):
 log.info("running")
 app.run()
 log.info("stopped")
-

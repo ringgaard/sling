@@ -228,37 +228,8 @@ non_proxy_headers = set([
 proxy_pool = urllib3.PoolManager()
 
 @app.route("/case/proxy")
-def service_request(request):
-  # Get URL.
-  url = request.param("url")
-
-  # Check that request is not for local network.
-  if sling.net.private(url): return 403
-
-  # Set up request headers.
-  headers = {}
-  ua = request["XUser-Agent"]
-  if ua: headers["User-Agent"] = ua
-  cookie = request["XCookie"]
-  if cookie: headers["Cookie"] = cookie
-
-  log.info("Proxy request for", url)
-
-  # Forward request.
-  r = proxy_pool.request("GET", url, headers=headers, timeout=30)
-
-  # Relay back response.
-  response = sling.net.HTTPResponse()
-  response.status = r.status
-  response.body = r.data
-
-  response.headers = []
-  for key, value in r.headers.items():
-    if key.lower() in non_proxy_headers: continue
-    if key.lower() == "set-cookie": key = "XSet-Cookie"
-    response.headers.append((key, value))
-
-  return response
+def proxy_request(request):
+  return sling.net.proxy(request, proxy_pool)
 
 @app.route("/case/xrefs")
 def xrefs_request(request):
