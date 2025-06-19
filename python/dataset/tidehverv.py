@@ -13,6 +13,8 @@
 # limitations under the License.
 
 import requests
+import hashlib
+import base64
 
 import sling
 import sling.flags as flags
@@ -30,8 +32,34 @@ flags.define("--search",
              default="http://vault.ringgaard.com:7575",
              metavar="URL")
 
+flags.define("--userdb",
+             help="User database",
+             default=None,
+             metavar="FILE")
+
 # Parse command line flags.
 flags.parse()
+
+# User database.
+
+class User:
+  def __init__(self, email, salt, password):
+    self.email = email
+    self.salt = salt
+    self.password = password
+
+  def valid(self, password):
+    m = hashlib.sha256()
+    m.update(self.salt)
+    m.update(password.encode())
+    return m.digest() == self.password
+
+userdb = {}
+if flags.arg.userdb:
+  with open(flags.arg.userdb) as f:
+    for line in f:
+      f = line.strip().split(":")
+      userdb[f[0]] = User(f[0], bytes.fromhex(f[1]), bytes.fromhex(f[2]))
 
 # Read Tidehverv case file.
 log.info("Reading tidehverv database")
@@ -55,6 +83,9 @@ n_author_of = store["Q65970010"]
 n_contains = store["Q66759300"]
 n_volume_no = store["P478"]
 n_url = store["P2699"]
+n_access = store["P7228"]
+n_no_access = store["Q66439731"]
+n_login = store["Q16572632"]
 
 casedb = sling.Database("vault/case")
 data = casedb["1543"]
@@ -91,9 +122,9 @@ app.page("/tidehverv/",
         type="search"
         placeholder="Søg i Tidehverv...">
       </md-input>
-      <md-icon-button id="search" icon="search"></md-icon-button>
+      <md-icon-button id="search" icon="search" tooltip="Søg"></md-icon-button>
       <md-spacer></md-spacer>
-      <md-icon-button id="home" icon="home"></md-icon-button>
+      <md-icon-button id="home" icon="home" tooltip="Hjem"></md-icon-button>
     </md-toolbar>
 
     <md-content>
@@ -451,7 +482,6 @@ function link(type, ref, name) {
   }
 }
 
-document.body.style = null;
 """)
 
 # Statistics.
@@ -644,6 +674,27 @@ def handle_document(request):
   item = store[docid]
   if item[n_instance_of] == n_article:
     item = store.resolve(item[n_published_in])
+
+  access = item[n_access]
+  if access == n_no_access:
+    response = sling.net.HTTPResponse()
+    response.error(401, "Tidsskrift er ikke tilgængeligt online")
+    return response
+  elif access == n_login:
+    auth = request["Authorization"]
+    if auth:
+      if not auth.startswith("Basic "): return 500
+      credentials = base64.b64decode(auth[6:]).decode().split(":")
+      if len(credentials) != 2: return 500
+      user = userdb.get(credentials[0].lower())
+      if user is None: return 401
+      if not user.valid(credentials[1]): return 401
+    else:
+      response = sling.net.HTTPResponse()
+      response.error(401, "Kræver login")
+      response["WWW-Authenticate"] = 'Basic realm="Tidehverv"'
+      return response
+
   url = item[n_url].resolve()
   if url is None: return 500
   return sling.net.HTTPRedirect(url)
