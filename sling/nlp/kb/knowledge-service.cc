@@ -728,17 +728,24 @@ void KnowledgeService::HandleSearch(HTTPRequest *request,
   Store *store = ws.store();
 
   // Get query
-  Text query = ws.Get("q");
+  Text q = ws.Get("q");
   int limit = ws.Get("limit", 50);
   int maxambig = ws.Get("maxambig", 10000);
+  int snippet = ws.Get("snippet", 0);
   Text tag = ws.Get("tag");
   if (tag.empty()) tag = "main";
-  VLOG(1) << "Search query: " << query;
+  VLOG(1) << "Search query: " << q;
 
   if (search_server_.connected()) {
     // Send search query to search server.
+    JSON::Object query;
+    query.Add("q", q);
+    query.Add("limit", limit);
+    query.Add("maxambig", maxambig);
+    query.Add("snippet", snippet);
+    query.Add("tag", tag);
     JSON result;
-    Status st = search_server_.Search(query, limit, maxambig, tag, &result);
+    Status st = search_server_.Search(query, &result);
     if (!st.ok()) {
       response->SendError(500, nullptr, st.message());
       return;
@@ -762,7 +769,6 @@ void KnowledgeService::HandleSearch(HTTPRequest *request,
         Text docid = hit["docid"].t();
         Handle item = store->LookupExisting(docid);
         if (item.IsNil() || store->IsProxy(item)) itemids.push_back(docid);
-
       }
       if (!itemids.empty()) {
         Handles items(store);
@@ -778,11 +784,13 @@ void KnowledgeService::HandleSearch(HTTPRequest *request,
       if (!hit.valid()) continue;
       Text docid = hit["docid"].t();
       int score = hit["score"].i();
+      Text snippet = hit["snippet"].t();
 
       Frame item(store, RetrieveItem(store, docid));
       Builder match(store);
       GetStandardProperties(item, &match, true);
       match.Add(n_score_, score);
+      if (snippet.size() > 0) match.Add(n_snippet_, snippet);
       Handle h = match.Create().handle();
       matches.push_back(h);
     }
@@ -793,7 +801,7 @@ void KnowledgeService::HandleSearch(HTTPRequest *request,
   } else if (search_.loaded()) {
     // Search internal index.
     SearchEngine::Results results(limit, maxambig);
-    int hits = search_.Search(query, &results);
+    int hits = search_.Search(q, &results);
 
     // Generate response.
     Handles matches(store);

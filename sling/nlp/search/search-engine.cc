@@ -20,6 +20,8 @@
 
 #include "sling/util/unicode.h"
 
+REGISTER_COMPONENT_REGISTRY("snippet generator", sling::nlp::SnippetGenerator);
+
 namespace sling {
 namespace nlp {
 

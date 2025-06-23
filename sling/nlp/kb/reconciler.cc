@@ -340,6 +340,7 @@ class ItemMerger : public task::Reducer {
     num_orig_statements_ = task->GetCounter("original_statements");
     num_final_statements_ = task->GetCounter("final_statements");
     num_dup_statements_ = task->GetCounter("duplicate_statements");
+    num_deprecated_statements_ = task->GetCounter("deprecated_statements");
     num_merged_statements_ = task->GetCounter("merged_statements");
     num_merged_items_ = task->GetCounter("merged_items");
     num_unnames_ = task->GetCounter("unnames");
@@ -386,8 +387,17 @@ class ItemMerger : public task::Reducer {
         // Check for unnames.
         if (slot.name == n_unname_) has_unnames = true;
 
-        // Check for existing match(es).
+        // Remove statements with deprecated rank.
         Handle qvalue = store.Resolve(slot.value);
+        if (qvalue != slot.value) {
+          Handle rank = store.Get(slot.value, n_rank_.handle());
+          if (rank == Handle::zero()) {
+            num_deprecated_statements_->Increment();
+            continue;
+          }
+        }
+
+        // Check for existing match(es).
         bool isnew = statements.Insert(slot.name, qvalue);
         if (isnew) {
           // Add new statement.
@@ -576,6 +586,7 @@ class ItemMerger : public task::Reducer {
   Name n_alias_{names_, "alias"};
   Name n_family_{names_, "family"};
   Name n_role_{names_, "role"};
+  Name n_rank_{names_, "rank"};
   Name n_property_{names_, "/w/property"};
 
   Name n_point_in_time_{names_, "P585"};
@@ -588,6 +599,7 @@ class ItemMerger : public task::Reducer {
   task::Counter *num_final_statements_ = nullptr;
   task::Counter *num_dup_statements_ = nullptr;
   task::Counter *num_merged_statements_ = nullptr;
+  task::Counter *num_deprecated_statements_ = nullptr;
   task::Counter *num_merged_items_ = nullptr;
   task::Counter *num_unnames_ = nullptr;
 };

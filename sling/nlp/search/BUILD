@@ -105,6 +105,7 @@ cc_binary(
   deps = [
     ":search-engine",
     ":search-protocol",
+    ":document-snippet",
     "//sling/base",
     "//sling/base:clock",
     "//sling/file:posix",
@@ -131,4 +132,14 @@ cc_library(
     "//sling/util:mutex",
     "//sling/util:json",
   ],
+)
+
+cc_library(
+  name = "document-snippet",
+  srcs = ["document-snippet.cc"],
+  deps = [
+    ":search-engine",
+    "//sling/base",
+  ],
+  alwayslink = 1,
 )

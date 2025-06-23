@@ -496,6 +496,12 @@ void Store::Unbind(Handle handle) {
   }
 }
 
+Handle Store::Get(Handle frame, Handle name) const {
+  const FrameDatum *f = GetFrame(frame);
+  if (f == nullptr || !f->IsFrame()) return Handle::error();
+  return f->get(name);
+}
+
 void Store::Set(Handle frame, Handle name, Handle value) {
   // This method cannot be used for id slots because this would require updates
   // to the symbol table.

@@ -15,6 +15,7 @@
 #ifndef SLING_NLP_SEARCH_ENGINE_H_
 #define SLING_NLP_SEARCH_ENGINE_H_
 
+#include "sling/base/registry.h"
 #include "sling/base/types.h"
 #include "sling/nlp/document/phrase-tokenizer.h"
 #include "sling/nlp/search/search-index.h"
@@ -102,6 +103,21 @@ class SearchEngine {
   // Tokenizer for tokenizing query.
   PhraseTokenizer tokenizer_;
 };
+
+// A snippet generator extracts a query-dependent snippet from a search result.
+class SnippetGenerator : public Component<SnippetGenerator> {
+ public:
+  virtual ~SnippetGenerator() = default;
+
+  // Initialize snippet generator.
+  virtual void Init() = 0;
+
+  // Generate snippet for query and result.
+  virtual string Generate(Text query, Slice item) = 0;
+};
+
+#define REGISTER_SNIPPET_GENERATOR(type, component) \
+    REGISTER_COMPONENT_TYPE(SnippetGenerator, type, component)
 
 }  // namespace nlp
 }  // namespace sling

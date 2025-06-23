@@ -441,6 +441,10 @@ for logfn in flags.arg.logfiles:
       spam_hits[ipaddr] += 1
       num_spammers += 1
       continue
+    if ipaddr.startswith("47."):
+      spam_hits["alibaba"] += 1
+      num_spammers += 1
+      continue
 
     # Bots.
     bot = False
@@ -618,22 +622,22 @@ for logfn in flags.arg.logfiles:
 
 def print_table(title, keyname, table, chron=False):
   print("\n" + title + "\n")
-  print("     # |       % | " + keyname)
-  print("-------+---------+-----------------------------------------------")
+  print("      # |       % | " + keyname)
+  print("--------+---------+-----------------------------------------------")
   total = sum(table.values())
   if chron:
     for key in sorted(table.keys()):
       hits = table[key]
       pct = hits * 100.0 / total
-      print("%6d | %6.2f%% | %s" % (hits, pct, key.strftime("%a, %B %d, %Y")))
+      print("%7d | %6.2f%% | %s" % (hits, pct, key.strftime("%a, %B %d, %Y")))
   else:
     for key in sorted(table, key=table.get, reverse=True):
       hits = table[key]
       pct = hits * 100.0 / total
-      if hits > 0: print("%6d | %6.2f%% | %s" % (hits, pct, key))
-  print("-------+---------+-----------------------------------------------")
-  print("%6d |         | total" % total)
-  print("-------+---------+-----------------------------------------------")
+      if hits > 0: print("%7d | %6.2f%% | %s" % (hits, pct, key))
+  print("--------+---------+-----------------------------------------------")
+  print("%7d |         | total" % total)
+  print("--------+---------+-----------------------------------------------")
 
 
 visits_per_day = {}
@@ -695,8 +699,8 @@ print_table("DOWNLOADS", "file", download_hits)
 print_table("GOGGLE CRAWL", "date", google_crawl, chron=True)
 if flags.arg.v:
   print_table("MEDIA", "file", media_hits)
-  print_table("ITEMS", "item", item_hits)
-  print_table("QUERIES", "query", query_hits)
+print_table("ITEMS", "item", item_hits)
+print_table("QUERIES", "query", query_hits)
 print_table("REFFERING DOMAINS", "domain", referring_domains)
 print_table("REFERRERS", "referrer", referrers)
 #print_table("HEADS", "HEAD requests", head_hits)

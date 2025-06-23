@@ -232,6 +232,7 @@ struct Handle {
 
   static const Word kZero        = kIntTag | (0 << kIntShift);
   static const Word kOne         = kIntTag | (1 << kIntShift);
+  static const Word kTwo         = kIntTag | (2 << kIntShift);
   static const Word kFalse       = kZero;
   static const Word kTrue        = kOne;
 
@@ -373,6 +374,7 @@ struct Handle {
   static constexpr Handle name() { return Handle{kName}; }
   static constexpr Handle zero() { return Handle{kZero}; }
   static constexpr Handle one() { return Handle{kOne}; }
+  static constexpr Handle two() { return Handle{kTwo}; }
   static constexpr Handle error() { return Handle{kError}; }
 
   // Handle is represented as an 32-bit unsigned integer where the lower bits
@@ -1080,6 +1082,9 @@ class Store {
   // Looks up symbol and returns its value. Returns nil if the symbol does not
   // exist or it is not bound.
   Handle LookupExisting(Text name) const;
+
+  // Get (first) value for named slot in frame.
+  Handle Get(Handle frame, Handle name) const;
 
   // Sets value for slot in  frame. If the frame has an existing slot with this
   // name, its value is updated. Otherwise a new slot is added to the frame. It

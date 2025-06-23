@@ -41,13 +41,15 @@ class SearchSession;
 struct SearchShard {
   ~SearchShard() {
     delete database;
+    delete snipper;
   }
 
   // Load shard.
   void Load(const string &name,
       const string &repo,
       const string &items,
-      const string &prefix) {
+      const string &prefix,
+      const string &snippets) {
     this->name = name;
     this->repofn = repo;
     this->itemsfn = items;
@@ -55,6 +57,10 @@ struct SearchShard {
     engine.Load(repo);
     if (!items.empty()) {
       database = new RecordDatabase(items, itemdb_options);
+    }
+    if (!snippets.empty()) {
+     snipper = nlp::SnippetGenerator::Create(snippets);
+     snipper->Init();
     }
     idprefix = prefix;
   }
@@ -85,6 +91,9 @@ struct SearchShard {
 
   // Item database.
   RecordDatabase *database = nullptr;
+
+  // Snippet generator for shard.
+  nlp::SnippetGenerator *snipper = nullptr;
 };
 
 // Search engine service.
@@ -155,6 +164,7 @@ class SearchService {
     Text tag = query.Get("tag");
     int limit = query.Get("limit", 50);
     int maxambig = query.Get("maxambig", 10000);
+    int snippet = query.Get("snippet", 0);
 
     // Find search shard.
     Clock clock;
@@ -181,6 +191,10 @@ class SearchService {
       JSON::Object *result = hits->AddObject();
       result->Add("docid", hit.id());
       result->Add("score", hit.score);
+      if (snippet > 0 && shard->snipper) {
+        string summary = shard->snipper->Generate(q, Slice());
+        if (!summary.empty()) result->Add("snippet", summary);
+      }
     }
 
     json.Write(response->buffer());
@@ -197,6 +211,7 @@ class SearchService {
     string repo = query.Get("repo").str();
     string items = query.Get("items").str();
     string idprefix = query.Get("idprefix").str();
+    string snippets = query.Get("snippets").str();
     if (name.empty()) {
       response->SendError(400, nullptr, "Missing search shard name");
       return;
@@ -208,7 +223,7 @@ class SearchService {
       return;
     }
     SearchShard *shard = new SearchShard();
-    shard->Load(name, repo, items, idprefix);
+    shard->Load(name, repo, items, idprefix, snippets);
     shards_.push_back(shard);
     LOG(INFO) << "Search shard " << name << " loaded";
   }
@@ -235,6 +250,7 @@ class SearchService {
     Text tag = query["tag"];
     int limit = query["limit"].i(50);
     int maxambig = query["maxambig"].i(10000);
+    int snippet = query["snippet"].i(0);
 
     // Find search shard.
     MutexLock lock(&mu_);
@@ -257,6 +273,10 @@ class SearchService {
       JSON::Object *result = hits->AddObject();
       result->Add("docid", hit.id());
       result->Add("score", hit.score);
+      if (snippet > 0 && shard->snipper) {
+        string summary = shard->snipper->Generate(q, Slice());
+        if (!summary.empty()) result->Add("snippet", summary);
+      }
     }
     VLOG(1) << "Query: " << q << ", tag: " << tag
             << ", time: " << clock.ms() << " ms";
