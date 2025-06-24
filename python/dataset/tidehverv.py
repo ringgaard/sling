@@ -15,6 +15,7 @@
 import requests
 import hashlib
 import base64
+import json
 
 import sling
 import sling.flags as flags
@@ -301,12 +302,16 @@ class TidehvervContent extends MdCard {
             h.html`, side ${hit.page}`;
           }
         } else if (hit.type == "issue") {
-          h.html`tidsskrift`;
-          if (hit.articles > 1) {
-            h.html`, ${hit.articles} artikler`;
-          }
-          if (hit.pages) {
-            h.html`, side ${hit.pages}`;
+          if (hit.snippet) {
+            h.html`${hit.snippet}...`;
+          } else {
+            h.html`tidsskrift`;
+            if (hit.articles > 1) {
+              h.html`, ${hit.articles} artikler`;
+            }
+            if (hit.pages) {
+              h.html`, side ${hit.pages}`;
+            }
           }
         } else if (hit.type == "volume") {
           h.html`${hit.volume}. årgang, ${hit.issues} tidsskrifter`;
@@ -411,6 +416,7 @@ class TidehvervContent extends MdCard {
         font-family: 'Arial';
         font-size: 16px;
         color: #474747;
+        max-width: 700px;
       }
       $ span.link {
         cursor: pointer;
@@ -534,10 +540,10 @@ def handle_search(request):
   q = request.param("q")
   if q is None: return 500
 
-  r = requests.get(flags.arg.search + "/search?tag=tidehverv&q=" + q)
+  r = requests.get(flags.arg.search + "/search?snippet=160&tag=tidehverv&q=" + q)
   r.raise_for_status()
 
-  results = r.json()
+  results = json.loads(r.content.decode())
   hits = []
   for hit in results["hits"]:
     itemid = hit["docid"]
@@ -574,6 +580,7 @@ def handle_search(request):
         "pages": item[n_page],
         "published": item[n_pubdate],
         "articles": len(list(item(n_contains))),
+        "snippet": hit.get("snippet"),
       })
     elif kind == n_volume:
       hits.append({

@@ -29,6 +29,11 @@ flags.define("--caseno",
              default=None,
              help="case number")
 
+flags.define("--plaintext",
+             help="output plaintext in documents",
+             default=False,
+             action='store_true')
+
 flags.define("--output",
              default=None,
              help="record output file")
@@ -39,6 +44,7 @@ store = sling.Store()
 n_topics = store["topics"]
 n_url = store["P2699"]
 n_lex = store["lex"]
+n_text = store["text"]
 
 # Fetch case from case database.
 casedb = sling.Database(flags.arg.casedb)
@@ -63,6 +69,12 @@ for topic in casefile[n_topics]:
     mag.add_single_book_chapter()
     content = mag.collect()
     topic[n_lex] = content
+
+    # Extract plain text.
+    if flags.arg.plaintext:
+      doc = sling.lex(content)
+      plain = doc.phrase(0, len(doc.tokens))
+      topic[n_text] = plain
 
   output.write(topic.id, topic.data(binary=True))
 

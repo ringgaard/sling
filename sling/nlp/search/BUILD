@@ -105,7 +105,7 @@ cc_binary(
   deps = [
     ":search-engine",
     ":search-protocol",
-    ":document-snippet",
+    ":plain-snippet",
     "//sling/base",
     "//sling/base:clock",
     "//sling/file:posix",
@@ -135,11 +135,14 @@ cc_library(
 )
 
 cc_library(
-  name = "document-snippet",
-  srcs = ["document-snippet.cc"],
+  name = "plain-snippet",
+  srcs = ["plain-snippet.cc"],
   deps = [
     ":search-engine",
     "//sling/base",
+    "//sling/frame:store",
+    "//sling/frame:object",
+    "//sling/frame:serialization",
   ],
   alwayslink = 1,
 )

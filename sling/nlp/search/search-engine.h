@@ -113,7 +113,7 @@ class SnippetGenerator : public Component<SnippetGenerator> {
   virtual void Init() = 0;
 
   // Generate snippet for query and result.
-  virtual string Generate(Text query, Slice item) = 0;
+  virtual string Generate(Text query, Slice item, int length) = 0;
 };
 
 #define REGISTER_SNIPPET_GENERATOR(type, component) \

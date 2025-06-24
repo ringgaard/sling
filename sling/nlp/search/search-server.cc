@@ -57,10 +57,10 @@ struct SearchShard {
     engine.Load(repo);
     if (!items.empty()) {
       database = new RecordDatabase(items, itemdb_options);
-    }
-    if (!snippets.empty()) {
-     snipper = nlp::SnippetGenerator::Create(snippets);
-     snipper->Init();
+      if (!snippets.empty()) {
+       snipper = nlp::SnippetGenerator::Create(snippets);
+       snipper->Init();
+      }
     }
     idprefix = prefix;
   }
@@ -192,8 +192,11 @@ class SearchService {
       result->Add("docid", hit.id());
       result->Add("score", hit.score);
       if (snippet > 0 && shard->snipper) {
-        string summary = shard->snipper->Generate(q, Slice());
-        if (!summary.empty()) result->Add("snippet", summary);
+        Record record;
+        if (shard->database->Lookup(hit.id(), &record)) {
+          string summary = shard->snipper->Generate(q, record.value, snippet);
+          if (!summary.empty()) result->Add("snippet", summary);
+        }
       }
     }
 
@@ -274,8 +277,11 @@ class SearchService {
       result->Add("docid", hit.id());
       result->Add("score", hit.score);
       if (snippet > 0 && shard->snipper) {
-        string summary = shard->snipper->Generate(q, Slice());
-        if (!summary.empty()) result->Add("snippet", summary);
+        Record record;
+        if (shard->database->Lookup(hit.id(), &record)) {
+          string summary = shard->snipper->Generate(q, record.value, snippet);
+          if (!summary.empty()) result->Add("snippet", summary);
+        }
       }
     }
     VLOG(1) << "Query: " << q << ", tag: " << tag
@@ -303,6 +309,7 @@ class SearchService {
 
       // Try to fetch record for item.
       if (shard) {
+        // Fetch record from item database.
         if (!shard->database->Lookup(key, &record)) continue;
 
         // Write record to response.
