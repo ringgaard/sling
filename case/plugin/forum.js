@@ -34,7 +34,7 @@ const images_services = [
     }
   },
   fetch: async (url, context) => {
-    let r = await fetch(context.proxy(url));
+    let r = await context.fetch(url);
     let html = await r.text();
     let doc = new DOMParser().parseFromString(html, "text/html");
     let img = doc.querySelector(".card-body img");
@@ -50,7 +50,7 @@ const images_services = [
     if (m) return `https://img${m[1]}.pixhost.to/images/${m[2]}`;
   },
   fetch: async (url, context) => {
-    let r = await fetch(context.proxy(url));
+    let r = await context.fetch(url);
     let html = await r.text();
     let doc = new DOMParser().parseFromString(html, "text/html");
     let img = doc.getElementById("image");
@@ -62,7 +62,7 @@ const images_services = [
 {
   pattern: /https?:\/\/(www\.)?pimpandhost\.com\/image\//,
   fetch: async (url, context) => {
-    let r = await fetch(context.proxy(url));
+    let r = await context.fetch(url);
     let html = await r.text();
     let doc = new DOMParser().parseFromString(html, "text/html");
     let img = doc.querySelector("img.normal");
@@ -77,7 +77,7 @@ const images_services = [
     return thumb.replace("thumbs", "images").replace("_t", "_o");
   },
   fetch: async (url, context) => {
-    let r = await fetch(context.proxy(url + "?full=1"));
+    let r = await context.fetch(url + "?full=1");
     let html = await r.text();
     let doc = new DOMParser().parseFromString(html, "text/html");
     let meta = doc.querySelector('meta[property="og:image"]');
@@ -89,7 +89,7 @@ const images_services = [
 {
   pattern: /https?:\/\/www\.imagebam\.com\/(image|view)\//,
   fetch: async (url, context) => {
-    let r = await fetch(context.proxy(url + "?full=1"), {
+    let r = await context.fetch(url + "?full=1", {
       headers: {"XCookie": "nsfw_inter=1"},
     });
     let html = await r.text();
@@ -103,7 +103,7 @@ const images_services = [
 {
   pattern: /https?:\/\/postimg\.(cc|org)\/image\//,
   fetch: async (url, context) => {
-    let r = await fetch(context.proxy(url));
+    let r = await context.fetch(url);
     let html = await r.text();
     let doc = new DOMParser().parseFromString(html, "text/html");
     let img = doc.querySelector("#main-image");
@@ -115,7 +115,7 @@ const images_services = [
 {
   pattern: /https?:\/\/ibb\.co\//,
   fetch: async (url, context) => {
-    let r = await fetch(context.proxy(url));
+    let r = await context.fetch(url);
     let html = await r.text();
     let doc = new DOMParser().parseFromString(html, "text/html");
     let container = doc.getElementById("image-viewer-container");
@@ -128,7 +128,7 @@ const images_services = [
 {
   pattern: /https?:\/\/www\.turboimagehost\.com\//,
   fetch: async (url, context) => {
-    let r = await fetch(context.proxy(url));
+    let r = await context.fetch(url);
     let html = await r.text();
     let doc = new DOMParser().parseFromString(html, "text/html");
     let img = doc.querySelector("img.uImage");
@@ -140,7 +140,7 @@ const images_services = [
 {
   pattern: /https?:\/\/lemmecheck\.tube\//,
   fetch: async (url, context) => {
-    let r = await fetch(context.proxy(url));
+    let r = await context.fetch(url);
     let html = await r.text();
     let doc = new DOMParser().parseFromString(html, "text/html");
     let container = doc.querySelector("div.gallery-block");
@@ -154,7 +154,7 @@ const images_services = [
 {
   pattern: /https?:\/\/\w+rater\.com\//,
   fetch: async (url, context) => {
-    let r = await fetch(context.proxy(url));
+    let r = await context.fetch(url);
     let html = await r.text();
     let doc = new DOMParser().parseFromString(html, "text/html");
     let ogimage = doc.querySelector('meta[property="og:image"]');
@@ -171,7 +171,7 @@ const images_services = [
 {
   pattern: /https?:\/\/www\.galleries\./,
   fetch: async (url, context) => {
-    let r = await fetch(context.proxy(url));
+    let r = await context.fetch(url);
     let html = await r.text();
     let doc = new DOMParser().parseFromString(html, "text/html");
     let container = doc.querySelector("a");
@@ -185,7 +185,7 @@ const images_services = [
 {
   pattern: /https?:\/\/celeb\.gate\.cc\//,
   fetch: async (url, context) => {
-    let r = await fetch(context.proxy(url));
+    let r = await context.fetch(url);
     let html = await r.text();
     let doc = new DOMParser().parseFromString(html, "text/html");
     let img = doc.querySelector("img.img-fluid");
@@ -198,7 +198,7 @@ const images_services = [
 {
   pattern: /https?:\/\/postimage.org\/image\//,
   fetch: async (url, context) => {
-    let r = await fetch(context.proxy(url), {headers: {
+    let r = await context.fetch(url, {headers: {
       "XUser-Agent": navigator.userAgent,
     }});
     let html = await r.text();
@@ -213,7 +213,7 @@ const images_services = [
 {
   pattern: /https?:\/\/imagetwist\.com\//,
   fetch: async (url, context) => {
-    let r = await fetch(context.proxy(url));
+    let r = await context.fetch(url);
     let html = await r.text();
     let doc = new DOMParser().parseFromString(html, "text/html");
     let img = doc.querySelector("img.pic.img.img-responsive");
@@ -226,7 +226,7 @@ const images_services = [
 {
   pattern: /https?:\/\/imageupper\.com\//,
   fetch: async (url, context) => {
-    let r = await fetch(context.proxy(url));
+    let r = await context.fetch(url);
     let html = await r.text();
     let doc = new DOMParser().parseFromString(html, "text/html");
     let img = doc.querySelector("img.img");
@@ -381,4 +381,3 @@ export default class AlbumPlugin {
     return num_images > 0;
   }
 };
-

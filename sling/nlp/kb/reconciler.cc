@@ -342,6 +342,7 @@ class ItemMerger : public task::Reducer {
     num_dup_statements_ = task->GetCounter("duplicate_statements");
     num_deprecated_statements_ = task->GetCounter("deprecated_statements");
     num_merged_statements_ = task->GetCounter("merged_statements");
+    num_reconciled_dates_ = task->GetCounter("reconciled_dates");
     num_merged_items_ = task->GetCounter("merged_items");
     num_unnames_ = task->GetCounter("unnames");
   }
@@ -357,6 +358,8 @@ class ItemMerger : public task::Reducer {
     // Merge all item sources.
     Statements statements(&store);
     bool has_unnames = false;
+    int birth_dates = 0;
+    int death_dates = 0;
     for (task::Message *message : input.messages()) {
       // Decode item.
       Frame item = DecodeMessage(&store, message);
@@ -396,6 +399,10 @@ class ItemMerger : public task::Reducer {
             continue;
           }
         }
+
+        // Count number of birth and death dates.
+        if (slot.name == n_date_of_birth_) birth_dates++;
+        if (slot.name == n_date_of_death_) death_dates++;
 
         // Check for existing match(es).
         bool isnew = statements.Insert(slot.name, qvalue);
@@ -454,6 +461,22 @@ class ItemMerger : public task::Reducer {
     // Replace names if item has unname statements.
     if (has_unnames) Unname(builder);
 
+    // Reconcile birth and death dates.
+    bool prune = false;
+    if (birth_dates > 1) {
+      if (ReconcileDates(builder, n_date_of_birth_)) {
+        prune = true;
+        num_reconciled_dates_->Increment();
+      }
+    }
+    if (death_dates > 1) {
+      if (ReconcileDates(builder, n_date_of_death_)) {
+        prune = true;
+        num_reconciled_dates_->Increment();
+      }
+    }
+    if (prune) builder.Prune();
+
     // Output merged frame for item.
     Frame merged = builder.Create();
     Output(input.shard(), task::CreateMessage(input.key(), merged));
@@ -506,6 +529,65 @@ class ItemMerger : public task::Reducer {
       if (d1.Contains(d2) || d2.Contains(d1)) return true;
     }
     return false;
+  }
+
+  // Reconcile dates. Returns true if some dates have been reconciled.
+  bool ReconcileDates(Builder &builder, Name &property) {
+    // Collect property values.
+    Store *store = builder.store();
+    std::vector<Slot *> slots;
+    for (Slot *s = builder.begin(); s < builder.end(); s++) {
+      if (s->name == property) slots.push_back(s);
+    }
+
+    // Find best date.
+    Slot *winner = nullptr;
+    Date best;
+    for (Slot *s : slots) {
+      Handle value = store->Resolve(s->value);
+      if (!value.IsInt()) continue;
+      Date date(value.AsInt());
+      if (winner == nullptr || (date != best && best.Contains(date))) {
+        winner = s;
+        best = date;
+      }
+    }
+    if (winner == nullptr) return false;
+
+    // Only keep best date.
+    int pruned = 0;
+    for (Slot *s : slots) {
+      // Keep winner.
+      if (s == winner) continue;
+
+      // Prune dates that contain the winner, i.e. are less precise.
+      Handle value = store->Resolve(s->value);
+      if (!value.IsInt()) continue;
+      Date date(value.AsInt());
+      if (date.Contains(best)) {
+        s->name = Handle::nil();
+        pruned++;
+      }
+    }
+
+    // Remove redundant qualifiers for winner.
+    if (pruned == slots.size() - 1 && store->IsFrame(winner->value)) {
+      Frame qualifiers(store, winner->value);
+      bool compact = true;
+      for (const Slot &s : qualifiers) {
+        if (s.name == Handle::is()) continue;
+        if (s.name == n_rank_) continue;
+        if (s.name == n_rank_reason_) continue;
+        compact = false;
+        break;
+      }
+      if (compact) {
+        winner->value = qualifiers.GetHandle(Handle::is());
+        pruned++;
+      }
+    }
+
+    return pruned > 0;
   }
 
   // Merge second frame into the first frame.
@@ -592,6 +674,9 @@ class ItemMerger : public task::Reducer {
   Name n_point_in_time_{names_, "P585"};
   Name n_start_time_{names_, "P580"};
   Name n_end_time_{names_, "P582"};
+  Name n_date_of_birth_{names_, "P569"};
+  Name n_date_of_death_{names_, "P570"};
+  Name n_rank_reason_{names_, "P7452"};
   Handles temporal_modifiers_{&commons_};
 
   // Statistics.
@@ -600,6 +685,7 @@ class ItemMerger : public task::Reducer {
   task::Counter *num_dup_statements_ = nullptr;
   task::Counter *num_merged_statements_ = nullptr;
   task::Counter *num_deprecated_statements_ = nullptr;
+  task::Counter *num_reconciled_dates_ = nullptr;
   task::Counter *num_merged_items_ = nullptr;
   task::Counter *num_unnames_ = nullptr;
 };
