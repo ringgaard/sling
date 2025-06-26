@@ -343,6 +343,7 @@ class ItemMerger : public task::Reducer {
     num_deprecated_statements_ = task->GetCounter("deprecated_statements");
     num_merged_statements_ = task->GetCounter("merged_statements");
     num_reconciled_dates_ = task->GetCounter("reconciled_dates");
+    num_reconciled_names_ = task->GetCounter("reconciled_names");
     num_merged_items_ = task->GetCounter("merged_items");
     num_unnames_ = task->GetCounter("unnames");
   }
@@ -358,6 +359,7 @@ class ItemMerger : public task::Reducer {
     // Merge all item sources.
     Statements statements(&store);
     bool has_unnames = false;
+    int birth_names = 0;
     int birth_dates = 0;
     int death_dates = 0;
     for (task::Message *message : input.messages()) {
@@ -400,7 +402,8 @@ class ItemMerger : public task::Reducer {
           }
         }
 
-        // Count number of birth and death dates.
+        // Count properties that can be reconciled.
+        if (slot.name == n_birth_name_) birth_names++;
         if (slot.name == n_date_of_birth_) birth_dates++;
         if (slot.name == n_date_of_death_) death_dates++;
 
@@ -461,8 +464,14 @@ class ItemMerger : public task::Reducer {
     // Replace names if item has unname statements.
     if (has_unnames) Unname(builder);
 
-    // Reconcile birth and death dates.
+    // Reconcile names and dates.
     bool prune = false;
+    if (birth_names > 1) {
+      if (ReconcileNames(builder, n_birth_name_)) {
+        prune = true;
+        num_reconciled_names_->Increment();
+      }
+    }
     if (birth_dates > 1) {
       if (ReconcileDates(builder, n_date_of_birth_)) {
         prune = true;
@@ -590,6 +599,33 @@ class ItemMerger : public task::Reducer {
     return pruned > 0;
   }
 
+  // Reconcile names. Returns true if some names have been reconciled.
+  bool ReconcileNames(Builder &builder, Name &property) {
+    // Collect qualified names.
+    Store *store = builder.store();
+    int pruned = 0;
+    std::unordered_set<Text> names;
+    for (Slot *s = builder.begin(); s < builder.end(); s++) {
+      if (s->name == property && store->IsString(s->value)) {
+        StringDatum *name = store->GetString(s->value);
+        if (name->qualified()) names.insert(name->str());
+      }
+    }
+
+    // Delete unqualified names with qualified counterparts.
+    for (Slot *s = builder.begin(); s < builder.end(); s++) {
+      if (s->name == property && store->IsString(s->value)) {
+        StringDatum *name = store->GetString(s->value);
+        if (!name->qualified() && names.count(name->str()) > 0) {
+          s->name = Handle::nil();
+          pruned++;
+        }
+      }
+    }
+
+    return pruned > 0;
+  }
+
   // Merge second frame into the first frame.
   void Merge(Frame &f1, Frame &f2) {
     CHECK(f1.valid());
@@ -677,6 +713,7 @@ class ItemMerger : public task::Reducer {
   Name n_date_of_birth_{names_, "P569"};
   Name n_date_of_death_{names_, "P570"};
   Name n_rank_reason_{names_, "P7452"};
+  Name n_birth_name_{names_, "P1477"};
   Handles temporal_modifiers_{&commons_};
 
   // Statistics.
@@ -686,6 +723,7 @@ class ItemMerger : public task::Reducer {
   task::Counter *num_merged_statements_ = nullptr;
   task::Counter *num_deprecated_statements_ = nullptr;
   task::Counter *num_reconciled_dates_ = nullptr;
+  task::Counter *num_reconciled_names_ = nullptr;
   task::Counter *num_merged_items_ = nullptr;
   task::Counter *num_unnames_ = nullptr;
 };

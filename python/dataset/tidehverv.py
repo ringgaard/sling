@@ -212,7 +212,7 @@ class TidehvervApp extends MdApp {
       }
       $ .logo {
         width: 64px;
-        padding: 5px;
+        padding: 4px;
       }
       $ md-input {
         display: flex;
@@ -249,10 +249,11 @@ class TidehvervContent extends MdCard {
         ${state.issues} tidsskrifter med ${state.pages} sider og
         ${state.articles} artikler skrevet af ${state.authors} skribenter.
         </p>
-        <p>Årgange:`;
+        <grid class="volumes">`;
       for (let v of state.volumes) {
-        h.push(link("volume", v.id, v.year));
+        h.html`<span class="button" type="volume" ref="${v.id}">${v.year}</span> `;
       }
+      h.html`</grid>`;
       h.html`</p>
         <p>Efterlysning! Vi mangler stadig nogle få tidsskrifter, for at arkivet
         er komplet:</p>
@@ -425,6 +426,9 @@ class TidehvervContent extends MdCard {
       $ span.link:hover {
         text-decoration: underline;
       }
+      $ grid.volumes {
+        line-height: 2;
+      }
       $ span.button {
         cursor: pointer;
         background: #888888;
@@ -540,9 +544,9 @@ def handle_search(request):
   q = request.param("q")
   if q is None: return 500
 
-  r = requests.get(flags.arg.search + "/search?snippet=160&tag=tidehverv&q=" + q)
+  url = flags.arg.search + "/search?snippet=160&tag=tidehverv&q=" + q
+  r = requests.get(url)
   r.raise_for_status()
-
   results = json.loads(r.content.decode())
   hits = []
   for hit in results["hits"]:
