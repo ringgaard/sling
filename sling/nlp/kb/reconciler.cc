@@ -556,7 +556,12 @@ class ItemMerger : public task::Reducer {
       Handle value = store->Resolve(s->value);
       if (!value.IsInt()) continue;
       Date date(value.AsInt());
-      if (winner == nullptr || (date != best && best.Contains(date))) {
+      if (value != s->value &&
+          store->Get(s->value, n_rank_.handle()) == Handle::two()) {
+        // Make preferred date the winner.
+        winner = s;
+        best = date;
+      } else if (winner == nullptr || (date != best && best.Contains(date))) {
         winner = s;
         best = date;
       }
@@ -579,20 +584,19 @@ class ItemMerger : public task::Reducer {
       }
     }
 
-    // Remove redundant qualifiers for winner.
+    // Remove redundant qualifiers from winner.
     if (pruned == slots.size() - 1 && store->IsFrame(winner->value)) {
       Frame qualifiers(store, winner->value);
       bool compact = true;
       for (const Slot &s : qualifiers) {
         if (s.name == Handle::is()) continue;
         if (s.name == n_rank_) continue;
-        if (s.name == n_rank_reason_) continue;
+        if (s.name == n_preferred_rank_reason_) continue;
         compact = false;
         break;
       }
       if (compact) {
         winner->value = qualifiers.GetHandle(Handle::is());
-        pruned++;
       }
     }
 
@@ -712,7 +716,7 @@ class ItemMerger : public task::Reducer {
   Name n_end_time_{names_, "P582"};
   Name n_date_of_birth_{names_, "P569"};
   Name n_date_of_death_{names_, "P570"};
-  Name n_rank_reason_{names_, "P7452"};
+  Name n_preferred_rank_reason_{names_, "P7452"};
   Name n_birth_name_{names_, "P1477"};
   Handles temporal_modifiers_{&commons_};
 
