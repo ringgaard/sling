@@ -2,23 +2,16 @@
 // Licensed under the Apache License, Version 2
 
 import {Component} from "/common/lib/component.js";
-import {
-  StdDialog,
-  MdIcon,
-  MdDialog,
-  MdToolbox,
-  inform
-} from "/common/lib/material.js";
+import {StdDialog, MdDialog, MdToolbox, inform} from "/common/lib/material.js";
 import {Frame, QString, Printer} from "/common/lib/frame.js";
 import {store, frame, settings} from "/common/lib/global.js";
-import {imageurl} from "/common/lib/gallery.js";
-import {LabelCollector, ItemCollector, value_parser, Time}
-  from "/common/lib/datatype.js";
+import {LabelCollector, ItemCollector} from "/common/lib/datatype.js";
 import {Document} from "/common/lib/document.js";
 
 import {get_schema, inverse_property} from "./schema.js";
 import {search, kbsearch, SearchResultsDialog} from "./search.js";
 import {Drive} from "./drive.js";
+import * as plugins from "./plugins.js";
 import "./item.js"
 import "./fact.js"
 
@@ -26,6 +19,7 @@ const n_id = store.id;
 const n_is = store.is;
 const n_name = frame("name");
 const n_alias = frame("alias");
+const n_birth_name = frame("P1477");
 const n_bookmarked = frame("bookmarked");
 const n_case_file = frame("Q108673968");
 const n_instance_of = frame("P31");
@@ -37,9 +31,6 @@ const n_not_safe_for_work = frame("Q2716583");
 const n_full_work = frame("P953");
 const n_url = frame("P2699");
 const n_mime_type = frame("P1163");
-const n_dob = frame("P569");
-const n_dod = frame("P570");
-const n_birth_name = frame("P1477");
 
 // Cross-reference configuration.
 var xrefs;
@@ -394,6 +385,7 @@ class TopicToolbox extends MdToolbox {
             <md-menu-item id="toprofile">Move photos to profile</md-menu-item>
             <md-menu-item id="photoupload">Upload photos</md-menu-item>
             <md-menu-item id="myheritage">Search myheritage.dk</md-menu-item>
+            <md-menu-item id="familytree">Familytree</md-menu-item>
           </md-menu>
    `;
  }
@@ -449,7 +441,9 @@ class TopicCard extends Component {
       } else if (action == "photoupload") {
         this.onphotoupload(e);
       } else if (action == "myheritage") {
-        this.onmyheritage(e);
+        this.execute("myheritage");
+      } else if (action == "familytree") {
+        this.execute("familytree");
       }
     });
 
@@ -828,64 +822,10 @@ class TopicCard extends Component {
   }
 
   async onimgdups(e) {
-    // Get list of images.
-    let topic = this.state;
-    let media = [];
-    let images = [];
-    let seen = new Set();
-    for (let m of topic.all(n_media)) {
-      let url = store.resolve(m);
-      if (url.startsWith('!')) url = url.slice(1);
-      if (seen.has(url)) continue;
-      media.push(m);
-      images.push(url);
-      seen.add(url);
-    }
-    if (images.length == 0) return;
-
-    let existing = [];
-    for (let redir of topic.links()) {
-      for (let m of redir.all(n_media)) {
-        let url = store.resolve(m);
-        if (url.startsWith('!')) url = url.slice(1);
-        existing.push(url);
-      }
-    }
-
-    // Find duplicates.
-    this.style.cursor = "wait";
-    let r = await fetch("/case/service/dups", {
-      method: "POST",
-      body: JSON.stringify({itemid: topic.get(n_id), images, existing}),
-    });
-    this.style.cursor = "";
-    let response = await r.json();
-    for (let image of response.dups) {
-      if (image.bigger) {
-        image.dup.remove = true;
-      } else {
-        image.remove = true;
-      }
-    }
-
-    if (response.dups.length == 0 && response.missing.length == 0) {
-      inform("no duplicate photos found");
-    } else {
-      let dialog = new DedupDialog(response);
-      let result = await dialog.show();
-      if (result) {
-        // Remove selected urls.
-        topic.remove(n_media);
-        for (let m of media) {
-          let url = store.resolve(m);
-          if (url.startsWith('!')) url = url.slice(1);
-          if (!result.includes(url)) topic.add(n_media, m)
-        }
-
-        inform(`${plural(result.length, "photo")} removed`);
-        this.refresh();
-        this.mark_dirty();
-      }
+    let updated =  await plugins.execute_command("dedup", this.state, this);
+    if (updated) {
+      this.refresh();
+      this.mark_dirty();
     }
   }
 
@@ -1122,47 +1062,8 @@ class TopicCard extends Component {
     }
   }
 
-  async onmyheritage(e) {
-    function escape(str) {
-      return str.replaceAll(" ", "%2F3").replaceAll(".", "%2F2");
-    }
-
-    // Build search query for myheritage.dk.
-    let topic = this.state;
-    let url = "https://www.myheritage.dk/research?";
-    url += "s=1&formId=master&formMode=1&useTranslation=1";
-    url += "&exactSearch=&p=1&action=query&view_mode=card";
-    let name = topic.get(n_birth_name) || topic.get(n_name);
-    let dob = new Time(topic.get(n_dob));
-    let dod = new Time(topic.get(n_dod));
-    if (name) {
-      let fn, ln;
-      let space = name.lastIndexOf(" ");
-      if (space) {
-        fn = name.substring(0, space);
-        ln = name.substring(space + 1);
-      } else {
-        ln = name
-      }
-      url += "&qname=Name";
-      if (fn) url += "+fn." + escape(fn);
-      if (ln) url += "+ln." + escape(ln);
-    }
-
-    if (dob.precision) {
-      url += "&qevents-event1=Event+et.birth";
-      if (dob.day) url += "+ed." + dob.day;
-      if (dob.month) url += "+em." + dob.month;
-      if (dob.year) url += "+ey." + dob.year;
-    }
-    if (dod.precision) {
-      url += "&qevents-any/1event_1=Event+et.death";
-      if (dod.day) url += "+ed." + dod.day;
-      if (dod.month) url += "+em." + dod.month;
-      if (dod.year) url += "+ey." + dod.year;
-    }
-    url += "&qevents=List";
-    window.open(url, "_blank", "noreferrer");
+  async execute(command) {
+    return await plugins.execute_command(command, this.state);
   }
 
   ondown(e) {
@@ -1353,128 +1254,3 @@ class RawEditDialog extends MdDialog {
 }
 
 Component.register(RawEditDialog);
-
-class TopicPhoto extends Component {
-  render() {
-    let photo = this.state;
-    let url = imageurl(photo.url);
-    if (photo.existing) {
-      let label = `Existing ${photo.width} x ${photo.height}`
-      if (photo.bigger) label += " bigger";
-      if (photo.smaller) label += " smaller";
-      return `
-        <a href="${url}" target="_blank">
-          <img src="${url}" referrerpolicy="no-referrer">
-        </a>
-        <div>${label}</div>
-      `;
-    } else {
-      let label = `Remove ${photo.width} x ${photo.height}`
-      if (photo.bigger) label += " bigger";
-      if (photo.smaller) label += " smaller";
-      return `
-        <a href="${url}" target="_blank">
-          <img src="${url}" referrerpolicy="no-referrer">
-        </a>
-        <div>
-          <md-checkbox
-            id="remove"
-            label="${label}"
-            checked=${!!photo.remove}>
-          </md-checkbox>
-        </div>
-      `;
-    }
-  }
-
-  url() {
-    return this.state.url;
-  }
-
-  remove() {
-    let checkbox = this.find("#remove");
-    return checkbox && checkbox.checked;
-  }
-
-  static stylesheet() {
-    return `
-      $ {
-        padding: 16px;
-      }
-      $ img {
-        height: 250px;
-      }
-      $ div {
-        font-size: 16px;
-      }
-      $ md-checkbox input {
-        user-select: none;
-      }
-    `;
-  }
-}
-
-Component.register(TopicPhoto);
-
-class DedupDialog extends MdDialog {
-  submit() {
-    let selected = new Array();
-    let photo = this.find("#photos").firstChild;
-    while (photo) {
-      if (photo.remove()) selected.push(photo.url());
-      photo = photo.nextSibling;
-    }
-
-    if (this.find("#missing").checked) {
-      selected.push(...this.state.missing)
-    }
-
-    this.close(selected);
-  }
-
-  render() {
-    let missing = this.state.missing;
-    return `
-      <md-dialog-top>Remove photos</md-dialog-top>
-      <div id="photos"></div>
-      <div class="${missing.length > 0 ? "miss" : "nomiss"}">
-        <md-checkbox
-          id="missing"
-          label="Remove ${plural(missing.length, "missing photo")}">
-        </md-checkbox>
-      </div>
-      <md-dialog-bottom>
-        <button id="cancel">Cancel</button>
-        <button id="submit">Remove</button>
-      </md-dialog-bottom>
-    `;
-  }
-
-  onrendered() {
-    let photos = this.find("#photos");
-    for (let image of this.state.dups) {
-      photos.appendChild(new TopicPhoto(image.dup));
-      photos.appendChild(new TopicPhoto(image));
-    }
-  }
-
-  static stylesheet() {
-    return `
-      $ #photos {
-        display: grid;
-        max-width: 75vw;
-        max-height: 75vh;
-        overflow: auto;
-        grid-template-columns: 50% 50%;
-      }
-      $ .miss {
-       padding: 16px;
-      }
-      $ .nomiss {
-       display: none;
-      }
-    `;
-  }
-}
-
-Component.register(DedupDialog);

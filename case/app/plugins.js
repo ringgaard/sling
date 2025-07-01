@@ -650,3 +650,18 @@ export async function get_widget(topic) {
   // Return new instance of widget.
   return new widget.factory(topic);
 }
+
+// Loaded command modules.
+var commands = new Map();
+
+export async function execute_command(command, ...args) {
+  // Get module for command.
+  let module = commands.get(command);
+  if (!module) {
+    module = await load_plugin(command + ".js");
+    commands.set(command, module);
+  }
+
+  // Make instance and run command.
+  return await new module().run(...args);
+}
