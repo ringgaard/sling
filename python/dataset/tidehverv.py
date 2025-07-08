@@ -254,6 +254,9 @@ class TidehvervContent extends MdCard {
         h.html`<span class="button" type="volume" ref="${v.id}">${v.year}</span> `;
       }
       h.html`</grid>`;
+      h.html`</p>Tidsskrifter, som ikke er offentligt tilgængelige, kan købes ved
+             henvendelse til Lars Brinth
+             (<a href="mailto:lrbrinth@outlook.dk">lrbrinth@outlook.dk)</a></p>`;
       h.html`</p>
         <p>Efterlysning! Vi mangler stadig nogle få tidsskrifter, for at arkivet
         er komplet:</p>

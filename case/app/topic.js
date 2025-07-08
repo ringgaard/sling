@@ -384,8 +384,8 @@ class TopicToolbox extends MdToolbox {
             <md-menu-item id="mentions">Find mentions</md-menu-item>
             <md-menu-item id="toprofile">Move photos to profile</md-menu-item>
             <md-menu-item id="photoupload">Upload photos</md-menu-item>
+            <md-menu-item id="familytree">Family tree</md-menu-item>
             <md-menu-item id="myheritage">Search myheritage.dk</md-menu-item>
-            <md-menu-item id="familytree">Familytree</md-menu-item>
           </md-menu>
    `;
  }
@@ -443,7 +443,7 @@ class TopicCard extends Component {
       } else if (action == "myheritage") {
         this.execute("myheritage");
       } else if (action == "familytree") {
-        this.execute("familytree");
+        this.onfamilytree(e);
       }
     });
 
@@ -758,6 +758,12 @@ class TopicCard extends Component {
     }
   }
 
+  async onfamilytree(e) {
+    let index = this.match("#editor").get_index();
+    let ref = await this.execute("familytree", index);
+    if (ref) this.dispatch("navigate", {ref}, true);
+  }
+
   onmoveup(e) {
     e.stopPropagation();
     this.match("#editor").move_topic_up(this.state);
@@ -822,7 +828,7 @@ class TopicCard extends Component {
   }
 
   async onimgdups(e) {
-    let updated =  await plugins.execute_command("dedup", this.state, this);
+    let updated =  await this.execute("dedup", this);
     if (updated) {
       this.refresh();
       this.mark_dirty();
@@ -1062,8 +1068,8 @@ class TopicCard extends Component {
     }
   }
 
-  async execute(command) {
-    return await plugins.execute_command(command, this.state);
+  async execute(command, ...args) {
+    return await plugins.execute_command(command, this.state, ...args);
   }
 
   ondown(e) {

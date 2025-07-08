@@ -474,7 +474,7 @@ export class LabelCollector {
       await this.aux.retrieve();
     }
 
-    // Skip if all labels has already been resolved.
+    // Skip if all labels have already been resolved.
     if (this.items.size == 0) return null;
 
     // Retrieve stubs from knowledge service.
@@ -528,8 +528,8 @@ export class ItemCollector {
       await this.aux.retrieve();
     }
 
-    // Skip if all items has already been fetched.
-    if (this.items.size == 0) return null;
+    // Skip if all items have already been fetched.
+    if (this.items.size == 0) return;
 
     // Retrieve items from knowledge service.
     let response = await kbfetch("/kb/topics", {

@@ -199,7 +199,7 @@ class CaseEditor extends MdApp {
     } else if (this.lazyload && ref.startsWith(`t/${this.caseid()}/`)) {
       // Lazy-load topic.
       this.navigate_to(frame(ref));
-    } else if (e.detail.event.ctrlKey) {
+    } else if (e.detail.event?.ctrlKey) {
       // Add new linked topic and navigate to it.
       let item = frame(ref);
       let link = await this.add_topic_link(item, position);

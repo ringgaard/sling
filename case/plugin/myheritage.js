@@ -22,6 +22,7 @@ export default class MyHeritagePlugin {
     url += "s=1&formId=master&formMode=1&useTranslation=1";
     url += "&exactSearch=&p=1&action=query&view_mode=card";
     let name = topic.get(n_birth_name) || topic.get(n_name);
+    if (name) name = name.toString();
     let dob = new Time(topic.get(n_dob));
     let dod = new Time(topic.get(n_dod));
     if (name) {
