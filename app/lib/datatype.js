@@ -367,6 +367,11 @@ export class Time {
     return this.year + (days / (leapyear ? 366 : 365));
   }
 
+  number() {
+    if (!this.precision) return;
+    return (this.year || 0) * 10000 + (this.month || 0) * 100 + (this.day || 0);
+  }
+
   static value(year, month, day, precision) {
     if (!precision) {
       if (!month) {

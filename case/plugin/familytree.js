@@ -6,8 +6,7 @@
 import {store, frame} from "/common/lib/global.js";
 import {Component, html} from "/common/lib/component.js";
 import {MdDialog} from "/common/lib/material.js";
-import {ItemCollector} from "/common/lib/datatype.js";
-import {Time} from "/common/lib/datatype.js";
+import {ItemCollector, Time} from "/common/lib/datatype.js";
 
 const n_id = frame("id")
 const n_is = frame("is");
@@ -59,7 +58,7 @@ class Person {
   }
 
   name() {
-    return this.property(n_name) || this.topic.id;
+    return (this.property(n_name) || this.topic.id).toString();
   }
 
   property(prop) {
@@ -77,6 +76,7 @@ class Person {
     if (gender == n_female) s += "♀ ";
     if (born) s += "* " + date(born) + " ";
     if (died) s += "† " + date(died) + " ";
+    if (this.distance) s += " [" + this.distance + "]";
     return s.trim();
   }
 
@@ -116,6 +116,22 @@ class Person {
 
   add_child(person) {
     if (!this.children.includes(person)) this.children.push(person);
+  }
+
+  dob() {
+    return new Time(this.property(n_born));
+  }
+
+  issibling(other) {
+    if (this.parents.length != other.parents.length) return false;
+    for (let parent of this.parents) {
+      if (!other.parents.includes(parent)) return false;
+    }
+    return this.parents.length > 0;
+  }
+
+  ispartner(other) {
+    return this.partners.includes(other);
   }
 
   toString() {
@@ -193,9 +209,16 @@ class FamilyTree {
     this.persons = new Map();
     this.families = new Map();
     this.generations = new Map();
+    this.radius = (maxgen - mingen + 1) * 2;
     for (let g = mingen; g <= maxgen; ++g) {
       this.generations.set(g, new Generation(g));
     }
+  }
+
+  async build(topic) {
+    await this.traverse(topic);
+    this.order();
+    this.layout();
   }
 
   family(key) {
@@ -229,6 +252,7 @@ class FamilyTree {
     let queue = [];
     let visited = new Set();
     this.subject = this.person(topic);
+    this.subject.distance = 1;
     queue.push(this.subject);
     let i = 0;
     while (i < queue.length) {
@@ -255,6 +279,7 @@ class FamilyTree {
       generation.add_person(person);
       if (visited.has(person)) continue;
       visited.add(person);
+      if (person.distance == this.radius) continue;
 
       // Find parents.
       if (this.generations.has(person.generation - 1)) {
@@ -262,6 +287,7 @@ class FamilyTree {
         if (father) {
           let f = this.person(father);
           f.generation = person.generation - 1;
+          if (!f.distance) f.distance = person.distance + 1;
           person.add_parent(f);
           if (!visited.has(f)) queue.push(f);
         }
@@ -269,6 +295,7 @@ class FamilyTree {
         if (mother) {
           let m = this.person(mother);
           m.generation = person.generation - 1;
+          if (!m.distance) m.distance = person.distance + 1;
           person.add_parent(m);
           if (!visited.has(m)) queue.push(m);
         }
@@ -278,6 +305,7 @@ class FamilyTree {
       for (let spouse of person.relatives(n_spouse)) {
         let s = this.person(store.resolve(spouse));
         s.generation = person.generation;
+        if (!s.distance) s.distance = person.distance + 1;
         person.add_partner(s);
         if (!visited.has(s)) queue.push(s);
       }
@@ -287,6 +315,7 @@ class FamilyTree {
         for (let child of person.relatives(n_child)) {
           let c = this.person(store.resolve(child));
           c.generation = person.generation + 1;
+          if (!c.distance) c.distance = person.distance + 1;
           person.add_child(c);
           if (!visited.has(c)) queue.push(c);
         }
@@ -324,6 +353,49 @@ class FamilyTree {
       let lane = 1;
       for (let family of generation.families) {
         family.lane = lane++;
+      }
+    }
+  }
+
+  order() {
+    for (let generation of this.generations.values()) {
+      //console.log("reorder generation " + generation.index);
+
+      // Sort persons in generation by age.
+      let g = generation.persons;
+      g.sort((a, b) => {
+        let dob_a = a.dob().number();
+        let dob_b = b.dob().number();
+        if (!dob_a && !dob_b) return 0;
+        if (!dob_a) return 1;
+        if (!dob_b) return -1;
+        return dob_a - dob_b;
+      });
+
+      // Move partners and siblings together.
+      for (let i = 0; i < g.length; ++i) {
+        //let s = [];
+        //for (let p of g) s.push(p.name());
+        //console.log(s);
+
+        let insert = i + 1;
+        for (let j = i + 1; j < g.length; ++j) {
+          if (g[i].ispartner(g[j])) {
+            let partner = g[j];
+            //console.log(`move ${g[i].name()} partner ${partner.name()} from ${j} to ${insert}`);
+            g.splice(j, 1);
+            g.splice(insert++, 0, partner);
+          }
+        }
+
+        for (let j = i + 1; j < g.length; ++j) {
+          if (g[i].issibling(g[j])) {
+            let sibling = g[j];
+            //console.log(`move ${g[i].name()} sibling ${sibling.name()} from ${j} to ${insert}`);
+            g.splice(j, 1);
+            g.splice(insert++, 0, sibling);
+          }
+        }
       }
     }
   }
@@ -550,16 +622,7 @@ export default class FamilyTreePlugin {
   async run(topic, index) {
     console.log("family tree for " + topic.id);
     let tree = new FamilyTree(-1, 1, index);
-    await tree.traverse(topic);
-    tree.layout();
-
-    //console.log(tree);
-    //for (let g of tree.generations.values()) {
-    //  for (let p of g.persons) console.log(p.toString());
-    //}
-    //for (let f of tree.families.values()) {
-    //  console.log(f.toString());
-    //}
+    await tree.build(topic);
 
     let dialog = new FamilyTreeDialog(tree)
     return await dialog.show();
