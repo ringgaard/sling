@@ -28,12 +28,15 @@ const n_spouse = frame("P26");
 const n_partner = frame("P451");
 
 const top_spacing = 25;
-const box_width = 200;
+const box_width = 250;
 const box_height = 50;
-const box_spacing = 50;
-const lane_spacing = 25;
+const box_spacing = 25;
+const lane_spacing = 15;
 const name_xofs = 10;
 const name_yofs = 20;
+const max_delta = 500;
+const delta_limit = 50;
+const layout_iterations = 20;
 
 function date(d) {
   let t = new Time(store.resolve(d));
@@ -50,7 +53,6 @@ class Person {
     this.children = [];
     this.partners = [];
     this.generation = 0;
-    this.nm = this.name();
   }
 
   id() {
@@ -166,6 +168,20 @@ class Family {
     if (!this.children.includes(person)) this.children.push(person);
   }
 
+  parent_center() {
+    if (this.parents.length == 0) return;
+    let sum = 0;
+    for (let p of this.parents) sum += p.y;
+    return sum / this.parents.length;
+  }
+
+  child_center() {
+    if (this.children.length == 0) return;
+    let sum = 0;
+    for (let c of this.children) sum += c.y;
+    return sum / this.children.length;
+  }
+
   toString() {
     let h = [];
     h.push(`family ${family_key(this.parents)}`);
@@ -278,8 +294,8 @@ class FamilyTree {
       }
       generation.add_person(person);
       if (visited.has(person)) continue;
-      visited.add(person);
       if (person.distance == this.radius) continue;
+      visited.add(person);
 
       // Find parents.
       if (this.generations.has(person.generation - 1)) {
@@ -401,9 +417,28 @@ class FamilyTree {
   }
 
   layout() {
+    function first(persons) {
+      if (persons.length == 0) return;
+      let low = persons[0].index;
+      for (let p of persons) {
+        if (p.index < low) low = p.index;
+      }
+      return low;
+    }
+
+    function together(family, generation) {
+      if (family.parents.length == 1) return true;
+      if (family.parents.length == 2) {
+        return generation.adjacent(family.parents[0], family.parents[1]);
+      }
+      return false;
+    }
+
+    // Initial grid layout.
     let x = top_spacing;
     for (let generation of this.generations.values()) {
       if (generation.persons.length == 0) continue;
+
       let y = top_spacing;
       let index = 0;
       for (let person of generation.persons) {
@@ -412,11 +447,66 @@ class FamilyTree {
         person.index = index++;
         y += box_height + box_spacing;
       }
+
       // TODO: assign lanes to families based on overlap
       generation.lanes = generation.families.length;
       generation.x = x;
 
       x += box_width + box_spacing + generation.lanes * lane_spacing;
+    }
+
+    for (let iteration = 0; iteration < layout_iterations; iteration++) {
+      let converged = true;
+      console.log("align iter", iteration);
+      // Align parents with children.
+      for (let generation of this.generations.values()) {
+        for (let family of generation.families) {
+          if (together(family, generation)) {
+            let midp = family.parent_center();
+            let midc = family.child_center();
+            //console.log("midp", midp, "midc", midc);
+            if (midp && midc) {
+              let delta = midc - midp;
+              if (delta > 0 && delta < max_delta) {
+                if (delta > delta_limit) delta = delta_limit;
+                let from = first(family.parents);
+                console.log("parent delta", delta, "family", family.parents[0].name(), "from", from);
+                for (let i = from; i < generation.persons.length; ++i) {
+                  generation.persons[i].y += delta;
+                }
+                converged = false;
+              }
+            }
+          }
+        }
+      }
+
+      // Align children with parents.
+      let prev;
+      for (let generation of this.generations.values()) {
+        if (prev) {
+          for (let family of prev.families) {
+            let midp = family.parent_center();
+            let midc = family.child_center();
+            if (midp && midc) {
+              let delta = midp - midc;
+              if (delta > 0 && delta < max_delta) {
+                if (delta > delta_limit) delta = delta_limit;
+                let from = first(family.children);
+                console.log("child delta", delta, "family", family.parents[0].name());
+                for (let i = from; i < generation.persons.length; ++i) {
+                  generation.persons[i].y += delta;
+                }
+                converged = false;
+              }
+            }
+          }
+        }
+        prev = generation;
+      }
+
+      // Stop if layout has converged.
+      if (converged) break;
     }
   }
 
