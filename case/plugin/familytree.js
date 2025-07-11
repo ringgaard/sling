@@ -34,9 +34,10 @@ const box_spacing = 25;
 const lane_spacing = 15;
 const name_xofs = 10;
 const name_yofs = 20;
-const max_delta = 500;
-const delta_limit = 50;
+const max_delta = 2000; //500;
+const delta_limit = 2000; //50;
 const layout_iterations = 20;
+const max_name_length = 35;
 
 function date(d) {
   let t = new Time(store.resolve(d));
@@ -60,7 +61,27 @@ class Person {
   }
 
   name() {
-    return (this.property(n_name) || this.topic.id).toString();
+    let name = this.property(n_name)
+    if (!name) return id();
+    name = name.toString();
+    if (name.length > max_name_length) {
+      // Remove titles.
+      let comma = name.indexOf(",");
+      if (comma != -1) name = name.slice(0, comma);
+
+      if (name.length > max_name_length) {
+        // Shorten name by replacing names with initials.
+        let len = name.length;
+        let parts = name.split(" ");
+        for (let i = 0; i < parts.length; ++i) {
+          len -= parts[i].length - 1;
+          parts[i] = parts[i][0];
+          if (len < max_name_length) break;
+        }
+        name = parts.join(" ");
+      }
+    }
+    return name;
   }
 
   property(prop) {
@@ -225,7 +246,7 @@ class FamilyTree {
     this.persons = new Map();
     this.families = new Map();
     this.generations = new Map();
-    this.radius = (maxgen - mingen + 1) * 2;
+    this.radius = maxgen - mingen + 1;
     for (let g = mingen; g <= maxgen; ++g) {
       this.generations.set(g, new Generation(g));
     }
@@ -294,7 +315,6 @@ class FamilyTree {
       }
       generation.add_person(person);
       if (visited.has(person)) continue;
-      if (person.distance == this.radius) continue;
       visited.add(person);
 
       // Find parents.
@@ -303,27 +323,29 @@ class FamilyTree {
         if (father) {
           let f = this.person(father);
           f.generation = person.generation - 1;
-          if (!f.distance) f.distance = person.distance + 1;
+          if (!f.distance) f.distance = person.distance;
           person.add_parent(f);
           if (!visited.has(f)) queue.push(f);
         }
         let mother = store.resolve(person.relative(n_mother));
         if (mother) {
           let m = this.person(mother);
-          m.generation = person.generation - 1;
-          if (!m.distance) m.distance = person.distance + 1;
+          m.generation = person.generation;
+          if (!m.distance) m.distance = person.distance;
           person.add_parent(m);
           if (!visited.has(m)) queue.push(m);
         }
       }
 
       // Find spouses.
-      for (let spouse of person.relatives(n_spouse)) {
-        let s = this.person(store.resolve(spouse));
-        s.generation = person.generation;
-        if (!s.distance) s.distance = person.distance + 1;
-        person.add_partner(s);
-        if (!visited.has(s)) queue.push(s);
+      if (person.distance < this.radius) {
+        for (let spouse of person.relatives(n_spouse)) {
+          let s = this.person(store.resolve(spouse));
+          s.generation = person.generation;
+          if (!s.distance) s.distance = person.distance + 1;
+          person.add_partner(s);
+          if (!visited.has(s)) queue.push(s);
+        }
       }
 
       // Find children.
@@ -331,7 +353,7 @@ class FamilyTree {
         for (let child of person.relatives(n_child)) {
           let c = this.person(store.resolve(child));
           c.generation = person.generation + 1;
-          if (!c.distance) c.distance = person.distance + 1;
+          if (!c.distance) c.distance = person.distance;
           person.add_child(c);
           if (!visited.has(c)) queue.push(c);
         }
@@ -434,6 +456,18 @@ class FamilyTree {
       return false;
     }
 
+    function min(a, b) {
+      if (a == undefined) return b;
+      if (b == undefined) return a;
+      return a < b ? a : b;
+    }
+
+    function move(persons, start, offset) {
+      for (let i = start; i < persons.length; ++i) {
+        persons[i].y += offset;
+      }
+    }
+
     // Initial grid layout.
     let x = top_spacing;
     for (let generation of this.generations.values()) {
@@ -470,7 +504,7 @@ class FamilyTree {
               if (delta > 0 && delta < max_delta) {
                 if (delta > delta_limit) delta = delta_limit;
                 let from = first(family.parents);
-                console.log("parent delta", delta, "family", family.parents[0].name(), "from", from);
+                //console.log("parent delta", delta, "family", family.parents[0].name(), "from", from);
                 for (let i = from; i < generation.persons.length; ++i) {
                   generation.persons[i].y += delta;
                 }
@@ -493,7 +527,7 @@ class FamilyTree {
               if (delta > 0 && delta < max_delta) {
                 if (delta > delta_limit) delta = delta_limit;
                 let from = first(family.children);
-                console.log("child delta", delta, "family", family.parents[0].name());
+                //console.log("child delta", delta, "family", family.parents[0].name());
                 for (let i = from; i < generation.persons.length; ++i) {
                   generation.persons[i].y += delta;
                 }
@@ -508,6 +542,62 @@ class FamilyTree {
       // Stop if layout has converged.
       if (converged) break;
     }
+
+    // Tree compaction.
+    let gen = [];
+    let pos = [];
+    for (let generation of this.generations.values()) {
+      gen.push(generation.persons);
+      pos.push(0);
+    }
+    let top_margin;
+    for (let g of gen) {
+      if (g.length > 0) top_margin = min(top_margin,  g[0].y);
+    }
+    if (top_margin > 0) {
+      for (let g of gen) move(g, 0, -top_margin);
+    }
+    for (;;) {
+      // Find minimum y position.
+      let y;
+      for (let i = 0; i < gen.length; ++i) {
+        if (pos[i] < gen[i].length) {
+          let p = gen[i][pos[i]];
+          y = min(y, p.y);
+        }
+      }
+      if (y === undefined) break;
+
+      // Compute gap to next.
+      let gap;
+      for (let i = 0; i < gen.length; ++i) {
+        if (pos[i] < gen[i].length) {
+          let p = gen[i][pos[i]];
+          if (p.y == y) {
+            //console.log(`y=${y} gen ${i} index ${pos[i]} name ${p.name()}`);
+            pos[i]++;
+            if (pos[i] < gen[i].length) {
+              let q = gen[i][pos[i]];
+              let spacing = q.y - y;
+              gap = min(gap, spacing);
+            }
+
+          } else {
+            gap = min(gap, p.y - y);
+          }
+        }
+      }
+      //console.log("gap", gap);
+      if (gap > box_height + box_spacing) {
+        let adjust = gap - box_height - box_spacing;
+        for (let i = 0; i < gen.length; ++i) {
+          if (pos[i] < gen[i].length) {
+            move(gen[i], pos[i], -adjust);
+          }
+        }
+      }
+    }
+
   }
 
   bounds() {
@@ -553,10 +643,10 @@ class FamilyTreeDialog extends MdDialog {
     let [width, height] = tree.bounds();
 
     h.html`<div id=tree><svg id=chart
-           width=${width} height=${height}
+           width="${width}" height="${height}"
            viewBox="0 0 ${width} ${height}"
            preserveAspectRatio="xMidYMid"
-           xmlns="http://www.w3.org/2000"/svg">`;
+           xmlns="http://www.w3.org/2000/svg">`;
     for (let generation of tree.generations.values()) {
       for (let f of generation.families) {
         let lx = generation.x + box_width + f.lane * lane_spacing;
@@ -605,7 +695,8 @@ class FamilyTreeDialog extends MdDialog {
       for (let p of generation.persons) {
         h.html`<rect ref="${p.id()}" x="${p.x}" y="${p.y}"
                 width="${box_width}" height="${box_height}"
-                rx="10" ry="10"/>
+                rx="10" ry="10"
+                ${p == tree.subject ? 'class=subject' : ''} />
                <text class="name"
                  x="${p.x + box_width / 2}" y="${p.y + name_yofs}">
                  ${p.name()}
@@ -659,6 +750,9 @@ class FamilyTreeDialog extends MdDialog {
         stroke-width: 2px;
         fill: white;
       }
+      $ rect.subject {
+        stroke: black;
+      }
       $ rect:hover {
         fill: #cccccc;
         cursor: pointer;
@@ -668,7 +762,6 @@ class FamilyTreeDialog extends MdDialog {
         stroke-width: 2px;
       }
       $ text {
-        /*dominant-baseline: middle;*/
         text-anchor: middle;
       }
       $ text.name {

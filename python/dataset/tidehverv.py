@@ -258,16 +258,13 @@ class TidehvervContent extends MdCard {
              henvendelse til Lars Brinth
              (<a href="mailto:lrbrinth@outlook.dk">lrbrinth@outlook.dk)</a></p>`;
       h.html`</p>
-        <p>Efterlysning! Vi mangler stadig nogle få tidsskrifter, for at arkivet
-        er komplet:</p>
+        <p>Efterlysning! Vi mangler stadig et ekelt tidsskrift,
+        for at arkivet er komplet:</p>
         <ul>
-          <li>Tidehverv 90. årgang nr. 9, november 2016</li>
           <li>Tidehverv 92. årgang nr. 2, februar 2018 (p. 21-36)</li>
-          <li>Tidehverv 92. årgang nr. 5, juni 2018 (p. 85-100)</li>
-          <li>Tidehverv 92. årgang nr. 7-8, oktober-november 2018 (p. 129-176)</li>
         </ul>
-        <p>Hvis du ligger inde med en eller flere af disse numre, vil vi være
-        taknemmelige, hvis du vil kontakte
+        <p>Hvis du ligger inde med dette nummer, vil vi være taknemmelige,
+        hvis du vil kontakte
         <a href="https://tidehverv.dk">tidehverv.dk</a>,
         så vi kan aftale scanning af disse. Tidsskrifter kan scannes uden at
         beskadige originalen.</p>`;

@@ -251,7 +251,7 @@ class Template {
         if (!this.vars) this.vars = new Array();
         this.vars.push(...value.vars);
       }
-    } else if (value != undefined && value != null && value != "") {
+    } else if (value !== undefined && value !== null && value !== "") {
       this.parts.push(Component.escape(value.toString()));
     }
   }
