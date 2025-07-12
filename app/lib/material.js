@@ -701,6 +701,7 @@ export class MdMenu extends Component {
 
       $ .menu-content {
         display: none;
+        border-radius: 7px;
         position: absolute;
         padding: 8px 0px 8px 0px;
         font-size: 15px;
