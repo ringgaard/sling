@@ -258,7 +258,7 @@ class TidehvervContent extends MdCard {
              henvendelse til Lars Brinth
              (<a href="mailto:lrbrinth@outlook.dk">lrbrinth@outlook.dk)</a></p>`;
       h.html`</p>
-        <p>Efterlysning! Vi mangler stadig et ekelt tidsskrift,
+        <p>Efterlysning! Vi mangler stadig et enkelt tidsskrift,
         for at arkivet er komplet:</p>
         <ul>
           <li>Tidehverv 92. årgang nr. 2, februar 2018 (p. 21-36)</li>

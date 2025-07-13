@@ -190,6 +190,25 @@ class Family {
     if (!this.children.includes(person)) this.children.push(person);
   }
 
+  mid_parent() {
+    if (this.parents.length == 0) return;
+    let sum = 0;
+    for (let p of this.parents) sum += p.index;
+    return sum / this.parents.length;
+  }
+
+  mid_child() {
+    if (this.children.length == 0) return;
+    let sum = 0;
+    for (let c of this.children) sum += c.index;
+    return sum / this.children.length;
+  }
+
+  nucleus() {
+    if (this.children.length == 0) return false;
+    return this.parents.length == 1 || this.parents.length == 2;
+  }
+
   parent_center() {
     if (this.parents.length == 0) return;
     let sum = 0;
@@ -238,6 +257,15 @@ class Generation {
     if (person1.index == person2.index + 1) return true;
     if (person1.index == person2.index - 1) return true;
     return false;
+  }
+
+  swap(index1, index2) {
+    let person1 = this.persons[index1];
+    let person2 = this.persons[index2];
+    this.persons[index1] = person2;
+    this.persons[index2] = person1;
+    person1.index = index2;
+    person2.index = index1;
   }
 }
 
@@ -293,7 +321,7 @@ class FamilyTree {
     let queue = [];
     let visited = new Set();
     this.subject = this.person(topic);
-    this.subject.distance = 1;
+    this.subject.distance = 0;
     queue.push(this.subject);
     let i = 0;
     while (i < queue.length) {
@@ -328,7 +356,7 @@ class FamilyTree {
         if (father) {
           let f = this.person(father);
           f.generation = person.generation - 1;
-          if (!f.distance) f.distance = person.distance;
+          if (f.distance == undefined) f.distance = person.distance;
           person.add_parent(f);
           if (!visited.has(f)) queue.push(f);
         }
@@ -336,7 +364,7 @@ class FamilyTree {
         if (mother) {
           let m = this.person(mother);
           m.generation = person.generation - 1;
-          if (!m.distance) m.distance = person.distance;
+          if (m.distance == undefined) m.distance = person.distance;
           person.add_parent(m);
           if (!visited.has(m)) queue.push(m);
         }
@@ -347,7 +375,7 @@ class FamilyTree {
         for (let spouse of person.relatives(n_spouse)) {
           let s = this.person(store.resolve(spouse));
           s.generation = person.generation;
-          if (!s.distance) s.distance = person.distance + 1;
+          if (s.distance == undefined) s.distance = person.distance + 1;
           person.add_partner(s);
           if (!visited.has(s)) queue.push(s);
         }
@@ -358,7 +386,7 @@ class FamilyTree {
         for (let child of person.relatives(n_child)) {
           let c = this.person(store.resolve(child));
           c.generation = person.generation + 1;
-          if (!c.distance) c.distance = person.distance;
+          if (c.distance == undefined) c.distance = person.distance;
           person.add_child(c);
           if (!visited.has(c)) queue.push(c);
         }
@@ -432,6 +460,36 @@ class FamilyTree {
           }
         }
       }
+
+      for (let index = 0; index < g.length; ++index) {
+        g[index].index = index;
+      }
+    }
+
+    // Swap parent order based on children.
+    for (let generation of this.generations.values()) {
+      for (let i = 0; i <  generation.families.length; ++i) {
+        let f1 = generation.families[i];
+        if (!f1.nucleus()) continue;
+
+        for (let j = i + 1; j <  generation.families.length; ++j) {
+          let f2 = generation.families[j];
+          if (!f2.nucleus()) continue;
+          if (f1 == f2) continue;
+          if (f1.parents.length != f2.parents.length) continue;
+
+          let mp1 = f1.mid_parent();
+          let mp2 = f2.mid_parent();
+          let mc1 = f1.mid_child();
+          let mc2 = f2.mid_child();
+          if (mp1 < mp2 && mc1 > mc2) {
+            console.log(`swap family ${f1.parents[0].name()} with ${f2.parents[0].name()}`);
+            for (let k = 0; k < f1.parents.length; ++k) {
+              generation.swap(f1.parents[k].index, f2.parents[k].index);
+            }
+          }
+        }
+      }
     }
   }
 
@@ -471,11 +529,9 @@ class FamilyTree {
       if (generation.persons.length == 0) continue;
 
       let y = top_spacing;
-      let index = 0;
       for (let person of generation.persons) {
         person.x = x;
         person.y = y;
-        person.index = index++;
         y += box_height + box_spacing;
       }
 

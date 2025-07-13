@@ -121,7 +121,7 @@ export default class BabepediaPlugin {
     }
     let aka = doc.getElementById("aka");
     if (aka) {
-      let names = aka.innerText.substring(4).split(/\s*\/\s*/);
+      let names = aka.innerText.substring(15).split(/\s-\s*/);
       for (let name of names) {
         topic.put(n_alias, name.trim());
       }
@@ -130,83 +130,88 @@ export default class BabepediaPlugin {
     topic.put(n_gender, n_female);
 
     // Get biographical information.
-    let biolist = doc.getElementById("biolist");
-    for (let i = 0; i < biolist.children.length; i++) {
-      let li = biolist.children[i];
-      let m = li.innerText.match(/^([^:]+): ?(.+)/);
-      let field = m[1].trim();
-      let value = m[2].trim();
-      if (field == "Born") {
-        let m = value.match(/\w+ (\d+)\w+ of (\w+) (\d+)/);
+    let biolist = doc.querySelector("div.info-grid");
+    if (biolist) {
+      for (let i = 0; i < biolist.children.length; i++) {
+        let li = biolist.children[i];
+        if (li.className != "info-item") continue;
+        let field = li.firstElementChild.innerText.trim();
+        let value = li.lastElementChild.innerText.trim();
+        if (field == "Born:") {
+          let m = value.match(/\w+ (\d+)\w+ of (\w+) (\d+)/);
+            let date = new Date(m ? m[1] + " " + m[2] + " " + m[3] : value);
+            topic.put(n_date_of_birth, date2sling(date));
+        } else if (field == "Died:") {
+          let m = value.match(/\w+ (\d+)\w+ of (\w+) (\d+)/);
           let date = new Date(m ? m[1] + " " + m[2] + " " + m[3] : value);
-          topic.put(n_date_of_birth, date2sling(date));
-      } else if (field == "Died") {
-        let m = value.match(/\w+ (\d+)\w+ of (\w+) (\d+)/);
-        let date = new Date(m ? m[1] + " " + m[2] + " " + m[3] : value);
-        topic.put(n_date_of_death, date2sling(date));
-      } else if (field == "Birthplace") {
-        let location = value.split(/, /);
-        let country = location.pop();
-        if (country == "Republic of") {
-          country = "Republic of " + location.pop();
-        }
-        location = await context.lookup(location.join(", "));
-        country = await context.lookup(country);
-        if (location) {
-          topic.put(n_place_of_birth, location);
-          topic.put(n_country_of_citizenship, country);
-        } else if (country) {
-          topic.put(n_place_of_birth, country);
-        }
-      } else if (field == "Profession") {
-        for (let profession of value.split(/, /)) {
-          let occ = profession.toLowerCase();
-          if (occ.endsWith(" (former)")) {
-            occ = occ.substring(0, occ.length - 9);
+          topic.put(n_date_of_death, date2sling(date));
+        } else if (field == "Birthplace:") {
+          let location = value.split(/, /);
+          let country = location.pop();
+          if (country == "Republic of") {
+            country = "Republic of " + location.pop();
           }
-          if (occ in occupations) {
-            occ = occupations[occ];
-          } else {
-            occ = await context.lookup(occ);
+          location = await context.lookup(location.join(", "));
+          country = await context.lookup(country);
+          if (location) {
+            topic.put(n_place_of_birth, location);
+            topic.put(n_country_of_citizenship, country);
+          } else if (country) {
+            topic.put(n_place_of_birth, country);
           }
-          if (occ && !topic.has(n_occupation, occ)) {
-            topic.put(n_occupation, occ);
+        } else if (field == "Professions:") {
+          for (let profession of value.split(/, /)) {
+            let occ = profession.toLowerCase();
+            if (occ.startsWith("sportswoman: ")) {
+              occ = occ.substring(13);
+            }
+            if (occ.endsWith(" (former)")) {
+              occ = occ.substring(0, occ.length - 9);
+            }
+            if (occ in occupations) {
+              occ = occupations[occ];
+            } else {
+              occ = await context.lookup(occ);
+            }
+            if (occ && !topic.has(n_occupation, occ)) {
+              topic.put(n_occupation, occ);
+            }
           }
-        }
-      } else if (field == "Height") {
-        let m = value.match(/\(or (\d+) cm\)/);
-        if (m) {
-          let v = store.frame();
-          v.add(n_amount, parseInt(m[1]));
-          v.add(n_unit, n_cm);
-          if (!topic.has(n_height)) topic.add(n_height, v);
-        }
-      } else if (field == "Weight") {
-        let m = value.match(/\(or (\d+) kg\)/);
-        if (m) {
-          let v = store.frame();
-          v.add(n_amount, parseInt(m[1]));
-          v.add(n_unit, n_kg);
-          if (!topic.has(n_weight)) topic.add(n_weight, v);
-        }
-      } else if (field == "Hair color") {
-        let color = value.toLowerCase();
-        if (color in hair_colors) color = hair_colors[color];
-        if (color) {
-          topic.put(n_hair_color, color);
-        }
-      } else if (field == "Eye color") {
-        let color = value.toLowerCase();
-        if (color in eye_colors) color = eye_colors[color];
-        if (color) {
-          topic.put(n_eye_color, color);
-        }
-      } else if (field == "Years active") {
-        let m = value.match(/(\d+) - (\d+|present)/);
-        if (m) {
-          topic.put(n_work_peroid_start, parseInt(m[1]));
-          if (m[2] != "present") {
-            topic.put(n_work_peroid_end, parseInt(m[2]));
+        } else if (field == "Height:") {
+          let m = value.match(/\(or (\d+) cm\)/);
+          if (m) {
+            let v = store.frame();
+            v.add(n_amount, parseInt(m[1]));
+            v.add(n_unit, n_cm);
+            if (!topic.has(n_height)) topic.add(n_height, v);
+          }
+        } else if (field == "Weight:") {
+          let m = value.match(/\(or (\d+) kg\)/);
+          if (m) {
+            let v = store.frame();
+            v.add(n_amount, parseInt(m[1]));
+            v.add(n_unit, n_kg);
+            if (!topic.has(n_weight)) topic.add(n_weight, v);
+          }
+        } else if (field == "Hair color:") {
+          let color = value.toLowerCase();
+          if (color in hair_colors) color = hair_colors[color];
+          if (color) {
+            topic.put(n_hair_color, color);
+          }
+        } else if (field == "Eye color:") {
+          let color = value.toLowerCase();
+          if (color in eye_colors) color = eye_colors[color];
+          if (color) {
+            topic.put(n_eye_color, color);
+          }
+        } else if (field == "Years active:") {
+          let m = value.match(/(\d+) - (\d+|present)/);
+          if (m) {
+            topic.put(n_work_peroid_start, parseInt(m[1]));
+            if (m[2] != "present") {
+              topic.put(n_work_peroid_end, parseInt(m[2]));
+            }
           }
         }
       }
