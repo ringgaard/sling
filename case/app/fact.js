@@ -787,7 +787,7 @@ class FactEditor extends Component {
       if (!prop || !value) continue;
       let p = prop.value();
       let v = value.value();
-      if (p === undefined || v === undefined || v == "") continue;
+      if (p === undefined || v === undefined || v === "") continue;
       if (e.qualified) {
         if (s.length == 0) return;
         let prev = s[s.length - 1];
@@ -1140,7 +1140,7 @@ class FactField extends Component {
         value = item.topic.id;
         text = item.topic.get(n_name);
       }
-    } else if (item.value) {
+    } else if (item.value !== undefined) {
       if (item.value instanceof Frame) {
         value = item.value.id || item.value.text(false, true);
         [text, encoded] = value_text(item.value, this.state.property);
