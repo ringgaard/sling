@@ -1799,6 +1799,68 @@ export class MdInput extends Component {
 Component.register(MdInput);
 
 //-----------------------------------------------------------------------------
+// Slider
+//-----------------------------------------------------------------------------
+
+export class MdSlider extends Component {
+  onconnect() {
+    if (this.state == undefined) this.state = this.attrs.value;
+  }
+
+  onconnected() {
+    this.attach(this.onchange, "change", "input");
+  }
+
+  onchange(e) {
+    this.state = event.target.value;
+    this.dispatch("change", e);
+  }
+
+  value() {
+    return this.state;
+  }
+
+  render() {
+    let attrs = [];
+    attrs.push(`type="range"`);
+    if (this.attrs.min != undefined) attrs.push(`min="${this.attrs.min}"`);
+    if (this.attrs.max != undefined) attrs.push(`max="${this.attrs.max}"`);
+    if (this.attrs.step != undefined) attrs.push(`step="${this.attrs.step}"`);
+    attrs.push(`value="${this.state}"`);
+    let html = `<input ${attrs.join(" ")}>`;
+
+    if (this.attrs.label) {
+      html += `<div class="label">${this.attrs.label}</div>`;
+    }
+    return html;
+  }
+
+  static stylesheet() {
+    return `
+      $ {
+        display: block;
+      }
+
+      $ input {
+        width: 100%;
+        accent-color: #00A0D6;
+      }
+      $ input::-webkit-slider-runnable-track {
+         background-color: #EEEEEE;
+      }
+      $ div.label {
+        font-size: 10px;
+        text-align: center;
+        line-height: 1;
+        margin-top: -5px;
+      }
+    `;
+  }
+}
+
+Component.register(MdSlider);
+
+//-----------------------------------------------------------------------------
 // Toolbox
 //-----------------------------------------------------------------------------
 

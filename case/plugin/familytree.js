@@ -672,14 +672,13 @@ class FamilyTree {
 
 class FamilyTreeDialog extends MdDialog {
   onrendered() {
-    this.attach(this.onclose, "click", "#close");
     this.attach(this.onclick, "click", "#chart");
-    this.attach(this.onancestors, "click", "#ancestors");
-    this.attach(this.ondescendants, "click", "#descendants");
-    this.attach(this.onnarrow, "click", "#narrow");
-    this.attach(this.onwiden, "click", "#widen");
-  }
+    this.attach(this.onclose, "click", "#close");
+    this.attach(this.onchange, "click", "#ancestors");
+    this.attach(this.onchange, "click", "#descendants");
+    this.attach(this.onchange, "click", "#radius");
 
+  }
   onclick(e) {
     let ref = e.target.getAttribute("ref");
     if (ref) this.close(ref);
@@ -689,34 +688,12 @@ class FamilyTreeDialog extends MdDialog {
     this.close();
   }
 
-  async onancestors(e) {
+  async onchange(e) {
     let t = this.state;
-    let mingen = e.ctrlKey ? t.mingen + 1 : t.mingen - 1;
-    let tree = new FamilyTree(mingen, t.maxgen, t.radius, t.index);
-    await tree.build(t.subject.topic);
-    this.update(tree);
-  }
-
-  async ondescendants(e) {
-    let t = this.state;
-    let maxgen = e.ctrlKey ? t.maxgen - 1 : t.maxgen + 1;
-    let tree = new FamilyTree(t.mingen, maxgen, t.radius, t.index);
-    await tree.build(t.subject.topic);
-    this.update(tree);
-  }
-
-  async onnarrow(e) {
-    let t = this.state;
-    if (t.radius > 0) {
-      let tree = new FamilyTree(t.mingen, t.maxgen, t.radius - 1, t.index);
-      await tree.build(t.subject.topic);
-      this.update(tree);
-    }
-  }
-
-  async onwiden(e) {
-    let t = this.state;
-    let tree = new FamilyTree(t.mingen, t.maxgen, t.radius + 1, t.index);
+    let mingen = -this.find("#ancestors").value();
+    let maxgen = this.find("#descendants").value();
+    let radius = this.find("#radius").value();
+    let tree = new FamilyTree(mingen, maxgen, radius, t.index);
     await tree.build(t.subject.topic);
     this.update(tree);
   }
@@ -724,7 +701,26 @@ class FamilyTreeDialog extends MdDialog {
   render() {
     let tree = this.state;
     let name = tree.subject.name();
-    let h = html`<md-dialog-top>Family tree for ${name}</md-dialog-top>`;
+    let h = html`<md-dialog-top>
+      <span class="title">${name} family</span>
+      <md-slider id="ancestors"
+                 min="0" max="9" step="1" value="${-tree.mingen}"
+                 label="Ancestors">
+      </md-slider>
+      <md-slider id="descendants"
+                 min="0" max="9" step="1" value="${tree.maxgen}"
+                 label="Descendants">
+      </md-slider>
+      <md-slider id="radius"
+                 min="0" max="9" step="1" value="${tree.radius}"
+                 label="Radius">
+      </md-slider>
+      <span class="icons">
+        <md-icon-button id="zoomin" icon="zoom_in"></md-icon-button>
+        <md-icon-button id="zoomout" icon="zoom_out"></md-icon-button>
+        <md-icon-button id="close" icon="close"></md-icon-button>
+      </span>
+    </md-dialog-top>`;
     let [width, height] = tree.bounds();
     if (tree.overflow) h.html`<p class="alert">overflow</p>`;
 
@@ -794,33 +790,6 @@ class FamilyTreeDialog extends MdDialog {
       }
     }
     h.html`</svg></div>`;
-
-    h.html`
-      <div class="toolbar">
-        <div class="toolbox">
-          <md-icon-button
-            id="ancestors"
-            icon="fast_rewind">
-          </md-icon-button>
-          <md-icon-button
-            id="descendants"
-            icon="fast_forward">
-          </md-icon-button>
-          <md-icon-button
-            id="narrow"
-            icon="unfold_less">
-          </md-icon-button>
-          <md-icon-button
-            id="widen"
-            icon="unfold_more">
-          </md-icon-button>
-          <md-icon-button
-            id="close"
-            icon="close"
-            tooltip-align="top">
-          </md-icon-button>
-        </div>
-      </div>`;
     return h;
   }
 
@@ -834,6 +803,21 @@ class FamilyTreeDialog extends MdDialog {
         height: calc(100vh * 0.85);
         overflow: auto;
         outline: none;
+      }
+      $ md-dialog-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+      }
+      $ span.title {
+        flex: 1 0;
+      }
+      $ span.icons {
+        display: flex;
+        flex: 0;
+      }
+      $ md-slider {
+        flex: 1 1;
       }
       $ svg {
         /*width: auto;*/
@@ -870,27 +854,6 @@ class FamilyTreeDialog extends MdDialog {
       }
       $ circle {
         fill: #cccccc;
-      }
-      $ .toolbar {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        display: flex;
-        justify-content: center;
-      }
-      $ .toolbox {
-        visibility: hidden;
-        display: flex;
-        color: white;
-        background: #808080;
-        padding: 4px 12px 4px 12px;
-        margin: 12px;
-        border-radius: 12px;
-      }
-
-      $ .toolbar:hover .toolbox {
-        visibility: initial;
       }
     `;
   }
