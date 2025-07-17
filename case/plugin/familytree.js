@@ -61,7 +61,7 @@ class Person {
 
   name() {
     let name = this.property(n_name)
-    if (!name) return id();
+    if (!name) return this.id();
     name = name.toString();
     if (name.length > max_name_length) {
       // Remove titles.
@@ -105,9 +105,10 @@ class Person {
   relative(kinship) {
     let p = this.topic.get(kinship);
     if (!p) p = this.base?.get(kinship);
-    p = store.resolve(p);
-    if (typeof(p) === 'string') return;
-    return p;
+    let f = store.resolve(p);
+    if (typeof(f) === 'string') return;
+    if (f != p && p.has(n_kinship)) return;
+    return f;
   }
 
   relatives(kinship) {
@@ -270,18 +271,18 @@ class Generation {
 }
 
 class FamilyTree {
-  constructor(mingen, maxgen, radius, index) {
+  constructor(mingen, maxgen, radius, iterations, index) {
     this.index = index;
     this.persons = new Map();
     this.families = new Map();
     this.mingen = mingen;
     this.maxgen = maxgen;
     this.radius = radius;
+    this.iterations = iterations;
     this.generations = new Map();
     for (let g = mingen; g <= maxgen; ++g) {
       this.generations.set(g, new Generation(g));
     }
-    console.log(`gen ${mingen} - ${maxgen} radius: ${radius}`);
   }
 
   async build(topic) {
@@ -300,9 +301,10 @@ class FamilyTree {
     return f;
   }
 
-  person(topic) {
+  person(topic, existing) {
     let p = this.persons.get(topic);
     if (p) return p;
+    if (existing) return;
 
     if (this.index) {
       topic = this.index.ids.get(topic.id) || topic;
@@ -371,14 +373,14 @@ class FamilyTree {
       }
 
       // Find spouses.
-      if (person.distance < this.radius) {
-        for (let spouse of person.relatives(n_spouse)) {
-          let s = this.person(store.resolve(spouse));
-          s.generation = person.generation;
-          if (s.distance == undefined) s.distance = person.distance + 1;
-          person.add_partner(s);
-          if (!visited.has(s)) queue.push(s);
-        }
+      let more_partners = person.distance < this.radius;
+      for (let spouse of person.relatives(n_spouse)) {
+        let s = this.person(store.resolve(spouse), !more_partners);
+        if (!s) continue;
+        s.generation = person.generation;
+        if (s.distance == undefined) s.distance = person.distance + 1;
+        person.add_partner(s);
+        if (!visited.has(s)) queue.push(s);
       }
 
       // Find children.
@@ -482,7 +484,9 @@ class FamilyTree {
           let mp2 = f2.mid_parent();
           let mc1 = f1.mid_child();
           let mc2 = f2.mid_child();
-          if (mp1 < mp2 && mc1 > mc2) {
+          console.log(`family ${f1.parents[0].name()} p=${mp1} c=${mc1} and ${f2.parents[0].name()} p=${mp2} c=${mc2}`);
+
+          if (mp1 < mp2 && mc1 > mc2 || mp1 > mp2 && mc1 < mc2) {
             console.log(`swap family ${f1.parents[0].name()} with ${f2.parents[0].name()}`);
             for (let k = 0; k < f1.parents.length; ++k) {
               generation.swap(f1.parents[k].index, f2.parents[k].index);
@@ -543,7 +547,7 @@ class FamilyTree {
     }
 
     // Align parents and children.
-    for (let iteration = 0; iteration < layout_iterations; iteration++) {
+    for (let iteration = 0; iteration < this.iterations; iteration++) {
       let converged = true;
       // Align parents with children.
       for (let generation of this.generations.values()) {
@@ -681,6 +685,7 @@ class FamilyTreeDialog extends MdDialog {
     this.attach(this.onclose, "click", "#close");
     this.attach(this.onchange, "click", "#ancestors");
     this.attach(this.onchange, "click", "#descendants");
+    this.attach(this.onchange, "click", "#iterations");
     this.attach(this.onchange, "click", "#radius");
     this.attach(this.onzoomin, "click", "#zoomin");
     this.attach(this.onzoomout, "click", "#zoomout");
@@ -700,7 +705,8 @@ class FamilyTreeDialog extends MdDialog {
     let mingen = -this.find("#ancestors").value();
     let maxgen = this.find("#descendants").value();
     let radius = this.find("#radius").value();
-    let tree = new FamilyTree(mingen, maxgen, radius, t.index);
+    let iterations = this.find("#iterations").value();
+    let tree = new FamilyTree(mingen, maxgen, radius, iterations, t.index);
     await tree.build(t.subject.topic);
     this.update(tree);
   }
@@ -731,6 +737,10 @@ class FamilyTreeDialog extends MdDialog {
       <md-slider id="radius"
                  min="0" max="9" step="1" value="${tree.radius}"
                  label="Radius">
+      </md-slider>
+      <md-slider id="iterations"
+                 min="0" max="20" step="1" value="${tree.iterations}"
+                 label="Iterations">
       </md-slider>
       <span class="icons">
         <md-icon-button id="zoomin" icon="zoom_in"></md-icon-button>
@@ -877,7 +887,7 @@ Component.register(FamilyTreeDialog);
 
 export default class FamilyTreePlugin {
   async run(topic, index) {
-    let tree = new FamilyTree(-1, 1, 1, index);
+    let tree = new FamilyTree(-1, 1, 1, layout_iterations, index);
     await tree.build(topic);
 
     let dialog = new FamilyTreeDialog(tree)
