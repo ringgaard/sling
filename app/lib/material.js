@@ -1830,23 +1830,28 @@ export class MdSlider extends Component {
     let html = `<input ${attrs.join(" ")}>`;
 
     if (this.attrs.label) {
-      html += `<div class="label">${this.attrs.label}</div>`;
+      html += `<div class="label">${Component.escape(this.attrs.label)}</div>`;
     }
     return html;
   }
 
   static stylesheet() {
     return `
-      $ {
-        display: block;
-      }
-
       $ input {
         width: 100%;
+        height: 16px;
         accent-color: #00A0D6;
+        cursor: pointer;
+        outline: none;
       }
       $ input::-webkit-slider-runnable-track {
-         background-color: #EEEEEE;
+        background: #EEEEEE;
+        height: 8px;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      $ input::-webkit-slider-thumb {
+        margin-top: -4px;
       }
       $ div.label {
         font-size: 10px;

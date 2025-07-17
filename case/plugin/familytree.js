@@ -671,14 +671,21 @@ class FamilyTree {
 }
 
 class FamilyTreeDialog extends MdDialog {
+  constructor(state) {
+    super(state);
+    this.zoom = 1.0;
+  }
+
   onrendered() {
     this.attach(this.onclick, "click", "#chart");
     this.attach(this.onclose, "click", "#close");
     this.attach(this.onchange, "click", "#ancestors");
     this.attach(this.onchange, "click", "#descendants");
     this.attach(this.onchange, "click", "#radius");
-
+    this.attach(this.onzoomin, "click", "#zoomin");
+    this.attach(this.onzoomout, "click", "#zoomout");
   }
+
   onclick(e) {
     let ref = e.target.getAttribute("ref");
     if (ref) this.close(ref);
@@ -696,6 +703,16 @@ class FamilyTreeDialog extends MdDialog {
     let tree = new FamilyTree(mingen, maxgen, radius, t.index);
     await tree.build(t.subject.topic);
     this.update(tree);
+  }
+
+  onzoomin(e) {
+    this.zoom *= 1.25;
+    this.refresh();
+  }
+
+  onzoomout(e) {
+    this.zoom *= 0.8;
+    this.refresh();
   }
 
   render() {
@@ -725,7 +742,7 @@ class FamilyTreeDialog extends MdDialog {
     if (tree.overflow) h.html`<p class="alert">overflow</p>`;
 
     h.html`<div id=tree><svg id=chart
-           width="${width}" height="${height}"
+           width="${width * this.zoom}" height="${height * this.zoom}"
            viewBox="0 0 ${width} ${height}"
            preserveAspectRatio="xMidYMid"
            xmlns="http://www.w3.org/2000/svg">`;
@@ -808,9 +825,6 @@ class FamilyTreeDialog extends MdDialog {
         display: flex;
         justify-content: space-between;
         gap: 16px;
-      }
-      $ span.title {
-        flex: 1 0;
       }
       $ span.icons {
         display: flex;
