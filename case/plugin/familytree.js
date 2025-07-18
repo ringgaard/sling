@@ -33,9 +33,10 @@ const box_width = 250;
 const box_height = 50;
 const box_spacing = 25;
 const lane_spacing = 15;
+const port_spacing = 8;
 const name_xofs = 10;
 const name_yofs = 20;
-const layout_iterations = 12;
+const layout_iterations = 15;
 const max_name_length = 35;
 
 function date(d) {
@@ -52,6 +53,7 @@ class Person {
     this.parents = [];
     this.children = [];
     this.partners = [];
+    this.ports = new Map();
     this.generation = 0;
   }
 
@@ -184,7 +186,10 @@ class Family {
   }
 
   add_parent(person) {
-    if (!this.parents.includes(person)) this.parents.push(person);
+    if (!this.parents.includes(person)) {
+      this.parents.push(person);
+      person.ports.set(this, null);
+    }
   }
 
   add_child(person) {
@@ -258,15 +263,6 @@ class Generation {
     if (person1.index == person2.index + 1) return true;
     if (person1.index == person2.index - 1) return true;
     return false;
-  }
-
-  swap(index1, index2) {
-    let person1 = this.persons[index1];
-    let person2 = this.persons[index2];
-    this.persons[index1] = person2;
-    this.persons[index2] = person1;
-    person1.index = index2;
-    person2.index = index1;
   }
 }
 
@@ -431,6 +427,18 @@ class FamilyTree {
   }
 
   order() {
+    function move(arr, from, to) {
+      let elem = arr[from];
+      arr.splice(from, 1);
+      arr.splice(to, 0, elem);
+    }
+
+    function swap(arr, index1, index2) {
+      let elem = arr[index1];
+      arr[index1] = arr[index2];
+      arr[index2] = elem;
+    }
+
     for (let generation of this.generations.values()) {
       // Sort persons in generation by age.
       let g = generation.persons;
@@ -448,17 +456,13 @@ class FamilyTree {
         let insert = i + 1;
         for (let j = i + 1; j < g.length; ++j) {
           if (g[i].ispartner(g[j])) {
-            let partner = g[j];
-            g.splice(j, 1);
-            g.splice(insert++, 0, partner);
+            move(g, j, insert++);
           }
         }
 
         for (let j = i + 1; j < g.length; ++j) {
           if (g[i].issibling(g[j])) {
-            let sibling = g[j];
-            g.splice(j, 1);
-            g.splice(insert++, 0, sibling);
+            move(g, j, insert++);
           }
         }
       }
@@ -478,18 +482,34 @@ class FamilyTree {
           let f2 = generation.families[j];
           if (!f2.nucleus()) continue;
           if (f1 == f2) continue;
-          if (f1.parents.length != f2.parents.length) continue;
 
           let mp1 = f1.mid_parent();
           let mp2 = f2.mid_parent();
           let mc1 = f1.mid_child();
           let mc2 = f2.mid_child();
-          console.log(`family ${f1.parents[0].name()} p=${mp1} c=${mc1} and ${f2.parents[0].name()} p=${mp2} c=${mc2}`);
+          //console.log(`family ${f1.parents[0].name()} p=${mp1} c=${mc1} and ${f2.parents[0].name()} p=${mp2} c=${mc2}`);
 
           if (mp1 < mp2 && mc1 > mc2 || mp1 > mp2 && mc1 < mc2) {
-            console.log(`swap family ${f1.parents[0].name()} with ${f2.parents[0].name()}`);
-            for (let k = 0; k < f1.parents.length; ++k) {
-              generation.swap(f1.parents[k].index, f2.parents[k].index);
+            let p1 = f1.parents;
+            let p2 = f2.parents;
+            //console.log(`swap family ${p1[0].name()} with ${p2[0].name()}`);
+            if (p1.length == p2.length) {
+              for (let k = 0; k < p1.length; ++k) {
+                swap(generation.persons, p1[k].index, p2[k].index);
+              }
+            } else if (p1.length == 1 && p2.length == 2) {
+              swap(generation.persons, p1[0].index, p2[0].index);
+              if (generation.adjacent(p2[0], p2[1])) {
+                move(generation.persons, p2[1].index, p1[0].index);
+              }
+            } else if (p1.length == 2 && p2.length == 1) {
+              swap(generation.persons, p1[0].index, p2[0].index);
+              if (generation.adjacent(p1[0], p1[1])) {
+                move(generation.persons, p1[1].index, p2[0].index);
+              }
+            }
+            for (let k = 0; k < generation.persons.length; ++k) {
+              generation.persons[k].index = k;
             }
           }
         }
@@ -651,6 +671,43 @@ class FamilyTree {
         }
       }
     }
+
+    // Compute port positions.
+    for (let generation of this.generations.values()) {
+      for (let person of generation.persons) {
+        if (person.ports.size == 0) continue;
+        let ports = [];
+        for (let f of person.ports.keys()) {
+          let n = 0;
+          let sum = 0;
+          let shared = false;
+          for (let p of f.parents) {
+            if (p == person) continue;
+            if (generation.adjacent(person, p)) {
+              shared = true;
+              continue;
+            }
+            n++;
+            sum += p.y;
+          }
+          if (!shared) {
+            for (let c of f.children) {
+              n++;
+              sum += c.y;
+            }
+          }
+          if (n > 0) ports.push({family: f, pos: sum / n});
+        }
+        if (ports.length == 0) continue;
+
+        ports.sort((a, b) => a.pos - b.pos);
+        let mid = (ports.length - 1) / 2;
+        for (let i = 0; i < ports.length; ++i) {
+          let portno = i - mid;
+          person.ports.set(ports[i].family, portno);
+        }
+      }
+    }
   }
 
   bounds() {
@@ -783,6 +840,7 @@ class FamilyTreeDialog extends MdDialog {
             }
             let x = p.x + box_width;
             let y = p.y + box_height / 2;
+            y += (p.ports.get(f) || 0) * port_spacing;
             if (!ly0 || y < ly0) ly0 = y;
             if (!ly1 || y > ly1) ly1 = y;
             h.html`<line x1="${x}" y1="${y}" x2="${lx}" y2="${y}"/>`;

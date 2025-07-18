@@ -57,9 +57,9 @@ flags.define("-v",
              action="store_true")
 
 flags.define("--html",
-             help="Output HTML page with knowledge base items",
-             default=False,
-             action="store_true")
+             help="Output HTML page with report",
+             default=None,
+             metavar="FILE")
 
 flags.define("logfiles",
              nargs="*",
@@ -667,59 +667,63 @@ warm_hits = sum(warm_ips.values())
 cold_hits = sum(cold_ips.values())
 
 if flags.arg.html:
-  print("<html><body>")
+  lines = []
+  lines.append("<html><body>")
   for key, value in item_hits.items():
-    print('<a href="https://ringgaard.com/kb/%s">%s</a><br>' % (key, key))
-  print("</body></html>")
-else:
-  print("\nSUMMARY\n")
-  print("%7d hits" % num_hits)
-  print("%7d visitors" % len(visitors))
-  print("%7d cached" % num_cached)
-  print("%7d POSTs" % num_posts)
-  print("%7d HEADs" % num_heads)
-  print("%7d mobile hits" % num_mobile)
-  print("%7d internal hits" % num_internal)
-  print("%7d internal monitoring" % num_monitor)
-  print("%7d favicons" % num_favicons)
-  print("%7d robots.txt" % num_robotstxt)
-  print("%7d curl requests" % num_curls)
-  print("%7d bot requests" % num_bots)
-  print("%7d worm requests" % num_worms)
-  print("%7d spam hits" % num_spammers)
-  print("%7d errors" % num_errors)
-  print("%7d unknown requests" % num_unknown)
-  print("%7d invalid requests" % num_invalid)
-  print("%7d total hits" % total_hits)
-  print("%7d MB" % (num_bytes / (1024 * 1024)))
+    lines.append('<a href="https://ringgaard.com/kb/%s">%s</a><br>' % (key, key))
+  lines.append("</body></html>")
+  f = open(flags.arg.html, "w")
+  f.write("\n".join(lines))
+  f.close()
 
-  real_pct = warm_hits / (warm_hits + cold_hits) * 100
+print("\nSUMMARY\n")
+print("%7d hits" % num_hits)
+print("%7d visitors" % len(visitors))
+print("%7d cached" % num_cached)
+print("%7d POSTs" % num_posts)
+print("%7d HEADs" % num_heads)
+print("%7d mobile hits" % num_mobile)
+print("%7d internal hits" % num_internal)
+print("%7d internal monitoring" % num_monitor)
+print("%7d favicons" % num_favicons)
+print("%7d robots.txt" % num_robotstxt)
+print("%7d curl requests" % num_curls)
+print("%7d bot requests" % num_bots)
+print("%7d worm requests" % num_worms)
+print("%7d spam hits" % num_spammers)
+print("%7d errors" % num_errors)
+print("%7d unknown requests" % num_unknown)
+print("%7d invalid requests" % num_invalid)
+print("%7d total hits" % total_hits)
+print("%7d MB" % (num_bytes / (1024 * 1024)))
 
-  print()
-  print("%.2f%% real traffic (%d warm, %d cold)" % (real_pct, warm_hits, cold_hits))
+real_pct = warm_hits / (warm_hits + cold_hits) * 100
 
-  print_table("PAGES", "page", page_hits)
-  print_table("API CALLS", "api", api_calls)
-  print_table("SOURCE FILES", "files", source_files)
-  print_table("HITS PER DAY", "date", date_hits, chron=True)
-  print_table("VISITS PER DAY", "date", visits_per_day, chron=True)
-  print_table("BROWSERS", "browser", browser_hits)
-  print_table("PLATFORMS", "platform", platform_hits)
-  print_table("DOWNLOADS", "file", download_hits)
-  #print_table("IP ADDRESSES", "hits", ip_hits)
-  print_table("GOGGLE CRAWL", "date", google_crawl, chron=True)
-  if flags.arg.v:
-    print_table("MEDIA", "file", media_hits)
-  print_table("ITEMS", "item", item_hits)
-  print_table("QUERIES", "query", query_hits)
-  print_table("REFFERING DOMAINS", "domain", referring_domains)
-  print_table("REFERRERS", "referrer", referrers)
-  #print_table("HEADS", "HEAD requests", head_hits)
-  #print_table("COLD IP ADDRESSES", "hits", cold_ips)
-  #print_table("WARM IP ADDRESSES", "hits", warm_ips)
+print()
+print("%.2f%% real traffic (%d warm, %d cold)" % (real_pct, warm_hits, cold_hits))
 
-  if flags.arg.v:
-    print_table("HTTP ERRORS", "HTTP status", http_codes)
-    print_table("BOTS", "bot", bot_hits)
-    print_table("WORMS", "worm", worm_hits)
-    print_table("SPAM", "spam", spam_hits)
+print_table("PAGES", "page", page_hits)
+print_table("API CALLS", "api", api_calls)
+print_table("SOURCE FILES", "files", source_files)
+print_table("HITS PER DAY", "date", date_hits, chron=True)
+print_table("VISITS PER DAY", "date", visits_per_day, chron=True)
+print_table("BROWSERS", "browser", browser_hits)
+print_table("PLATFORMS", "platform", platform_hits)
+print_table("DOWNLOADS", "file", download_hits)
+#print_table("IP ADDRESSES", "hits", ip_hits)
+print_table("GOGGLE CRAWL", "date", google_crawl, chron=True)
+if flags.arg.v:
+  print_table("MEDIA", "file", media_hits)
+print_table("ITEMS", "item", item_hits)
+print_table("QUERIES", "query", query_hits)
+print_table("REFFERING DOMAINS", "domain", referring_domains)
+print_table("REFERRERS", "referrer", referrers)
+#print_table("HEADS", "HEAD requests", head_hits)
+#print_table("COLD IP ADDRESSES", "hits", cold_ips)
+#print_table("WARM IP ADDRESSES", "hits", warm_ips)
+
+if flags.arg.v:
+  print_table("HTTP ERRORS", "HTTP status", http_codes)
+  print_table("BOTS", "bot", bot_hits)
+  print_table("WORMS", "worm", worm_hits)
+  print_table("SPAM", "spam", spam_hits)
