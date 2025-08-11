@@ -423,17 +423,10 @@ class CaseEditor extends MdApp {
     let casefile = this.localcase || this.casefile;
     let share = casefile.get(n_share);
     let publish = casefile.get(n_publish);
-    let secret = casefile.get(n_secret);
-    let collab = !!this.collab;
-    let dialog = new SharingDialog({share, publish, secret, collab});
-    let result = await dialog.show();
-    if (result) {
-      // Update sharing information.
-      casefile.set(n_share, result.share);
-      casefile.set(n_publish, result.publish);
-      casefile.set(n_secret, result.secret);
-
-      if (this.collab) {
+    if (this.collab) {
+      let dialog = new CollabSharingDialog({share, publish});
+      let result = await dialog.show();
+      if (result) {
         // Let collaboration server share case.
         let modtime = await this.collab.share(result.share, result.publish);
         if (!modtime) modtime = null;
@@ -445,7 +438,17 @@ class CaseEditor extends MdApp {
         this.localcase.set(n_shared, modtime);
         this.localcase.set(n_modified, modtime);
         await this.save();
-      } else {
+      }
+    } else {
+      let secret = casefile.get(n_secret);
+      let dialog = new SharingDialog({share, publish, secret});
+      let result = await dialog.show();
+      if (result) {
+        // Update sharing information.
+        casefile.set(n_share, result.share);
+        casefile.set(n_publish, result.publish);
+        casefile.set(n_secret, result.secret);
+
         // Update modification and sharing time.
         let ts = new Date().toJSON();
         casefile.set(n_modified, ts);
@@ -2166,27 +2169,24 @@ class SharingDialog extends MdDialog {
     if (this.state.publish) {
       this.find("#publish").update(true);
     } else if (this.state.secret) {
-      this.find("#restrict")?.update(true);
+      this.find("#restrict").update(true);
     } else if (this.state.share) {
       this.find("#share").update(true);
     } else {
-      this.find("#private")?.update(true);
+      this.find("#private").update(true);
     }
 
     this.secret = this.state.secret;
     this.url = window.location.href;
     this.find("#sharingurl").update(this.sharingurl());
 
-    this.attach(this.onchange, "change", "#share");
-    this.attach(this.onchange, "change", "#publish");
-    if (!this.state.collab)  {
-      this.attach(this.onchange, "change", "#private");
-      this.attach(this.onchange, "change", "#restrict");
+    for (let checkbox of ["#private", "#share", "#restrict", "#publish"]) {
+      this.attach(this.onchange, "change", checkbox);
     }
   }
 
   onchange(e) {
-    if (this.find("#restrict")?.checked) {
+    if (this.find("#restrict").checked) {
       this.secret = generate_key();
     } else {
       this.secret = undefined;
@@ -2195,9 +2195,9 @@ class SharingDialog extends MdDialog {
   }
 
   sharingurl() {
-    if (this.find("#private")?.checked) {
+    if (this.find("#private").checked) {
       return "";
-    } else if (this.find("#restrict")?.checked) {
+    } else if (this.find("#restrict").checked) {
       return this.url + "#k=" + this.secret;
     } else {
       return this.url;
@@ -2205,39 +2205,16 @@ class SharingDialog extends MdDialog {
   }
 
   submit() {
-    if (this.state.collab) {
-      let share = this.find("#share").checked;
-      let publish = this.find("#publish").checked;
-      let secret = null;
-      this.close({share, publish, secret});
-    } else {
-      let share = !this.find("#private").checked;
-      let publish = this.find("#publish").checked;
-      let secret = this.secret;
-      this.close({share, publish, secret});
-    }
+    let share = !this.find("#private").checked;
+    let publish = this.find("#publish").checked;
+    let secret = this.secret;
+    this.close({share, publish, secret});
   }
 
   render() {
-    let h = new Array();
-    h.push('<md-dialog-top>Share case</md-dialog-top>');
-    h.push('<div id="content">');
-    if (this.state.collab) {
-      h.push(`
-        <md-checkbox
-          id="share"
-          label="Share (public so other users can view case)">
-        </md-checkbox>
-        <md-checkbox
-          id="publish"
-          label="Publish (case topics in public knowledge base)">
-        </md-checkbox>
-        <div>
-          Sharing URL:
-          <md-copyable-text id="sharingurl"></md-copyable-text>
-        </div>`);
-    } else {
-      h.push(`
+    return `
+      <md-dialog-top>Share case</md-dialog-top>
+      <div id="content">
         <md-radio-button
           id="private"
           name="sharing"
@@ -2265,18 +2242,13 @@ class SharingDialog extends MdDialog {
         <div>
           Sharing URL:
           <md-copyable-text id="sharingurl"></md-copyable-text>
-        </div>`);
-    }
-    h.push("</div>");
-
-    h.push(`
+        </div>
+      </div>
       <md-dialog-bottom>
         <button id="cancel">Cancel</button>
         <button id="submit">Share</button>
       </md-dialog-bottom>
-    `);
-
-    return h.join("");
+    `;
   }
 
   static stylesheet() {
@@ -2294,6 +2266,51 @@ class SharingDialog extends MdDialog {
 }
 
 Component.register(SharingDialog);
+
+class CollabSharingDialog extends MdDialog {
+  onconnected() {
+    this.find("#share").update(this.state.share);
+    this.find("#publish").update(this.state.publish);
+  }
+
+  submit() {
+    let share = this.find("#share").checked;
+    let publish = this.find("#publish").checked;
+    this.close({share, publish});
+  }
+
+  render() {
+    return `
+      <md-dialog-top>Share collaboration</md-dialog-top>
+      <div id="content">
+        <md-checkbox
+          id="share"
+          label="Share (public so other users can view case)">
+        </md-checkbox>
+        <md-checkbox
+          id="publish"
+          label="Publish (case topics in public knowledge base)">
+        </md-checkbox>
+      </div>
+      <md-dialog-bottom>
+        <button id="cancel">Cancel</button>
+        <button id="submit">Share</button>
+      </md-dialog-bottom>
+    `;
+  }
+
+  static stylesheet() {
+    return `
+      $ #content {
+        display: flex;
+        flex-direction: column;
+        row-gap: 16px;
+      }
+    `;
+  }
+}
+
+Component.register(CollabSharingDialog);
 
 var user_script;
 const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;

@@ -208,7 +208,7 @@ class ArticlePanel extends MdCard {
   onupdated() {
     let article = this.state;
     let lex = article.get(n_lex);
-    let doc = lex && new Document(source, lex);
+    let doc = lex && new Document(store, lex, article);
     this.find("#title").update(article.get(n_name));
     this.find("#summary").update(article.get(n_description));
     this.find("#document").update(doc);
@@ -476,4 +476,3 @@ def handle_fetch(request):
 log.info("running")
 app.run()
 log.info("stopped")
-

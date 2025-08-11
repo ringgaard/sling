@@ -92,15 +92,22 @@ static void InitPerf() {
   page_size = sysconf(_SC_PAGESIZE);
 
   // Get proc files for thermal zones.
-  glob_t globbuf;
-  glob("/sys/class/thermal/thermal_zone*/temp", 0, nullptr, &globbuf);
-  for (int i = 0; i < globbuf.gl_pathc; ++i) {
-    thermal_devices.push_back(globbuf.gl_pathv[i]);
+  static const char *sensors[] = {
+    "/sys/class/thermal/thermal_zone*/temp",
+    "/sys/class/hwmon/hwmon?/temp*_input",
+    nullptr,
+  };
+  for (const char **sensor = sensors; *sensor; ++sensor) {
+    glob_t globbuf;
+    glob(*sensor, 0, nullptr, &globbuf);
+    for (int i = 0; i < globbuf.gl_pathc; ++i) {
+      thermal_devices.push_back(globbuf.gl_pathv[i]);
+    }
+    globfree(&globbuf);
+    if (!thermal_devices.empty()) break;
   }
-  globfree(&globbuf);
 }
 
 REGISTER_INITIALIZER(perf, { InitPerf(); });
 
 }  // namespace sling
-

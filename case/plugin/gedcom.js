@@ -230,6 +230,7 @@ export default class GEDCOMImporter {
         let husband, wife;
         let children = new Array();
         let dom, pom;
+        let relationship;
         for (let c of node.children) {
           if (c.field == "HUSB") {
             husband = pmap.get(c.value);
@@ -240,6 +241,9 @@ export default class GEDCOMImporter {
           } else if (c.field == "MARR") {
             dom = date(lookup(c, "DATE"))
             pom = lookup(c, "PLAC");
+          } else if (c.field == "EVEN") {
+            relationship = lookup(c, "TYPE");
+            dom = date(lookup(c, "DATE"))
           }
         }
 
@@ -254,7 +258,11 @@ export default class GEDCOMImporter {
               bride.add(n_is, wife);
               if (dom) bride.add(n_start, dom);
               if (pom) bride.add(n_pom, pom);
-              husband.put(n_spouse, bride);
+              if (relationship == "MYHERITAGE:REL_PARTNERS") {
+                husband.put(n_partner, bride);
+              } else {
+                husband.put(n_spouse, bride);
+              }
             }
 
             if (!wife.has(n_spouse, husband) && !wife.has(n_partner, husband)) {
@@ -262,8 +270,15 @@ export default class GEDCOMImporter {
               groom.add(n_is, husband);
               if (dom) groom.add(n_start, dom);
               if (pom) groom.add(n_pom, pom);
-              wife.put(n_spouse, groom);
+              if (relationship == "MYHERITAGE:REL_PARTNERS") {
+                wife.put(n_partner, groom);
+              } else {
+                wife.put(n_spouse, groom);
+              }
             }
+          } else if (relationship == "MYHERITAGE:REL_PARTNERS") {
+            husband.put(n_partner, wife);
+            wife.put(n_partner, husband);
           } else {
             if (!husband.has(n_partner, wife)) husband.put(n_spouse, wife);
             if (!wife.has(n_partner, husband)) wife.put(n_spouse, husband);
