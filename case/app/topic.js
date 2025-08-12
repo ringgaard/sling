@@ -378,15 +378,6 @@ class TopicToolbox extends MdToolbox {
             tooltip="Delete topic\n(Del)"
             tooltip-align="right">
           </md-icon-button>
-          <md-menu id="topic-menu">
-            <md-menu-item id="newdoc">Add document</md-menu-item>
-            <md-menu-item id="extract">Extract text</md-menu-item>
-            <md-menu-item id="mentions">Find mentions</md-menu-item>
-            <md-menu-item id="toprofile">Move photos to profile</md-menu-item>
-            <md-menu-item id="photoupload">Upload photos</md-menu-item>
-            <md-menu-item id="familytree">Family tree</md-menu-item>
-            <md-menu-item id="myheritage">Search myheritage.dk</md-menu-item>
-          </md-menu>
    `;
  }
 }
@@ -428,7 +419,7 @@ class TopicCard extends Component {
       }
     });
 
-    this.bind("#topic-actions", "select", e => {
+    this.bind("#topic-menu", "select", e => {
       let action = e.detail.id;
       if (action == "newdoc") {
         this.onnewdoc(e);
@@ -482,6 +473,9 @@ class TopicCard extends Component {
 
     this.find("#topic-actions").update(!editing && !this.readonly);
     this.find("#edit-actions").update(editing && !this.readonly);
+
+    let menu = this.find("#topic-menu");
+    menu.style.display = editing || this.readonly ? "none" : null;
   }
 
   update_title() {
@@ -1134,6 +1128,15 @@ class TopicCard extends Component {
         <md-spacer></md-spacer>
         <edit-toolbox id="edit-actions" sticky="1"></edit-toolbox>
         <topic-toolbox id="topic-actions"></topic-toolbox>
+        <md-menu id="topic-menu">
+          <md-menu-item id="newdoc">Add document</md-menu-item>
+          <md-menu-item id="extract">Extract text</md-menu-item>
+          <md-menu-item id="mentions">Find mentions</md-menu-item>
+          <md-menu-item id="toprofile">Move photos to profile</md-menu-item>
+          <md-menu-item id="photoupload">Upload photos</md-menu-item>
+          <md-menu-item id="familytree">Family tree</md-menu-item>
+          <md-menu-item id="myheritage">Search myheritage.dk</md-menu-item>
+        </md-menu>
       </md-card-toolbar>
       <item-panel></item-panel>
       <fact-panel></fact-panel>
@@ -1153,9 +1156,6 @@ class TopicCard extends Component {
         overflow-x: clip;
         outline: none;
       }
-      $ md-card-toolbar {
-        align-items: center;
-      }
       $ #icon {
         color: #000000;
       }
@@ -1172,6 +1172,7 @@ class TopicCard extends Component {
       $ md-card-toolbar {
         position: relative;
         margin-bottom: 0px;
+        align-items: center;
       }
       $ #name {
         display: block;
@@ -1183,12 +1184,15 @@ class TopicCard extends Component {
       }
       $ #topic-actions {
         top: -8px;
+        right: 24px;
         display: flex;
       }
-      $ md-card-toolbar md-icon-button {
+      $ #topic-menu {
+        margin-top: -8px;
         margin-left: -8px;
+        margin-right: -8px;
       }
-      $ md-card-toolbar md-menu {
+      $ md-card-toolbar md-icon-button {
         margin-left: -8px;
       }
 
