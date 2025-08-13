@@ -24,7 +24,7 @@ export default class MyHeritagePlugin {
     url += "&exactSearch=&p=1&action=query&view_mode=card";
     let birth_name = topic.get(n_birth_name)?.toString();
     let married_name = topic.get(n_married_name)?.toString();
-    let name = topic.get(n_name)?.toString() || birth_name || married_name;
+    let name = birth_name || topic.get(n_name)?.toString() || married_name;
     let dob = new Time(store.resolve(topic.get(n_dob)));
     let dod = new Time(store.resolve(topic.get(n_dod)));
     if (name) {
