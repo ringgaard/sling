@@ -1204,9 +1204,12 @@ int DBStream::Fill(IOBuffer *buffer) {
   int n = 0;
   while (!done_) {
     if (recbuf_.empty()) {
+      // Clear record buffer and make room for header.
+      recbuf_.Clear();
+      recbuf_.Append(sizeof(DBHeader));
+
       // Fetch next record.
       Record record;
-      recbuf_.Append(sizeof(DBHeader));
       if (limit_ != -1 && iterator_ >= limit_) {
         done_ = true;
         recbuf_.Write(&iterator_, 8);

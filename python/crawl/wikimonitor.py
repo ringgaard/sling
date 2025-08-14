@@ -26,6 +26,10 @@ import sling
 import sling.flags as flags
 from sling.crawl.sse import SSEStream
 
+wikidata_headers = {
+  "User-Agent": "SLING Bot 1.0 (ringgaard.com)",
+}
+
 flags.define("--wiki_changes_stream",
              help="stream for monitoring updates to wikidata",
              default="https://stream.wikimedia.org/v2/stream/recentchange",
@@ -123,7 +127,7 @@ def process_change(change):
           # Fetch item revision from Wikidata.
           url = "%s?id=%s&revision=%d&format=json" % (
             flags.arg.wiki_fetch_url, qid, revision)
-          reply = wdsession.get(url)
+          reply = wdsession.get(url, headers=wikidata_headers)
           if reply.status_code == 429:
             # Too many requests.
             print("throttle down...")
