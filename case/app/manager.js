@@ -36,7 +36,6 @@ function date2str(date, full=true) {
 
 class CaseManager extends material.MdApp {
   oninit() {
-
     this.attach(this.onsettings, "click", "#settings");
     this.attach(this.onhelp, "click", "#help");
     this.attach(this.onbackup, "click", "md-menu #backup");

@@ -29,10 +29,10 @@ export class Component extends HTMLElement {
   }
 
   // Initialize component.
-  initialize() {
+  async initialize() {
     if (this.initialized) return;
     this.initialized = true;
-    return this.oninit && this.oninit();
+    return this.oninit && await this.oninit();
   }
 
   // Web component connected to DOM.
@@ -110,48 +110,7 @@ export class Component extends HTMLElement {
   // Insert content into element.
   mount(content) {
     if (content instanceof Array) {
-      let begin = 0;
-      let end = content.length;
-      let anchor = null;
-      if (end > 0 && this.firstChild) {
-        // Find unchanged head.
-        let head = this.firstChild;
-        while (head && content[begin] == head) {
-          head = head.nextSibling;
-          begin++;
-        }
-
-        // Find unchanged tail.
-        let tail = this.lastChild;
-        while (tail != head && content[end - 1] == tail) {
-          tail = tail.previousSibling;
-          end--;
-        }
-
-        // Insert new elements before tail.
-        if (tail) anchor = tail.nextSibling;
-
-        // Remove all existing elements between head and tail.
-        if (head && tail) {
-          while (head != tail) {
-            let e = tail;
-            tail = tail.previousSibling;
-            this.removeChild(e);
-          }
-          this.removeChild(tail);
-        }
-      } else {
-        while (this.firstChild) this.removeChild(this.lastChild);
-      }
-
-      for (let i = begin; i < end; ++i) {
-        let n = content[i];
-        if (n instanceof Node) {
-          this.insertBefore(n, anchor);
-        } else {
-          this.insertAdjacentHTML("beforeend", n);
-        }
-      }
+      this.replaceChildren(...content);
     } else if (content instanceof Node) {
       this.replaceChildren(content);
     } else if (content instanceof Template) {
@@ -267,12 +226,14 @@ class Template {
 
   // Mount template into element.
   mount(element) {
-    element.innerHTML = this.parts.join("");
+    let html = this.parts.join("");
+    element.innerHTML = html
     if (this.vars) {
       let next = 0;
       for (let v of element.querySelectorAll("var")) {
         v.replaceWith(this.vars[next++]);
       }
+      if (next != this.vars.length) throw "HTML placeholder mismatch";
     }
   }
 }
