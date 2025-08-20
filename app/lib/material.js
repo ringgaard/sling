@@ -718,7 +718,7 @@ export class MdMenu extends Component {
 Component.register(MdMenu);
 
 export class MdMenuItem extends Component {
-  onconnected() {
+  oninit() {
     this.attach(this.onclick, "click");
   }
 

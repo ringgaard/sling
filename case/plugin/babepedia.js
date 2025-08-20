@@ -74,7 +74,6 @@ export default class BabepediaPlugin {
     if (!m) return;
     let username = decodeURIComponent(m[1]);
     if (!username) return;
-    let images = url.hash == "#img";
 
     if (action == SEARCHURL) {
       console.log("babepedia search for", username);
@@ -83,12 +82,11 @@ export default class BabepediaPlugin {
         name: username.replace(/_/g, " "),
         description: "Babepedia model",
         url: url.href,
-        images: images,
         context: context,
         onitem: item => this.select(item),
       };
     } else if (action == PASTEURL) {
-      await this.populate(context, context.topic, url.href, images);
+      await this.populate(context, context.topic, url.href);
       return true;
     }
   }
@@ -99,10 +97,10 @@ export default class BabepediaPlugin {
     if (!topic) return;
 
     // Fetch profile from babepedia and populate topic.
-    await this.populate(item.context, topic, item.url, item.images);
+    await this.populate(item.context, topic, item.url);
   }
 
-  async populate(context, topic, url, images) {
+  async populate(context, topic, url) {
     // Retrieve babepedia profile for user.
     let r = await context.fetch(url);
     let html = await r.text();
@@ -240,30 +238,28 @@ export default class BabepediaPlugin {
     let username = decodeURIComponent(m[1]);
     await social.add_prop(n_babepedia_id, username);
 
-    // Add images if #img in url fragment.
-    if (images) {
-      let imgurls = new Array();
-      let profimg = doc.getElementById("profimg");
-      if (profimg) {
-        let a = profimg.querySelector("a.img");
-        if (a) imgurls.push(a.getAttribute("href"));
-      }
+    // Add images.
+    let imgurls = new Array();
+    let profimg = doc.getElementById("profimg");
+    if (profimg) {
+      let a = profimg.querySelector("a.img");
+      if (a) imgurls.push(a.getAttribute("href"));
+    }
 
-      for (let prof of doc.querySelectorAll("div.prof").values()) {
-        let a = prof.querySelector("a.img");
-        if (a) imgurls.push(a.getAttribute("href"));
-      }
+    for (let prof of doc.querySelectorAll("div.prof").values()) {
+      let a = prof.querySelector("a.img");
+      if (a) imgurls.push(a.getAttribute("href"));
+    }
 
 
-      for (let prof of doc.querySelectorAll("div.thumbnail").values()) {
-        let a = prof.querySelector("a.img");
-        if (a) imgurls.push(a.getAttribute("href"));
-      }
+    for (let prof of doc.querySelectorAll("div.thumbnail").values()) {
+      let a = prof.querySelector("a.img");
+      if (a) imgurls.push(a.getAttribute("href"));
+    }
 
-      for (let imgurl of imgurls) {
-        if (imgurl.startsWith("/")) imgurl = imgurl.slice(1);
-        topic.put(n_media, "!https://www.babepedia.com/" + imgurl);
-      }
+    for (let imgurl of imgurls) {
+      if (imgurl.startsWith("/")) imgurl = imgurl.slice(1);
+      topic.put(n_media, "!https://www.babepedia.com/" + imgurl);
     }
 
     context.updated(topic);

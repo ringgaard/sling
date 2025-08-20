@@ -74,7 +74,7 @@ app.page("/redreport",
 
 app.js("/redreport/app.js",
 """
-import {Component} from "/common/lib/component.js";
+import {Component, html} from "/common/lib/component.js";
 import {MdApp, MdCard, MdDialog} from "/common/lib/material.js";
 import {PhotoGallery, imageurl, mediadb} from "/common/lib/gallery.js";
 import {reddit_thumbnail} from "/common/lib/reddit.js";
@@ -527,7 +527,7 @@ Component.register(RedditPosting);
 class SubredditCard extends MdCard {
   render() {
     let sr = this.state
-    let h = []
+    let h = html``;
 
     // Compute coverage.
     let dups = 0;
@@ -538,15 +538,14 @@ class SubredditCard extends MdCard {
     let known = sr.matches - dups;
 
     // Render header.
-    h.push(`
+    h.html`
       <h1>
         <a id="${sr.name}"
            href="https://www.reddit.com/r/${sr.name}/"
            target="_blank">
           ${sr.name}
         </a>
-      </h1>`
-    );
+      </h1>`;
     if (sr.total > 0) {
       let coverage = sr.total ? Math.round((known + dups) / sr.total * 100) : 0;
       let scale = Math.round(200 / sr.total);
@@ -555,7 +554,7 @@ class SubredditCard extends MdCard {
       let kw = dups * scale;
       let mw = unknown * scale;
 
-      h.push(`
+      h.html`
         <table class="coverage"><tr>
           <td class="hits" style="width: ${hw}px;"></td>
           <td class="known" style="width: ${kw}px;"></td>
@@ -565,7 +564,7 @@ class SubredditCard extends MdCard {
             ${dups > 1 ? ", " + dups + " dups" : ""}
           </td>
         </tr></table>
-      `);
+      `;
     }
 
     // Render postings.

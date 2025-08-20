@@ -1123,11 +1123,13 @@ class TopicCard extends Component {
 
     return `
       <md-card-toolbar>
-        <md-icon id="icon"></md-icon>
-        <md-text id="name"></md-text>
-        <md-spacer></md-spacer>
-        <edit-toolbox id="edit-actions" sticky="1"></edit-toolbox>
-        <topic-toolbox id="topic-actions"></topic-toolbox>
+        <div class="banner">
+          <md-icon id="icon"></md-icon>
+          <md-text id="name"></md-text>
+          <md-spacer></md-spacer>
+          <edit-toolbox id="edit-actions" sticky="1"></edit-toolbox>
+          <topic-toolbox id="topic-actions"></topic-toolbox>
+        </div>
         <md-menu id="topic-menu">
           <md-menu-item id="newdoc">Add document</md-menu-item>
           <md-menu-item id="extract">Extract text</md-menu-item>
@@ -1165,6 +1167,10 @@ class TopicCard extends Component {
       }
       $:focus {
         border: 1px solid #1a73e8;
+      }
+      $ div.banner {
+        display: flex;
+        width: 100%;
       }
       $.selected {
         background-color: #e7f0fd;

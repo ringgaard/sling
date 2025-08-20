@@ -110,7 +110,45 @@ export class Component extends HTMLElement {
   // Insert content into element.
   mount(content) {
     if (content instanceof Array) {
-      this.replaceChildren(...content);
+      if (content.length > 0 && this.firstChild) {
+        // Find unchanged head.
+        let begin = 0;
+        let end = content.length;
+        let head = this.firstChild;
+        while (head && content[begin] == head) {
+          head = head.nextSibling;
+          begin++;
+        }
+
+        // Find unchanged tail.
+        let tail = this.lastChild;
+        while (tail != head && content[end - 1] == tail) {
+          tail = tail.previousSibling;
+          end--;
+        }
+
+        // Insert new elements before tail.
+        let anchor = tail ? tail.nextSibling : null;
+
+        // Remove all existing elements between head and tail.
+        if (head && tail) {
+          while (head != tail) {
+            let e = tail;
+            tail = tail.previousSibling;
+            this.removeChild(e);
+          }
+          this.removeChild(tail);
+        }
+
+        // Insert replacement elements.
+        for (let i = begin; i < end; ++i) {
+          let n = content[i];
+          if (typeof(n) === 'string') n = new Text(n);
+          this.insertBefore(n, anchor);
+        }
+      } else {
+        this.replaceChildren(...content);
+      }
     } else if (content instanceof Node) {
       this.replaceChildren(content);
     } else if (content instanceof Template) {
