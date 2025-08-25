@@ -21,6 +21,7 @@ bazel build -c opt --cxxopt=-DPYVER=${PYVER} $* \
   sling/nlp/parser/tools:* \
   sling/nlp/wiki:* \
   sling/nlp/search:* \
+  sling/org:* \
   sling/pyapi:* \
   sling/nlp/web:* \
   sling/nlp/wiki:* \

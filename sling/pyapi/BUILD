@@ -123,6 +123,8 @@ cc_library(
 
     "//sling/nlp/silver:components",
 
+    "//sling/org:companies-house",
+
     "//sling/task:documents",
     "//sling/task:frame-store-reader",
     "//sling/task:frame-store-writer",
@@ -155,4 +157,3 @@ cc_binary(
   linkshared = 1,
   linkstatic = 1,
 )
-

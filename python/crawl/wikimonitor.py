@@ -211,7 +211,10 @@ if since:
   print("Restart at", since)
 
 # Event listener for receiving Wikidata updates.
-stream = SSEStream(flags.arg.wiki_changes_stream, since=since, timeout=600)
+stream = SSEStream(flags.arg.wiki_changes_stream,
+                   since=since,
+                   timeout=600,
+                   headers=wikidata_headers)
 while True:
   try:
     for event in stream:

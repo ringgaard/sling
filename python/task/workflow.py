@@ -674,8 +674,11 @@ class Workflow(object):
     if type != None:
       mapper = self.task(type, name=name)
       mapper.add_params(params)
-      reader = self.read(input)
-      self.connect(reader, mapper)
+      if isinstance(input, Channel):
+        self.connect(input, mapper)
+      else:
+        reader = self.read(input)
+        self.connect(reader, mapper)
       output = self.channel(mapper, format=format)
       if auxin != None:
         for name, resource in auxin.items():
@@ -715,6 +718,7 @@ class Workflow(object):
     if type == None:
       # No reducer (i.e. identity reducer), just write input.
       reduced = input
+      reducer = None
     else:
       reducer = self.task(type, name=name)
       reducer.add_params(params)

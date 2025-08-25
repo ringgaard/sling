@@ -275,6 +275,12 @@ commands = [
     package="sling.nlp.silver",
   ),
 
+  # Organizations.
+  Command("convert_companies_house",
+    help="Convert Companies House database",
+    package="sling.org.chuk",
+  ),
+
   # Media.
   Command("extract_wikimedia",
     help="Extract Wikimedia files from Wikipedia infoboxes",
