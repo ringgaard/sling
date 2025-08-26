@@ -26,10 +26,6 @@ import sling
 import sling.flags as flags
 from sling.crawl.sse import SSEStream
 
-wikidata_headers = {
-  "User-Agent": "SLING Bot 1.0 (ringgaard.com)",
-}
-
 flags.define("--wiki_changes_stream",
              help="stream for monitoring updates to wikidata",
              default="https://stream.wikimedia.org/v2/stream/recentchange",
@@ -92,6 +88,13 @@ wdsession = requests.Session()
 redir_pat = re.compile(r"\/\* wbcreateredirect:\d+\|\|(Q\d+)\|(Q\d+) \*\/")
 num_changes = 0
 dbresults = ["new", "updated", "unchanged", "exists", "stale", "fault"]
+wikidata_headers = {
+  "User-Agent": "SLING Bot 1.0 (ringgaard.com)",
+}
+num_events = 0
+num_event_bytes = 0
+num_wikidata_events = 0
+num_wikidata_event_bytes = 0
 
 # Fetch changed item and update database.
 def process_change(change):
@@ -220,7 +223,12 @@ while True:
     for event in stream:
       if event.event != b"message": continue
       if event.data is None: continue
+      bytes = len(event.data)
+      num_events += 1
+      num_event_bytes += bytes
       if b"wikidatawiki" not in event.data: continue
+      num_wikidata_events += 1
+      num_wikidata_event_bytes += bytes
 
       try:
         change = json.loads(event.data.decode("utf8"))
@@ -238,6 +246,12 @@ while True:
       # Add event to queue.
       stream.lastts = time.time()
       queue.put(change)
+
+  except KeyboardInterrupt as error:
+    print("Stopped, events:", num_events, ", bytes:", num_event_bytes,
+          "Wikidata events:", num_wikidata_events, ", bytes: ",
+          num_wikidata_event_bytes)
+    sys.exit()
 
   except Exception as e:
     print("SSE error:", e)
