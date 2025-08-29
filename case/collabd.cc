@@ -160,6 +160,9 @@ class TopicNameIndex {
   // Search for topics with matching names.
   void Search(const string &query, int limit, int flags, Handles *matches);
 
+  // Find (first) full match.
+  Handle Find(Text name);
+
  private:
   // Rebuild search index.
   void Rebuild();
@@ -390,6 +393,9 @@ class CollabCase {
 
   // Collaboration store.
   Store *store() { return &store_; }
+
+  // Topic redirect index.
+  TopicNameIndex *idindex() { return &idindex_; }
 
  private:
   // Return case filename.
@@ -778,6 +784,27 @@ void TopicNameIndex::Search(const string &query, int limit, int flags,
       index++;
     }
   }
+}
+
+Handle TopicNameIndex::Find(Text name) {
+  // Rebuild seach index if needed.
+  if (names_.empty()) Rebuild();
+
+  // Find match.
+  int lo = 0;
+  int hi = names_.size() - 1;
+  while (lo <= hi) {
+    int mid = (lo + hi) / 2;
+    const TopicName *tn = names_[mid];
+    if (tn->name < name) {
+      lo = mid + 1;
+    } else if (tn->name > name) {
+      hi = mid - 1;
+    } else {
+      return tn->topic;
+    }
+  }
+  return Handle::nil();
 }
 
 bool CollabCase::Parse(CollabReader *reader) {
@@ -1701,7 +1728,8 @@ void CollabClient::Topics(CollabReader *reader) {
   }
 
   // Reading array with proxies will resolve them.
-  Array topics = reader->ReadObjects(collab_->store()).AsArray();
+  Store *store = collab_->store();
+  Array topics = reader->ReadObjects(store).AsArray();
   if (!topics.valid()) {
     Error("invalid topic request");
     return;
@@ -1710,9 +1738,18 @@ void CollabClient::Topics(CollabReader *reader) {
   // Return resolved topics.
   CollabWriter writer;
   writer.WriteInt(COLLAB_TOPICS);
-  Encoder encoder(collab_->store(), writer.output(), false);
+  Encoder encoder(store, writer.output(), false);
   for (int i = 0; i < topics.length(); ++i) {
-    encoder.Encode(topics.get(i));
+    Handle topic = topics.get(i);
+
+    // Try to resolve external topic to local topic.
+    if (store->IsProxy(topic)) {
+      Text id = store->FrameId(topic);
+      Handle local = collab_->idindex()->Find(id);
+      if (local != Handle::nil()) topic = local;
+    }
+
+    encoder.Encode(topic);
   }
   writer.Send(this);
 }
