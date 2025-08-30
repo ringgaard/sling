@@ -639,11 +639,21 @@ export class Decoder {
     return this.pos == this.input.length;
   }
 
-  // Read all the objects from the input.
+  // Read all the objects from the input. Return the last object.
   readall() {
     let obj = this.read();
     while (!this.done()) obj = this.read();
     return obj;
+  }
+
+  // Read all objects from the input and return array of objects,
+  readobjects() {
+    let objects = new Array();
+    while (!this.done()) {
+      let obj = this.read();
+      objects.push(obj);
+    }
+    return objects;
   }
 
   // Read one object from the input.

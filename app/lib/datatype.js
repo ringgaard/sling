@@ -506,12 +506,11 @@ export class ItemCollector {
     this.store = store;
     this.items = new Set();
     this.aux = aux_collectors.items && aux_collectors.items();
-    this.auxprefix = this.aux && this.aux.prefix();
   }
 
   collect(item) {
-    if (this.aux && item.id.startsWith(this.auxprefix)) {
-      this.aux.collect(item);
+    if (this.aux) {
+      if (!this.aux.collect(item)) this.items.add(item);
     } else {
       this.items.add(item);
     }
@@ -530,7 +529,13 @@ export class ItemCollector {
   async retrieve() {
     // Retrieve items from aux collector.
     if (this.aux) {
-      await this.aux.retrieve();
+      let topics = await this.aux.retrieve();
+      if (topics && this.index) {
+        for (let topic of topics) {
+          this.index.add_ids(topic);
+          for (let link of topic.links()) this.add(link);
+        }
+      }
     }
 
     // Skip if all items have already been fetched.

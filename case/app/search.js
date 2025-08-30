@@ -143,10 +143,7 @@ export class SearchIndex {
       if (topic.isproxy()) continue;
 
       // Add topic ids to id index.
-      this.ids.set(topic.id, topic);
-      for (let link of topic.links()) {
-        this.ids.set(link.id, topic)
-      }
+      this.add_ids(topic);
 
       // Add topic names, aliases, and xrefs to index.
       for (let [prop, value] of topic) {
@@ -169,6 +166,13 @@ export class SearchIndex {
       if (a.name > b.name) return 1;
       return 0;
     });
+  }
+
+  add_ids(topic) {
+    this.ids.set(topic.id, topic);
+    for (let link of topic.links()) {
+      this.ids.set(link.id, topic)
+    }
   }
 
   hits(query, options = {}) {

@@ -212,10 +212,10 @@ export class Collaboration {
         break;
       }
       case COLLAB_TOPICS: {
-        let result = decoder.readall();
+        let results = decoder.readobjects();
         this.onfail = null;
         if (this.ontopics) {
-          this.ontopics();
+          this.ontopics(results);
           this.ontopics = null;
         }
         break;
@@ -413,7 +413,7 @@ export class Collaboration {
   // Collect topics from collaboration.
   async collect_topics(topics) {
     return new Promise((resolve, reject) => {
-      this.ontopics = () => resolve();
+      this.ontopics = (results) => resolve(results);
       this.onfail = e => reject(e);
 
       let encoder = new Encoder(store, false);
@@ -545,19 +545,17 @@ class CollabTopicCollector {
   constructor(collab) {
     this.collab =  collab;
     this.items = new Set();
-  }
-
-  prefix() {
-    return `t/${this.collab.caseid}/`;
+    this.prefix = `t/${collab.caseid}/`;
   }
 
   collect(item) {
     this.items.add(item);
+    return item.id.startsWith(this.prefix);
   }
 
   async retrieve() {
     if (this.items.size > 0) {
-      await this.collab.collect_topics(Array.from(this.items));
+      return await this.collab.collect_topics(Array.from(this.items));
     }
   }
 };

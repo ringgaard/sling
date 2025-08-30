@@ -161,6 +161,18 @@ class Person {
     return this.partners.includes(other);
   }
 
+  replace(source, target) {
+    for (let i = 0; i < this.parents.length; ++i) {
+      if (this.parents[i] == source) this.parents[i] = target;
+    }
+    for (let i = 0; i < this.children.length; ++i) {
+      if (this.children[i] == source) this.children[i] = target;
+    }
+    for (let i = 0; i < this.partners.length; ++i) {
+      if (this.partners[i] == source) this.partners[i] = target;
+    }
+  }
+
   toString() {
     let h = [];
     h.push(`gen ${this.generation} person ${this.name()} (${this.id()})`);
@@ -314,6 +326,15 @@ class FamilyTree {
     return p;
   }
 
+  merge(source, target) {
+    target.base = source.topic;
+    this.persons.set(source.topic, target);
+    for (let p of source.parents) target.add_parent(p);
+    for (let c of source.children) target.add_child(c);
+    for (let p of source.partners) target.add_partner(p);
+    for (let p of this.persons.values()) p.replace(source, target);
+  }
+
   async traverse(topic) {
     // Build familiy tree by following parent/child/partner relations.
     let queue = [];
@@ -331,6 +352,7 @@ class FamilyTree {
 
       // Collect external items.
       let collector = new ItemCollector(store);
+      collector.index = this.index;
       for (let j = i; j < queue.length; ++j) {
         collector.add(queue[j].topic);
         collector.add(queue[j].base);
@@ -339,6 +361,14 @@ class FamilyTree {
 
       // Get next person.
       let person = queue[i++];
+      let local = this.index.ids.get(person.id());
+      if (local && local != person.topic) {
+        let target = this.persons.get(local);
+        if (target) {
+          this.merge(person, target);
+          person = target;
+        }
+      }
       let generation = this.generations.get(person.generation);
       if (!generation) {
         console.log("generations exceeded", person.id(), person.name(), person);
