@@ -312,6 +312,18 @@ class FamilyTree {
   person(topic, existing) {
     let p = this.persons.get(topic);
     if (p) return p;
+    let redir = topic.get(n_is);
+    if (redir) {
+      let base = frame(redir);
+      p = this.persons.get(base);
+      if (p) {
+        p.topic = topic;
+        p.base = base;
+        this.persons.set(p.topic, p);
+        return p;
+      }
+    }
+
     if (existing) return;
 
     if (this.index) {
@@ -369,6 +381,7 @@ class FamilyTree {
           person = target;
         }
       }
+
       let generation = this.generations.get(person.generation);
       if (!generation) {
         console.log("generations exceeded", person.id(), person.name(), person);
