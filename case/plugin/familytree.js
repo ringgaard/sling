@@ -279,8 +279,8 @@ class Generation {
 }
 
 class FamilyTree {
-  constructor(mingen, maxgen, radius, iterations, index) {
-    this.index = index;
+  constructor(mingen, maxgen, radius, iterations, idmap) {
+    this.idmap = new Map(idmap);
     this.persons = new Map();
     this.families = new Map();
     this.mingen = mingen;
@@ -326,11 +326,9 @@ class FamilyTree {
 
     if (existing) return;
 
-    if (this.index) {
-      topic = this.index.ids.get(topic.id) || topic;
-      p = this.persons.get(topic);
-      if (p) return p;
-    }
+    topic = this.idmap.get(topic.id) || topic;
+    p = this.persons.get(topic);
+    if (p) return p;
 
     p = new Person(topic);
     this.persons.set(topic, p);
@@ -364,7 +362,7 @@ class FamilyTree {
 
       // Collect external items.
       let collector = new ItemCollector(store);
-      collector.index = this.index;
+      collector.idmap = this.idmap;
       for (let j = i; j < queue.length; ++j) {
         collector.add(queue[j].topic);
         collector.add(queue[j].base);
@@ -373,7 +371,7 @@ class FamilyTree {
 
       // Get next person.
       let person = queue[i++];
-      let local = this.index.ids.get(person.id());
+      let local = this.idmap.get(person.id());
       if (local && local != person.topic) {
         let target = this.persons.get(local);
         if (target) {
@@ -987,8 +985,8 @@ class FamilyTreeDialog extends MdDialog {
 Component.register(FamilyTreeDialog);
 
 export default class FamilyTreePlugin {
-  async run(topic, index) {
-    let tree = new FamilyTree(-1, 1, 1, layout_iterations, index);
+  async run(topic, idmap) {
+    let tree = new FamilyTree(-1, 1, 1, layout_iterations, idmap);
     await tree.build(topic);
 
     let dialog = new FamilyTreeDialog(tree)

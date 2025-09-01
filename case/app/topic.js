@@ -754,7 +754,7 @@ class TopicCard extends Component {
 
   async onfamilytree(e) {
     let index = this.match("#editor").get_index();
-    let ref = await this.execute("familytree", index);
+    let ref = await this.execute("familytree", index.ids);
     if (ref) this.dispatch("navigate", {ref}, true);
   }
 

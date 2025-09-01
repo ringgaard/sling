@@ -530,10 +530,13 @@ export class ItemCollector {
     // Retrieve items from aux collector.
     if (this.aux) {
       let topics = await this.aux.retrieve();
-      if (topics && this.index) {
+      if (topics && this.idmap) {
         for (let topic of topics) {
-          this.index.add_ids(topic);
-          for (let link of topic.links()) this.add(link);
+          this.idmap.set(topic.id, topic);
+          for (let link of topic.links()) {
+            this.idmap.set(link.id, topic)
+            this.add(link);
+          }
         }
       }
     }
