@@ -48,13 +48,13 @@ function date(d) {
 class Person {
   constructor(topic) {
     this.topic = topic;
-    let redir = topic.get(n_is);
-    this.base = redir && frame(redir);
+    this.base = topic.link();
     this.parents = [];
     this.children = [];
     this.partners = [];
     this.ports = new Map();
     this.generation = 0;
+    //console.log("create", this.id(), this.name(), this.base?.id);
   }
 
   id() {
@@ -270,6 +270,11 @@ class Generation {
     }
   }
 
+  remove(person) {
+    let index = this.persons.indexOf(person);
+    if (index !== -1) this.persons.splice(index, 1);
+  }
+
   adjacent(person1, person2) {
     if (!person1 || !person2) return false;
     if (person1.index == person2.index + 1) return true;
@@ -337,12 +342,14 @@ class FamilyTree {
   }
 
   merge(source, target) {
+    //console.log("merge", source.id(), target.id());
     target.base = source.topic;
     this.persons.set(source.topic, target);
     for (let p of source.parents) target.add_parent(p);
     for (let c of source.children) target.add_child(c);
     for (let p of source.partners) target.add_partner(p);
     for (let p of this.persons.values()) p.replace(source, target);
+    this.generations.get(source.generation).remove(source);
   }
 
   async traverse(topic) {
@@ -378,8 +385,19 @@ class FamilyTree {
           this.merge(person, target);
           person = target;
         }
+      } else {
+        if (!person.base) {
+          let base = person.topic.link();
+          if (base) {
+            let target = this.persons.get(base);
+            if (target) {
+              this.merge(target, person);
+            } else {
+              person.base = base;
+            }
+          }
+        }
       }
-
       let generation = this.generations.get(person.generation);
       if (!generation) {
         console.log("generations exceeded", person.id(), person.name(), person);
@@ -397,6 +415,7 @@ class FamilyTree {
           f.generation = person.generation - 1;
           if (f.distance == undefined) f.distance = person.distance;
           person.add_parent(f);
+          f.add_child(person);
           if (!visited.has(f)) queue.push(f);
         }
         let mother = store.resolve(person.relative(n_mother));
@@ -405,6 +424,7 @@ class FamilyTree {
           m.generation = person.generation - 1;
           if (m.distance == undefined) m.distance = person.distance;
           person.add_parent(m);
+          m.add_child(person);
           if (!visited.has(m)) queue.push(m);
         }
       }
@@ -427,6 +447,7 @@ class FamilyTree {
           c.generation = person.generation + 1;
           if (c.distance == undefined) c.distance = person.distance;
           person.add_child(c);
+          c.add_parent(person);
           if (!visited.has(c)) queue.push(c);
         }
       }
@@ -901,18 +922,20 @@ class FamilyTreeDialog extends MdDialog {
         }
       }
       for (let p of generation.persons) {
-        h.html`<rect ref="${p.id()}" x="${p.x}" y="${p.y}"
-                width="${box_width}" height="${box_height}"
-                rx="10" ry="10"
-                ${p == tree.subject ? 'class=subject' : ''} />
-               <text class="name"
-                 x="${p.x + box_width / 2}" y="${p.y + name_yofs}">
-                 ${p.name()}
-               </text>
-               <text class="descr"
-                 x="${p.x + box_width / 2}" y="${p.y + name_yofs * 2}">
-                 ${p.description()}
-               </text>`;
+        h.html`<g class="person">
+                 <rect ref="${p.id()}" x="${p.x}" y="${p.y}"
+                  width="${box_width}" height="${box_height}"
+                  rx="10" ry="10"
+                  ${p == tree.subject ? 'class=subject' : ''} />
+                 <text ref="${p.id()}" class="name"
+                   x="${p.x + box_width / 2}" y="${p.y + name_yofs}">
+                   ${p.name()}
+                 </text>
+                 <text ref="${p.id()}" class="descr"
+                   x="${p.x + box_width / 2}" y="${p.y + name_yofs * 2}">
+                   ${p.description()}
+                 </text>
+               </g>`;
       }
     }
     h.html`</svg></div>`;
@@ -957,8 +980,7 @@ class FamilyTreeDialog extends MdDialog {
       $ rect.subject {
         stroke: black;
       }
-      $ rect:hover {
-        fill: #cccccc;
+      $ .person:hover {
         cursor: pointer;
       }
       $ line {

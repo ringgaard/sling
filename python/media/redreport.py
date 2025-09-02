@@ -638,11 +638,19 @@ Component.register(SubredditCard);
 
 class OverviewCard extends MdCard {
   render() {
+    function pct(n, total) {
+      return total > 0 ? (n / total * 100) | 0 : 0;
+    }
+
     let s = this.state;
-    console.log(s);
 
     let total = s.known + s.unknown;
-    let coverage = total > 0 ? (s.known / total * 100) | 0 : 0;
+    let coverage = pct(s.known, total);
+
+    let total_ex_osc = total - (s.oscmatched + s.oscunmatched);
+    let known_ex_osc = s.known - s.oscmatched;
+    let unknown_ex_osc = s.unknown - s.oscunmatched;
+    let coverage_ex_osc = pct(known_ex_osc, total_ex_osc);
 
     let total_photos = s.photos + s.dups;
     let repeats = total_photos > 0 ? (s.dups / total_photos * 100) | 0 : 0;
@@ -656,7 +664,8 @@ class OverviewCard extends MdCard {
       ${total} postings,
       ${s.known} known,
       ${s.unknown} unknown,
-      ${coverage}% coverage<br>
+      ${coverage}% coverage
+      (${unknown_ex_osc} unknown without OldSchoolCool, ${coverage_ex_osc}%)<br>
 
       ${s.profiles} profiles,
       ${s.profiles - s.unchanged} changed,
@@ -692,7 +701,14 @@ class SubredditList extends Component {
     srnames.sort();
     let cards = [];
     let statistics = this.state["statistics"];
-    if (statistics) cards.push(new OverviewCard(statistics));
+    if (statistics) {
+      let osc = subreddits["OldSchoolCool"];
+      if (osc) {
+        statistics.oscmatched = osc.matched.length;
+        statistics.oscunmatched = osc.unmatched.length;
+      }
+      cards.push(new OverviewCard(statistics));
+    }
     for (let name of srnames) {
       let report = subreddits[name]
       //if (general && !report.general) continue;
