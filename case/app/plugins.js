@@ -178,6 +178,16 @@ var plugins = [
   ],
 },
 
+// Persons from myheritage.dk.
+{
+  name: "myheritage",
+  module: "myheritage.js",
+  actions: [PASTEURL, SEARCHURL],
+  patterns: [
+    /^https?\:\/\/www\.myheritage\.dk\/research\//,
+  ],
+},
+
 // E-books from libgen.
 {
   name: "libgen",
