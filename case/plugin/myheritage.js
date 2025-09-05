@@ -4,7 +4,7 @@
 // SLING case plug-in for MyHeritage search.
 
 import {store, frame} from "/common/lib/global.js";
-import {Time} from "/common/lib/datatype.js";
+import {date_parser, Time} from "/common/lib/datatype.js";
 import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 
 const n_name = frame("name");
@@ -13,6 +13,19 @@ const n_dod = frame("P570");
 const n_birth_name = frame("P1477");
 const n_married_name = frame("P2562");
 const n_mh_id = frame("PMH");
+const n_pob = frame("P19");
+const n_pod = frame("P20");
+const n_father = frame("P22");
+const n_mother = frame("P25");
+const n_spouse = frame("P26");
+const n_sibling = frame("P3373");
+const n_child = frame("P40");
+const n_gender = frame("P21");
+const n_female = frame("Q6581072");
+const n_male = frame("Q6581097");
+const n_instance_of = frame("P31");
+const n_human = frame("Q5");
+const n_occupation = frame("P106");
 
 const collection_properties = {
   1: frame("PMHI"),
@@ -24,6 +37,42 @@ const collection_properties = {
   10190: frame("PDFT25"),
   10181: frame("PDFT30"),
   10706: frame("PDFT40"),
+}
+
+function parse_date(d) {
+  if (!d) return undefined;
+  let results = new Array();
+  date_parser(d, results);
+  if (results.length > 0) return results[0].value;
+  return d;
+}
+
+function field_text(elem, selector) {
+  if (!elem) return;
+  let value = elem.querySelector("td.recordFieldValue");
+  if (value) {
+    if (selector) value = value.querySelector(selector);
+    if (value) {
+      value = value.querySelector("span.map_callout_link") || value;
+      return value?.innerText.trim();
+    }
+  }
+}
+
+function field_list(elem) {
+  if (!elem) return;
+  let value = elem.querySelector("td.recordFieldValue");
+  if (value) {
+    let values = [];
+    console.log("v", value);
+    for (let s of value.children) {
+      let id = s.getAttribute("data-item-id");
+      if (!id) continue;
+      let name = s.innerText.trim();
+      values.push({id, name});
+    }
+    return values;
+  }
 }
 
 export default class MyHeritagePlugin {
@@ -62,26 +111,82 @@ export default class MyHeritagePlugin {
   }
 
   async populate(context, topic, url, collection, itemid) {
+    // Retrieve MyHeritage profile.
+    let r = await context.fetch(url, {local: true});
+    if (r) {
+      // Parse HTML.
+      let html = await r.text();
+      let doc = new DOMParser().parseFromString(html, "text/html");
+      let table = doc.querySelector("table.recordFieldsTable");
+      console.log(table);
+
+      // Get fields.
+      let fields = {}
+      let rows = table.querySelectorAll("tr.recordFieldsRow");
+      for (let f of rows.values()) {
+        let field_name = f.getAttribute("data-field-id");
+        fields[field_name] = f;
+        console.log(field_name, f);
+      }
+
+      // Populate bio.
+      let bio = {};
+      bio.name = field_text(fields["NAME"]);
+      bio.gender = field_text(fields["gender"]);
+      bio.dob = field_text(fields["birth"], "span.event_date");
+      bio.pob = field_text(fields["birth"], "span.event_place");
+      bio.dod = field_text(fields["death"], "span.event_date");
+      bio.pod = field_text(fields["death"], "span.event_place");
+      bio.occupation = field_text(fields["occupation"]);
+      bio.father = field_text(fields["father"]);
+      bio.mother = field_text(fields["mother"]);
+      bio.wife = field_text(fields["wife"]);
+      bio.husband = field_text(fields["husband"]);
+      bio.children = field_list(fields["children"]);
+      bio.siblings = field_list(fields["siblings"]);
+      console.log(bio);
+
+      if (topic.has(n_name)) {
+        topic.put(n_birth_name, bio.name);
+      } else {
+        topic.put(n_name, bio.name);
+      }
+      topic.put(n_instance_of, n_human);
+      if (bio.gender == "Mand") topic.put(n_gender, n_male);
+      if (bio.gender == "Kvinde") topic.put(n_gender, n_female);
+      topic.put(n_dob, parse_date(bio.dob));
+      topic.put(n_pob, bio.pob);
+      topic.put(n_dod, parse_date(bio.dod));
+      topic.put(n_pod, bio.pod);
+
+      topic.put(n_father, bio.father);
+      topic.put(n_mother, bio.mother);
+      if (bio.siblings) {
+        for (let s of bio.siblings) {
+          topic.put(n_sibling, s.name);
+        }
+      }
+      topic.put(n_spouse, bio.husband);
+      topic.put(n_spouse, bio.wife);
+      if (bio.children) {
+        for (let c of bio.children) {
+          topic.put(n_child, c.name);
+        }
+      }
+      topic.put(n_occupation, bio.occupation);
+    }
+
+    // Add reference.
     if (itemid.endsWith("-")) {
       itemid = itemid.slice(0, -1);
     }
     let prop = collection_properties[collection];
     if (prop) {
-      topic.put(cp.prop, itemid);
+      topic.put(prop, itemid);
     } else {
       topic.put(n_mh_id, `${collection}:${itemid}`);
     }
     context.updated(topic);
-
-/*
-    // Retrieve MyHeritage profile.
-    let r = await context.fetch(url);
-    let html = await r.text();
-
-    // Parse HTML.
-    let doc = new DOMParser().parseFromString(html, "text/html");
-    console.log(doc);
-*/
  }
 
   async run(topic) {

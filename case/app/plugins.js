@@ -495,12 +495,13 @@ export class Context {
 
   async fetch(url, options = {}) {
     // Try to get content from cache.
+    if (!options.headers) options.headers = {};
     if (webcache.has(url)) {
       return new LocalResponse(url, webcache.get(url));
     }
+    if (options.local) return;
 
     // Build headers.
-    if (!options.headers) options.headers = {};
     options.headers["XUser-Agent"] = navigator.userAgent;
     let hostname = new URL(url).hostname;
     let cookie = settings.cookiejar[hostname];
