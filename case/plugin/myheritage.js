@@ -7,6 +7,7 @@ import {store, frame} from "/common/lib/global.js";
 import {date_parser, Time} from "/common/lib/datatype.js";
 import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 
+const n_is = store.is;
 const n_name = frame("name");
 const n_dob = frame("P569");
 const n_dod = frame("P570");
@@ -26,6 +27,7 @@ const n_male = frame("Q6581097");
 const n_instance_of = frame("P31");
 const n_human = frame("Q5");
 const n_occupation = frame("P106");
+const n_start_time = frame("P580");
 
 const collection_properties = {
   1: frame("PMHI"),
@@ -49,30 +51,27 @@ function parse_date(d) {
 
 function field_text(elem, selector) {
   if (!elem) return;
-  let value = elem.querySelector("td.recordFieldValue");
-  if (value) {
-    if (selector) value = value.querySelector(selector);
-    if (value) {
-      value = value.querySelector("span.map_callout_link") || value;
-      return value?.innerText.trim();
-    }
+  if (typeof(selector) === 'number')  {
+    return elem.childNodes.item(selector)?.wholeText.trim();
+  } else if (selector) {
+    elem = elem.querySelector(selector);
+  }
+  if (elem) {
+    elem = elem.querySelector("span.map_callout_link") || elem;
+    return elem?.innerText?.trim();
   }
 }
 
 function field_list(elem) {
   if (!elem) return;
-  let value = elem.querySelector("td.recordFieldValue");
-  if (value) {
-    let values = [];
-    console.log("v", value);
-    for (let s of value.children) {
-      let id = s.getAttribute("data-item-id");
-      if (!id) continue;
-      let name = s.innerText.trim();
-      values.push({id, name});
-    }
-    return values;
+  let values = [];
+  for (let e of elem.children) {
+    let id = e.getAttribute("data-item-id");
+    if (!id) continue;
+    let name = e.innerText.trim();
+    values.push({id, name});
   }
+  return values;
 }
 
 export default class MyHeritagePlugin {
@@ -125,26 +124,48 @@ export default class MyHeritagePlugin {
       let rows = table.querySelectorAll("tr.recordFieldsRow");
       for (let f of rows.values()) {
         let field_name = f.getAttribute("data-field-id");
-        fields[field_name] = f;
-        console.log(field_name, f);
+        let field_value = f.querySelector("td.recordFieldValue");
+        fields[field_name] = field_value;
+        console.log(field_name, field_value);
       }
 
       // Populate bio.
       let bio = {};
       bio.name = field_text(fields["NAME"]);
       bio.gender = field_text(fields["gender"]);
+
       bio.dob = field_text(fields["birth"], "span.event_date");
       bio.pob = field_text(fields["birth"], "span.event_place");
+      if (!bio.dob) {
+        bio.dob = field_text(fields["BIRT"], 0);
+        bio.pob = field_text(fields["BIRT"], "div.mapCalloutContainer");
+      }
       bio.dod = field_text(fields["death"], "span.event_date");
       bio.pod = field_text(fields["death"], "span.event_place");
+      if (!bio.dod) {
+        bio.dod = field_text(fields["DEAT"], 0);
+        bio.pod = field_text(fields["DEAT"], "div.mapCalloutContainer");
+      }
+
       bio.occupation = field_text(fields["occupation"]);
       bio.father = field_text(fields["father"]);
       bio.mother = field_text(fields["mother"]);
-      bio.wife = field_text(fields["wife"]);
-      bio.husband = field_text(fields["husband"]);
+      bio.spouse = field_text(fields["wife"]) ||
+                   field_text(fields["husband"]) ||
+                   field_text(fields["spouse"]);
       bio.children = field_list(fields["children"]);
       bio.siblings = field_list(fields["siblings"]);
+      let marriage = fields["MARR"];
+      if (marriage) {
+        let spouse = field_text(marriage, 0);
+        if (spouse) {
+          if (spouse.startsWith("Ægteskab med: ")) spouse = spouse.slice(14);
+          bio.spouse = spouse;
+          bio.married = field_text(marriage, 2);
+        }
+      }
       console.log(bio);
+
 
       if (topic.has(n_name)) {
         topic.put(n_birth_name, bio.name);
@@ -166,8 +187,16 @@ export default class MyHeritagePlugin {
           topic.put(n_sibling, s.name);
         }
       }
-      topic.put(n_spouse, bio.husband);
-      topic.put(n_spouse, bio.wife);
+      if (bio.spouse) {
+        if (bio.married) {
+          let marriage = store.frame();
+          marriage.add(n_is, bio.spouse);
+          marriage.add(n_start_time, parse_date(bio.married));
+          topic.put(n_spouse, marriage);
+        } else {
+          topic.put(n_spouse, bio.spouse);
+        }
+      }
       if (bio.children) {
         for (let c of bio.children) {
           topic.put(n_child, c.name);
