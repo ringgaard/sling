@@ -5,6 +5,7 @@
 
 import {store, frame} from "/common/lib/global.js";
 import {date_parser, Time} from "/common/lib/datatype.js";
+import {match_link} from "/case/app/social.js";
 import {SEARCHURL, PASTEURL} from "/case/app/plugins.js";
 
 const n_is = store.is;
@@ -28,6 +29,7 @@ const n_instance_of = frame("P31");
 const n_human = frame("Q5");
 const n_occupation = frame("P106");
 const n_start_time = frame("P580");
+const n_described_at_url = frame("P973");
 
 const collection_properties = {
   1: frame("PMHI"),
@@ -52,7 +54,8 @@ function parse_date(d) {
 function field_text(elem, selector) {
   if (!elem) return;
   if (typeof(selector) === 'number')  {
-    return elem.childNodes.item(selector)?.wholeText.trim();
+    let node = elem.childNodes.item(selector);
+    return node?.wholeText?.trim();
   } else if (selector) {
     elem = elem.querySelector(selector);
   }
@@ -72,6 +75,14 @@ function field_list(elem) {
     values.push({id, name});
   }
   return values;
+}
+
+function field_link(elem) {
+  if (!elem) return;
+  elem = elem.querySelector("a");
+  if (elem) {
+    return elem.getAttribute("href").trim();
+  }
 }
 
 export default class MyHeritagePlugin {
@@ -132,22 +143,25 @@ export default class MyHeritagePlugin {
       // Populate bio.
       let bio = {};
       bio.name = field_text(fields["NAME"]);
-      bio.gender = field_text(fields["gender"]);
+      bio.gender = field_text(fields["gender"]) ||
+                   field_text(fields["person-canonical-events.gender"])
 
-      bio.dob = field_text(fields["birth"], "span.event_date");
+      bio.dob = field_text(fields["birth"], "span.event_date") ||
+                field_text(fields["person-events.birth"], "span.event_date")
       bio.pob = field_text(fields["birth"], "span.event_place");
       if (!bio.dob) {
         bio.dob = field_text(fields["BIRT"], 0);
         bio.pob = field_text(fields["BIRT"], "div.mapCalloutContainer");
       }
-      bio.dod = field_text(fields["death"], "span.event_date");
+      bio.dod = field_text(fields["death"], "span.event_date")  ||
+                field_text(fields["person-events.death"], "span.event_date");
       bio.pod = field_text(fields["death"], "span.event_place");
       if (!bio.dod) {
         bio.dod = field_text(fields["DEAT"], 0);
         bio.pod = field_text(fields["DEAT"], "div.mapCalloutContainer");
       }
 
-      bio.occupation = field_text(fields["occupation"]);
+      bio.occupation = field_text(fields["occupation"] || fields["OCCU"]);
       bio.father = field_text(fields["father"]);
       bio.mother = field_text(fields["mother"]);
       bio.spouse = field_text(fields["wife"]) ||
@@ -164,8 +178,8 @@ export default class MyHeritagePlugin {
           bio.married = field_text(marriage, 2);
         }
       }
+      bio.source = field_link(fields["source-link"]);
       console.log(bio);
-
 
       if (topic.has(n_name)) {
         topic.put(n_birth_name, bio.name);
@@ -203,6 +217,15 @@ export default class MyHeritagePlugin {
         }
       }
       topic.put(n_occupation, bio.occupation);
+
+      if (bio.source) {
+        let [xprop, identifier] = match_link(bio.source);
+        if (xprop) {
+          topic.put(xprop, identifier);
+        } else {
+          topic.put(n_described_at_url, bio.source);
+        }
+      }
     }
 
     // Add reference.
