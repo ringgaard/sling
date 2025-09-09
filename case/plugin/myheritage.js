@@ -178,7 +178,7 @@ export default class MyHeritagePlugin {
           bio.married = field_text(marriage, 2);
         }
       }
-      bio.source = field_link(fields["source-link"]);
+      bio.source = field_link(fields["source-link"] || fields["source"]);
       console.log(bio);
 
       if (topic.has(n_name)) {
