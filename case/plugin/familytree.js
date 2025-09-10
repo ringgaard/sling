@@ -133,6 +133,12 @@ class Person {
     return it(this.topic, this.base);
   }
 
+  update_distance(distance) {
+    if (!this.distance || distance < this.distance) {
+      this.distance = distance;
+    }
+  }
+
   add_parent(person) {
     if (!this.parents.includes(person)) this.parents.push(person);
   }
@@ -406,6 +412,7 @@ class FamilyTree {
       generation.add_person(person);
       if (visited.has(person)) continue;
       visited.add(person);
+      if (person.distance >= this.radius) continue;
 
       // Find parents.
       if (this.generations.has(person.generation - 1)) {
@@ -413,7 +420,7 @@ class FamilyTree {
         if (father) {
           let f = this.person(father);
           f.generation = person.generation - 1;
-          if (f.distance == undefined) f.distance = person.distance;
+          f.update_distance(person.distance + 1);
           person.add_parent(f);
           f.add_child(person);
           if (!visited.has(f)) queue.push(f);
@@ -422,7 +429,7 @@ class FamilyTree {
         if (mother) {
           let m = this.person(mother);
           m.generation = person.generation - 1;
-          if (m.distance == undefined) m.distance = person.distance;
+          m.update_distance(person.distance + 1);
           person.add_parent(m);
           m.add_child(person);
           if (!visited.has(m)) queue.push(m);
@@ -430,12 +437,11 @@ class FamilyTree {
       }
 
       // Find spouses.
-      let more_partners = person.distance < this.radius;
       for (let spouse of person.relatives(n_spouse)) {
-        let s = this.person(store.resolve(spouse), !more_partners);
+        let s = this.person(store.resolve(spouse));
         if (!s) continue;
         s.generation = person.generation;
-        if (s.distance == undefined) s.distance = person.distance + 1;
+        s.update_distance(person.distance + 1);
         person.add_partner(s);
         if (!visited.has(s)) queue.push(s);
       }
@@ -445,7 +451,7 @@ class FamilyTree {
         for (let child of person.relatives(n_child)) {
           let c = this.person(store.resolve(child));
           c.generation = person.generation + 1;
-          if (c.distance == undefined) c.distance = person.distance;
+          c.update_distance(person.distance + 1);
           person.add_child(c);
           c.add_parent(person);
           if (!visited.has(c)) queue.push(c);
@@ -854,7 +860,7 @@ class FamilyTreeDialog extends MdDialog {
                  label="Descendants">
       </md-slider>
       <md-slider id="radius"
-                 min="0" max="9" step="1" value="${tree.radius}"
+                 min="0" max="20" step="1" value="${tree.radius}"
                  label="Radius">
       </md-slider>
       <md-slider id="iterations"
@@ -1008,7 +1014,7 @@ Component.register(FamilyTreeDialog);
 
 export default class FamilyTreePlugin {
   async run(topic, idmap) {
-    let tree = new FamilyTree(-1, 1, 1, layout_iterations, idmap);
+    let tree = new FamilyTree(-2, 2, 4, layout_iterations, idmap);
     await tree.build(topic);
 
     let dialog = new FamilyTreeDialog(tree)
