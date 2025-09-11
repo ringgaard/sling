@@ -19,6 +19,7 @@ const n_pob = frame("P19");
 const n_pod = frame("P20");
 const n_father = frame("P22");
 const n_mother = frame("P25");
+const n_parent = frame("P8810");
 const n_spouse = frame("P26");
 const n_sibling = frame("P3373");
 const n_child = frame("P40");
@@ -143,6 +144,9 @@ export default class MyHeritagePlugin {
       // Populate bio.
       let bio = {};
       bio.name = field_text(fields["NAME"]);
+      bio.married_name = field_text(fields["married-name"]);
+      bio.birth_name = field_text(fields["birth-name"]);
+
       bio.gender = field_text(fields["gender"]) ||
                    field_text(fields["person-canonical-events.gender"])
 
@@ -164,11 +168,13 @@ export default class MyHeritagePlugin {
       bio.occupation = field_text(fields["occupation"] || fields["OCCU"]);
       bio.father = field_text(fields["father"]);
       bio.mother = field_text(fields["mother"]);
+      bio.parents = field_list(fields["parents"]);
       bio.spouse = field_text(fields["wife"]) ||
                    field_text(fields["husband"]) ||
                    field_text(fields["spouse"]);
       bio.children = field_list(fields["children"]);
-      bio.siblings = field_list(fields["siblings"]);
+      bio.siblings = field_list(fields["siblings"]) ||
+                     field_list(fields["sibling"]);
       let marriage = fields["MARR"];
       if (marriage) {
         let spouse = field_text(marriage, 0);
@@ -186,6 +192,8 @@ export default class MyHeritagePlugin {
       } else {
         topic.put(n_name, bio.name);
       }
+      topic.put(n_birth_name, bio.birth_name);
+      topic.put(n_married_name, bio.married_name);
       topic.put(n_instance_of, n_human);
       if (bio.gender == "Mand") topic.put(n_gender, n_male);
       if (bio.gender == "Kvinde") topic.put(n_gender, n_female);
@@ -196,6 +204,11 @@ export default class MyHeritagePlugin {
 
       topic.put(n_father, bio.father);
       topic.put(n_mother, bio.mother);
+      if (bio.parents) {
+        for (let p of bio.parents) {
+          topic.put(n_parent, p.name);
+        }
+      }
       if (bio.siblings) {
         for (let s of bio.siblings) {
           topic.put(n_sibling, s.name);

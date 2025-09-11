@@ -412,6 +412,10 @@ let xrefs = [
     property: frame("P2889"),
   },
   {
+    pattern: /^https:\/\/familysearch\.org\/ark:\/\d+\/\d+:\d+:(.+)/,
+    property: frame("P2889"),
+  },
+  {
     pattern: /^https:\/\/billiongraves\.com\/grave\/[A-Za-z0-9% -]+\/(\d+)/,
     property: frame("P10554"),
   },

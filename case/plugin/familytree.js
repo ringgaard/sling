@@ -134,7 +134,7 @@ class Person {
   }
 
   update_distance(distance) {
-    if (!this.distance || distance < this.distance) {
+    if (!this.distance === undefined || distance < this.distance) {
       this.distance = distance;
     }
   }
