@@ -1481,8 +1481,13 @@ class CaseEditor extends MdApp {
 
   async onscript(e) {
     if (!settings.userscripts) return;
-    let dialog = new ScriptDialog();
-    let script = await dialog.show();
+    let script;
+    if (e.ctrlKey && user_script) {
+      script = new AsyncFunction("store", "frame", "print", user_script);
+    } else {
+      let dialog = new ScriptDialog();
+      script = await dialog.show();
+    }
     if (script) {
       // Execute script.
       try {
