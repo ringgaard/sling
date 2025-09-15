@@ -348,7 +348,6 @@ class FamilyTree {
   }
 
   merge(source, target) {
-    //console.log("merge", source.id(), target.id());
     target.base = source.topic;
     this.persons.set(source.topic, target);
     for (let p of source.parents) target.add_parent(p);
@@ -555,12 +554,10 @@ class FamilyTree {
           let mp2 = f2.mid_parent();
           let mc1 = f1.mid_child();
           let mc2 = f2.mid_child();
-          //console.log(`family ${f1.parents[0].name()} p=${mp1} c=${mc1} and ${f2.parents[0].name()} p=${mp2} c=${mc2}`);
 
           if (mp1 < mp2 && mc1 > mc2 || mp1 > mp2 && mc1 < mc2) {
             let p1 = f1.parents;
             let p2 = f2.parents;
-            //console.log(`swap family ${p1[0].name()} with ${p2[0].name()}`);
             if (p1.length == p2.length) {
               for (let k = 0; k < p1.length; ++k) {
                 swap(generation.persons, p1[k].index, p2[k].index);

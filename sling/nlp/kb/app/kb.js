@@ -162,6 +162,7 @@ class KbLink extends Component {
 
       $:hover {
         cursor: pointer;
+        text-decoration: underline;
       }
     `;
   }
@@ -426,6 +427,9 @@ class KbPropertyTable extends Component {
         text-decoration: none;
         cursor: pointer;
         outline: none;
+      }
+      $ .prop-value a:hover {
+        text-decoration: underline;
       }
 
       $ .qual-tab {

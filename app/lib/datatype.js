@@ -462,7 +462,11 @@ export class LabelCollector {
           this.collect(value);
         }
       } else if (value instanceof QString) {
-        if (value.qual) this.collect(value.qual);
+        if (value.qual &&
+            (value.qual instanceof Frame) &&
+            value.qual.isproxy()) {
+          this.collect(value.qual);
+        }
       }
     }
   }
