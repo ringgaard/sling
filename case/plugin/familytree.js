@@ -134,7 +134,7 @@ class Person {
   }
 
   update_distance(distance) {
-    if (!this.distance === undefined || distance < this.distance) {
+    if (this.distance === undefined || distance < this.distance) {
       this.distance = distance;
     }
   }
@@ -279,6 +279,13 @@ class Generation {
   remove(person) {
     let index = this.persons.indexOf(person);
     if (index !== -1) this.persons.splice(index, 1);
+  }
+
+  reindex() {
+    for (let i = 0; i < this.persons.length; ++i) {
+      let person = this.persons[i];
+      person.index = i;
+    }
   }
 
   adjacent(person1, person2) {
@@ -466,6 +473,7 @@ class FamilyTree {
         family.generation = person.generation - 1;
         for (let parent of person.parents) family.add_parent(parent);
         family.add_child(person);
+        person.ancestry = family;
       }
       for (let partner of person.partners) {
         let family = this.family(family_key([person, partner]));
@@ -485,6 +493,8 @@ class FamilyTree {
         console.log("family generation exceeded", family);
       }
     }
+
+    // Assign lanes for families.
     for (let generation of this.generations.values()) {
       let lane = 1;
       for (let family of generation.families) {
@@ -501,6 +511,10 @@ class FamilyTree {
     }
 
     function swap(arr, index1, index2) {
+      if (!arr[index1] || !arr[index2]) {
+        console.log(`illegal swap ${index1} and ${index2}`);
+        return;
+      }
       let elem = arr[index1];
       arr[index1] = arr[index2];
       arr[index2] = elem;
@@ -533,51 +547,78 @@ class FamilyTree {
           }
         }
       }
-
-      for (let index = 0; index < g.length; ++index) {
-        g[index].index = index;
-      }
+      generation.reindex();
     }
 
-    // Swap parent order based on children.
-    for (let generation of this.generations.values()) {
-      for (let i = 0; i <  generation.families.length; ++i) {
-        let f1 = generation.families[i];
-        if (!f1.nucleus()) continue;
+    // Align parents and children.
+    for (let iteration = 0; iteration < this.iterations; iteration++) {
+      let converged = true;
 
-        for (let j = i + 1; j <  generation.families.length; ++j) {
-          let f2 = generation.families[j];
-          if (!f2.nucleus()) continue;
-          if (f1 == f2) continue;
+      // Order parents and children.
+      for (let generation of this.generations.values()) {
 
-          let mp1 = f1.mid_parent();
-          let mp2 = f2.mid_parent();
-          let mc1 = f1.mid_child();
-          let mc2 = f2.mid_child();
+        // Swap children based on parent order.
+        for (let i = 0; i < generation.persons.length; ++i) {
+          let p1 = generation.persons[i];
+          if (!p1.ancestry) continue;
 
-          if (mp1 < mp2 && mc1 > mc2 || mp1 > mp2 && mc1 < mc2) {
-            let p1 = f1.parents;
-            let p2 = f2.parents;
-            if (p1.length == p2.length) {
-              for (let k = 0; k < p1.length; ++k) {
-                swap(generation.persons, p1[k].index, p2[k].index);
-              }
-            } else if (p1.length == 1 && p2.length == 2) {
-              swap(generation.persons, p1[0].index, p2[0].index);
-              if (generation.adjacent(p2[0], p2[1])) {
-                move(generation.persons, p2[1].index, p1[0].index);
-              }
-            } else if (p1.length == 2 && p2.length == 1) {
-              swap(generation.persons, p1[0].index, p2[0].index);
-              if (generation.adjacent(p1[0], p1[1])) {
-                move(generation.persons, p1[1].index, p2[0].index);
-              }
-            }
-            for (let k = 0; k < generation.persons.length; ++k) {
-              generation.persons[k].index = k;
+          for (let j = i + 1; j <  generation.persons.length; ++j) {
+            let p2 = generation.persons[j];
+            if (!p2.ancestry) continue;
+
+            let mp1 = p1.ancestry.mid_parent();
+            let mp2 = p2.ancestry.mid_parent();
+            if (mp1 > mp2) {
+              swap(generation.persons, p1.index, p2.index);
+              generation.reindex();
+              converged = false;
             }
           }
         }
+
+
+        // Swap parent order based on children.
+        for (let i = 0; i < generation.families.length; ++i) {
+          let f1 = generation.families[i];
+          if (!f1.nucleus()) continue;
+
+          for (let j = i + 1; j <  generation.families.length; ++j) {
+            let f2 = generation.families[j];
+            if (!f2.nucleus()) continue;
+            if (f1 == f2) continue;
+
+            let mp1 = f1.mid_parent();
+            let mp2 = f2.mid_parent();
+            let mc1 = f1.mid_child();
+            let mc2 = f2.mid_child();
+
+            if (mp1 < mp2 && mc1 > mc2 || mp1 > mp2 && mc1 < mc2) {
+              let p1 = f1.parents;
+              let p2 = f2.parents;
+              if (p1.length == p2.length) {
+                for (let k = 0; k < p1.length; ++k) {
+                  swap(generation.persons, p1[k].index, p2[k].index);
+                }
+              } else if (p1.length == 1 && p2.length == 2) {
+                swap(generation.persons, p1[0].index, p2[0].index);
+                if (generation.adjacent(p2[0], p2[1])) {
+                  move(generation.persons, p2[1].index, p1[0].index);
+                }
+              } else if (p1.length == 2 && p2.length == 1) {
+                swap(generation.persons, p1[0].index, p2[0].index);
+                if (generation.adjacent(p1[0], p1[1])) {
+                  move(generation.persons, p1[1].index, p2[0].index);
+                }
+              }
+              generation.reindex();
+              converged = false;
+            }
+          }
+        }
+      }
+      if (converged) {
+        console.log(`converged after ${iteration} iterations`);
+        break;
       }
     }
   }
