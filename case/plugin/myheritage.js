@@ -151,7 +151,8 @@ export default class MyHeritagePlugin {
                    field_text(fields["person-canonical-events.gender"])
 
       bio.dob = field_text(fields["birth"], "span.event_date") ||
-                field_text(fields["person-events.birth"], "span.event_date")
+                field_text(fields["birth-date"], "span.event_date") ||
+                field_text(fields["person-events.birth"], "span.event_date");
       bio.pob = field_text(fields["birth"], "span.event_place");
       if (!bio.dob) {
         bio.dob = field_text(fields["BIRT"], 0);

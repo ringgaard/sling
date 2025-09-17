@@ -620,6 +620,13 @@ export function date_parser(value, results) {
     add_date_result(results, m[1], m[2], null);
   }
 
+  // Parse YYYY MMM.
+  m = value.match(/^(\d+) (\w+)\.?$/);
+  if (m) {
+    let month = monthnum(m[2]);
+    if (month) add_date_result(results, m[1], month, null);
+  }
+
   // Parse YYYY.
   m = value.match(/^(\d{4})$/);
   if (m) {
