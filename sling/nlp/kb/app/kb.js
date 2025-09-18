@@ -11,6 +11,7 @@ import {PhotoGallery, imageurl, isimage, censor} from "/common/lib/gallery.js";
 
 var mobile_ckecked = false;
 var is_mobile = false;
+var familytree = null;
 
 function isMobile() {
   if (mobile_ckecked) return is_mobile;
@@ -573,6 +574,9 @@ class KbItemCard extends MdCard {
     if (this.find("#imgsearch")) {
       this.bind("#imgsearch", "click", e => this.onimgsearch(e));
     }
+    if (this.find("#tree")) {
+      this.bind("#tree", "click", e => this.ontree(e));
+    }
   }
 
   visible() {
@@ -609,6 +613,17 @@ class KbItemCard extends MdCard {
     let url = `/photosearch?q="${encodeURIComponent(item.name)}"`;
     if (settings.nsfw) url += "&nsfw=1";
     window.open(url, "_blank");
+  }
+
+  async ontree(e) {
+    let item = this.state;
+    if (!familytree) {
+      let component = await import("/case/plugin/familytree.js");
+      familytree = component.default;
+    }
+    let tree = new familytree();
+    let ref = await tree.run(item.ref, new Map());
+    if (ref) this.match("#app").navigate(ref);
   }
 
   copy() {
@@ -949,6 +964,8 @@ const desktop_template = `
             <md-icon-button id="imgsearch" icon="image_search">
             </md-icon-button>
             <md-icon-button id="code" icon="code">
+            </md-icon-button>
+            <md-icon-button id="tree" icon="lan">
             </md-icon-button>
           </md-card-toolbar>
           <div><md-text id="description"></md-text></div>

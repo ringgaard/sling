@@ -1053,6 +1053,7 @@ Component.register(FamilyTreeDialog);
 export default class FamilyTreePlugin {
   async run(topic, idmap) {
     let tree = new FamilyTree(-2, 2, 4, layout_iterations, idmap);
+    if (typeof(topic) === 'string') topic = frame(topic);
     await tree.build(topic);
 
     let dialog = new FamilyTreeDialog(tree)
