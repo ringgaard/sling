@@ -674,7 +674,7 @@ class PicturePanel extends Component {
   onopen(e) {
     e.stopPropagation();
     let modal = new PhotoGallery();
-    for (let event of ["nsfw", "sfw", "delimage", "picedit"]) {
+    for (let event of ["nsfw", "sfw", "delimage", "insimage", "picedit"]) {
       modal.bind(null, event, e => this.dispatch(e.type, e.detail, true));
     }
     modal.open(this.state);
@@ -1045,4 +1045,3 @@ class ItemPanel extends Component {
 };
 
 Component.register(ItemPanel);
-

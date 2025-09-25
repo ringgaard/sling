@@ -455,6 +455,7 @@ class TopicCard extends Component {
     this.bind(null, "nsfw", e => this.onnsfw(e, true));
     this.bind(null, "sfw", e => this.onnsfw(e, false));
     this.bind(null, "delimage", e => this.ondelimage(e));
+    this.bind(null, "insimage", e => this.oninsimage(e));
     this.bind(null, "picedit", e => this.refresh());
 
     this.update_mode(false);
@@ -576,6 +577,31 @@ class TopicCard extends Component {
         this.mark_dirty();
         break;
       }
+    }
+  }
+
+  oninsimage(e) {
+    if (this.editing) return;
+    let insert = e.detail;
+    let topic = this.state;
+    let start = -1;
+    let anchor = insert.anchor;
+    for (let n = 0; n < topic.length; ++n) {
+      if (topic.name(n) != n_media) continue;
+      let v = store.resolve(topic.value(n));
+      if (v == anchor || (v.startsWith('!') && v.slice(1) == anchor)) {
+        start = n;
+        break;
+      }
+    }
+
+    if (start != -1) {
+      for (let n = 0; n < insert.photos.length; ++n) {
+        let url = insert.photos[n].url;
+        if (insert.photos[n].nsfw) url = "!" + url;
+        topic.insert(start + n, n_media, url);
+      }
+      this.mark_dirty();
     }
   }
 

@@ -84,7 +84,6 @@ class FotomatApp extends MdApp {
 
   async oncopy(e) {
     if (!this.profile) return;
-    console.log("gallery");
     let urls = new Array();
     for (let p of this.profile.photos) {
       if (p.deleted) continue;
@@ -132,6 +131,7 @@ class PhotoProfile extends MdCard {
     gallery.bind(null, "nsfw", e => this.onnsfw(e, true));
     gallery.bind(null, "sfw", e => this.onnsfw(e, false));
     gallery.bind(null, "delimage", e => this.ondelimage(e));
+    gallery.bind(null, "insimage", e => this.oninsimage(e));
     gallery.open(photos);
   }
 
@@ -168,6 +168,44 @@ class PhotoProfile extends MdCard {
     }
   }
 
+  async oninsimage(e) {
+    let insert = e.detail;
+    let anchor = insert.anchor;
+    let photos = this.state.photos;
+    let pos = -1;
+    for (let i = 0; i < photos.length; ++i) {
+      if (!photos[i].deleted && photos[i].url == anchor) {
+        pos = i;
+        break;
+      }
+    }
+
+    if (pos != -1) {
+      let urls = [];
+      for (let photo of insert.photos) {
+        let url = photo.url;
+        if (photo.nsfw) url = "!" + url;
+        urls.push(url);
+      }
+      let query = `gallery:${urls.join(" ")}`
+      await this.insert(pos, query);
+    }
+  }
+
+  async insert(pos, query) {
+    try {
+      let r = await fetch(`/fotomat/fetch?q=${encodeURIComponent(query)}`);
+      let additions = await r.json();
+      if (additions.photos.length > 0) {
+        this.state.photos.splice(pos, 0, ...additions.photos);
+        this.refresh();
+        this.mark_dirty();
+      }
+    } catch (e) {
+      inform("Error fetching images: " + e.toString());
+    }
+  }
+
   find_strip(url) {
     for (let e = this.firstChild; e; e = e.nextSibling) {
       if (e.firstChild?.state.url == url) return e;
@@ -179,6 +217,7 @@ class PhotoProfile extends MdCard {
     let onlydups = document.getElementById("onlydups").checked;
     let strips = new Array();
     for (let p of this.state.photos) {
+      if (p.deleted) continue;
       if (onlydups && !p.dups) continue;
       let strip = new Array();
       strip.push(p);

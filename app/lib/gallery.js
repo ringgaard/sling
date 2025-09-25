@@ -114,6 +114,9 @@ export class PhotoGallery extends MdModal {
     this.attach(this.onsearch, "click", "#search");
     this.attach(this.close, "click", "#close");
     this.attach(this.onsource, "click", ".domain");
+    this.attach(this.oncut, "cut");
+    this.attach(this.oncopy, "copy");
+    this.attach(this.onpaste, "paste");
     this.attach(this.onkeypress, "keydown");
   }
 
@@ -147,7 +150,7 @@ export class PhotoGallery extends MdModal {
       this.onnext(e);
     } else if (e.keyCode == 27) {
       this.close(e);
-    } else if (e.keyCode == 88) {
+    } else if (e.keyCode == 88 && !e.ctrlKey) {
       this.flipnsfw(e);
     } else if (e.keyCode == 68) {
       this.delimg(e);
@@ -283,8 +286,7 @@ export class PhotoGallery extends MdModal {
     }
   }
 
-  ongallery(e) {
-    let remove = e.shiftKey;
+  gallery(remove) {
     let selected = new Array();
     let removed = new Set();
     for (let photo of this.photos) {
@@ -294,6 +296,13 @@ export class PhotoGallery extends MdModal {
         if (remove) removed.add(photo);
       }
     }
+
+    if (selected.length == 0) {
+      let photo = this.photos[this.current];
+      selected.push(photo.nsfw ? "!" + photo.url : photo.url);
+      if (remove) removed.add(photo);
+    }
+
     if (selected.length > 0) {
       // Put gallery URL in clipboard.
       navigator.clipboard.writeText("gallery:" + selected.join(" "));
@@ -311,6 +320,48 @@ export class PhotoGallery extends MdModal {
          this.edited = true;
          this.move(0);
       }
+    }
+  }
+
+  ongallery(e) {
+    let remove = e.shiftKey;
+    this.gallery(remove);
+  }
+
+  oncut(e) {
+    this.gallery(true);
+  }
+
+  oncopy(e) {
+    this.gallery(false);
+  }
+
+  async onpaste(e) {
+    if (!navigator.clipboard) throw "Access to clipboard denied";
+    let clipboard = await navigator.clipboard.readText();
+
+    let pos = this.current;
+    let anchor = this.photos[pos];
+    let photos = [];
+    if (clipboard.startsWith("gallery:")) {
+      let gallery = clipboard.slice(8).split(" ");
+      for (let url of gallery) {
+        url = url.trim();
+        let nsfw = false;
+        if (url.startsWith("!")) {
+          url = url.slice(1);
+          nsfw = true;
+        }
+        photos.push({url, nsfw});
+      }
+    } else if (isimage(clipboard)) {
+      photos.push({url: clipboard});
+    }
+
+    if (photos.length > 0) {
+      this.photos.splice(pos, 0, ...photos);
+      this.move(0);
+      this.dispatch("insimage", {anchor: anchor.url, photos});
     }
   }
 

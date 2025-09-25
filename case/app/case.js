@@ -83,7 +83,6 @@ async function write_to_clipboard(topics) {
   for (let topic of topics) {
     printer.print(topic);
     printer.write("\n");
-
   }
 
   // Write selected topics to clipboard.
