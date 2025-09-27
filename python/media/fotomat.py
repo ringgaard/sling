@@ -107,6 +107,7 @@ app.page("/fotomat",
       <md-spacer></md-spacer>
       <md-icon-button id="save" icon="save"></md-icon-button>
       <md-icon-button id="copy" icon="content_copy"></md-icon-button>
+      <md-icon-button id="paste" icon="content_paste"></md-icon-button>
     </md-toolbar>
 
     <md-content>

@@ -1,5 +1,5 @@
 import {Component} from "/common/lib/component.js";
-import {MdApp, MdCard, inform} from "/common/lib/material.js";
+import {MdApp, MdCard, StdDialog, inform} from "/common/lib/material.js";
 import {PhotoGallery, imageurl} from "/common/lib/gallery.js";
 
 class FotomatApp extends MdApp {
@@ -10,9 +10,12 @@ class FotomatApp extends MdApp {
     this.bind(null, "keyup", e => {
       if (e.key === "Escape") this.find("#query").focus();
     });
-    this.bind("#search", "click", e => this.onquery(e));
-    this.bind("#save", "click", e => this.onsave(e));
-    this.bind("#copy", "click", e => this.oncopy(e));
+    this.attach(this.onquery, "click", "#search");
+    this.attach(this.onsave, "click", "#save");
+    this.attach(this.oncopy, "click", "#copy");
+    this.attach(this.onpaste, "click", "#paste");
+    this.attach(this.oncopy, "copy");
+    this.attach(this.onpaste, "paste");
     this.bind("#onlydups", "change", e => this.find("#photos").refresh());
     this.mark_clean();
     window.addEventListener("beforeunload", e => this.onbeforeunload(e));
@@ -31,13 +34,13 @@ class FotomatApp extends MdApp {
   }
 
   mark_dirty() {
-    if (this.profile.item) {
-      this.dirty = true;
-      this.find("#save").enable();
-    }
+    this.dirty = true;
+    this.find("#save").enable();
   }
 
   async onquery(e) {
+    e.preventDefault(); // prevent paste
+
     let query = this.find("#query").value().trim();
 
     this.style.cursor = "wait";
@@ -48,6 +51,7 @@ class FotomatApp extends MdApp {
     try {
       let r = await fetch(`/fotomat/fetch?q=${encodeURIComponent(query)}`);
       this.profile = await r.json();
+      if (!this.profile.item) this.mark_dirty();
       this.find("#photos").update(this.profile);
       this.find("md-content").scrollTop = 0;
     } catch (e) {
@@ -68,22 +72,29 @@ class FotomatApp extends MdApp {
           caption: p.caption,
         });
       }
-      let profile = {item: this.profile.item, photos: photos}
-      let r = await fetch("/fotomat/update", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(profile)
-        });
-      if (!r.ok) throw new Error("HTTP status " + r.status);
+      if (!this.profile.item) {
+        this.profile.item = await StdDialog.prompt("Save profile", "Item ID");
+      }
+      if (this.profile.item) {
+        let profile = {item: this.profile.item, photos: photos}
+        let r = await fetch("/fotomat/update", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(profile)
+          });
+        if (!r.ok) throw new Error("HTTP status " + r.status);
+        this.mark_clean();
+        inform(`Profile saved to ${this.profile.item}`);
+      }
     } catch (e) {
       inform("Error updating profile images: " + e.toString());
     }
     this.style.cursor = "";
-    this.mark_clean();
   }
 
   async oncopy(e) {
     if (!this.profile) return;
+    if (e.target.type == "search") return;
     let urls = new Array();
     for (let p of this.profile.photos) {
       if (p.deleted) continue;
@@ -91,9 +102,17 @@ class FotomatApp extends MdApp {
       if (p.nsfw) url = "!" + url;
       urls.push(url);
     }
-    let gallery = `gallery: ${urls.join(" ")}`
+    let gallery = `gallery:${urls.join(" ")}`
     await navigator.clipboard.writeText(gallery);
     inform("Gallery URL coped to clipboard");
+  }
+
+  async onpaste(e) {
+    if (!this.profile) return;
+    if (e.target.type == "search") return;
+    if (!navigator.clipboard) throw "Access to clipboard denied";
+    let clipboard = await navigator.clipboard.readText();
+    this.find("#photos").insert(clipboard);
   }
 
   static stylesheet() {
@@ -188,12 +207,13 @@ class PhotoProfile extends MdCard {
         urls.push(url);
       }
       let query = `gallery:${urls.join(" ")}`
-      await this.insert(pos, query);
+      await this.insert(query, pos);
     }
   }
 
-  async insert(pos, query) {
+  async insert(query, pos) {
     try {
+      if (pos === undefined) pos = this.state.photos.length;
       let r = await fetch(`/fotomat/fetch?q=${encodeURIComponent(query)}`);
       let additions = await r.json();
       if (additions.photos.length > 0) {
