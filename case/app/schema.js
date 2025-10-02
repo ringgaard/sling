@@ -131,7 +131,7 @@ class Properties {
     let query_len = query.length;
     for (let [name, value] of Object.entries(property_shortcuts)) {
       if (name.substring(0, query_len) == query) {
-        matches.set(value, value.get(n_fanin));
+        matches.set(value, value.get(n_fanin) | 100000000);
       }
     }
 

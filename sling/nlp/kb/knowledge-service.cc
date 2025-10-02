@@ -203,6 +203,8 @@ void KnowledgeService::Load(Store *kb, const string &name_table) {
   std::vector<PropName> xref_properties;
   for (const Slot &s : Frame(kb, kb->Lookup("/w/entity"))) {
     if (s.name != n_role_) continue;
+    if (s.value == n_description_) continue;
+
     Frame property(kb, s.value);
     Property p;
 

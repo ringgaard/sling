@@ -412,7 +412,7 @@ let xrefs = [
     property: frame("P2889"),
   },
   {
-    pattern: /^https:\/\/familysearch\.org\/ark:\/\d+\/\d+:\d+:(.+)/,
+    pattern: /^https?:\/\/familysearch\.org\/ark:\/\d+\/\d+:\d+:(.+)/,
     property: frame("P2889"),
   },
   {
