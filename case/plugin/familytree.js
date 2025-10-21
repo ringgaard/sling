@@ -105,12 +105,9 @@ class Person {
   }
 
   relative(kinship) {
-    let p = this.topic.get(kinship);
-    if (!p) p = this.base?.get(kinship);
-    let f = store.resolve(p);
-    if (typeof(f) === 'string') return;
-    if (f != p && p.has(n_kinship)) return;
-    return f;
+    for (let r of this.relatives(kinship)) {
+      return r;
+    }
   }
 
   relatives(kinship) {

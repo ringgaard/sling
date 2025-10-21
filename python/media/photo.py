@@ -732,6 +732,10 @@ class Profile:
           count += self.add_media(m[2], m[1], nsfw)
       else:
         # Add media to profile frame.
+        if url == "https://www.reddit.com/gallery/" + galleryid:
+          print("Skipping recursive gallery", galleryid);
+          return 0
+
         count = self.add_media(url, title, nsfw)
 
       return count
