@@ -415,7 +415,7 @@ class FamilyTree {
       generation.add_person(person);
       if (visited.has(person)) continue;
       visited.add(person);
-      if (person.distance >= this.radius) continue;
+      if (this.radius > 0 && person.distance >= this.radius) continue;
 
       // Find parents.
       if (this.generations.has(person.generation - 1)) {
@@ -440,13 +440,15 @@ class FamilyTree {
       }
 
       // Find spouses.
-      for (let spouse of person.relatives(n_spouse)) {
-        let s = this.person(store.resolve(spouse));
-        if (!s) continue;
-        s.generation = person.generation;
-        s.update_distance(person.distance + 1);
-        person.add_partner(s);
-        if (!visited.has(s)) queue.push(s);
+      if (this.radius > 0) {
+        for (let spouse of person.relatives(n_spouse)) {
+          let s = this.person(store.resolve(spouse));
+          if (!s) continue;
+          s.generation = person.generation;
+          s.update_distance(person.distance + 1);
+          person.add_partner(s);
+          if (!visited.has(s)) queue.push(s);
+        }
       }
 
       // Find children.

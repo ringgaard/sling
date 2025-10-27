@@ -129,7 +129,7 @@ export default class MyHeritagePlugin {
       let html = await r.text();
       let doc = new DOMParser().parseFromString(html, "text/html");
       let table = doc.querySelector("table.recordFieldsTable");
-      console.log(table);
+      //console.log(table);
 
       // Get fields.
       let fields = {}
@@ -189,7 +189,9 @@ export default class MyHeritagePlugin {
       console.log(bio);
 
       if (topic.has(n_name)) {
-        topic.put(n_birth_name, bio.name);
+        if (topic.get(n_name) != bio.name) {
+          topic.put(n_birth_name, bio.name);
+        }
       } else {
         topic.put(n_name, bio.name);
       }
