@@ -45,6 +45,7 @@
     P25: P40            ; mother -> child
     P26: P26            ; spouse -> spouse
     P3373: P3373        ; sibling -> sibling
+    P40: P8810          ; child -> parent (mother/father)
 
     PFRND: PFRND        ; friend -> friend
     PLOV: PLOV          ; lover -> lover

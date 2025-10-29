@@ -160,6 +160,14 @@ class ItemReconciler : public task::FrameProcessor {
       Text target_id = store->FrameId(target);
       if (target_id.empty()) continue;
 
+      // Convert parent to father or mother based on gender.
+      Handle inverse = inversion->inverse;
+      if (inverse == n_parent_ && target != slot.value) {
+        Handle gender = frame.GetHandle(n_gender_);
+        if (gender == n_male_) inverse = n_father_.handle();
+        if (gender == n_female_) inverse = n_mother_.handle();
+      }
+
       // Build inverted property frame.
       Builder inverted(store);
       if (target != slot.value && !inversion->qualifiers.empty()) {
@@ -175,13 +183,13 @@ class ItemReconciler : public task::FrameProcessor {
           }
         }
         if (qualified.empty()) {
-          inverted.AddLink(inversion->inverse, id);
+          inverted.AddLink(inverse, id);
         } else {
-          inverted.Add(inversion->inverse, qualified.Create());
+          inverted.Add(inverse, qualified.Create());
         }
       } else {
-        // Inverted unqualified statement.
-        inverted.AddLink(inversion->inverse, id);
+        // Output Inverted unqualified statement.
+        inverted.AddLink(inverse, id);
       }
       Frame fi = inverted.Create();
       Output(target_id, serial, fi);
@@ -238,6 +246,12 @@ class ItemReconciler : public task::FrameProcessor {
   Name n_exact_match_{names_, "P2888"};
   Name n_equivalent_class_{names_, "P1709"};
   Name n_equivalent_property_{names_, "P1628"};
+  Name n_parent_{names_, "P8810"};
+  Name n_father_{names_, "P22"};
+  Name n_mother_{names_, "P25"};
+  Name n_gender_{names_, "P21"};
+  Name n_male_{names_, "Q6581097"};
+  Name n_female_{names_, "Q6581072"};
 
   // Statistics.
   task::Counter *num_mapped_ids_ = nullptr;
