@@ -31,6 +31,7 @@ const n_human = frame("Q5");
 const n_occupation = frame("P106");
 const n_start_time = frame("P580");
 const n_described_at_url = frame("P973");
+const n_marriage_place = frame("P2842");
 
 const collection_properties = {
   1: frame("PMHI"),
@@ -44,6 +45,12 @@ const collection_properties = {
   10706: frame("PDFT40"),
 }
 
+function is_date(d) {
+  let results = new Array();
+  date_parser(d, results);
+  return results.length > 0;
+}
+
 function parse_date(d) {
   if (!d) return undefined;
   let results = new Array();
@@ -52,33 +59,66 @@ function parse_date(d) {
   return d;
 }
 
-function field_text(elem, selector) {
-  if (!elem) return;
-  if (typeof(selector) === 'number')  {
-    let node = elem.childNodes.item(selector);
-    return node?.wholeText?.trim();
-  } else if (selector) {
-    elem = elem.querySelector(selector);
+function parse_record(element) {
+  if (!element) return;
+  let fields = {};
+  for (let n of element.childNodes) {
+    if (n.nodeType == Node.ELEMENT_NODE) {
+      if (n.tagName == "SPAN") {
+        //console.log(n);
+        let id = n.getAttribute("data-item-id");
+        if (n.className == "event_date") {
+          fields.date = parse_date(n.innerText);
+        } else if (n.className == "event_place") {
+          let place = n.querySelector("span.map_callout_link");
+          if (place) fields.location = place.innerText?.trim();
+        } else if (id) {
+          let text = n.innerText?.trim();
+          fields.id = id;
+          if (text) fields.name = text;
+        } else {
+          let text = n.innerText?.trim();
+          if (text) fields.comment = text;
+        }
+      } else if (n.tagName == "DIV") {
+        if (n.className == "mapCalloutContainer") {
+          let place = n.querySelector("span.map_callout_link");
+          if (place) fields.location = place.innerText?.trim();
+        }
+      } else if (n.tagName == "A") {
+        let name = n.innerText?.trim();
+        if (name) fields.name = name;
+      }
+    } else if (n.nodeType == Node.TEXT_NODE) {
+      let text = n.wholeText?.trim();
+      if (text) {
+        if (is_date(text)) {
+          fields.date = parse_date(text);
+        } else {
+          fields.text = text;
+        }
+      }
+    }
   }
-  if (elem) {
-    elem = elem.querySelector("span.map_callout_link") || elem;
-    return elem?.innerText?.trim();
-  }
+  return fields;
 }
 
-function field_list(elem) {
+function parse_list(elem) {
   if (!elem) return;
   let values = [];
   for (let e of elem.children) {
     let id = e.getAttribute("data-item-id");
     if (!id) continue;
-    let name = e.innerText.trim();
-    values.push({id, name});
+    if (id.endsWith("-")) id = id.slice(0, -1);
+
+    let value = parse_record(e);
+    value.id = id;
+    values.push(value);
   }
   return values;
 }
 
-function field_link(elem) {
+function parse_source(elem) {
   if (!elem) return;
   elem = elem.querySelector("a");
   if (elem) {
@@ -143,49 +183,49 @@ export default class MyHeritagePlugin {
 
       // Populate bio.
       let bio = {};
-      bio.name = field_text(fields["NAME"]);
-      bio.married_name = field_text(fields["married-name"]);
-      bio.birth_name = field_text(fields["birth-name"]);
+      bio.name = parse_record(fields["NAME"])?.text;
+      bio.married_name = parse_record(fields["married-name"])?.text;
+      bio.birth_name = parse_record(fields["birth-name"])?.text;
 
-      bio.gender = field_text(fields["gender"]) ||
-                   field_text(fields["person-canonical-events.gender"])
+      bio.gender = parse_record(fields["gender"])?.text ||
+                   parse_record(fields["person-canonical-events.gender"])?.text;
 
-      bio.dob = field_text(fields["birth"], "span.event_date") ||
-                field_text(fields["birth-date"], "span.event_date") ||
-                field_text(fields["person-events.birth"], "span.event_date");
-      bio.pob = field_text(fields["birth"], "span.event_place");
-      if (!bio.dob) {
-        bio.dob = field_text(fields["BIRT"], 0);
-        bio.pob = field_text(fields["BIRT"], "div.mapCalloutContainer");
-      }
-      bio.dod = field_text(fields["death"], "span.event_date")  ||
-                field_text(fields["person-events.death"], "span.event_date");
-      bio.pod = field_text(fields["death"], "span.event_place");
-      if (!bio.dod) {
-        bio.dod = field_text(fields["DEAT"], 0);
-        bio.pod = field_text(fields["DEAT"], "div.mapCalloutContainer");
-      }
+      bio.birth = parse_record(fields["birth"]) ||
+                  parse_record(fields["person-events.birth"]) ||
+                  parse_record(fields["BIRT"]);
 
-      bio.occupation = field_text(fields["occupation"] || fields["OCCU"]);
-      bio.father = field_text(fields["father"]);
-      bio.mother = field_text(fields["mother"]);
-      bio.parents = field_list(fields["parents"]);
-      bio.spouse = field_text(fields["wife"]) ||
-                   field_text(fields["husband"]) ||
-                   field_text(fields["spouse"]);
-      bio.children = field_list(fields["children"]);
-      bio.siblings = field_list(fields["siblings"]) ||
-                     field_list(fields["sibling"]);
-      let marriage = fields["MARR"];
+      bio.death = parse_record(fields["death"]) ||
+                  parse_record(fields["person-events.death"]) ||
+                  parse_record(fields["DEAT"]);
+
+                  parse_record(fields["person-events.birth"]);
+
+      bio.occupation = parse_record(fields["occupation"]) ||
+                       parse_record(fields["OCCU"]);
+      bio.father = parse_record(fields["father"]);
+      bio.mother = parse_record(fields["mother"]);
+      bio.parents = parse_list(fields["parents"]);
+      bio.spouse = parse_record(fields["wife"]) ||
+                   parse_record(fields["husband"]) ||
+                   parse_record(fields["spouse"]);
+      bio.children = parse_list(fields["children"]);
+      bio.siblings = parse_list(fields["siblings"]) ||
+                     parse_list(fields["sibling"]);
+      let marriage = parse_record(fields["marriage"]) ||
+                     parse_record(fields["marriage-array0"]) ||
+                     parse_record(fields["MARR"]);
       if (marriage) {
-        let spouse = field_text(marriage, 0);
+        console.log("marriage", marriage);
+        let spouse = marriage.name || marriage.text;
         if (spouse) {
           if (spouse.startsWith("Ægteskab med: ")) spouse = spouse.slice(14);
+          if (spouse.startsWith("Ægtefælle: ")) spouse = spouse.slice(11);
           bio.spouse = spouse;
-          bio.married = field_text(marriage, 2);
         }
+        bio.married = marriage.date;
+        bio.wedding = marriage.location;
       }
-      bio.source = field_link(fields["source-link"] || fields["source"]);
+      bio.source = parse_source(fields["source-link"] || fields["source"]);
       console.log(bio);
 
       if (topic.has(n_name)) {
@@ -200,13 +240,13 @@ export default class MyHeritagePlugin {
       topic.put(n_instance_of, n_human);
       if (bio.gender == "Mand") topic.put(n_gender, n_male);
       if (bio.gender == "Kvinde") topic.put(n_gender, n_female);
-      topic.put(n_dob, parse_date(bio.dob));
-      topic.put(n_pob, bio.pob);
-      topic.put(n_dod, parse_date(bio.dod));
-      topic.put(n_pod, bio.pod);
+      topic.put(n_dob, bio.birth?.date);
+      topic.put(n_pob, bio.birth?.location);
+      topic.put(n_dod, bio.death?.date);
+      topic.put(n_pod, bio.death?.location);
 
-      topic.put(n_father, bio.father);
-      topic.put(n_mother, bio.mother);
+      topic.put(n_father, bio.father?.name);
+      topic.put(n_mother, bio.mother?.name);
       if (bio.parents) {
         for (let p of bio.parents) {
           topic.put(n_parent, p.name);
@@ -220,19 +260,20 @@ export default class MyHeritagePlugin {
       if (bio.spouse) {
         if (bio.married) {
           let marriage = store.frame();
-          marriage.add(n_is, bio.spouse);
-          marriage.add(n_start_time, parse_date(bio.married));
+          marriage.add(n_is, bio.spouse.name || bio.spouse);
+          marriage.add(n_start_time, bio.married);
+          if (bio.wedding) marriage.add(n_marriage_place, bio.wedding);
           topic.put(n_spouse, marriage);
         } else {
-          topic.put(n_spouse, bio.spouse);
+          topic.put(n_spouse, bio.spouse.name);
         }
       }
       if (bio.children) {
         for (let c of bio.children) {
-          topic.put(n_child, c.name);
+          topic.put(n_child, c.name || c.text);
         }
       }
-      topic.put(n_occupation, bio.occupation);
+      topic.put(n_occupation, bio.occupation?.name || bio.occupation?.text);
 
       if (bio.source) {
         let [xprop, identifier] = match_link(bio.source);
