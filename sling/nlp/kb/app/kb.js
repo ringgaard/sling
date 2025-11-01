@@ -961,11 +961,12 @@ const desktop_template = `
               <md-link id="ref" notab="1" newtab="1" external="1"></md-link>
             </div>
             <md-spacer></md-spacer>
-            <md-icon-button id="imgsearch" icon="image_search">
+            <md-icon-button id="imgsearch" icon="image_search"
+                            tooltip="Image search">
             </md-icon-button>
-            <md-icon-button id="code" icon="code">
+            <md-icon-button id="code" icon="code" tooltip="SLING code">
             </md-icon-button>
-            <md-icon-button id="tree" icon="lan">
+            <md-icon-button id="tree" icon="lan" tooltip="Family tree">
             </md-icon-button>
           </md-card-toolbar>
           <div><md-text id="description"></md-text></div>

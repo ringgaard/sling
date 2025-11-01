@@ -91,6 +91,7 @@ class ItemReconciler : public task::FrameProcessor {
     num_mapped_uris_ = task->GetCounter("mapped_uris");
     num_inverse_properties_ = task->GetCounter("inverse_properties");
     num_inverse_qualifiers_ = task->GetCounter("inverse_qualifiers");
+    num_inverse_parents_ = task->GetCounter("inverse_parents");
   }
 
   void Process(Slice key, uint64 serial, const Frame &frame) override {
@@ -162,10 +163,11 @@ class ItemReconciler : public task::FrameProcessor {
 
       // Convert parent to father or mother based on gender.
       Handle inverse = inversion->inverse;
-      if (inverse == n_parent_ && target != slot.value) {
+      if (inverse == n_parent_ && target == slot.value) {
         Handle gender = frame.GetHandle(n_gender_);
         if (gender == n_male_) inverse = n_father_.handle();
         if (gender == n_female_) inverse = n_mother_.handle();
+        num_inverse_parents_->Increment();
       }
 
       // Build inverted property frame.
@@ -258,6 +260,7 @@ class ItemReconciler : public task::FrameProcessor {
   task::Counter *num_mapped_uris_ = nullptr;
   task::Counter *num_inverse_properties_ = nullptr;
   task::Counter *num_inverse_qualifiers_ = nullptr;
+  task::Counter *num_inverse_parents_ = nullptr;
 };
 
 REGISTER_TASK_PROCESSOR("item-reconciler", ItemReconciler);

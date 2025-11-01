@@ -191,6 +191,7 @@ export default class MyHeritagePlugin {
                    parse_record(fields["person-canonical-events.gender"])?.text;
 
       bio.birth = parse_record(fields["birth"]) ||
+                  parse_record(fields["birth-date"]) ||
                   parse_record(fields["person-events.birth"]) ||
                   parse_record(fields["BIRT"]);
 

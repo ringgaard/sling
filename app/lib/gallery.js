@@ -291,7 +291,9 @@ export class PhotoGallery extends MdModal {
     let removed = new Set();
     for (let photo of this.photos) {
       if (photo.selected) {
-        selected.push(photo.nsfw ? "!" + photo.url : photo.url);
+        let url = photo.url.replace(/\s/g, "%20");
+        if (photo.nsfw) url = "!" + url;
+        selected.push(url);
         photo.selected = false;
         if (remove) removed.add(photo);
       }
@@ -299,7 +301,9 @@ export class PhotoGallery extends MdModal {
 
     if (selected.length == 0) {
       let photo = this.photos[this.current];
-      selected.push(photo.nsfw ? "!" + photo.url : photo.url);
+      let url = photo.url.replace(/\s/g, "%20");
+      if (photo.nsfw) url = "!" + url;
+      selected.push(url);
       if (remove) removed.add(photo);
     }
 
