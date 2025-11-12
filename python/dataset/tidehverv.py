@@ -257,17 +257,6 @@ class TidehvervContent extends MdCard {
       h.html`</p>Tidsskrifter, som ikke er offentligt tilgængelige, kan købes ved
              henvendelse til Lars Brinth
              (<a href="mailto:lrbrinth@outlook.dk">lrbrinth@outlook.dk)</a></p>`;
-      h.html`</p>
-        <p>Efterlysning! Vi mangler stadig et enkelt tidsskrift,
-        for at arkivet er komplet:</p>
-        <ul>
-          <li>Tidehverv 92. årgang nr. 2, februar 2018 (p. 21-36)</li>
-        </ul>
-        <p>Hvis du ligger inde med dette nummer, vil vi være taknemmelige,
-        hvis du vil kontakte
-        <a href="https://tidehverv.dk">tidehverv.dk</a>,
-        så vi kan aftale scanning af disse. Tidsskrifter kan scannes uden at
-        beskadige originalen.</p>`;
     } else if (type == "results") {
       for (let hit of state.hits) {
         h.html`
