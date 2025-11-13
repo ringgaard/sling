@@ -71,7 +71,8 @@ bb_para_start = [
   "Elev",
   "Dimitteret",
   "Afgang",
-  "Adresse:"
+  "Adresse:",
+  "Sommeradresse:",
 ]
 
 def escape(s):

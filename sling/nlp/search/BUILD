@@ -86,6 +86,7 @@ cc_library(
     ":search-index",
     "//sling/base",
     "//sling/nlp/document:phrase-tokenizer",
+    "//sling/string:ctype",
     "//sling/util:unicode",
     "//sling/util:top",
   ],

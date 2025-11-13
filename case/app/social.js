@@ -400,6 +400,14 @@ let xrefs = [
     property: frame("P12039"),
   },
   {
+    pattern: /^https:\/\/fanvue\.com\/(.+)/,
+    property: frame("P10716"),
+  },
+  {
+    pattern: /^https:\/\/playbill\.com\/person\/(.+)/,
+    property: frame("P6132"),
+  },
+  {
     pattern: /^https:\/\/www\.familysearch\.org\/tree\/person\/details\/(.+)/,
     property: frame("P2889"),
   },

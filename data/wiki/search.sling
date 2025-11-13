@@ -27,7 +27,7 @@
     "a", "after", "aka", "an", "and", "are", "as", "at", "also",
     "be", "by", "between",
     "for", "from",
-    "human", "have", "her", "has", "he", "he's", "his",
+    "have", "her", "has", "he", "he's", "his",
     "in", "is", "it", "i", "im", "its",
     "may",
     "no",
@@ -80,7 +80,7 @@
     "på",
     "til",
     "under",
-    "var",
+    "var", "ved",
   ]
 
   ; Indexed properties.

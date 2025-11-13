@@ -19,6 +19,7 @@
 #include "sling/base/types.h"
 #include "sling/nlp/document/phrase-tokenizer.h"
 #include "sling/nlp/search/search-index.h"
+#include "sling/string/ctype.h"
 #include "sling/util/top.h"
 
 namespace sling {
@@ -26,8 +27,10 @@ namespace nlp {
 
 class SearchEngine {
  public:
-  // Query hit.
+  typedef SearchIndex::Term Term;
   typedef SearchIndex::Document Document;
+
+  // Query hit.
   struct Hit {
     Hit(const Document *document) : document(document), score(0) {}
     Text id() const { return document->id(); }
@@ -44,6 +47,108 @@ class SearchEngine {
 
   // Search results for selecting top-k results.
   typedef Top<Hit, HitCompare> Hits;
+
+  // Search query.
+  enum QueryType { EXCLUDE, OR, AND, PHRASE, TERMS };
+
+  class Parser {
+   public:
+    Parser(Text query) : query(query), pos(0) {}
+
+    char current() { return more() ? query[pos] : 0; }
+
+    void next() { pos++; }
+
+    void skipws() {
+      while (more() && ascii_isblank(query[pos])) pos++;
+    }
+
+    Text phrase() {
+      int start = pos;
+      while (more() && query[pos] != '"') pos++;
+      return query.substr(start, pos - start);
+    }
+
+    Text terms() {
+      int start = pos;
+      while (more()) {
+        char ch = current();
+        if (ch == '!' || ch == '\\' ||
+            ch == '&' || ch == '|' ||
+            ch == '(' || ch == ')') {
+          break;
+        }
+        pos++;
+      }
+      return query.substr(start, pos - start);
+    }
+
+    Text rest() { return query.substr(pos); }
+
+    bool more() { return pos < query.size(); }
+
+   private:
+    Text query;
+    int pos;
+
+  };
+
+  struct Query {
+    Query(QueryType type, Query *left = nullptr, Query *right = nullptr)
+      : type(type), left(left), right(right) {}
+
+    ~Query() {
+      delete left;
+      delete right;
+    }
+
+    QueryType type;
+    Query *left;
+    Query *right;
+    string terms;
+    std::vector<uint64> fingerprints;
+  };
+
+  // Posting list with document ids.
+  struct Matches {
+    // Initialize posting list from repository term.
+    Matches(const Term *term = nullptr) : term(term) {}
+
+    // Start of match list.
+    const uint32 *begin() {
+      return term != nullptr ? term->documents() : docids.data();
+    }
+
+    // End of match list.
+    const uint32 *end() {
+      if (term != nullptr) {
+        return term->documents() + term->num_documents();
+      } else {
+        return docids.data() + docids.size();
+      }
+    }
+
+    // Return size of posting list.
+    int size() const { return term ? term->num_documents() : docids.size();}
+
+    // Check if posting list is empty.
+    bool empty() const { return size() == 0; }
+
+    // Swap this posting list with another.
+    void swap(Matches &other) {
+      std::swap(term, other.term);
+      docids.swap(other.docids);
+    }
+
+    // Add match.
+    void add(uint32 docid) { docids.push_back(docid); }
+
+    // Repository term with matching documents.
+    const Term *term = nullptr;
+
+    // List of matching document ids.
+    std::vector<uint32> docids;
+  };
 
   // Search results.
   class Results {
@@ -87,6 +192,18 @@ class SearchEngine {
   // Search for matches in search index and put the k-best matches into the
   // result list. Returns the total number of matches.
   int Search(Text query, Results *results);
+
+  // Parse query
+  Query *ParseQuery(Parser *parser);
+  Query *ParseUnion(Parser *parser);
+  Query *ParseIntersection(Parser *parser);
+  Query *ParseFactor(Parser *parser);
+  void ExtractTerms(Query *query, std::vector<uint16> *terms);
+  void QueryToString(Query *query, string *str);
+
+  // Find documents matching query.
+  void Match(Query *query, Matches *matches);
+  void MatchTerms(Query *query, Matches *matches);
 
   // Check if search index has been loaded.
   bool loaded() const { return index_.loaded(); }
