@@ -408,6 +408,10 @@ let xrefs = [
     property: frame("P6132"),
   },
   {
+    pattern: /^https:\/\/fashionmodeldirectory\.com\/models\/(.+)/,
+    property: frame("P2266"),
+  },
+  {
     pattern: /^https:\/\/www\.familysearch\.org\/tree\/person\/details\/(.+)/,
     property: frame("P2889"),
   },

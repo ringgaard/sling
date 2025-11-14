@@ -163,10 +163,17 @@ class ItemReconciler : public task::FrameProcessor {
 
       // Convert parent to father or mother based on gender.
       Handle inverse = inversion->inverse;
-      if (inverse == n_parent_ && target == slot.value) {
+      if (inverse == n_parent_) {
+        // Skip parent inversion if qualified.
+        if (target != slot.value) continue;
         Handle gender = frame.GetHandle(n_gender_);
-        if (gender == n_male_) inverse = n_father_.handle();
-        if (gender == n_female_) inverse = n_mother_.handle();
+        if (gender == n_male_) {
+          inverse = n_father_.handle();
+        } else if (gender == n_female_) {
+          inverse = n_mother_.handle();
+        } else {
+          continue;
+        }
         num_inverse_parents_->Increment();
       }
 
