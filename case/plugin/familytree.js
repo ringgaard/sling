@@ -447,6 +447,7 @@ class FamilyTree {
           s.generation = person.generation;
           s.update_distance(person.distance + 1);
           person.add_partner(s);
+          s.add_partner(person);
           if (!visited.has(s)) queue.push(s);
         }
       }
@@ -549,12 +550,39 @@ class FamilyTree {
       generation.reindex();
     }
 
-    // Align parents and children.
+    // Align parents, partners and children.
     for (let iteration = 0; iteration < this.iterations; iteration++) {
       let converged = true;
 
       // Order parents and children.
       for (let generation of this.generations.values()) {
+        // Move partners together.
+        for (let i = 0; i < generation.persons.length; ++i) {
+          let p1 = generation.persons[i];
+          for (let j = i + 1; j <  generation.persons.length; ++j) {
+            let p2 = generation.persons[j];
+            if (!p1.ispartner(p2)) continue;
+
+            // Check if partners are adjacent.
+            let adjacent = i;
+            for (let k = i + 1; k < j; ++k) {
+              let p3 = generation.persons[k];
+              if (!p1.ispartner(p3) || !p2.ispartner(p3)) {
+                adjacent = k;
+              }
+            }
+
+            if (adjacent != i) {
+              //console.log(`partners apart: ${p1.name()} and ${p2.name()}`);
+              move(generation.persons, i, adjacent);
+              generation.reindex();
+              converged = false;
+              break;
+            }
+          }
+
+          if (!converged) break;
+        }
 
         // Swap children based on parent order.
         for (let i = 0; i < generation.persons.length; ++i) {
@@ -571,8 +599,11 @@ class FamilyTree {
               swap(generation.persons, p1.index, p2.index);
               generation.reindex();
               converged = false;
+              break;
             }
           }
+
+          if (!converged) break;
         }
 
 
@@ -611,8 +642,11 @@ class FamilyTree {
               }
               generation.reindex();
               converged = false;
+              break;
             }
           }
+
+          if (!converged) break;
         }
       }
       if (converged) {
