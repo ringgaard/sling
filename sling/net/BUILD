@@ -73,7 +73,9 @@ cc_library(
     ":http-server",
     ":http-utils",
     "//sling/base",
+    "//sling/base:clock",
     "//sling/db:dbclient",
+    "//sling/string:strcat",
     "//sling/util:mutex",
   ],
 )

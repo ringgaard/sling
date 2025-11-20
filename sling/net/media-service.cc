@@ -14,9 +14,11 @@
 
 #include "sling/net/media-service.h"
 
+#include "sling/base/clock.h"
 #include "sling/db/dbclient.h"
 #include "sling/net/http-server.h"
 #include "sling/net/http-utils.h"
+#include "sling/string/strcat.h"
 
 namespace sling {
 
@@ -64,11 +66,14 @@ void MediaService::Handle(HTTPRequest *request, HTTPResponse *response) {
   // Retrieve media from database.
   MutexLock lock(&mu_);
   DBRecord media;
+  Clock clock;
+  clock.start();
   Status st = db_.Get(path, &media);
   if (!st) {
     response->SendError(500, "Internal Server Error", st.message());
     return;
   }
+  clock.stop();
 
   // Return error or redirect if file not found.
   size_t size = media.value.size();
@@ -107,6 +112,10 @@ void MediaService::Handle(HTTPRequest *request, HTTPResponse *response) {
     response->set_content_type(mimetype);
   }
 
+  // Set timing header.
+  string timing = StrCat("db;dur=", clock.ms());
+  response->Set("Server-Timing", timing.c_str());
+
   // Do not return file content if only headers were requested.
   if (method == HTTP_HEAD) return;
 
@@ -117,4 +126,3 @@ void MediaService::Handle(HTTPRequest *request, HTTPResponse *response) {
 }
 
 }  // namespace sling
-
