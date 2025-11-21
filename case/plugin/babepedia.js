@@ -204,7 +204,7 @@ export default class BabepediaPlugin {
             topic.put(n_eye_color, color);
           }
         } else if (field == "Years active:") {
-          let m = value.match(/(\d+) - (\d+|present)/);
+          let m = value.match(/(\d+)\s*-\s*(\d+|present)/);
           if (m) {
             topic.put(n_work_peroid_start, parseInt(m[1]));
             if (m[2] != "present") {

@@ -92,7 +92,8 @@ class UrlDownload:
           try:
             chunk = r.read(chunksize)
           except urllib3.exceptions.ReadTimeoutError:
-            log.info(name, "timeout", bytes, "of", content_length)
+            log.info(name, "HTTP timeout", bytes, "of", content_length)
+            r.close()
             r = http.request('GET', url, preload_content=False, timeout=60,
                              headers={"Range": "bytes=%s-" % bytes})
             continue
