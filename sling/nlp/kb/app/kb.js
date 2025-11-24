@@ -214,7 +214,7 @@ class KbSearchBox extends Component {
       if (!search) {
         items.push(new MdSearchResult({
           text: "more...",
-          description: 'search for "' + query + '" 🔎',
+          description: 'search for items containing "' + query + '" 🔎',
           query: query,
         }));
       }
