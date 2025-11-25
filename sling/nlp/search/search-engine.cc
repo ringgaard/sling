@@ -263,7 +263,7 @@ void SearchEngine::Match(Query *query, Matches *matches) {
           matches->add(*l);
           l++;
         }
-        while (r < lend) {
+        while (r < rend) {
           matches->add(*r);
           r++;
         }
