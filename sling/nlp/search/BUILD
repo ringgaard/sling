@@ -113,7 +113,7 @@ cc_binary(
     "//sling/file:recordio",
     "//sling/net:http-server",
     "//sling/util:json",
-    "//sling/util:mutex",
+    "//sling/util:rwlock",
   ],
 )
 

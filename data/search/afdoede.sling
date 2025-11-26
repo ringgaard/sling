@@ -1,0 +1,43 @@
+{
+  ; Term normalization.
+  normalization: "clnpqD"
+  dictionary_aliases: true
+
+  ; Languages for selecting dictionary terms.
+  dictionary_languages: [
+    /lang/en ; English
+    /lang/da ; Danish
+    /lang/de ; German
+  ]
+
+  ; Languages for index terms.
+  index_languages: [
+    /lang/en ; English
+    /lang/da ; Danish
+    /lang/de ; German
+  ]
+
+  ; Stopwords that are not indexed.
+  stopwords: [
+    ; Danish
+    "ad", "af",
+    "de", "dem", "den", "der", "det", "du",
+    "eller", "en", "er", "et",
+    "i", "ikke",
+    "og", "over",
+    "på",
+    "til",
+    "under",
+    "var",
+  ]
+
+  ; Indexed properties.
+  indexed: {
+    name: name,
+    description: text,
+    summary: text,
+
+    P569: date ; date of birth
+    P570: date ; date of death
+  }
+}

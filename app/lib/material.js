@@ -1280,6 +1280,8 @@ export class MdText extends Component {
 Component.register(MdText);
 
 export class MdLink extends Component {
+  visible() { return this.state && this.state.url; }
+
   render() {
     if (!this.state) return "";
     let url = this.state.url;

@@ -24,7 +24,7 @@
 #include "sling/nlp/search/search-engine.h"
 #include "sling/nlp/search/search-protocol.h"
 #include "sling/util/json.h"
-#include "sling/util/mutex.h"
+#include "sling/util/rwlock.h"
 
 using namespace sling;
 
@@ -121,7 +121,7 @@ class SearchService {
 
     // Output loaded shards.
     JSON::Array *shards = json.AddArray("shards");
-    MutexLock lock(&mu_);
+    SharedLock lock(&rw_);
     for (auto *shard : shards_) {
       JSON::Object *s = shards->AddObject();
       s->Add("name", shard->name);
@@ -168,7 +168,7 @@ class SearchService {
 
     // Find search shard.
     Clock clock;
-    MutexLock lock(&mu_);
+    SharedLock lock(&rw_);
     SearchShard *shard = Find(tag);
     if (shard == nullptr) {
       response->SendError(400, nullptr, "Search shard not loaded");
@@ -220,7 +220,7 @@ class SearchService {
       return;
     }
 
-    MutexLock lock(&mu_);
+    ExclusiveLock lock(&rw_);
     if (Find(name) != nullptr) {
       response->SendError(400, nullptr, "Search shard already loaded");
       return;
@@ -236,7 +236,7 @@ class SearchService {
     URLQuery query(request->query());
     string name = query.Get("name").str();
 
-    MutexLock lock(&mu_);
+    ExclusiveLock lock(&rw_);
     SearchShard *shard = Find(name);
     if (shard == nullptr) {
       response->SendError(400, nullptr, "Search shard not loaded");
@@ -256,7 +256,7 @@ class SearchService {
     int snippet = query["snippet"].i(0);
 
     // Find search shard.
-    MutexLock lock(&mu_);
+    SharedLock lock(&rw_);
     SearchShard *shard = Find(tag);
     if (shard == nullptr) return Status(ENOENT, "Unknown search index");
 
@@ -291,7 +291,7 @@ class SearchService {
   }
 
   bool Fetch(IOBuffer *request, IOBuffer *response) {
-    MutexLock lock(&mu_);
+    SharedLock lock(&rw_);
     Record record;
     SearchShard *shard = nullptr;
     int num_items = 0;
@@ -350,8 +350,8 @@ class SearchService {
   // Loaded search shards.
   std::vector<SearchShard *> shards_;
 
-  // Mutex for accessing global server state.
-  Mutex mu_;
+  // Read/write lock for accessing global server state.
+  RWLock rw_;
 };
 
 // Search session that uses the SLING search protocol.

@@ -122,6 +122,14 @@ cc_library(
 )
 
 cc_library(
+  name = "rwlock",
+  hdrs = ["rwlock.h"],
+  copts = [
+    "-pthread",
+  ],
+)
+
+cc_library(
   name = "queue",
   hdrs = ["queue.h"],
 )

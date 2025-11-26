@@ -70,6 +70,8 @@ class SearchWorkflow:
 
   def custom_search_dictionary(self):
     """Resource for custom search dictionary repository."""
+    fn = flags.arg.custom_search_dictionary
+    if not fn: return None
     return self.wf.resource(flags.arg.custom_search_dictionary,
                             format="repository")
 
