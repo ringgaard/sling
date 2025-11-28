@@ -133,7 +133,7 @@ class KnowledgeService {
 
   // Get item from id. This also resolves cross-reference and loads offline
   // items from the item database.
-  Handle RetrieveItem(Store *store, Text id, bool offline = true) const;
+  Handle RetrieveItem(Store *store, Text id) const;
 
   // Return representative image URL for item.
   string GetImage(const Frame &item);
@@ -144,6 +144,9 @@ class KnowledgeService {
  private:
   // Check if item is indexable.
   bool Indexable(const Frame &item) const;
+
+  // Check if item is indexable.
+  bool PossibleId(Text query) const;
 
   // Fetch properties.
   void FetchProperties(const Frame &item, Item *info);

@@ -367,8 +367,7 @@ void KnowledgeService::Register(HTTPServer *http) {
   app_.Register(http);
 }
 
-Handle KnowledgeService::RetrieveItem(Store *store, Text id,
-                                      bool offline) const {
+Handle KnowledgeService::RetrieveItem(Store *store, Text id) const {
   // Look up item in knowledge base.
   Handle handle = store->LookupExisting(id);
   if (!handle.IsNil() && store->IsProxy(handle)) handle = Handle::nil();
@@ -381,7 +380,7 @@ Handle KnowledgeService::RetrieveItem(Store *store, Text id,
     }
   }
 
-  if (handle.IsNil() && offline && items_ != nullptr) {
+  if (handle.IsNil() && items_ != nullptr) {
     // Try looking up item in the offline item records.
     MutexLock lock(&mu_);
     Record rec;
@@ -392,7 +391,7 @@ Handle KnowledgeService::RetrieveItem(Store *store, Text id,
     }
   }
 
-  if (handle.IsNil() && offline && itemdb_ != nullptr) {
+  if (handle.IsNil() && itemdb_ != nullptr) {
     // Try looking up item in the offline item database.
     MutexLock lock(&mu_);
     DBRecord rec;
@@ -404,7 +403,7 @@ Handle KnowledgeService::RetrieveItem(Store *store, Text id,
     }
   }
 
-  if (handle.IsNil() && offline && search_server_.connected()) {
+  if (handle.IsNil() && search_server_.connected()) {
     // Try looking up item in search backend.
     std::vector<Text> itemids;
     itemids.push_back(id);
@@ -655,13 +654,15 @@ void KnowledgeService::HandleQuery(HTTPRequest *request,
 
   // Check for exact match with id.
   Handles results(store);
-  Handle idmatch = RetrieveItem(store, query, fullmatch);
-  if (!idmatch.IsNil()) {
-    Frame item(store, idmatch);
-    if (item.valid()) {
-      Builder match(store);
-      GetStandardProperties(item, &match, true);
-      results.push_back(match.Create().handle());
+  if (PossibleId(query)) {
+    Handle idmatch = RetrieveItem(store, query);
+    if (!idmatch.IsNil()) {
+      Frame item(store, idmatch);
+      if (item.valid()) {
+        Builder match(store);
+        GetStandardProperties(item, &match, true);
+        results.push_back(match.Create().handle());
+      }
     }
   }
 
@@ -766,7 +767,7 @@ void KnowledgeService::HandleSearch(HTTPRequest *request,
     if (fetchable) {
       std::vector<Text> itemids;
       for (int i = 0; i < hits->size(); ++i) {
-       const JSON &hit = (*hits)[i];
+        const JSON &hit = (*hits)[i];
         if (!hit.valid()) continue;
         Text docid = hit["docid"].t();
         Handle item = store->LookupExisting(docid);
@@ -894,6 +895,14 @@ void KnowledgeService::HandleGetItem(HTTPRequest *request,
 bool KnowledgeService::Indexable(const Frame &item) const {
   if (!item.valid()) return false;
   return item.Has(n_topic_);
+}
+
+bool KnowledgeService::PossibleId(Text query) const {
+  if (!query.empty()) {
+    if (query[0] == 'Q' || query[0] == 'Q') return true;
+    if (query.starts_with("t/")) return true;
+  }
+  return false;
 }
 
 void KnowledgeService::FetchProperties(const Frame &item, Item *info) {
@@ -1547,16 +1556,14 @@ void KnowledgeService::HandleGetStubs(HTTPRequest *request,
     Handle handle = frames.get(i);
     if (store->IsProxy(handle)) {
       // Try to resolve xrefs and retrieve offline item.
-      handle = RetrieveItem(store, store->FrameId(handle), true);
+      handle = RetrieveItem(store, store->FrameId(handle));
     }
     if (handle.IsNil()) continue;
 
     Frame item(store, handle);
     Builder b(store);
-    b.AddId(item.Id());
-    if (handle != frames.get(i)) {
-      b.AddId(store->FrameId(frames.get(i)));
-    }
+    b.AddId(store->FrameId(frames.get(i)));
+    if (handle != frames.get(i)) b.AddIs(item.Id());
     Handle name = item.GetHandle(n_name_);
     if (!name.IsNil()) b.Add(n_name_, name);
     Handle description = item.GetHandle(n_description_);

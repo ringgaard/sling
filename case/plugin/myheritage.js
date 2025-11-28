@@ -188,21 +188,25 @@ export default class MyHeritagePlugin {
       bio.birth_name = parse_record(fields["birth-name"])?.text;
 
       bio.gender = parse_record(fields["gender"])?.text ||
+                   parse_record(fields["0_gender"])?.text
                    parse_record(fields["person-canonical-events.gender"])?.text;
 
       bio.birth = parse_record(fields["birth"]) ||
                   parse_record(fields["birth-date"]) ||
                   parse_record(fields["person-events.birth"]) ||
+                  parse_record(fields["2_birth"]) ||
                   parse_record(fields["BIRT"]);
 
       bio.death = parse_record(fields["death"]) ||
                   parse_record(fields["person-events.death"]) ||
-                  parse_record(fields["DEAT"]);
-
-                  parse_record(fields["person-events.birth"]);
+                  parse_record(fields["DEAT"]) ||
+                  parse_record(fields["person-events.birth"]) ||
+                  parse_record(fields["7_death"]);
 
       bio.occupation = parse_record(fields["occupation"]) ||
-                       parse_record(fields["OCCU"]);
+                       parse_record(fields["OCCU"]) ||
+                       parse_record(fields["3_occupation"]);
+
       bio.father = parse_record(fields["father"]);
       bio.mother = parse_record(fields["mother"]);
       bio.parents = parse_list(fields["parents"]);
