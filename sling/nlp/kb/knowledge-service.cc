@@ -899,7 +899,7 @@ bool KnowledgeService::Indexable(const Frame &item) const {
 
 bool KnowledgeService::PossibleId(Text query) const {
   if (!query.empty()) {
-    if (query[0] == 'Q' || query[0] == 'Q') return true;
+    if (query[0] == 'Q' || query[0] == 'P') return true;
     if (query.starts_with("t/")) return true;
   }
   return false;

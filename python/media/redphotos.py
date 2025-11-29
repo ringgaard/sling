@@ -367,7 +367,12 @@ for key, value in postings:
   nsfw = True if posting[n_over_18] else None
 
   # Check for personal subreddit.
+  # Treat cross-posts from personal subreddit as personal posts.
   itemid = person_subreddits.get(sr)
+  xpost_list = posting[n_crosspost];
+  if itemid is None and xpost_list is not None and len(xpost_list) == 1:
+    itemid = person_subreddits.get(xpost_list[0][n_subreddit])
+
   general = sr in general_subreddits or flags.arg.all
   if itemid is None and not general: continue
 

@@ -83,6 +83,7 @@ var sfw = false;
 var hits = false;
 var xpost = false;
 var general = false;
+var unseen = false;
 mediadb.enabled = false;
 
 function current_date() {
@@ -110,6 +111,7 @@ class PhotoReportApp extends MdApp {
     if (qs.get("hits") == "1") hits = true;
     if (qs.get("xpost") == "1") xpost = true;
     if (qs.get("general") == "1") general = true;
+    if (qs.get("unseen") == "1") unseen = true;
 
     // Retrieve report.
     let url = `https://ringgaard.com/reddit/report/${date}.json`;
@@ -574,6 +576,8 @@ class SubredditCard extends MdCard {
       if (sfw && item.posting.over_18) continue;
       if (xpost && !item.posting.crosspost_parent_list) continue;
       if (general && !item.query) continue;
+      let seen = (item.duplicates || 0) + (item.bigger || 0);
+      if (unseen && seen == item.photos) continue;
       item.more = this.more(items, item);
       h.push(new RedditPosting(item));
       empty = false;
