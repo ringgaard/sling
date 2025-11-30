@@ -654,7 +654,7 @@ void KnowledgeService::HandleQuery(HTTPRequest *request,
 
   // Check for exact match with id.
   Handles results(store);
-  if (PossibleId(query)) {
+  if (fullmatch || PossibleId(query)) {
     Handle idmatch = RetrieveItem(store, query);
     if (!idmatch.IsNil()) {
       Frame item(store, idmatch);
@@ -898,9 +898,18 @@ bool KnowledgeService::Indexable(const Frame &item) const {
 }
 
 bool KnowledgeService::PossibleId(Text query) const {
-  if (!query.empty()) {
-    if (query[0] == 'Q' || query[0] == 'P') return true;
-    if (query.starts_with("t/")) return true;
+  if (query.empty()) return false;
+  if (query[0] == 'Q') {
+    for (int i = 1; i < query.size(); ++i) {
+       if (query[i] < '0' || query[i] > '9') return false;
+    }
+    return true;
+  }
+  if (query[0] == 'P') {
+    return query.find('/') != -1;
+  }
+  if (query.starts_with("t/")) {
+    return true;
   }
   return false;
 }

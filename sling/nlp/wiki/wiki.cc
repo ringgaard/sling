@@ -249,6 +249,9 @@ void AuxFilter::Init(Store *store) {
     "Q12795622",  // low-mass star
     "Q6999",      // astronomical object
 
+    "Q11446",     // ship
+    "Q105999",    // cargo ship
+
     nullptr,
   };
   for (const char **type = aux_item_types; *type; ++type) {
