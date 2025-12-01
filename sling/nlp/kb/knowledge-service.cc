@@ -911,6 +911,9 @@ bool KnowledgeService::PossibleId(Text query) const {
   if (query.starts_with("t/")) {
     return true;
   }
+  if (query.find(':') != -1) {
+    return true;
+  }
   return false;
 }
 

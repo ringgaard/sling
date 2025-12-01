@@ -651,10 +651,10 @@ class OverviewCard extends MdCard {
     let total = s.known + s.unknown;
     let coverage = pct(s.known, total);
 
-    let total_ex_osc = total - (s.oscmatched + s.oscunmatched);
-    let known_ex_osc = s.known - s.oscmatched;
-    let unknown_ex_osc = s.unknown - s.oscunmatched;
-    let coverage_ex_osc = pct(known_ex_osc, total_ex_osc);
+    let total_clean = total - (s.noisy_matched + s.noisy_unmatched);
+    let known_clean = s.known - s.noisy_matched;
+    let unknown_clean = s.unknown - s.noisy_unmatched;
+    let coverage_clean = pct(known_clean, total_clean);
 
     let total_photos = s.photos + s.dups;
     let repeats = total_photos > 0 ? (s.dups / total_photos * 100) | 0 : 0;
@@ -669,13 +669,14 @@ class OverviewCard extends MdCard {
       ${s.known} known,
       ${s.unknown} unknown,
       ${coverage}% coverage
-      (${unknown_ex_osc} unknown without OldSchoolCool, ${coverage_ex_osc}%)<br>
+      (${unknown_clean} unknown clean, ${coverage_clean}%)<br>
 
       ${s.profiles} profiles,
       ${s.profiles - s.unchanged} changed,
       ${s.unchanged} unchanged<br>
 
       ${s.reposts} reposts,
+      ${s.xposts} cross-posts,
       ${s.removed} removed,
       ${s.selfies} selfies,
       ${s.errors} errors
@@ -706,11 +707,6 @@ class SubredditList extends Component {
     let cards = [];
     let statistics = this.state["statistics"];
     if (statistics) {
-      let osc = subreddits["OldSchoolCool"];
-      if (osc) {
-        statistics.oscmatched = osc.matched.length;
-        statistics.oscunmatched = osc.unmatched.length;
-      }
       cards.push(new OverviewCard(statistics));
     }
     for (let name of srnames) {

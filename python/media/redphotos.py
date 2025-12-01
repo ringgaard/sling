@@ -164,6 +164,7 @@ person_subreddits = {}
 general_subreddits = set()
 skipped_subreddits = set()
 aic_subreddits = set()
+noisy_subreddits = set()
 
 if flags.arg.subreddits:
   for fn in flags.arg.subreddits.split(","):
@@ -180,6 +181,9 @@ if flags.arg.subreddits:
         elif itemid == "aic":
           general_subreddits.add(sr)
           aic_subreddits.add(sr)
+        elif itemid == "noisy":
+          general_subreddits.add(sr)
+          noisy_subreddits.add(sr)
         elif itemid is None:
           general_subreddits.add(sr)
         else:
@@ -308,6 +312,9 @@ num_reposts = 0
 num_removed = 0
 num_selfies = 0
 num_errors = 0
+num_xposts = 0
+num_noisy_matched = 0
+num_noisy_unmatched = 0
 
 if flags.arg.posting:
   postings = [(flags.arg.posting, redditdb[flags.arg.posting])]
@@ -369,9 +376,13 @@ for key, value in postings:
   # Check for personal subreddit.
   # Treat cross-posts from personal subreddit as personal posts.
   itemid = person_subreddits.get(sr)
-  xpost_list = posting[n_crosspost];
-  if itemid is None and xpost_list is not None and len(xpost_list) == 1:
-    itemid = person_subreddits.get(xpost_list[0][n_subreddit])
+  if itemid is None:
+    xpost_list = posting[n_crosspost]
+    if xpost_list is not None and len(xpost_list) == 1:
+      xp = xpost_list[0][n_subreddit]
+      itemid = person_subreddits.get(xp)
+      print("xpost", sr, xp, itemid)
+      if itemid is not None: num_xposts += 1
 
   general = sr in general_subreddits or flags.arg.all
   if itemid is None and not general: continue
@@ -385,7 +396,7 @@ for key, value in postings:
 
   # Check for name match in general subreddit.
   query = title
-  if general:
+  if general and itemid is None:
     # Skip photos with multiple persons.
     skip = False
     for conj in conjunctions:
@@ -545,6 +556,12 @@ for key, value in postings:
       num_profiles += 1
     num_photos += profile.copy(posting_profile)
 
+  if sr in noisy_subreddits:
+    if itemid is None:
+      num_noisy_unmatched += 1
+    else:
+      num_noisy_matched += 1
+
   print(sr, key, itemid, title, "NSFW" if nsfw else "", url)
 
 # Write updated profiles.
@@ -564,6 +581,9 @@ report["statistics"] = {
  "known": num_known,
  "unknown": num_unknown,
  "reposts": num_reposts,
+ "xposts": num_xposts,
+ "noisy_unmatched": num_noisy_unmatched,
+ "noisy_matched": num_noisy_matched,
  "removed": num_removed,
  "selfies": num_selfies,
  "errors": num_errors,
