@@ -47,8 +47,15 @@ function date(d) {
 
 class Person {
   constructor(topic) {
-    this.topic = topic;
-    this.base = topic.link();
+    this.topics = [topic];
+    let i = 0;
+    while (i < this.topics.length) {
+      let t = this.topics[i++];
+      for (let l of topic.links()) {
+        this.add_topic(l);
+      }
+    }
+
     this.parents = [];
     this.children = [];
     this.partners = [];
@@ -58,7 +65,7 @@ class Person {
   }
 
   id() {
-    return this.topic.id;
+    return this.topics[0].id;
   }
 
   name() {
@@ -86,9 +93,10 @@ class Person {
   }
 
   property(prop) {
-    let value = store.resolve(this.topic.get(prop));
-    if (!value && this.base) value = store.resolve(this.base.get(prop));
-    return value;
+    for (let t of this.topics) {
+      let value = store.resolve(t.get(prop));
+      if (value) return value;
+    }
   }
 
   description() {
@@ -111,29 +119,30 @@ class Person {
   }
 
   relatives(kinship) {
-    let it = function* (topic, base) {
-      for (let r of topic.all(kinship)) {
-        let f = store.resolve(r);
-        if (typeof(f) === 'string') continue;
-        if (f != r && r.has(n_kinship)) continue;
-        yield f;
-      }
-      if (base) {
-        for (let r of base.all(kinship)) {
+    let it = function* (person) {
+      let seen = new Set();
+      for (let t of person.topics) {
+        for (let r of t.all(kinship)) {
           let f = store.resolve(r);
           if (typeof(f) === 'string') continue;
           if (f != r && r.has(n_kinship)) continue;
+          if (seen.has(f)) continue;
+          seen.add(f);
           yield f;
         }
       }
     };
-    return it(this.topic, this.base);
+    return it(this);
   }
 
   update_distance(distance) {
     if (this.distance === undefined || distance < this.distance) {
       this.distance = distance;
     }
+  }
+
+  add_topic(topic) {
+    if (!this.topics.includes(topic)) this.topics.push(topic);
   }
 
   add_parent(person) {
@@ -327,14 +336,11 @@ class FamilyTree {
   person(topic, existing) {
     let p = this.persons.get(topic);
     if (p) return p;
-    let redir = topic.get(n_is);
-    if (redir) {
-      let base = frame(redir);
-      p = this.persons.get(base);
+    for (let r of topic.links()) {
+      let p = this.persons.get(r);
       if (p) {
-        p.topic = topic;
-        p.base = base;
-        this.persons.set(p.topic, p);
+        p.add_topic(r);
+        this.persons.set(r, p);
         return p;
       }
     }
@@ -346,14 +352,18 @@ class FamilyTree {
     if (p) return p;
 
     p = new Person(topic);
-    this.persons.set(topic, p);
-    if (p.base) this.persons.set(p.base, p);
+    for (let t of p.topics) {
+      this.persons.set(t, p);
+    }
     return p;
   }
 
   merge(source, target) {
-    target.base = source.topic;
-    this.persons.set(source.topic, target);
+    for (let t of source.topics) {
+      target.add_topic(t);
+      this.persons.set(t, target);
+    }
+
     for (let p of source.parents) target.add_parent(p);
     for (let c of source.children) target.add_child(c);
     for (let p of source.partners) target.add_partner(p);
@@ -380,33 +390,26 @@ class FamilyTree {
       let collector = new ItemCollector(store);
       collector.idmap = this.idmap;
       for (let j = i; j < queue.length; ++j) {
-        collector.add(queue[j].topic);
-        collector.add(queue[j].base);
+        for (let t of queue[j].topics) {
+          collector.add(t);
+        }
       }
       await collector.retrieve();
 
       // Get next person.
       let person = queue[i++];
-      let local = this.idmap.get(person.id());
-      if (local && local != person.topic) {
+
+      // Check for redirect.
+      for (let t of person.topics) {
+        let local = this.idmap.get(t.id);
         let target = this.persons.get(local);
         if (target) {
           this.merge(person, target);
           person = target;
         }
-      } else {
-        if (!person.base) {
-          let base = person.topic.link();
-          if (base) {
-            let target = this.persons.get(base);
-            if (target) {
-              this.merge(target, person);
-            } else {
-              person.base = base;
-            }
-          }
-        }
       }
+
+      // Get generation.
       let generation = this.generations.get(person.generation);
       if (!generation) {
         console.log("generations exceeded", person.id(), person.name(), person);
@@ -561,6 +564,7 @@ class FamilyTree {
           let p1 = generation.persons[i];
           for (let j = i + 1; j <  generation.persons.length; ++j) {
             let p2 = generation.persons[j];
+            //console.log(`partners check: ${p1.name()} and ${p2.name()} ${p1}`);
             if (!p1.ispartner(p2)) continue;
 
             // Check if partners are adjacent.
@@ -573,7 +577,7 @@ class FamilyTree {
             }
 
             if (adjacent != i) {
-              //console.log(`partners apart: ${p1.name()} and ${p2.name()}`);
+              console.log(`partners apart: ${p1.name()} and ${p2.name()}`);
               move(generation.persons, i, adjacent);
               generation.reindex();
               converged = false;
@@ -903,7 +907,7 @@ class FamilyTreeDialog extends MdDialog {
     let radius = this.find("#radius").value();
     let iterations = this.find("#iterations").value();
     let tree = new FamilyTree(mingen, maxgen, radius, iterations, t.index);
-    await tree.build(t.subject.topic);
+    await tree.build(t.subject.topics[0]);
     this.update(tree);
   }
 
