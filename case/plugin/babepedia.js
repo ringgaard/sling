@@ -256,11 +256,12 @@ export default class BabepediaPlugin {
       if (a) imgurls.push(a.getAttribute("href"));
     }
 
-    for (let prof of doc.querySelectorAll("div.prof").values()) {
-      let a = prof.querySelector("a.img");
-      if (a) imgurls.push(a.getAttribute("href"));
+    let profselect = doc.getElementById("profselect");
+    if (profselect) {
+      for (let a of profselect.querySelectorAll("a.img").values()) {
+        imgurls.push(a.getAttribute("href"));
+      }
     }
-
 
     for (let prof of doc.querySelectorAll("div.thumbnail").values()) {
       let a = prof.querySelector("a.img");
