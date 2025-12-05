@@ -269,6 +269,7 @@ export default class BabepediaPlugin {
     }
 
     for (let imgurl of imgurls) {
+      if (imgurl.includes("?")) continue;
       if (imgurl.startsWith("/")) imgurl = imgurl.slice(1);
       topic.put(n_media, "!https://www.babepedia.com/" + imgurl);
     }

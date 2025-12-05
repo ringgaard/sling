@@ -677,6 +677,7 @@ class OverviewCard extends MdCard {
 
       ${s.reposts} reposts,
       ${s.xposts} cross-posts,
+      ${s.noisy_skipped} noisy,
       ${s.removed} removed,
       ${s.selfies} selfies,
       ${s.errors} errors

@@ -315,6 +315,7 @@ num_errors = 0
 num_xposts = 0
 num_noisy_matched = 0
 num_noisy_unmatched = 0
+num_noisy_skipped = 0
 
 if flags.arg.posting:
   postings = [(flags.arg.posting, redditdb[flags.arg.posting])]
@@ -429,6 +430,12 @@ for key, value in postings:
 
   # Do not match names marked as ambiguous (*).
   ambiguous = itemid == "*"
+
+  # Skip single-word titles from noisy subreddits
+  if sr in noisy_subreddits and itemid is None:
+    if ' ' not in query:
+      num_noisy_skipped += 1
+      continue;
 
   # Add posting to report.
   subreddit = report["subreddits"].get(sr)
@@ -584,6 +591,7 @@ report["statistics"] = {
  "xposts": num_xposts,
  "noisy_unmatched": num_noisy_unmatched,
  "noisy_matched": num_noisy_matched,
+ "noisy_skipped": num_noisy_skipped,
  "removed": num_removed,
  "selfies": num_selfies,
  "errors": num_errors,
