@@ -191,6 +191,7 @@ class SearchIndexMapper : public task::FrameProcessor {
       if (config_.stopword(token)) {
         num_stopwords_->Increment();
       } else {
+        token = config_.map(token);
         terms->insert(token);
         words->push_back(WordFingerprint(token));
       }
@@ -217,6 +218,7 @@ class SearchIndexMapper : public task::FrameProcessor {
       if (config_.stopword(term)) {
         num_stopwords_->Increment();
       } else {
+        term = config_.map(term);
         terms->insert(term);
         if (token.brk() >= PARAGRAPH_BREAK) words->push_back(WORDFP_BREAK);
         words->push_back(WordFingerprint(term));
@@ -316,6 +318,17 @@ class SearchIndexBuilder : public task::Processor {
     repository_.AddBlock("stopwords",
                          stopwords.data(),
                          stopwords.size() * sizeof(uint64));
+
+    // Add synonyms to repository.
+    std::vector<uint64> synonyms;
+    for (auto it : config.synonyms()) {
+      synonyms.push_back(it.first);
+      synonyms.push_back(it.second);
+
+    }
+    repository_.AddBlock("synonyms",
+                         synonyms.data(),
+                         synonyms.size() * sizeof(uint64));
 
     // Repository streams.
     document_index_ = AddStream("DocumentIndex");

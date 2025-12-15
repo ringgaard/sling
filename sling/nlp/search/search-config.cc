@@ -67,6 +67,19 @@ void SearchConfiguration::Load(Store *store,
     for (uint64 fp : tokens) stopwords_.insert(fp);
   }
 
+  // Get synonym mappings.
+  Frame synonyms = config.Get("synonyms").AsFrame();
+  if (synonyms.valid()) {
+    for (int i = 0; i < synonyms.size(); ++i) {
+      uint64 synonym = fingerprint(String(store, synonyms.name(i)).text());
+      Text aliases = String(store, synonyms.value(i)).text();
+      tokenizer_.TokenFingerprints(aliases, &tokens);
+      for (uint64 fp : tokens) {
+        synonyms_[fp] = synonym;
+      }
+    }
+  }
+
   // Get number of term buckets.
   buckets_ = config.GetInt("buckets", buckets_);
 

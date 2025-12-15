@@ -16,6 +16,7 @@
 #define SLING_NLP_SEARCH_CONFIG_H_
 
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 
 #include "sling/base/types.h"
@@ -91,6 +92,17 @@ class SearchConfiguration {
     return tokenizer_.TokenFingerprint(word);
   }
 
+  // Synonym fingerprint mapping.
+  uint64 map(uint64 term) {
+    auto f = synonyms_.find(term);
+    return f != synonyms_.end() ? f->second : term;
+  }
+
+  // Return synonym fingerprint mapping.
+  const std::unordered_map<uint64, uint64> &synonyms() const {
+    return synonyms_;
+  }
+
  private:
   // Include aliases in dictionary.
   bool dictionary_aliases_ = false;
@@ -103,6 +115,9 @@ class SearchConfiguration {
 
   // Stopwords.
   std::unordered_set<uint64> stopwords_;
+
+  // Stopwords.
+  std::unordered_map<uint64, uint64> synonyms_;
 
   // Items where properties are omitted from indexing.
   std::unordered_set<string> omitted_;
