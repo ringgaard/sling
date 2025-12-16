@@ -162,7 +162,7 @@ int SearchEngine::Search(Text query, Results *results) {
   // Return empty result if index has not been loaded.
   if (!loaded()) return 0;
 
-  // Find matches.
+  // Parse query.
   Parser parser(query);
   Query *expression = ParseQuery(&parser);
 
@@ -170,6 +170,7 @@ int SearchEngine::Search(Text query, Results *results) {
   QueryToString(expression, &str);
   LOG(INFO) << "Query: " << query << " -> " << str;
 
+  // Find matches.
   Matches matches;
   Match(expression, &matches);
   ExtractTerms(expression, &results->query_terms_);
@@ -311,6 +312,7 @@ void SearchEngine::MatchTerms(Query *query, Matches *matches) {
   std::vector<const SearchIndex::Term *> terms;
   for (uint64 token : query->fingerprints) {
     if (index_.stopword(token)) continue;
+    token = index_.map(token);
 
     const SearchIndex::Term *term = index_.Find(token);
     if (term == nullptr) return;

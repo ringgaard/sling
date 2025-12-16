@@ -43,6 +43,16 @@ void SearchIndex::Load(const string &filename) {
   for (int i = 0; i < num_stopwords; ++i) {
     stopwords_.insert(stopwords[i]);
   }
+
+  // Initialize synonyms.
+  const uint64 *synonyms;
+  repository_.FetchBlock("synonyms", &synonyms);
+  int num_synonyms = repository_.GetBlockSize("synonyms") / sizeof(uint64);
+  for (int i = 0; i < num_synonyms; i += 2) {
+    uint64 source = synonyms[i];
+    uint64 target = synonyms[i + 1];
+    synonyms_[source] = target;
+  }
 }
 
 const SearchIndex::Term *SearchIndex::Find(uint64 fp) const {

@@ -16,6 +16,7 @@
 #define SLING_NLP_SEARCH_INDEX_H_
 
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 
 #include "sling/base/types.h"
@@ -109,6 +110,12 @@ class SearchIndex {
     return fp == 1 || stopwords_.count(fp) > 0;
   }
 
+  // Map to synonym fingerprint.
+  bool map(uint64 fp) const {
+    auto f = synonyms_.find(fp);
+    return f != synonyms_.end() ? f->second : fp;
+  }
+
   // Check if search index has been loaded.
   bool loaded() const { return repository_.loaded(); }
 
@@ -156,6 +163,9 @@ class SearchIndex {
 
   // Stopwords.
   std::unordered_set<uint64> stopwords_;
+
+  // Synonyms.
+  std::unordered_map<uint64, uint64> synonyms_;
 };
 
 }  // namespace nlp
