@@ -95,7 +95,7 @@ class SearchConfiguration {
   // Synonym fingerprint mapping.
   uint64 map(uint64 term) {
     auto f = synonyms_.find(term);
-    return f != synonyms_.end() ? f->second : term;
+    return f == synonyms_.end() ? term : f->second;
   }
 
   // Return synonym fingerprint mapping.

@@ -111,9 +111,9 @@ class SearchIndex {
   }
 
   // Map to synonym fingerprint.
-  bool map(uint64 fp) const {
+  uint64 map(uint64 fp) const {
     auto f = synonyms_.find(fp);
-    return f != synonyms_.end() ? f->second : fp;
+    return f == synonyms_.end() ? fp : f->second;
   }
 
   // Check if search index has been loaded.
