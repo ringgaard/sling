@@ -246,7 +246,7 @@ let xrefs = [
     property: frame("PVEF"),
   },
   {
-    pattern: /^https?:\/\/(?:www\.)?models\.com\/models\/(.+)/,
+    pattern: /^https?:\/\/(?:www\.)?models\.com\/models\/(.+)\?.*/,
     property: frame("P2471"),
   },
   {

@@ -18,7 +18,7 @@ const n_occupation = frame("P106");
 const n_famousbdays = frame("P11194");
 
 function element_text(parent, selector) {
-  return parent.querySelector(selector).innerText.trim();
+  return parent.querySelector(selector)?.innerText?.trim();
 }
 
 export default class FamousBirthdaysPlugin {
@@ -63,7 +63,7 @@ export default class FamousBirthdaysPlugin {
     let main = doc.querySelector("div.bio-module__info");
 
     // Get bio.
-    let name = element_text(main, "span.bio-module__first-name");
+    let name = element_text(main, "span.bio-module__full-name");
     let title = element_text(main, "p.bio-module__profession");
     let stats = main.querySelectorAll("div.bio-module__person-attributes p");
 
@@ -90,4 +90,3 @@ export default class FamousBirthdaysPlugin {
     context.updated(topic);
   }
 }
-
