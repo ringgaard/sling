@@ -404,6 +404,10 @@ let xrefs = [
     property: frame("P10716"),
   },
   {
+    pattern: /^https:\/\/www\.fanvue\.com\/(.+)/,
+    property: frame("P10716"),
+  },
+  {
     pattern: /^https:\/\/playbill\.com\/person\/(.+)/,
     property: frame("P6132"),
   },

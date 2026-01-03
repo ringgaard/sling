@@ -47,6 +47,11 @@ flags.define("--auto_blacklist",
              default=False,
              action="store_true")
 
+flags.define("--skip_commons",
+             help="skip images from commons",
+             default=False,
+             action="store_true")
+
 flags.parse()
 
 wiki_base_url = "https://upload.wikimedia.org/wikipedia/"
@@ -141,6 +146,11 @@ for url in media:
     continue
   if url in whitelist:
     num_whitelist += 1
+    continue
+
+  # Skip images from commons.
+  if flags.arg.skip_commons and url.startswith(wiki_base_url):
+    print("skip commons", url)
     continue
 
   # Check if url is already in media database.
