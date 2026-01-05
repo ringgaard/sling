@@ -83,7 +83,7 @@ for item in persons[:30]:
   picture = None
   if n_image in item:
     fn = kb.resolve(item[n_image])
-    picture = photolib.commons_media(fn)
+    if type(fn) is str: picture = photolib.commons_media(fn)
   if picture is None:
     for m in item(n_media):
       url = kb.resolve(m)
@@ -115,4 +115,3 @@ with open(flags.arg.output, "w") as f:
   f.write(json.dumps(report, indent=2))
 
 print(num_dob, "with dob", num_bday, "birthdays")
-
