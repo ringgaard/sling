@@ -151,7 +151,11 @@ export class PhotoGallery extends MdModal {
     } else if (e.keyCode == 27) {
       this.close(e);
     } else if (e.keyCode == 88 && !e.ctrlKey) {
-      this.flipnsfw(e);
+      if (e.shiftKey) {
+        this.flipallnsfw(e);
+      } else {
+        this.flipnsfw(e);
+      }
     } else if (e.keyCode == 68) {
       this.delimg(e);
     } else if (e.keyCode == 70) {
@@ -209,6 +213,17 @@ export class PhotoGallery extends MdModal {
     this.dispatch(photo.nsfw ? "nsfw" : "sfw", photo.url);
     this.find(".nsfw").update(photo.nsfw ? "NSFW" : null);
     this.edited = true;
+  }
+
+  flipallnsfw(e) {
+    let nsfw = !this.photos[this.current].nsfw;
+    for (let photo of this.photos) {
+      if (photo.nsfw == nsfw) continue;
+      photo.nsfw = nsfw;
+      this.dispatch(nsfw ? "nsfw" : "sfw", photo.url);
+      this.edited = true;
+    }
+    this.find(".nsfw").update(nsfw ? "NSFW" : null);
   }
 
   delimg(e) {

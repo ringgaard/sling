@@ -61,6 +61,11 @@ flags.define("--html",
              default=None,
              metavar="FILE")
 
+flags.define("--blacklist",
+             help="File with black-listed IPs",
+             default=None,
+             metavar="FILE")
+
 flags.define("logfiles",
              nargs="*",
              help="NCSA log files in NCSA Combined format",
@@ -378,6 +383,7 @@ num_bytes = 0
 num_mobile = 0
 num_monitor = 0
 num_curls = 0
+num_blacklisted = 0
 
 page_hits = defaultdict(int)
 ip_hits = defaultdict(int)
@@ -400,6 +406,14 @@ worm_hits = defaultdict(int)
 spam_hits = defaultdict(int)
 referrers = defaultdict(int)
 referring_domains = defaultdict(int)
+
+blacklisted = set()
+if flags.arg.blacklist:
+  fin = open(flags.arg.blacklist)
+  for line in fin.readlines():
+    line = line.strip()
+    blacklisted.add(line)
+  fin.close()
 
 home_ips = set()
 bday_ips = set()
@@ -439,6 +453,11 @@ for logfn in flags.arg.logfiles:
         num_monitor += 1
       else:
         num_internal += 1
+      continue
+
+    # Blacklisted IPs
+    if ipaddr in blacklisted:
+      num_blacklisted += 1
       continue
 
     # Spam IPs.
@@ -685,6 +704,7 @@ print("%7d HEADs" % num_heads)
 print("%7d mobile hits" % num_mobile)
 print("%7d internal hits" % num_internal)
 print("%7d internal monitoring" % num_monitor)
+print("%7d blacklisted" % num_blacklisted)
 print("%7d favicons" % num_favicons)
 print("%7d robots.txt" % num_robotstxt)
 print("%7d curl requests" % num_curls)
