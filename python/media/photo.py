@@ -170,13 +170,14 @@ def is_video(url):
     if url.startswith(prefix): return True
   return False
 
-def commons_media(fn):
+def commons_media(fn, escaped=False):
   if fn is None: return None
   fn = fn.replace(' ', '_')
   md5 = hashlib.md5(fn.encode("utf8")).hexdigest()
   fn = fn.replace("?", "%3F")
   fn = fn.replace("+", "%2B")
   fn = fn.replace("&", "%26")
+  if escaped: fn = urllib.parse.quote(fn)
   return "%s/%s/%s/%s" % (commons_base_url, md5[0], md5[0:2], fn)
 
 # Image hashing.

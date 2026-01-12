@@ -37,7 +37,7 @@ let xrefs = [
     property: frame("P2002"),
   },
   {
-    pattern: /^https?:\/\/(?:mobile\.)?x\.com\/([A-Za-z0-9_]+)(\?.*)?$/i,
+    pattern: /^https?:\/\/(?:mobile\.)?x\.com\/([A-Za-z0-9_]+)\/?(\?.*)?$/i,
     property: frame("P2002"),
   },
   {
@@ -246,11 +246,11 @@ let xrefs = [
     property: frame("PVEF"),
   },
   {
-    pattern: /^https?:\/\/(?:www\.)?models\.com\/models\/(.+)\?.*/,
+    pattern: /^https?:\/\/(?:www\.)?models\.com\/models\/([^\?]+)/,
     property: frame("P2471"),
   },
   {
-    pattern: /^https?:\/\/(?:www\.)?models\.com\/people\/(.+)/,
+    pattern: /^https?:\/\/(?:www\.)?models\.com\/people\/([^\?]+)/,
     property: frame("P2471"),
   },
   {

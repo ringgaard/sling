@@ -20,6 +20,10 @@ import requests
 import sys
 import traceback
 
+import pycurl
+from io import BytesIO
+from requests.structures import CaseInsensitiveDict
+
 import sling
 import sling.media.photo as photo
 import sling.flags as flags
@@ -57,6 +61,43 @@ flags.parse()
 wiki_base_url = "https://upload.wikimedia.org/wikipedia/"
 commons_redirect = "https://commons.wikimedia.org/wiki/Special:Redirect/file/"
 
+class CurlResponse:
+  def __init__(self):
+    self.buffer = BytesIO()
+    self.headers = CaseInsensitiveDict()
+    self.status = None
+    self.data = None
+
+  def http_header(self, header_line):
+    #name, value = header_line.decode("iso-8859-1").split(':', 1)
+
+    hdr = header_line.decode("iso-8859-1")
+    pos = hdr.find(':')
+    if pos == -1: return
+    name = hdr[:pos].strip()
+    value = hdr[pos + 1:].strip()
+    self.headers[name] = value
+
+class CurlSession:
+  def __init__(self):
+    self.curl = pycurl.Curl()
+    self.curl.setopt(self.curl.USERAGENT, "SLING Bot 1.0")
+
+  def request(self, url):
+    response = CurlResponse()
+    self.curl.setopt(self.curl.URL, url.encode("utf-8"))
+    self.curl.setopt(self.curl.WRITEDATA, response.buffer)
+    self.curl.setopt(self.curl.HEADERFUNCTION, response.http_header)
+    try:
+      self.curl.perform()
+      response.status = self.curl.getinfo(self.curl.RESPONSE_CODE)
+      response.data = response.buffer.getvalue()
+    except Exception as e:
+      print("Curl Error", e)
+      return None
+
+    return response
+
 # Read list of urls.
 def read_urls(filename):
   list = set()
@@ -81,11 +122,13 @@ def get_media_files(whitelist):
   p_media = kb["media"]
 
   # Find all properties for WikiCommons files.
+  include_commons = not flags.arg.skip_commons
   imageprops = set()
-  for name, prop in kb["/w/entity"]:
-    if name != n_role: continue;
-    if prop[n_target] == n_media:
-      imageprops.add(prop)
+  if include_commons:
+    for name, prop in kb["/w/entity"]:
+      if name != n_role: continue;
+      if prop[n_target] == n_media:
+        imageprops.add(prop)
 
   # Find media files for all items.
   media = []
@@ -93,7 +136,7 @@ def get_media_files(whitelist):
   for item in kb:
     itemid = item.id;
     for n, v in item:
-      if n in imageprops:
+      if include_commons and n in imageprops:
         # Add Wikimedia Commons url.
         v = kb.resolve(v)
         if type(v) == str:
@@ -128,6 +171,9 @@ print(len(media), "media files in knowledge base")
 # Connect to media database.
 photo.mediadb = sling.Database(flags.arg.mediadb, "mediaload")
 
+# Use CURL for fetching images from commons (HTTP2 is not rate-limited)
+curl = CurlSession()
+
 # Fetch all missing media files.
 num_urls = 0
 num_blacklist = 0
@@ -148,19 +194,24 @@ for url in media:
     num_whitelist += 1
     continue
 
-  # Skip images from commons.
-  if flags.arg.skip_commons and url.startswith(wiki_base_url):
-    print("skip commons", url)
-    continue
-
   # Check if url is already in media database.
   if url in photo.mediadb:
     num_known += 1
     continue
 
+  if url.endswith(".webm"):
+    print("blacklist video:", url)
+    if fblack: fblack.write(url + "\n")
+    continue
+
   # Download image.
   try:
-    r = photo.retrieve_image(url)
+    if url.startswith(wiki_base_url):
+      # Use CURL for fetching Wikimedia Commons images.
+      r = curl.request(url)
+    else:
+      r = photo.retrieve_image(url)
+
     if r == None:
       print("removed", url, mediamap.get(url))
       num_missing += 1
