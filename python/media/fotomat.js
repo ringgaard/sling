@@ -49,7 +49,7 @@ class FotomatApp extends MdApp {
     this.profile = null;
 
     try {
-      let r = await fetch(`/fotomat/fetch?q=${encodeURIComponent(query)}`);
+      let r = await fetch(`/fotomat/fetch`, {method: "POST", body: query});
       this.profile = await r.json();
       if (!this.profile.item) this.mark_dirty();
       this.find("#photos").update(this.profile);

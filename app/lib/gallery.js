@@ -162,8 +162,10 @@ export class PhotoGallery extends MdModal {
       this.onfullscreen(e);
     } else if (e.keyCode == 90) {
       this.onfullsize(e);
-    } else if (e.keyCode == 83) {
+    } else if (e.keyCode == 83 || e.keyCode == 32) {
       this.onselect(e);
+    } else if (e.keyCode == 65) {
+      this.onselectall(e);
     } else if (e.keyCode == 82) {
       this.onrefresh(e);
     } else if (e.keyCode == 71) {
@@ -299,6 +301,14 @@ export class PhotoGallery extends MdModal {
       this.find("#flag").classList.remove("unmarked");
       photo.selected = true;
     }
+  }
+
+  onselectall(e) {
+    e.preventDefault();
+    for (let photo of this.photos) {
+      photo.selected = true;
+    }
+    this.find("#flag").classList.remove("unmarked");
   }
 
   gallery(remove) {

@@ -121,11 +121,12 @@ app.page("/fotomat",
 
 app.file("/fotomat/app.js", "python/media/fotomat.js", "text/javascript")
 
-@app.route("/fotomat/fetch")
+@app.route("/fotomat/fetch", method="POST")
 def handle_fetch(request):
   # Get query.
-  query = request.param("q");
+  query = request.body.decode()
   log.info("query", query)
+
   if query is None: return 500
   result = {}
   itemid = None

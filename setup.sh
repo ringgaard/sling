@@ -71,6 +71,7 @@ fi
 
 # Extra Python packages:
 #   requests (http download)
+#   pycurl (http2 download for commons)
 #   numpy (myelin tests)
 #   tweepy (twitter)
 #   praw (reddit)
@@ -81,7 +82,6 @@ fi
 #   transformers (bert analyzer)
 #   pymupdf (epub2pdf)
 #   aiosmtpd (sysmon)
-
 
 # Done.
 echo
