@@ -509,6 +509,10 @@ class FactEditor extends Component {
       this.human(n_female);
       e.stopPropagation();
       e.preventDefault();
+    } else if (e.code === "KeyD" && e.ctrlKey) {
+      this.markdups();
+      e.stopPropagation();
+      e.preventDefault();
     } else if (e.code == "KeyM" && e.ctrlKey) {
       this.human(n_male);
       e.stopPropagation();
@@ -670,6 +674,29 @@ class FactEditor extends Component {
       let g = new FactStatement({property: n_gender, value: gender});
       this.insertBefore(g, s.statement);
       this.dirty = true;
+    }
+  }
+
+  markdups() {
+    let statements = [];
+    for (let e = this.firstChild; e; e = e.nextSibling) {
+      if (!(e instanceof FactStatement)) continue;
+      if (e.qualified) continue;
+      let prop = e.property()?.value();
+      let value = e.value()?.value();
+      if (!prop || !value) continue;
+      let seen = false;
+      for (let stmt of statements) {
+        if (prop == stmt.prop && value == stmt.value) {
+          seen = true;
+          break;
+        }
+      }
+      if (seen) {
+        e.classList.add("dup");
+      } else {
+        statements.push({prop, value});
+      }
     }
   }
 
@@ -938,6 +965,9 @@ class FactStatement extends Component {
       $.qualified {
         font-size: 13px;
         margin-left: 32px;
+      }
+      $.dup {
+        text-decoration: underline wavy red;
       }
     `;
   }
