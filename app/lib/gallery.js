@@ -109,6 +109,8 @@ export class PhotoGallery extends MdModal {
     this.attach(this.onfullscreen, "click", "#fullscreen");
     this.attach(this.onzoomin, "click", "#zoomin");
     this.attach(this.onzoomout, "click", "#zoomout");
+    this.attach(this.onrotateleft, "click", "#rotateleft");
+    this.attach(this.onrotateright, "click", "#rotateright");
     this.attach(this.onrefresh, "click", "#refresh");
     this.attach(this.oncopyurl, "click", "#copyurl");
     this.attach(this.onsearch, "click", "#search");
@@ -280,6 +282,22 @@ export class PhotoGallery extends MdModal {
     this.display(this.current);
   }
 
+  onrotateleft(e) {
+    e.stopPropagation();
+    this.rotate(-90);
+  }
+
+  onrotateright(e) {
+    e.stopPropagation();
+    this.rotate(90);
+  }
+
+  rotate(direction) {
+    let photo = this.photos[this.current];
+    photo.rotation = ((photo.rotation || 0) + direction + 360) % 360;
+    this.display(this.current);
+  }
+
   onrefresh(e) {
     e.stopPropagation();
     let photo = this.photos[this.current];
@@ -444,6 +462,9 @@ export class PhotoGallery extends MdModal {
       photo.image.style.transformOrigin = "0 0";
     } else {
       photo.image.style = "";
+      if (photo.rotation) {
+        photo.image.style.transform = `rotate(${photo.rotation}deg)`;
+      }
     }
 
     let url = new URL(photo.url);
@@ -534,6 +555,10 @@ export class PhotoGallery extends MdModal {
       </div>
       <md-text class="size"></md-text>
       <div class="toolbox">
+        <md-icon-button id="rotateleft" icon="rotate_left">
+        </md-icon-button>
+        <md-icon-button id="rotateright" icon="rotate_right">
+        </md-icon-button>
         <md-icon-button id="zoomout" icon="zoom_out">
         </md-icon-button>
         <md-icon-button id="zoomin" icon="zoom_in">
