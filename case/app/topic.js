@@ -31,6 +31,7 @@ const n_not_safe_for_work = frame("Q2716583");
 const n_full_work = frame("P953");
 const n_url = frame("P2699");
 const n_mime_type = frame("P1163");
+const n_rotation = frame("rotation");
 
 // Cross-reference configuration.
 var xrefs;
@@ -456,6 +457,7 @@ class TopicCard extends Component {
     this.bind(null, "sfw", e => this.onnsfw(e, false));
     this.bind(null, "delimage", e => this.ondelimage(e));
     this.bind(null, "insimage", e => this.oninsimage(e));
+    this.bind(null, "rotate", e => this.onrotimage(e));
     this.bind(null, "picedit", e => this.refresh());
 
     this.update_mode(false);
@@ -602,6 +604,29 @@ class TopicCard extends Component {
         topic.insert(start + n, n_media, url);
       }
       this.mark_dirty();
+    }
+  }
+
+  onrotimage(e) {
+    let url = e.detail.url;
+    let rotation = e.detail.rotation;
+    console.log(url, rotation);
+    let topic = this.state;
+    for (let n = 0; n < topic.length; ++n) {
+      if (topic.name(n) != n_media) continue;
+      let v = store.resolve(topic.value(n));
+      if (v == url || (v.startsWith('!') && v.slice(1) == url)) {
+        if (rotation) {
+          let q = store.frame()
+          q.add(n_is, v);
+          q.add(n_rotation, rotation);
+          topic.set_value(n, q);
+        } else {
+          topic.set_value(n, v);
+        }
+        this.mark_dirty();
+        break;
+      }
     }
   }
 

@@ -55,6 +55,7 @@ const n_has_quality = frame("P1552");
 const n_not_safe_for_work = frame("Q2716583");
 const n_popularity = frame("/w/item/popularity");
 const n_fanin = frame("/w/item/fanin");
+const n_rotation = frame("rotation");
 
 class KbLink extends Component {
   onconnected() {
@@ -674,7 +675,8 @@ class PicturePanel extends Component {
   onopen(e) {
     e.stopPropagation();
     let modal = new PhotoGallery();
-    for (let event of ["nsfw", "sfw", "delimage", "insimage", "picedit"]) {
+    for (let event of ["nsfw", "sfw", "delimage", "insimage", "rotate",
+                       "picedit"]) {
       modal.bind(null, event, e => this.dispatch(e.type, e.detail, true));
     }
     modal.open(this.state);
@@ -891,10 +893,12 @@ class ItemPanel extends Component {
       if (name === n_media) {
         let url = store.resolve(value);
         let nsfw = url.startsWith('!');
+        let rotation = undefined;
         if (nsfw) url = url.slice(1);
         if (value instanceof Frame) {
           if (value.has(n_has_quality, n_not_safe_for_work)) nsfw = true;
-          gallery.push({url, nsfw, text: value.get(n_media_legend)});
+          rotation = value.get(n_rotation);
+          gallery.push({url, nsfw, rotation, text: value.get(n_media_legend)});
         } else {
           gallery.push({url, nsfw});
         }

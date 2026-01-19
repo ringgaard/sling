@@ -135,6 +135,7 @@ export class PhotoGallery extends MdModal {
         nsfw: image.nsfw,
         image: null,
         selected: false,
+        rotation: image.rotation,
         loaded: false,
       });
     }
@@ -295,7 +296,9 @@ export class PhotoGallery extends MdModal {
   rotate(direction) {
     let photo = this.photos[this.current];
     photo.rotation = ((photo.rotation || 0) + direction + 360) % 360;
+    this.dispatch("rotate", {url: photo.url, rotation: photo.rotation});
     this.display(this.current);
+    this.edited = true;
   }
 
   onrefresh(e) {
