@@ -11,6 +11,8 @@ const VIDEO = 2;
 const GRAPHICS = 3;
 const DOCUMENT = 4;
 
+const SWIPE_THRESHOLD = 30;
+
 const media_types = {
   ".jpeg": IMAGE,
   ".jpg": IMAGE,
@@ -120,6 +122,13 @@ export class PhotoGallery extends MdModal {
     this.attach(this.oncopy, "copy");
     this.attach(this.onpaste, "paste");
     this.attach(this.onkeypress, "keydown");
+
+    this.attach(this.onpointerdown, "pointerdown");
+    this.attach(this.onpointermove, "pointermove");
+    this.attach(this.onpointerup, "pointerup");
+    this.attach(this.onpointercancel, "pointercancel");
+    this.attach(this.onpointercancel, "pointerleave");
+    this.attach(this.onpointercancel, "pointerout");
   }
 
   onupdate() {
@@ -173,6 +182,64 @@ export class PhotoGallery extends MdModal {
       this.onrefresh(e);
     } else if (e.keyCode == 71) {
       this.ongallery(e);
+    }
+  }
+
+  onpointerdown(e) {
+    //console.log("pointer down", e.pointerId);
+    this.dragging = true;
+    this.start_x = e.clientX;
+    this.start_y = e.clientY;
+  }
+
+  onpointermove(e) {
+    //console.log("pointer move", e.pointerId);
+    if (!this.dragging) return;
+
+    const current_x = e.clientX;
+    const current_y = e.clientY;
+
+    const diff_x = current_x - this.start_x;
+    const diff_y = current_y - this.start_y;
+    //console.log(`Moving: ${diff_x}px, ${diff_y}px`);
+  }
+
+  onpointerup(e) {
+    //console.log("pointer up", e.pointerId);
+    if (!this.dragging) return;
+
+    const end_x = e.clientX;
+    const end_y = e.clientY;
+    this.swipe(end_x - this.start_x, end_y - this.start_y);
+    this.dragging = false;
+  }
+
+  onpointercancel(e) {
+    //console.log("pointer cancel", e.pointerId);
+    if (!this.dragging) return;
+    this.dragging = false;
+  }
+
+  swipe(dx, dy) {
+    console.log("swipe", dx, dy);
+    if (Math.abs(dx) > Math.abs(dy)) {
+        if (Math.abs(dx) > SWIPE_THRESHOLD) {
+          if (dx > 0) {
+            console.log('swipe right');
+            this.move(-1);
+          } else {
+            console.log('swipe left');
+            this.move(1);
+          }
+        }
+    } else {
+      if (Math.abs(dy) > SWIPE_THRESHOLD) {
+        if (dy > 0) {
+          console.log('swipe down');
+        } else {
+          console.log('swipe up');
+        }
+      }
     }
   }
 
@@ -602,6 +669,7 @@ export class PhotoGallery extends MdModal {
         user-select: none;
         width: 100%;
         height: 100%;
+        touch-action: none;
       }
 
       $ .photo {
