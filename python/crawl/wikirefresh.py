@@ -50,11 +50,15 @@ commons.freeze()
 dbsession = requests.Session()
 wdsession = requests.Session()
 
+wikidata_headers = {
+  "User-Agent": "SLING Bot 1.0 (ringgaard.com)",
+}
+
 # Fetch item and update database.
 def update_item(qid):
   # Fetch item revision from Wikidata.
   url = "%s?id=%s&format=json" % (flags.arg.wiki_fetch_url, qid)
-  reply = wdsession.get(url)
+  reply = wdsession.get(url, headers=wikidata_headers)
 
   # Convert item to SLING format.
   store = sling.Store(commons)
@@ -65,6 +69,7 @@ def update_item(qid):
 
   # Save item in database.
   print(qid, revision)
+
   reply = dbsession.put(
     flags.arg.dburl + "/" + qid,
     data=item.data(binary=True),
@@ -79,4 +84,3 @@ with open(flags.arg.qids) as f: qids = f.read().split("\n")
 for qid in qids:
   if len(qid) == 0: continue
   update_item(qid)
-

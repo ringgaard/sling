@@ -17,7 +17,6 @@
 import json
 import re
 import sys
-import requests
 import time
 import traceback
 from threading import Thread
@@ -25,6 +24,10 @@ from queue import Queue
 import sling
 import sling.flags as flags
 from sling.crawl.sse import SSEStream
+
+import pycurl
+from io import BytesIO
+from requests.structures import CaseInsensitiveDict
 
 flags.define("--wiki_changes_stream",
              help="stream for monitoring updates to wikidata",
@@ -77,6 +80,57 @@ flags.define("--qsize",
 
 flags.parse()
 
+class CurlResponse:
+  def __init__(self):
+    self.buffer = BytesIO()
+    self.headers = CaseInsensitiveDict()
+    self.status = None
+    self.data = None
+
+  def http_header(self, header_line):
+    hdr = header_line.decode("iso-8859-1")
+    pos = hdr.find(':')
+    if pos == -1: return
+    name = hdr[:pos].strip()
+    value = hdr[pos + 1:].strip()
+    self.headers[name] = value
+
+  @property
+  def status_code(self):
+    return self.status
+
+  @property
+  def text(self):
+    return self.data
+
+  def raise_for_status(self):
+    if self.status // 100 != 2: raise Exception("HTTP error %d" % self.status);
+
+class CurlSession:
+  def __init__(self):
+    self.curl = pycurl.Curl()
+    self.curl.setopt(self.curl.USERAGENT, "SLING Bot 1.0")
+
+  def request(self, url, headers=None):
+    response = CurlResponse()
+    self.curl.setopt(self.curl.URL, url.encode("utf-8"))
+    self.curl.setopt(self.curl.WRITEDATA, response.buffer)
+    self.curl.setopt(self.curl.HEADERFUNCTION, response.http_header)
+    if headers:
+      hdrs = []
+      for k, v in headers.items(): hdrs.append(k + ": " + v)
+      self.curl.setopt(self.curl.HTTPHEADER, hdrs)
+
+    try:
+      self.curl.perform()
+      response.status = self.curl.getinfo(self.curl.RESPONSE_CODE)
+      response.data = response.buffer.getvalue()
+    except Exception as e:
+      print("Curl Error", e)
+      return None
+
+    return response
+
 # Commons store for Wikidata converter.
 commons = sling.Store()
 wikiconv = sling.WikiConverter(commons)
@@ -84,7 +138,7 @@ commons.freeze()
 
 # Global variables.
 db = sling.Database(flags.arg.wikidatadb, "wikimonitor")
-wdsession = requests.Session()
+
 redir_pat = re.compile(r"\/\* wbcreateredirect:\d+\|\|(Q\d+)\|(Q\d+) \*\/")
 num_changes = 0
 dbresults = ["new", "updated", "unchanged", "exists", "stale", "fault"]
@@ -97,7 +151,7 @@ num_wikidata_events = 0
 num_wikidata_event_bytes = 0
 
 # Fetch changed item and update database.
-def process_change(change):
+def process_change(change, session):
   qid = change["title"]
   if qid.startswith("Property:"): qid = qid[9:]
   ts = change["timestamp"]
@@ -130,7 +184,7 @@ def process_change(change):
           # Fetch item revision from Wikidata.
           url = "%s?id=%s&revision=%d&format=json" % (
             flags.arg.wiki_fetch_url, qid, revision)
-          reply = wdsession.get(url, headers=wikidata_headers)
+          reply = session.request(url, headers=wikidata_headers)
           if reply.status_code == 429:
             # Too many requests.
             print("throttle down...")
@@ -185,10 +239,11 @@ def process_change(change):
 queue = Queue(flags.arg.qsize)
 
 def worker():
+  session = CurlSession()
   while True:
     event = queue.get()
     try:
-      process_change(event)
+      process_change(event, session)
     except:
       print("Error processing event:", sys.exc_info()[0])
       traceback.print_exc(file=sys.stdout)

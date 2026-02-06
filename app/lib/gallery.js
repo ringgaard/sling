@@ -101,6 +101,7 @@ export class PhotoGallery extends MdModal {
     this.first = true;
     this.edited = false;
     this.zoom = 1;
+    this.events = [];
   }
 
   onconnected() {
@@ -129,6 +130,23 @@ export class PhotoGallery extends MdModal {
     this.attach(this.onpointercancel, "pointercancel");
     this.attach(this.onpointercancel, "pointerleave");
     this.attach(this.onpointercancel, "pointerout");
+  }
+
+  add_event(e) {
+    this.events.push(e);
+    //console.log("add", this.events.length, e);
+  }
+
+  update_event(e) {
+    const index = this.events.findIndex((ev) => ev.pointerId == e.pointerId);
+    //console.log("update", index, e);
+    this.events[index] = e;
+  }
+
+  remove_event(e) {
+    const index = this.events.findIndex((ev) => ev.pointerId == e.pointerId);
+    //console.log("remove", index, e);
+    this.events.splice(index, 1);
   }
 
   onupdate() {
@@ -190,34 +208,61 @@ export class PhotoGallery extends MdModal {
     this.dragging = true;
     this.start_x = e.clientX;
     this.start_y = e.clientY;
+    this.add_event(e);
   }
 
   onpointermove(e) {
     //console.log("pointer move", e.pointerId);
-    if (!this.dragging) return;
+    this.update_event(e);
+    if (this.events.length == 2) {
+      console.log("multi touch");
+      // Calculate the distance between the two pointers
+      let e0 = this.events[0];
+      let e1 = this.events[1];
+      const dist = Math.hypot(
+        e0.clientX - e1.clientX,
+        e0.clientY - e1.clientY,
+      );
+      console.log("dist", dist);
 
-    const current_x = e.clientX;
-    const current_y = e.clientY;
+      if (dist > this.dist) {
+        // The distance btween the two pointers has increased
+        console.log("Pinch moving OUT -> Zoom in", e);
+        this.style.background = "pink";
+      }
+      if (dist < this.dist) {
+        // The distance between the two pointers has decreased
+        console.log("Pinch moving IN -> Zoom out", e);
+        this.style.background = "lightblue";
+      }
 
-    const diff_x = current_x - this.start_x;
-    const diff_y = current_y - this.start_y;
-    //console.log(`Moving: ${diff_x}px, ${diff_y}px`);
+      // Cache the distance for the next move event
+      this.dist = dist;
+    } else if (this.dragging) {
+      const current_x = e.clientX;
+      const current_y = e.clientY;
+      const diff_x = current_x - this.start_x;
+      const diff_y = current_y - this.start_y;
+      //console.log(`Moving: ${diff_x}px, ${diff_y}px`);
+    }
   }
 
   onpointerup(e) {
     //console.log("pointer up", e.pointerId);
-    if (!this.dragging) return;
+    this.remove_event(e);
 
-    const end_x = e.clientX;
-    const end_y = e.clientY;
-    this.swipe(end_x - this.start_x, end_y - this.start_y);
-    this.dragging = false;
+    if (this.dragging) {
+      const end_x = e.clientX;
+      const end_y = e.clientY;
+      this.swipe(end_x - this.start_x, end_y - this.start_y);
+      this.dragging = false;
+    }
   }
 
   onpointercancel(e) {
     //console.log("pointer cancel", e.pointerId);
-    if (!this.dragging) return;
     this.dragging = false;
+    this.remove_event(e);
   }
 
   swipe(dx, dy) {
