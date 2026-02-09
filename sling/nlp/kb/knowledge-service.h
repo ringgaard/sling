@@ -25,6 +25,7 @@
 #include "sling/frame/store.h"
 #include "sling/net/http-server.h"
 #include "sling/net/static-content.h"
+#include "sling/net/web-service.h"
 #include "sling/nlp/document/document.h"
 #include "sling/nlp/document/document-tokenizer.h"
 #include "sling/nlp/document/lex.h"
@@ -115,6 +116,9 @@ class KnowledgeService {
 
   // Handle KB search queries.
   void HandleSearch(HTTPRequest *request, HTTPResponse *response);
+
+  // Handle geo search.
+  void HandleGeoQuery(Text query, int limit, WebService *ws);
 
   // Handle KB item requests.
   void HandleGetItem(HTTPRequest *request, HTTPResponse *response);
@@ -230,6 +234,16 @@ class KnowledgeService {
 
   typedef Top<Hit> Ranking;
 
+  // Geo entity.
+  struct GeoEntity {
+    GeoEntity(Handle item, float lng, float lat, float dist)
+      : item(item), lng(lng), lat(lat), dist(dist) {}
+    Handle item;  // geographic item
+    float lng;    // longitude
+    float lat;    // lattitide
+    float dist;   // distance from context
+  };
+
   // Knowledge base store.
   Store *kb_ = nullptr;
 
@@ -309,8 +323,10 @@ class KnowledgeService {
   Name n_time_type_{names_, "/w/time"};
   Name n_string_type_{names_, "/w/string"};
   Name n_lexeme_type_{names_, "/w/lexeme"};
+  Name n_coord_{names_, "P625"};
   Name n_lat_{names_, "/w/lat"};
   Name n_lng_{names_, "/w/lng"};
+
   Name n_amount_{names_, "/w/amount"};
   Name n_unit_{names_, "/w/unit"};
   Name n_category_{names_, "/w/item/category"};

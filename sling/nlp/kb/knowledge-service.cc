@@ -58,6 +58,26 @@ R"""(<script type="module" src="/kb/app/kb.js"></script>
 </html>
 )""";
 
+float square(float x) {
+  return x * x;
+}
+
+// Compute distance between two coordinates.
+static float Distance(float lng1, float lat1, float lng2, float lat2) {
+  // Compute deltas.
+  float dlng = lng2 - lng1;
+  float dlat = lat2 - lat1;
+
+  // Haversine formula.
+  float a = square(sin(dlat / 2)) +
+            cos(lat1) * cos(lat2) * square(sin(dlng / 2));
+  float c = 2 * asin(sqrt(a));
+
+  // Radius of Earth in kilometers.
+  const float r = 6371.0;
+  return c * r;
+}
+
 // Convert geo coordinate from decimal to minutes and seconds.
 static string ConvertGeoCoord(double coord, bool latitude) {
   // Compute direction.
@@ -646,6 +666,13 @@ void KnowledgeService::HandleQuery(HTTPRequest *request,
   int boost = ws.Get("boost", 1000);
   VLOG(1) << "Name query: " << query;
 
+
+  // Handle geo-query.
+  if (query.find('@') != -1) {
+    HandleGeoQuery(query, limit, &ws);
+    return;
+  }
+
   // Lookup name in name table.
   NameTable::Matches matches;
   if (!query.empty()) {
@@ -723,6 +750,98 @@ void KnowledgeService::HandleQuery(HTTPRequest *request,
 
   // Return response.
   ws.set_output(b.Create());
+}
+
+void KnowledgeService::HandleGeoQuery(Text query, int limit, WebService *ws) {
+  // Split query into parts.
+  Store *store = ws->store();
+  std::vector<Text> parts = query.split('@');
+  if (parts.size() < 2) return;
+
+  // Use last part as the initial (unambiguous) context.
+  LOG(INFO) << "Geo query: " << query;
+  std::vector<GeoEntity> context;
+  NameTable::Matches matches;
+  Text last = parts[parts.size() - 1].trim();
+  aliases_.Lookup(last, false, limit, 1, &matches);
+  for (const auto &m : matches) {
+    // Get entity.
+    Text id = m.second->id();
+    Handle h = RetrieveItem(store, id);
+    if (h.IsNil()) continue;
+    Frame item(store, h);
+
+    // Get position (lng/lat).
+    Handle c = item.Resolve(n_coord_);
+    if (c.IsNil()) continue;
+    Frame coord(store, c);
+    float lng = coord.GetFloat(n_lng_);
+    float lat = coord.GetFloat(n_lat_);
+
+    // Add to context.
+    context.emplace_back(h, lng, lat, 0.0);
+    if (matches.size() == 1) break;
+  }
+
+  // Compute distance to closest context item for each level.
+  std::vector<GeoEntity> current;
+  for (int p = parts.size() - 2; p >= 0; p--) {
+    Text part = parts[p].trim();
+    NameTable::Matches matches;
+    aliases_.Lookup(part, false, limit, 1, &matches);
+    for (const auto &m : matches) {
+      Text id = m.second->id();
+      Handle h = RetrieveItem(store, id);
+      if (h.IsNil()) continue;
+      Frame item(store, h);
+
+      // Get position (lng/lat).
+      Handle c = item.Resolve(n_coord_);
+      if (c.IsNil()) continue;
+      Frame coord(store, c);
+      float lng = coord.GetFloat(n_lng_);
+      float lat = coord.GetFloat(n_lat_);
+
+      // Find minimum distance to context item.
+      Handle best = Handle::nil();
+      float mindist = 0.0;
+      for (auto &c : context) {
+        float d = Distance(c.lng, c.lat, lng, lat) + c.dist;
+        if (best.IsNil() || d < mindist) {
+          best = c.item;
+          mindist = d;
+        }
+      }
+
+      // Add to context.
+      current.emplace_back(h, lng, lat, mindist);
+    }
+
+    // Copy current level to context.
+    context.swap(current);
+    current.clear();
+  }
+
+  // Sort results.
+  std::sort(context.begin(), context.end(),
+            [](const GeoEntity &e1, const GeoEntity &e2) {
+    return e1.dist < e2.dist;
+  });
+
+  // Generate query response.
+  Handles results(store);
+  for (const auto &c : context) {
+    Frame item(store, c.item);
+    if (item.invalid()) continue;
+    Builder match(store);
+    GetStandardProperties(item, &match, true);
+    results.push_back(match.Create().handle());
+  }
+
+  // Return response.
+  Builder b(store);
+  b.Add(n_matches_,  Array(store, results));
+  ws->set_output(b.Create());
 }
 
 void KnowledgeService::HandleSearch(HTTPRequest *request,
