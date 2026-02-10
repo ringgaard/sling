@@ -249,6 +249,7 @@ void AuxFilter::Init(Store *store) {
     "Q12795622",  // low-mass star
     "Q6999",      // astronomical object
 
+    "Q34023",     // tumulus (rundhøj)
     "Q11446",     // ship
     "Q105999",    // cargo ship
 

@@ -118,7 +118,7 @@ class KnowledgeService {
   void HandleSearch(HTTPRequest *request, HTTPResponse *response);
 
   // Handle geo search.
-  void HandleGeoQuery(Text query, int limit, WebService *ws);
+  bool HandleGeoQuery(Text query, int limit, WebService *ws);
 
   // Handle KB item requests.
   void HandleGetItem(HTTPRequest *request, HTTPResponse *response);
@@ -236,12 +236,13 @@ class KnowledgeService {
 
   // Geo entity.
   struct GeoEntity {
-    GeoEntity(Handle item, float lng, float lat, float dist)
-      : item(item), lng(lng), lat(lat), dist(dist) {}
+    GeoEntity(Handle item, float lng, float lat, float dist, float score)
+      : item(item), lng(lng), lat(lat), dist(dist), score(score) {}
     Handle item;  // geographic item
     float lng;    // longitude
     float lat;    // lattitide
-    float dist;   // distance from context
+    float dist;   // distance from context (km)
+    float score;  // alias score
   };
 
   // Knowledge base store.
@@ -311,6 +312,7 @@ class KnowledgeService {
   Name n_age_{names_, "age"};
   Name n_rank_{names_, "rank"};
   Name n_auto_{names_, "auto"};
+  Name n_distance_{names_, "distance"};
 
   Name n_xref_type_{names_, "/w/xref"};
   Name n_item_type_{names_, "/w/item"};

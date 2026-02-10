@@ -2268,6 +2268,14 @@ export class MdSearchResult extends MdSearchItem {
     let title = item.title || item.text || item.name;
     let description = item.description;
     let auto = item.auto;
+    let distance = Math.trunc(item.distance);
+    if (distance) {
+       if (description) {
+         description += ` (${distance} km)`;
+       } else {
+         description = `(${distance} km)`;
+       }
+    }
 
     if (title) {
       h.push('<span class="item-title">');

@@ -64,6 +64,12 @@ float square(float x) {
 
 // Compute distance between two coordinates.
 static float Distance(float lng1, float lat1, float lng2, float lat2) {
+  // Convert to radians.
+  lng1 *= M_PI / 180.0;
+  lat1 *= M_PI / 180.0;
+  lng2 *= M_PI / 180.0;
+  lat2 *= M_PI / 180.0;
+
   // Compute deltas.
   float dlng = lng2 - lng1;
   float dlat = lat2 - lat1;
@@ -669,8 +675,7 @@ void KnowledgeService::HandleQuery(HTTPRequest *request,
 
   // Handle geo-query.
   if (query.find('@') != -1) {
-    HandleGeoQuery(query, limit, &ws);
-    return;
+    if (HandleGeoQuery(query, limit, &ws)) return;
   }
 
   // Lookup name in name table.
@@ -752,11 +757,11 @@ void KnowledgeService::HandleQuery(HTTPRequest *request,
   ws.set_output(b.Create());
 }
 
-void KnowledgeService::HandleGeoQuery(Text query, int limit, WebService *ws) {
+bool KnowledgeService::HandleGeoQuery(Text query, int limit, WebService *ws) {
   // Split query into parts.
   Store *store = ws->store();
   std::vector<Text> parts = query.split('@');
-  if (parts.size() < 2) return;
+  if (parts.size() < 2) return false;
 
   // Use last part as the initial (unambiguous) context.
   LOG(INFO) << "Geo query: " << query;
@@ -766,6 +771,7 @@ void KnowledgeService::HandleGeoQuery(Text query, int limit, WebService *ws) {
   aliases_.Lookup(last, false, limit, 1, &matches);
   for (const auto &m : matches) {
     // Get entity.
+    float score = m.first;
     Text id = m.second->id();
     Handle h = RetrieveItem(store, id);
     if (h.IsNil()) continue;
@@ -779,8 +785,9 @@ void KnowledgeService::HandleGeoQuery(Text query, int limit, WebService *ws) {
     float lat = coord.GetFloat(n_lat_);
 
     // Add to context.
-    context.emplace_back(h, lng, lat, 0.0);
-    if (matches.size() == 1) break;
+    //LOG(INFO) << "Root " << id << " lng: " << lng << " lat: " << lat;
+    context.emplace_back(h, lng, lat, 0.0, score);
+    if (context.size() == 1) break;
   }
 
   // Compute distance to closest context item for each level.
@@ -790,6 +797,7 @@ void KnowledgeService::HandleGeoQuery(Text query, int limit, WebService *ws) {
     NameTable::Matches matches;
     aliases_.Lookup(part, false, limit, 1, &matches);
     for (const auto &m : matches) {
+      float score = m.first;
       Text id = m.second->id();
       Handle h = RetrieveItem(store, id);
       if (h.IsNil()) continue;
@@ -814,7 +822,8 @@ void KnowledgeService::HandleGeoQuery(Text query, int limit, WebService *ws) {
       }
 
       // Add to context.
-      current.emplace_back(h, lng, lat, mindist);
+      //LOG(INFO) << "Match " << id << " lng: " << lng << " lat: " << lat << " dist: " << mindist << " score: " << score;
+      current.emplace_back(h, lng, lat, mindist, score);
     }
 
     // Copy current level to context.
@@ -825,7 +834,7 @@ void KnowledgeService::HandleGeoQuery(Text query, int limit, WebService *ws) {
   // Sort results.
   std::sort(context.begin(), context.end(),
             [](const GeoEntity &e1, const GeoEntity &e2) {
-    return e1.dist < e2.dist;
+    return e1.dist - e1.score / 100 < e2.dist - e2.score / 100;
   });
 
   // Generate query response.
@@ -835,6 +844,8 @@ void KnowledgeService::HandleGeoQuery(Text query, int limit, WebService *ws) {
     if (item.invalid()) continue;
     Builder match(store);
     GetStandardProperties(item, &match, true);
+    match.Add(n_score_, c.score);
+    match.Add(n_distance_, c.dist);
     results.push_back(match.Create().handle());
   }
 
@@ -842,6 +853,7 @@ void KnowledgeService::HandleGeoQuery(Text query, int limit, WebService *ws) {
   Builder b(store);
   b.Add(n_matches_,  Array(store, results));
   ws->set_output(b.Create());
+  return true;
 }
 
 void KnowledgeService::HandleSearch(HTTPRequest *request,
