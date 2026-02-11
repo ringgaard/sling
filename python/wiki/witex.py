@@ -61,10 +61,11 @@ def get_extractor(lang):
 # Fetch wikitext for Wikipedia page.
 pool =  urllib3.PoolManager()
 def fetch_wikitext(lang, title):
+  headers = {"User-agent": "SLING Bot 1.0"}
   url = ("https://" + lang + ".wikipedia.org/w/api.php?" +
          "action=query&prop=revisions&format=json&formatversion=2&" +
          "rvslots=main&rvprop=content&titles=" + title.replace(' ', '_'))
-  r = pool.request("GET", url, timeout=60)
+  r = pool.request("GET", url, timeout=60, headers=headers)
   reply = json.loads(r.data.decode("utf-8"))
   page = reply["query"]["pages"][0]
   wikitext = page["revisions"][0]["slots"]["main"]["content"]
@@ -149,4 +150,3 @@ def handle_extract(request):
 log.info("running")
 app.run()
 log.info("stopped")
-
