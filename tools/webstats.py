@@ -56,6 +56,11 @@ flags.define("-v",
              default=False,
              action="store_true")
 
+flags.define("--http2",
+             help="Only show HTTP2 requests",
+             default=False,
+             action="store_true")
+
 flags.define("--html",
              help="Output HTML page with report",
              default=None,
@@ -446,6 +451,9 @@ for logfn in flags.arg.logfiles:
     ua = m.group(9)
     ts = datetime.datetime.strptime(timestamp, "%d/%b/%Y:%H:%M:%S %z")
     day = ts.date()
+
+    # HTTP2 filter
+    if flags.arg.http2 and protocol != "HTTP/2.0": continue
 
     # Internal traffic.
     if ipaddr.startswith("10.1.") or ipaddr.startswith("127."):

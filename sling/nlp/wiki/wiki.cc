@@ -250,6 +250,8 @@ void AuxFilter::Init(Store *store) {
     "Q6999",      // astronomical object
 
     "Q34023",     // tumulus (rundhøj)
+    "Q15120977",  // grave cairn (gravhøj)
+
     "Q11446",     // ship
     "Q105999",    // cargo ship
 
