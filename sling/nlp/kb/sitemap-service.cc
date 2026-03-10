@@ -35,6 +35,7 @@ void SitemapService::HandleSitemap(HTTPRequest *req, HTTPResponse *rsp) {
   WebService ws(commons_, req, rsp);
   Text itemid = ws.Get("id");
   int start = ws.Get("start", 1);
+  int limit = ws.Get("limit", 50000);
   if (itemid.empty()) {
       rsp->SendError(400, "Bad Request", nullptr);
       return;
@@ -58,15 +59,15 @@ void SitemapService::HandleSitemap(HTTPRequest *req, HTTPResponse *rsp) {
   rsp->Append("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">");
   rsp->Append("\n");
   int n = 0;
+  int m = 0;
   for (const Slot &s : item.Slots(n_has_part_)) {
     Text partid = ws.store()->FrameId(s.value);
     if (partid.empty()) continue;
-    n++;
-    if (n < start) continue;
+    if (++n < start) continue;
+    if (++m > limit) break;
     rsp->Append("<url><loc>https://ringgaard.com/kb/");
     rsp->Append(partid);
     rsp->Append("</loc></url>\n");
-    if (n - start >= 50000) break;
   }
   rsp->Append("</urlset>\n");
 }
