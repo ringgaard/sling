@@ -43,6 +43,7 @@ const collection_properties = {
   10190: frame("PDFT25"),
   10181: frame("PDFT30"),
   10706: frame("PDFT40"),
+  20181: frame("PMYHST"),
 }
 
 function is_date(d) {
