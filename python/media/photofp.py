@@ -132,6 +132,7 @@ if flags.arg.cases:
         url = store.resolve(media)
         if url.startswith('!'): url = url[1:]
         urls.append(url)
+      if len(urls) == 0: continue;
 
       # Get fingerprints for photos in topic.
       fingerprints = fpdb[urls]
@@ -164,7 +165,7 @@ if flags.arg.cases:
           fpinfo["width"] = p.width
           fpinfo["height"] = p.height
           fpinfo[flags.arg.hash] = p.fingerprint
-          updated = False
+          updated = True
 
         # Add duplicate.
         if itemid != fpinfo["item"] and topicid != fpinfo["item"]:
