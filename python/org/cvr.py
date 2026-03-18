@@ -740,6 +740,25 @@ print("Convert CVR data")
 cvrdb = sling.Database("vault/cvr")
 recout = sling.RecordWriter("data/e/org/cvr.rec")
 
+# Output post nr aliases
+fin = open("data/org/dkpostnr.txt")
+for line in fin:
+  line = line.strip()
+  if len(line) == 0: continue;
+  fields = line.split(",")
+  postnr = fields[0]
+  by = fields[1]
+  qid = fields[2]
+  item = kb[qid]
+  alias = str(postnr) + " " + by
+  store = sling.Store(kb)
+  builder = FrameBuilder(store)
+  builder.add(n_is, item)
+  builder.add(n_name, alias)
+  builder.add(n_postal_code, str(postnr))
+  builder.write(recout)
+fin.close()
+
 num_entities = 0
 num_persons = 0
 num_companies = 0
