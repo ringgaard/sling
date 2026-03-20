@@ -749,11 +749,10 @@ for line in fin:
   postnr = fields[0]
   by = fields[1]
   qid = fields[2]
-  item = kb[qid]
   alias = str(postnr) + " " + by
   store = sling.Store(kb)
   builder = FrameBuilder(store)
-  builder.add(n_is, item)
+  builder.add(n_id, qid)
   builder.add(n_name, alias)
   builder.add(n_postal_code, str(postnr))
   builder.write(recout)
