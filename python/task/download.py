@@ -79,7 +79,8 @@ class UrlDownload:
 
       # Download from url to file.
       if ratelimit > 0: log.info("Start download of " + output.name)
-      r = http.request('GET', url, preload_content=False, timeout=60)
+      r = http.request('GET', url, preload_content=False, timeout=60,
+                       headers={"User-agent": "SLING Bot 1.0"})
       last_modified = time.mktime(time.strptime(r.headers['last-modified'],
                                                 "%a, %d %b %Y %H:%M:%S GMT"))
       content_length = int(r.headers['content-length'])
@@ -95,7 +96,8 @@ class UrlDownload:
             log.info(name, "HTTP timeout", bytes, "of", content_length)
             r.close()
             r = http.request('GET', url, preload_content=False, timeout=60,
-                             headers={"Range": "bytes=%s-" % bytes})
+                             headers={"User-agent": "SLING Bot 1.0",
+                                      "Range": "bytes=%s-" % bytes})
             continue
 
           if chunk is None:
