@@ -112,14 +112,11 @@ class WikiMediaExtract:
 
     kb.freeze()
 
-    # Fetch media titles for Wikipedia from yesterday.
-    yesterday = (date.today() - timedelta(days=1)).strftime("%Y%m%d")
-    mediaurl = "https://dumps.wikimedia.org/other/mediatitles/%s/" \
-      "%swiki-%s-all-titles-in-ns-6.gz" % (yesterday, language, yesterday)
-    log.info("Fetch local media titles from", mediaurl)
-    r = urllib.request.urlopen(mediaurl)
-    mediatitles = set(gzip.decompress(r.read()).decode().split('\n'))
+    # Fetch media titles for Wikipedia.
+    fin = open("data/e/wiki/%s/media.txt" %  language)
+    mediatitles = set(fin.read().split('\n'))
     task.increment("local_media_files", len(mediatitles))
+    fin.close()
 
     # Open output file.
     fout = open(task.output("output").name, "w")

@@ -41,6 +41,7 @@ class WikipediaXMLParser : public XMLParser {
     articles_channel_ = task->GetSink("articles");
     redirects_channel_ = task->GetSink("redirects");
     categories_channel_ = task->GetSink("categories");
+    media_channel_ = task->GetSink("media");
 
     // Set up XML field mapping.
     fields_.resize(NUM_FIELDS);
@@ -61,6 +62,7 @@ class WikipediaXMLParser : public XMLParser {
     num_articles_ = task->GetCounter("wikipedia_articles");
     num_categories_ = task->GetCounter("wikipedia_categories");
     num_redirects_ = task->GetCounter("wikipedia_redirects");
+    num_media_ = task->GetCounter("wikipedia_media");
     num_fragment_redirects_ = task->GetCounter("fragment_redirects");
     input_bytes_ = task->GetCounter("wikipedia_input_bytes");
   }
@@ -164,7 +166,16 @@ class WikipediaXMLParser : public XMLParser {
         ctr = task_->GetCounter(StringPrintf("namespace_pages[%d]", ns));
       }
       ctr->Increment();
-      if (ns != WIKIPEDIA_NAMESPACE_MAIN &&
+      if (ns == WIKIPEDIA_NAMESPACE_FILE) {
+        int colon = title.find(':');
+        if (colon != -1) {
+          while (colon + 1 < title.length() && title[colon + 1] == ' ') colon++;
+          string filename = title.substr(colon + 1);
+          media_channel_->Send(new task::Message(filename));
+          num_media_->Increment();
+        }
+        return;
+      } if (ns != WIKIPEDIA_NAMESPACE_MAIN &&
           ns != WIKIPEDIA_NAMESPACE_CATEGORY) {
         return;
       }
@@ -241,6 +252,7 @@ class WikipediaXMLParser : public XMLParser {
   task::Channel *articles_channel_;
   task::Channel *redirects_channel_;
   task::Channel *categories_channel_;
+  task::Channel *media_channel_;
 
   // Wikipedia language.
   string lang_;
@@ -263,6 +275,7 @@ class WikipediaXMLParser : public XMLParser {
   task::Counter *num_articles_;
   task::Counter *num_redirects_;
   task::Counter *num_categories_;
+  task::Counter *num_media_;
   task::Counter *num_fragment_redirects_;
   task::Counter *input_bytes_;
   uint64 position_ = 0;
@@ -307,4 +320,3 @@ REGISTER_TASK_PROCESSOR("wikipedia-importer", WikipediaImporter);
 
 }  // namespace nlp
 }  // namespace sling
-

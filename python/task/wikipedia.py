@@ -82,6 +82,14 @@ class WikipediaWorkflow:
                             dir=corpora.wikidir(language),
                             format="store/frame")
 
+  def wikipedia_media(self, language=None):
+    """Resource for wikipedia media filenames.
+    """
+    if language == None: language = flags.arg.language
+    return self.wf.resource("media.txt",
+                            dir=corpora.wikidir(language),
+                            format="text/filename")
+
   def wikipedia_import(self, dump=None, language=None):
     """Task for importing Wikipedia dump as SLING articles and redirects."""
     if language == None: language = flags.arg.language
@@ -96,6 +104,8 @@ class WikipediaWorkflow:
                                    format="message/frame")
       redirects = self.wf.channel(task, name="redirects",
                                   format="message/frame")
+      media = self.wf.channel(task, name="media",
+                              format="message/text")
 
       # Write articles.
       articles_output = self.wikipedia_articles(language)
@@ -109,7 +119,11 @@ class WikipediaWorkflow:
       redirects_output = self.wikipedia_redirects(language)
       self.wf.write(redirects, redirects_output, name="redirect-writer")
 
-      return articles_output, categories_output, redirects_output
+      # Write media file names.
+      media_output = self.wikipedia_media(language)
+      self.wf.write(media, media_output, name="media-writer")
+
+      return articles_output, categories_output, redirects_output, media_output
 
   #---------------------------------------------------------------------------
   # Wikipedia mapping
@@ -341,4 +355,3 @@ def generate_summaries():
   wf = WikipediaWorkflow("summaries")
   wf.generate_summaries()
   run(wf.wf)
-
