@@ -1414,6 +1414,14 @@ class CaseEditor extends MdApp {
     }
     if (selected.length < 2) return;
 
+    // Make sure they are loaded.
+    for (let t of selected) {
+      if (t.isproxy() || t.isstub()) {
+        inform(`${t.id} is not loaded`);
+        return;
+      }
+    }
+
     // Merge the rest of the topics into the first topic.
     let target = selected[0];
     let sources = selected.slice(1);
