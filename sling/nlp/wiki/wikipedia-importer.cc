@@ -171,6 +171,9 @@ class WikipediaXMLParser : public XMLParser {
         if (colon != -1) {
           while (colon + 1 < title.length() && title[colon + 1] == ' ') colon++;
           string filename = title.substr(colon + 1);
+          for (char &c : filename) {
+            if (c == ' ') c = '_';
+          }
           media_channel_->Send(new task::Message(filename));
           num_media_->Increment();
         }

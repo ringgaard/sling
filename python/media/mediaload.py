@@ -69,8 +69,6 @@ class CurlResponse:
     self.data = None
 
   def http_header(self, header_line):
-    #name, value = header_line.decode("iso-8859-1").split(':', 1)
-
     hdr = header_line.decode("iso-8859-1")
     pos = hdr.find(':')
     if pos == -1: return
@@ -179,6 +177,7 @@ num_urls = 0
 num_blacklist = 0
 num_whitelist = 0
 num_known = 0
+num_skipped = 0
 num_retrieved = 0
 num_errors = 0
 num_missing = 0
@@ -202,6 +201,12 @@ for url in media:
   if url.endswith(".webm"):
     print("blacklist video:", url)
     if fblack: fblack.write(url + "\n")
+    continue
+
+  # Check for commons.
+  if flags.arg.skip_commons and url.startswith(wiki_base_url):
+    #print("skip:", url)
+    num_skipped += 1
     continue
 
   # Download image.
@@ -290,4 +295,5 @@ print(num_known, "known,",
       num_toobig, "too big",
       num_blacklist, "blacklisted",
       num_whitelist, "whitelisted",
+      num_skipped, "skipped",
       num_bytes, "bytes")
