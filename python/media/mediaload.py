@@ -86,15 +86,22 @@ class CurlSession:
     self.curl.setopt(self.curl.URL, url.encode("utf-8"))
     self.curl.setopt(self.curl.WRITEDATA, response.buffer)
     self.curl.setopt(self.curl.HEADERFUNCTION, response.http_header)
-    try:
-      self.curl.perform()
-      response.status = self.curl.getinfo(self.curl.RESPONSE_CODE)
-      response.data = response.buffer.getvalue()
-    except Exception as e:
-      print("Curl Error", e)
-      return None
+    while True:
+      try:
+        self.curl.perform()
+        response.status = self.curl.getinfo(self.curl.RESPONSE_CODE)
+        if response.status == 429:
+          reset = 60
+          print("throttle back", reset)
+          time.sleep(reset)
+          continue
 
-    return response
+        response.data = response.buffer.getvalue()
+      except Exception as e:
+        print("Curl Error", e)
+        return None
+
+      return response
 
 # Read list of urls.
 def read_urls(filename):

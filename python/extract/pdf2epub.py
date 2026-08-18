@@ -375,6 +375,7 @@ class PDFBook:
     self.spine = []
     self.chapters = {}
     self.meta = {}
+    self.skips = set()
     self.nextref = 0
     self.refsize = 0
     self.refsbychapter = False
@@ -400,6 +401,7 @@ class PDFBook:
         elif ' ' in line:
           last_space = line.rindex(' ')
           name = line[0:last_space].strip()
+          #print(line[last_space:])
           pageno = int(line[last_space:].strip())
           chapter = PDFChapter(self, pageno, name, index)
           if pageno < last_toc_pageno:
@@ -431,7 +433,9 @@ class PDFBook:
 
     for p in pdf:
       pnum += 1
-      if pnum in ignore: continue
+      if pnum in ignore:
+        #print("ignore", pnum)
+        continue
       page = PDFPage(self)
       self.pages.append(page)
       if refsbychapter and pnum in self.chapters:

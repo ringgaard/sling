@@ -275,8 +275,9 @@ class EPUBBook:
       self.add(n_language, languages.get(metadata[n_dc_language]))
 
       pubdate = self.store.resolve(metadata[n_dc_date])
-      if "T" in pubdate: pubdate = pubdate[0:pubdate.find("T")]
-      if pubdate: self.add(n_pubdate, int(pubdate.replace("-", "")))
+      if pubdate:
+        if "T" in pubdate: pubdate = pubdate[0:pubdate.find("T")]
+        if pubdate: self.add(n_pubdate, int(pubdate.replace("-", "")))
 
       description = metadata[n_dc_description]
       if description: self.add(None, re.sub(r"\s+", " ", detag(description)))
